@@ -24,7 +24,6 @@ public class XrAPI {
     public static final String FLAG_SBS = "sbs";
     public static final String FLAG_VERSION = "version";
     public static final String FLAG_VR = "vr";
-    public static final String FLAG_UDP = "udp_debug";
     public static final String MSG_CLIENT = "client";
     public static final int SLOTS_LIMIT = 4096;
 
