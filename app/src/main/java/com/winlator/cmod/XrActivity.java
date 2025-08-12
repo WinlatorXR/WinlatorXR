@@ -51,6 +51,7 @@ public class XrActivity extends XServerDisplayActivity implements TextWatcher {
     private static boolean isImmersive = false;
     private static boolean isSBS = false;
     private static boolean isVR = false;
+    private static boolean isDebugUDP = false;
     private static boolean usePassthrough = false;
     private static boolean[] currentButtons = new boolean[ControllerButton.values().length];
     private static final KeyCharacterMap chars = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD);
@@ -363,6 +364,11 @@ public class XrActivity extends XServerDisplayActivity implements TextWatcher {
                     isSBS = xrAPI.hasFlag(XrAPI.FLAG_SBS);
                     xrAPI.sendUDP(xrAPI.encodeAxes(lastAxes, 0), XrAPI.DEFAULT_PORT);
                     //xrAPI.sendFile(xrAPI.encodeAxes(lastAxes, 0), 0);
+                }
+
+                isDebugUDP = xrAPI.hasDebugFlag(XrAPI.FLAG_UDP);
+                if (isDebugUDP) {
+                    xrAPI.sendDebugUDP(xrAPI.encodeAxes(lastAxes, 0), XrAPI.DEFAULT_PORT);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
