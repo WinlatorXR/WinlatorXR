@@ -366,7 +366,7 @@ public class XrActivity extends XServerDisplayActivity implements TextWatcher {
                     //xrAPI.sendFile(xrAPI.encodeAxes(lastAxes, 0), 0);
                 }
 
-                isDebugUDP = xrAPI.hasDebugFlag(XrAPI.FLAG_UDP);
+                isDebugUDP = xrAPI.hasDebugIP();
                 if (isDebugUDP) {
                     xrAPI.sendDebugUDP(xrAPI.encodeAxes(lastAxes, 0), XrAPI.DEFAULT_PORT);
                 }
