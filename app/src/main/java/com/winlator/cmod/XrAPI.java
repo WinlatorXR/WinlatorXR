@@ -19,7 +19,7 @@ public class XrAPI {
     @SuppressLint("SdCardPath")
     public static final String DEFAULT_PATH = "/data/data/com.winlator.cmod/files/imagefs/tmp/xr";
 
-    public static final String DEFAULT_DEBUG_PATH = "/sdcard/Download/";
+    public static final String DEFAULT_DEBUG_PATH = "/sdcard/Download/udp_debug";
     public static final int DEFAULT_PORT = 7872;
     public static final String FLAG_SBS = "sbs";
     public static final String FLAG_VERSION = "version";
@@ -31,7 +31,6 @@ public class XrAPI {
     private final String debug_ip;
 
     private final File dir;
-    private final File debugDir;
     private final File[] lastFiles = new File[SLOTS_LIMIT];
     private final DatagramSocket socket = new DatagramSocket();
 
@@ -52,7 +51,7 @@ public class XrAPI {
         }
 
         //Set Debug directory
-        debugDir = new File(DEFAULT_DEBUG_PATH);
+        File debugDir = new File(DEFAULT_DEBUG_PATH);
         String dbgIPTmp = "";
 
         if (debugDir.exists()) {
@@ -89,7 +88,7 @@ public class XrAPI {
         }
 
         //Set Debug directory
-        debugDir = new File(debugPath);
+        File debugDir = new File(debugPath);
         String dbgIPTmp = "";
 
         if (debugDir.exists()) {
@@ -146,8 +145,8 @@ public class XrAPI {
         return new File(dir, flag).exists();
     }
 
-    public boolean hasDebugFlag(String debugFlag) {
-        return new File(debugDir, debugFlag).exists();
+    public boolean hasDebugIP() {
+        return !Objects.equals(debug_ip, "0.0.0.0");
     }
 
     @Deprecated
@@ -170,7 +169,7 @@ public class XrAPI {
     }
 
     public void sendDebugUDP(@NonNull String data, int port) throws Exception {
-        if (debug_ip != "0.0.0.0") {
+        if (!Objects.equals(debug_ip, "0.0.0.0")) {
             InetAddress debugIPAdd = InetAddress.getByName(debug_ip);
             byte[] bytes = data.getBytes(StandardCharsets.US_ASCII);
             socket.send(new DatagramPacket(bytes, bytes.length, debugIPAdd, port));
