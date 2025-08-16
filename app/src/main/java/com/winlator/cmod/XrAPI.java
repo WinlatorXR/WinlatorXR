@@ -28,11 +28,11 @@ public class XrAPI {
     public static final String MSG_CLIENT = "client";
     public static final int SLOTS_LIMIT = 4096;
 
-    private final String debugIp;
-
     private final File dir;
     private final File[] lastFiles = new File[SLOTS_LIMIT];
     private final DatagramSocket socket = new DatagramSocket();
+
+    private String debugIp = "";
 
     public XrAPI(String path) throws Exception {
         //Ensure directory exists
@@ -49,36 +49,6 @@ public class XrAPI {
                 throw new Exception("Filesystem issue");
             }
         }
-
-        if (ENABLE_UDP_DEBUG) {
-            debugIp = SetupDebugModeIP();
-        }
-        else {
-            debugIp = "0.0.0.0";
-        }
-    }
-
-    private String SetupDebugModeIP() {
-        //Set Debug directory
-        File debugDir = new File(DEFAULT_DEBUG_PATH);
-        String dbgIPTmp = "";
-
-        if (debugDir.exists()) {
-            boolean foundIp = false;
-
-            for (File file : debugDir.listFiles()) {
-                foundIp = true;
-                dbgIPTmp = file.getName();
-                break;
-            }
-
-            if (!foundIp) dbgIPTmp = "0.0.0.0";
-        }
-        else {
-            dbgIPTmp = "0.0.0.0";
-        }
-
-        return dbgIPTmp;
     }
 
     public String encodeAxes(@NonNull float[] axes, int clientIndex) {
@@ -136,9 +106,38 @@ public class XrAPI {
         byte[] bytes = data.getBytes(StandardCharsets.US_ASCII);
         socket.send(new DatagramPacket(bytes, bytes.length, address, port));
 
-        if (ENABLE_UDP_DEBUG && validDebugIP()) {
-            sendDebugUDP(data, port);
+        if (ENABLE_UDP_DEBUG) {
+            if (Objects.equals(debugIp, "")) {
+                setupDebugModeIP();
+            }
+
+            if (validDebugIP()) {
+                sendDebugUDP(data, port);
+            }
         }
+    }
+
+    private void setupDebugModeIP() {
+        //Set Debug directory
+        File debugDir = new File(DEFAULT_DEBUG_PATH);
+        String dbgIPTmp = "";
+
+        if (debugDir.exists()) {
+            boolean foundIp = false;
+
+            for (File file : debugDir.listFiles()) {
+                foundIp = true;
+                dbgIPTmp = file.getName();
+                break;
+            }
+
+            if (!foundIp) dbgIPTmp = "0.0.0.0";
+        }
+        else {
+            dbgIPTmp = "0.0.0.0";
+        }
+
+        debugIp = dbgIPTmp;
     }
 
     private boolean validDebugIP() {
