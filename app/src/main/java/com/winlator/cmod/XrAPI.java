@@ -18,7 +18,9 @@ public class XrAPI {
     @SuppressLint("SdCardPath")
     public static final String DEFAULT_PATH = "/data/data/com.winlator.cmod/files/imagefs/tmp/xr";
 
+    public boolean ENABLE_UDP_DEBUG = false;
     public static final String DEFAULT_DEBUG_PATH = "/sdcard/Download/udp_debug";
+
     public static final int DEFAULT_PORT = 7872;
     public static final String FLAG_SBS = "sbs";
     public static final String FLAG_VERSION = "version";
@@ -26,7 +28,7 @@ public class XrAPI {
     public static final String MSG_CLIENT = "client";
     public static final int SLOTS_LIMIT = 4096;
 
-    private final String debug_ip;
+    private final String debugIp;
 
     private final File dir;
     private final File[] lastFiles = new File[SLOTS_LIMIT];
@@ -48,62 +50,35 @@ public class XrAPI {
             }
         }
 
+        if (ENABLE_UDP_DEBUG) {
+            debugIp = SetupDebugModeIP();
+        }
+        else {
+            debugIp = "0.0.0.0";
+        }
+    }
+
+    private String SetupDebugModeIP() {
         //Set Debug directory
         File debugDir = new File(DEFAULT_DEBUG_PATH);
         String dbgIPTmp = "";
 
         if (debugDir.exists()) {
-            boolean found_ip = false;
+            boolean foundIp = false;
 
             for (File file : debugDir.listFiles()) {
-                found_ip = true;
+                foundIp = true;
                 dbgIPTmp = file.getName();
                 break;
             }
 
-            if (!found_ip) dbgIPTmp = "0.0.0.0";
+            if (!foundIp) dbgIPTmp = "0.0.0.0";
         }
         else {
             dbgIPTmp = "0.0.0.0";
         }
-        debug_ip = dbgIPTmp;
-    }
 
-    public XrAPI(String path, String debugPath) throws Exception {
-        //Ensure directory exists
-        dir = new File(path);
-        if (!dir.exists()) {
-            if (!dir.mkdir()) {
-                throw new Exception("Filesystem issue");
-            }
-        }
-
-        //Ensure there are no previous data
-        for (File file : Objects.requireNonNull(dir.listFiles())) {
-            if (!file.delete()) {
-                throw new Exception("Filesystem issue");
-            }
-        }
-
-        //Set Debug directory
-        File debugDir = new File(debugPath);
-        String dbgIPTmp = "";
-
-        if (debugDir.exists()) {
-            boolean found_ip = false;
-
-            for (File file : debugDir.listFiles()) {
-                found_ip = true;
-                dbgIPTmp = file.getName();
-                break;
-            }
-
-            if (!found_ip) dbgIPTmp = "0.0.0.0";
-        }
-        else {
-            dbgIPTmp = "0.0.0.0";
-        }
-        debug_ip = dbgIPTmp;
+        return dbgIPTmp;
     }
 
     public String encodeAxes(@NonNull float[] axes, int clientIndex) {
@@ -143,10 +118,6 @@ public class XrAPI {
         return new File(dir, flag).exists();
     }
 
-    public boolean hasDebugIP() {
-        return !Objects.equals(debug_ip, "0.0.0.0");
-    }
-
     @Deprecated
     public void sendFile(String data, int slot) throws Exception {
         File name = new File(dir, data);
@@ -164,11 +135,19 @@ public class XrAPI {
         InetAddress address = InetAddress.getLocalHost();
         byte[] bytes = data.getBytes(StandardCharsets.US_ASCII);
         socket.send(new DatagramPacket(bytes, bytes.length, address, port));
+
+        if (ENABLE_UDP_DEBUG && validDebugIP()) {
+            sendDebugUDP(data, port);
+        }
     }
 
-    public void sendDebugUDP(@NonNull String data, int port) throws Exception {
-        if (!Objects.equals(debug_ip, "0.0.0.0")) {
-            InetAddress debugIPAdd = InetAddress.getByName(debug_ip);
+    private boolean validDebugIP() {
+        return !Objects.equals(debugIp, "0.0.0.0");
+    }
+
+    private void sendDebugUDP(@NonNull String data, int port) throws Exception {
+        if (!Objects.equals(debugIp, "0.0.0.0")) {
+            InetAddress debugIPAdd = InetAddress.getByName(debugIp);
             byte[] bytes = data.getBytes(StandardCharsets.US_ASCII);
             socket.send(new DatagramPacket(bytes, bytes.length, debugIPAdd, port));
         }
