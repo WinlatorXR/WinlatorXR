@@ -372,7 +372,7 @@ public class XrActivity extends XServerDisplayActivity implements TextWatcher {
                 isVR = xrAPI.hasFlag(XrAPI.FLAG_VR);
                 getInstance().nativeSetUseVR(isVR);
                 if (isVR) {
-                    xrAPI.ENABLE_UDP_DEBUG = true;
+                    //xrAPI.ENABLE_UDP_DEBUG = true;
                     isSBS = xrAPI.hasFlag(XrAPI.FLAG_SBS);
                     xrAPI.sendUDP(xrAPI.encodeAxes(lastAxes, 0), XrAPI.DEFAULT_PORT);
                     //xrAPI.sendFile(xrAPI.encodeAxes(lastAxes, 0), 0);
