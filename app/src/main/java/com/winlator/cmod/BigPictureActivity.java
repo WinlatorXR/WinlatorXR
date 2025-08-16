@@ -957,6 +957,12 @@ public class BigPictureActivity extends AppCompatActivity {
         // Log the current cover art path
         Log.d("BigPictureActivity", "Loaded cover art path: " + shortcut.getCustomCoverArtPath());
 
+        if (uploadText != null) {
+            ViewGroup p = (ViewGroup) uploadText.getParent();
+            if (p != null) p.removeView(uploadText);
+            uploadText = null;
+        }
+
         // Set the game title
         gameTitleView.setText(shortcut.name);
 
@@ -972,7 +978,7 @@ public class BigPictureActivity extends AppCompatActivity {
         String graphicsDriver = shortcut.getExtra("graphicsDriver");
         
         setTextOrPlaceholder(graphicsDriverView, graphicsDriver, container.getGraphicsDriver());
-        setTextOrPlaceholder(graphicsDriverVersionView, shortcut.getExtra("graphicsDroverConfig"), container.getGraphicsDriverConfig());
+        setTextOrPlaceholder(graphicsDriverVersionView, shortcut.getExtra("graphicsDriverConfig"), container.getGraphicsDriverConfig());
         setTextOrPlaceholder(dxWrapperView, shortcut.getExtra("dxwrapper"), container.getDXWrapper());
         setTextOrPlaceholder(dxWrapperConfigView, shortcut.getExtra("dxwrapperConfig"), container.getDXWrapperConfig());
         setTextOrPlaceholder(audioDriverView, shortcut.getExtra("audioDriver"), container.getAudioDriver());

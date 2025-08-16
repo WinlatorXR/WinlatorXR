@@ -95,9 +95,17 @@ static int get_bytes_per_frame(int format, int channelCount) {
  * MODIFICATION: This is the new, more precise consumer thread function.
  * It uses a monotonic clock to stay in sync and avoid timing drift.
  */
+#include <sched.h>
+
 void *pacer_consumer_thread_func(void *arg) {
     PacerContext *ctx = (PacerContext*)arg;
-    LOGI("Pacer consumer thread started with high-precision timing.");
+
+    struct sched_param schedParams;
+    schedParams.sched_priority = sched_get_priority_max(SCHED_FIFO);
+    pthread_setschedparam(pthread_self(), SCHED_FIFO, &schedParams);
+
+    LOGI("Pacer consumer thread started with high-precision timing and real-time priority.");
+
 
     struct timespec next_wakeup_time;
     clock_gettime(CLOCK_MONOTONIC, &next_wakeup_time);
@@ -107,6 +115,7 @@ void *pacer_consumer_thread_func(void *arg) {
 
         while (ctx->available_bytes == 0 && ctx->running == 1) {
             pthread_cond_wait(&ctx->cond_not_empty, &ctx->mutex);
+            if (ctx->running != 1) break;
         }
 
         if (ctx->running != 1) {
@@ -115,7 +124,7 @@ void *pacer_consumer_thread_func(void *arg) {
         }
 
         // Consume a small, consistent chunk of audio data (e.g., 5ms)
-        int consume_chunk_frames = ctx->sample_rate / 200; // 5ms
+        int consume_chunk_frames = ctx->sample_rate / 100; // 10ms
         int consume_chunk_bytes = consume_chunk_frames * ctx->frame_size_bytes;
         if (consume_chunk_bytes == 0) consume_chunk_bytes = ctx->frame_size_bytes; // Consume at least one frame
         if (consume_chunk_bytes > ctx->available_bytes) {
@@ -141,6 +150,13 @@ void *pacer_consumer_thread_func(void *arg) {
         // Sleep until the calculated next wakeup time
         struct timespec current_time;
         clock_gettime(CLOCK_MONOTONIC, &current_time);
+
+        if ((current_time.tv_sec > next_wakeup_time.tv_sec) ||
+            (current_time.tv_sec == next_wakeup_time.tv_sec && current_time.tv_nsec > next_wakeup_time.tv_nsec)) {
+            // We're late; immediately schedule next wakeup from now
+            next_wakeup_time = current_time;
+        }
+
         long sleep_ns = (next_wakeup_time.tv_sec - current_time.tv_sec) * 1000000000L + (next_wakeup_time.tv_nsec - current_time.tv_nsec);
 
         if (sleep_ns > 0) {
@@ -252,65 +268,40 @@ JNIEXPORT jint JNICALL
 Java_com_winlator_cmod_alsaserver_ALSAClient_simulatedWrite(JNIEnv *env, jobject obj, jlong streamPtr, jobject buffer,
                                                             jint numFrames) {
     PacerContext *ctx = (PacerContext*)streamPtr;
-    // Basic safety check: if the context is null or not in the "running" state, do nothing.
     if (!ctx || ctx->running != 1) {
         return -1;
     }
 
-    // Get a direct pointer to the audio data from the Java ByteBuffer.
     void *data = (*env)->GetDirectBufferAddress(env, buffer);
     int bytes_to_write = numFrames * ctx->frame_size_bytes;
 
-    // Lock the mutex to ensure exclusive access to the buffer state.
     pthread_mutex_lock(&ctx->mutex);
 
-    if (ctx->capacity_bytes - ctx->available_bytes < bytes_to_write) {
-        //LOGI("simulatedWrite: Buffer full. Waiting for space. Available: %zu, Needed: %d", (ctx->capacity_bytes - ctx->available_bytes), bytes_to_write);
-    }
-    // This is the core of the back-pressure.
-    // We loop as long as there isn't enough space in our buffer for the new data.
-    while (ctx->capacity_bytes - ctx->available_bytes < bytes_to_write) {
-        // If the state changes while we are waiting, we should stop.
-        if (ctx->running != 1) {
-            pthread_mutex_unlock(&ctx->mutex);
-            return -1;
-        }
-        // Wait on the "not full" condition. This puts our thread to sleep until the
-        // consumer thread signals that it has made space.
+    while ((ctx->capacity_bytes - ctx->available_bytes) < bytes_to_write && ctx->running == 1) {
         pthread_cond_wait(&ctx->cond_not_full, &ctx->mutex);
     }
 
-    // --- Write data to the ring buffer ---
-    // Because it's a ring, the write might need to be split into two parts
-    // if it wraps around the end of the allocated memory.
+    if (ctx->running != 1) {
+        pthread_mutex_unlock(&ctx->mutex);
+        return -1;
+    }
 
-    // How much space is there from the current write position to the end of the buffer?
     size_t remaining_capacity = ctx->capacity_bytes - ctx->write_pos_bytes;
 
     if (remaining_capacity >= bytes_to_write) {
-        // Case 1: The new data fits without wrapping around.
         memcpy(ctx->buffer + ctx->write_pos_bytes, data, bytes_to_write);
-        ctx->write_pos_bytes += bytes_to_write;
+        ctx->write_pos_bytes = (ctx->write_pos_bytes + bytes_to_write) % ctx->capacity_bytes;
     } else {
-        // Case 2: The data wraps around.
-        // First, copy the first part to fill the space until the end.
         memcpy(ctx->buffer + ctx->write_pos_bytes, data, remaining_capacity);
-        // Then, copy the second part starting from the beginning of the buffer.
         memcpy(ctx->buffer, (uint8_t*)data + remaining_capacity, bytes_to_write - remaining_capacity);
-        // The new write position is now at the end of the second part.
-        ctx->write_pos_bytes = bytes_to_write - remaining_capacity;
+        ctx->write_pos_bytes = bytes_to_write - remaining_capacity; // Already modulo by logic
     }
 
-    // Update the count of available bytes in the buffer.
     ctx->available_bytes += bytes_to_write;
 
-    // Signal the consumer thread that new data is available, in case it was waiting.
     pthread_cond_signal(&ctx->cond_not_empty);
-
-    // Unlock the mutex so other threads can access the context.
     pthread_mutex_unlock(&ctx->mutex);
 
-    // Return the number of frames written, as the original function did.
     return numFrames;
 }
 
@@ -458,7 +449,11 @@ Java_com_winlator_cmod_alsaserver_ALSAClient_simulatedClose(JNIEnv *env, jobject
     // 6. Wait for the consumer thread to finish executing completely. This is a crucial
     //    blocking call that prevents us from freeing memory while it's still in use.
     if (ctx->consumer_thread) {
+        ctx->running = 0;
+        pthread_cond_broadcast(&ctx->cond_not_empty);
+        pthread_cond_broadcast(&ctx->cond_not_full);
         pthread_join(ctx->consumer_thread, NULL);
+        ctx->consumer_thread = 0;
     }
 
     // 7. Now that the thread is gone, we can safely destroy the threading tools.

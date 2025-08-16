@@ -23,17 +23,17 @@ tasks.register("prepareKotlinBuildScriptModel"){}
 
 android {
     namespace 'com.winlator.cmod'
-    // Keep compileSdk from your current config. If you want to match Termux-X11, you could set to 34.
+
     compileSdk 34
 
     defaultConfig {
         applicationId "com.winlator.cmod"
         minSdkVersion 26
-        // We’re preserving Winlator’s request to keep targetSdkVersion at 28
+
         targetSdkVersion 28
 
         versionCode 20
-        versionName "Cmod-v13"
+        versionName "Cmod-v13.1"
 
         // External native build from Winlator
         externalNativeBuild {
@@ -42,7 +42,7 @@ android {
             }
         }
 
-        // You originally only did arm64-v8a. If you want multi-ABI splits, see below.
+
         ndk {
             abiFilters 'arm64-v8a'
         }
@@ -65,15 +65,14 @@ android {
     }
 
 
-    ndkVersion '27.0.12077973'  // from your original config
-
+    ndkVersion '27.0.12077973'
     externalNativeBuild {
         cmake {
             path 'src/main/cpp/CMakeLists.txt'
         }
     }
 
-    // If you want to be sure modern JNI packaging is used:
+
     packagingOptions {
         jniLibs {
             useLegacyPackaging = true

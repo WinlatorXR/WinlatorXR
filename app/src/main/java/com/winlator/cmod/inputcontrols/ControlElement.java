@@ -665,39 +665,47 @@ public class ControlElement {
     }
 
     public boolean handleTouchDown(int pointerId, float x, float y) {
-        if (currentPointerId == -1 && containsPoint(x, y)) {
-            currentPointerId = pointerId;
-            if (type == Type.BUTTON) {
-                if (isKeepButtonPressedAfterMinTime()) touchTime = System.currentTimeMillis();
-                if (!toggleSwitch || !selected) inputControlsView.handleInputEvent(getBindingAt(0), true);
-                inputControlsView.invalidate();
-                return true;
+        /* reject if another finger already owns this element */
+        if (currentPointerId != -1 || !containsPoint(x, y)) return false;
+
+        currentPointerId = pointerId;
+
+        /* ---------- Button and Range-Button ---------- */
+        if (type == Type.BUTTON || type == Type.RANGE_BUTTON) {
+            if (isKeepButtonPressedAfterMinTime()) touchTime = System.currentTimeMillis();
+
+            if (!toggleSwitch || !selected) {                      // press only when not latched
+                inputControlsView.handleInputEvent(getBindingAt(0), true);
             }
-            else if (type == Type.STICK) {
-                // Record the initial touch point as our new "center".
-                touchDownOrigin.set(x, y);
-                // Force the stick to a neutral state to prevent instant movement.
-                handleTouchMove(pointerId, x, y);
-                // Set the visual position to the center of the element.
-                Rect boundingBox = getBoundingBox();
-                setCurrentPosition(boundingBox.centerX(), boundingBox.centerY());
-                inputControlsView.invalidate();
-                return true;
-            }
-            else if (type == Type.RANGE_BUTTON) {
-                scroller.handleTouchDown(x, y);
-                inputControlsView.invalidate();
-                return true;
-            }
-            else {
-                if (type == Type.TRACKPAD) {
-                    if (currentPosition == null) currentPosition = new PointF();
-                    currentPosition.set(x, y);
-                }
-                return handleTouchMove(pointerId, x, y);
-            }
+
+            if (type == Type.RANGE_BUTTON) scroller.handleTouchDown(x, y);
+
+            inputControlsView.invalidate();
+            return true;
         }
-        else return false;
+
+        /* ---------- Stick ---------- */
+        if (type == Type.STICK) {
+            // Record where the finger landed so relative motion is smooth.
+            touchDownOrigin.set(x, y);
+
+            // Force neutral value on first frame.
+            handleTouchMove(pointerId, x, y);
+
+            // Visually centre the knob.
+            Rect bb = getBoundingBox();
+            setCurrentPosition(bb.centerX(), bb.centerY());
+
+            inputControlsView.invalidate();
+            return true;
+        }
+
+        /* ---------- Track-pad, D-pad, etc. ---------- */
+        if (type == Type.TRACKPAD) {
+            if (currentPosition == null) currentPosition = new PointF();
+            currentPosition.set(x, y);
+        }
+        return handleTouchMove(pointerId, x, y);
     }
 
     public boolean handleTouchMove(int pointerId, float x, float y) {
@@ -842,56 +850,59 @@ public class ControlElement {
     }
 
     public boolean handleTouchUp(int pointerId) {
-        if (pointerId == currentPointerId) {
-            if (type == Type.BUTTON) {
-                final Binding binding = getBindingAt(0);
-                final long now = System.currentTimeMillis();
+        if (pointerId != currentPointerId) return false;
 
-                if (isKeepButtonPressedAfterMinTime() && touchTime != null) {
-                    long held = now - (long) touchTime;
-                    long delay = Math.max(0, BUTTON_MIN_TIME_TO_KEEP_PRESSED - held);
+        /* ========= BUTTON & RANGE_BUTTON ========= */
+        if (type == Type.BUTTON || type == Type.RANGE_BUTTON) {
+            final Binding binding = getBindingAt(0);
+            final long    now     = System.currentTimeMillis();
 
-                    // Always release, but ensure minimum hold time.
-                    inputControlsView.postDelayed(() -> {
-                        inputControlsView.handleInputEvent(binding, false);
-                        inputControlsView.invalidate();
-                    }, delay);
+            /* honour min-hold rule for L3/R3 */
+            if (isKeepButtonPressedAfterMinTime() && touchTime != null) {
+                long held  = now - (long) touchTime;
+                long delay = Math.max(0, BUTTON_MIN_TIME_TO_KEEP_PRESSED - held);
+                touchTime  = null;
 
-                    touchTime = null;
-                } else {
-                    // Normal buttons (and quick L3/R3 taps) release immediately.
+                inputControlsView.postDelayed(() -> {
+                    inputControlsView.handleInputEvent(binding, false);
+                    inputControlsView.invalidate();
+                }, delay);
+            } else {
+                // For toggles send release only if we were latched; otherwise always.
+                if (!toggleSwitch || selected) {
                     inputControlsView.handleInputEvent(binding, false);
                 }
-
-                // Toggle only applies to toggleSwitch buttons.
-                if (toggleSwitch) {
-                    selected = !selected;
-                }
-
-                currentPointerId = -1;
-                inputControlsView.invalidate();
-                return true;
             }
-            else if (type == Type.RANGE_BUTTON || type == Type.D_PAD || type == Type.STICK || type == Type.TRACKPAD) {
-                for (byte i = 0; i < states.length; i++) {
-                    if (states[i]) inputControlsView.handleInputEvent(getBindingAt(i), false);
-                    states[i] = false;
-                }
 
-                if (type == Type.RANGE_BUTTON) {
-                    scroller.handleTouchUp();
-                }
-                else if (type == Type.STICK) {
-                    inputControlsView.invalidate();
-                }
+            /* ----- toggle-latch behaviour ----- */
+            if (toggleSwitch) selected = !selected;
 
-                if (currentPosition != null) currentPosition = null;
+            if (type == Type.RANGE_BUTTON) {
+                scroller.handleTouchUp();
             }
+
             currentPointerId = -1;
             inputControlsView.invalidate();
             return true;
         }
-        return false;
+
+        /* ========= D-PAD / STICK / TRACKPAD ========= */
+        else if (type == Type.D_PAD || type == Type.STICK || type == Type.TRACKPAD) {
+            for (byte i = 0; i < states.length; i++) {
+                if (states[i]) inputControlsView.handleInputEvent(getBindingAt(i), false);
+                states[i] = false;
+            }
+
+            if (type == Type.STICK) {
+                inputControlsView.invalidate();   // redraw knob to centre
+            }
+
+            if (currentPosition != null) currentPosition = null;
+        }
+
+        currentPointerId = -1;
+        inputControlsView.invalidate();
+        return true;
     }
 
     public PointF getCurrentPosition() {
@@ -917,10 +928,11 @@ public class ControlElement {
     }
 
     private boolean isEngaged() {
-        if (type == Type.BUTTON) {
-            return currentPointerId != -1 || selected;
+        if (type == Type.BUTTON || type == Type.RANGE_BUTTON) {
+            return currentPointerId != -1 || selected;   // include toggle state
         }
         return currentPointerId != -1 || anyStateActive();
     }
+
 
 }

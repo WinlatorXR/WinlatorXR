@@ -42,6 +42,8 @@ import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.contentdialog.ControllerAssignmentDialog;
 import com.winlator.cmod.contentdialog.SaveEditDialog;
 import com.winlator.cmod.contentdialog.SaveSettingsDialog;
+import com.winlator.cmod.contents.ContentProfile;
+import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.core.Callback;
 import com.winlator.cmod.core.PreloaderDialog;
 import com.winlator.cmod.container.ContainerManager;
@@ -55,8 +57,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
     public static final @IntRange(from = 1, to = 19) byte CONTAINER_PATTERN_COMPRESSION_LEVEL = 9;
@@ -156,16 +164,183 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             // onCreate(), replace the two blocks with this single block
             boolean waitingForPerms = requestAppPermissions();
             if (!waitingForPerms) {
-                ImageFsInstaller.installIfNeeded(this, () -> {
-                    if (!allAccessFilesDialogDismissed
-                            && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
-                            && !Environment.isExternalStorageManager()) {
-                        showAllFilesAccessDialog();
-                    }
-                });
+                ImageFsInstaller.installIfNeeded(this, () ->
+                        checkForAndInstallAssetContents(() -> {
+                            if (!allAccessFilesDialogDismissed
+                                    && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                                    && !Environment.isExternalStorageManager()) {
+                                showAllFilesAccessDialog();
+                            }
+                        }));
             }
 
         }
+    }
+
+    /**
+     * Install *.wcp bundles from assets/contents/ that are not already
+     * unpacked in /files/contents/<Type>/<verDir>/.
+     *
+     * Handles case differences and the fact that install dirs end with
+     * “-<verCode>” while the .wcp filename may omit that suffix.
+     */
+    /**
+     * Scan assets/contents/ for *.wcp bundles and install the ones that do
+     * not already exist in /files/contents/<Type>/<verDir>/.
+     *
+     * Handles the following real-world quirks:
+     *   • Folder name may be "type-verDir-<code>" (duplicated type prefix)
+     *   • .wcp may have a leading 'v' in the version that the folder omits
+     *   • '-' and '_' are treated as equivalent separators
+     *   • Case insensitive everywhere
+     *
+     * The PreloaderDialog appears only when an install actually starts.
+     */
+    private void checkForAndInstallAssetContents(@Nullable Runnable onCompletion) {
+
+        Executors.newSingleThreadExecutor().execute(() -> {
+            PreloaderDialog spinner = new PreloaderDialog(this);
+            boolean spinnerShown = false;
+
+            try {
+                /* ----------------------------------------------------------
+                 * 1.  Build a map<type, set<normalisedVersionDir>>
+                 *     where normalisedVersionDir strips:
+                 *       - leading duplicate "type-" prefix
+                 *       - converts to lower-case
+                 *       - replaces '_' with '-'
+                 * ---------------------------------------------------------- */
+                Map<String, Set<String>> installed = new HashMap<>();
+                File root = ContentsManager.getContentDir(this);
+
+                File[] typeDirs = root.listFiles();
+                if (typeDirs != null) {
+                    for (File typeDir : typeDirs) {
+                        if (!typeDir.isDirectory()) continue;
+
+                        String typeKey = typeDir.getName().toLowerCase();
+                        Set<String> vers = new HashSet<>();
+
+                        File[] verDirs = typeDir.listFiles();
+                        if (verDirs != null) {
+                            for (File verDir : verDirs) {
+                                if (!verDir.isDirectory()) continue;
+                                String dirName = verDir.getName();
+
+                                // strip duplicated "type-" prefix if present
+                                String cleaned = dirName.toLowerCase()
+                                        .replace('_', '-');
+                                String dupPrefix = typeKey + "-";
+                                if (cleaned.startsWith(dupPrefix))
+                                    cleaned = cleaned.substring(dupPrefix.length());
+
+                                vers.add(cleaned);
+                            }
+                        }
+                        installed.put(typeKey, vers);
+                    }
+                }
+
+                /* ----------------------------------------------------------
+                 * 2.  Decide which asset bundles still need installing
+                 * ---------------------------------------------------------- */
+                String[] assetNames = getAssets().list("contents");
+                if (assetNames == null) assetNames = new String[0];
+
+                List<String> toInstall = new ArrayList<>();
+
+                for (String asset : assetNames) {
+                    if (!asset.endsWith(".wcp")) continue;
+
+                    String base = asset.substring(0, asset.length() - 4);   // strip ".wcp"
+                    int sep = Math.min(
+                            base.indexOf('-') == -1 ? Integer.MAX_VALUE : base.indexOf('-'),
+                            base.indexOf('_') == -1 ? Integer.MAX_VALUE : base.indexOf('_'));
+                    if (sep == Integer.MAX_VALUE) continue;                 // malformed
+
+                    String typeKey = base.substring(0, sep).toLowerCase();
+                    String verRaw  = base.substring(sep + 1);
+
+                    // normalise version string:
+                    //  - lower-case
+                    //  - '_' → '-'
+                    //  - optional leading 'v' removed for matching
+                    String verNorm = verRaw.toLowerCase().replace('_', '-');
+                    String verNoV  = verNorm.startsWith("v") ? verNorm.substring(1) : verNorm;
+
+                    Set<String> vers = installed.get(typeKey);
+                    boolean exists = false;
+                    if (vers != null) {
+                        for (String dir : vers) {
+                            // dir already lower-cased & '-' normalised
+                            if (dir.equals(verNorm)      ||
+                                    dir.equals(verNoV)        ||
+                                    dir.startsWith(verNorm + "-") ||
+                                    dir.startsWith(verNoV  + "-")) {
+                                exists = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!exists) toInstall.add(asset);
+                }
+
+                if (toInstall.isEmpty()) {
+                    if (onCompletion != null) runOnUiThread(onCompletion);
+                    return;
+                }
+
+                /* ----------------------------------------------------------
+                 * 3.  Install missing bundles
+                 * ---------------------------------------------------------- */
+                ContentsManager cm = new ContentsManager(this);
+                File tmpDir = new File(getCacheDir(), "wcp_asset_tmp");
+                if (!tmpDir.exists()) tmpDir.mkdirs();
+
+                for (String asset : toInstall) {
+
+                    if (!spinnerShown) {
+                        spinnerShown = true;
+                        runOnUiThread(() -> spinner.show(R.string.installing_contents));
+                    }
+
+                    File tmp = new File(tmpDir, asset);
+
+                    // 3a copy asset → tmp
+                    try (InputStream in  = getAssets().open("contents/" + asset);
+                         OutputStream out = new FileOutputStream(tmp)) {
+                        byte[] buf = new byte[8192];
+                        int n;
+                        while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+                    }
+
+                    // 3b two-stage install
+                    ContentsManager.OnInstallFinishedCallback cb =
+                            new ContentsManager.OnInstallFinishedCallback() {
+                                private boolean first = true;
+                                @Override public void onSucceed(ContentProfile p) {
+                                    if (first) { first = false; cm.finishInstallContent(p, this); }
+                                }
+                                @Override public void onFailed(ContentsManager.InstallFailedReason r,
+                                                               Exception e) {
+                                    Log.e("MainActivity","Install failed for "+asset+" : "+r,e);
+                                }
+                            };
+                    cm.extraContentFile(Uri.fromFile(tmp), cb);
+                    tmp.delete();
+                }
+
+            } catch (Exception e) {
+                Log.e("MainActivity", "Asset-content install error", e);
+            } finally {
+                final boolean shown = spinnerShown;        // effectively-final snapshot
+                runOnUiThread(() -> {
+                    if (shown) spinner.close();
+                    if (onCompletion != null) onCompletion.run();
+                });
+            }
+        });
     }
 
     private void showAllFilesAccessDialog() {
@@ -412,8 +587,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             String creditsAndThirdPartyAppsHTML = String.join("<br />",
                     "Winlator was created by Brunodev85 (<a href=\"https://github.com/brunodev85\">Git</a>)",
                     "Winlator Cmod by <a href=\"https://github.com/coffincolors/winlator\">coffincolors</a>, <a href=\"https://github.com/Pipetto-crypto/winlator\">Pipetto-crypto</a>",
-                    "Winlator Glibc by longjunyu2 (<a href=\"https://github.com/longjunyu2/winlator/tree/use-glibc-instead-of-proot\">Fork</a>)",
-                    "Winlator OpenXR by lvanosek (<a href=\"https://github.com/Ivanosek\">Fork</a>)",
+                    "Winlator Glibc by longjunyu2 (<a href=\"https://github.com/longjunyu2/winlator/\">Fork</a>)",
+                    "Winlator OpenXR by lvonasek (<a href=\"https://github.com/lvonasek\">Git</a>)",
                     "Big Picture Mode Music by Fumer",
                     "---",
                     "Ubuntu RootFs (<a href=\"https://releases.ubuntu.com/focal\">Focal Fossa</a>)",

@@ -16,6 +16,7 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
+import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -58,6 +59,15 @@ public class ShortcutSettingsDialog extends ContentDialog {
     private InputControlsManager inputControlsManager;
     private TextView tvGraphicsDriverVersion;
     private String box64Version;
+
+    private static final String[] MEDIACONV_ENV_VARS = {
+            "MEDIACONV_AUDIO_DUMP_FILE=/data/data/com.winlator.cmod/files/imagefs/home/xuser/audio.dmp",
+            "MEDIACONV_VIDEO_DUMP_FILE=/data/data/com.winlator.cmod/files/imagefs/home/xuser/video.dmp",
+            "MEDIACONV_VIDEO_TRANSCODED_FILE=/data/data/com.winlator.cmod/files/imagefs/home/xuser/transcoded.mkv",
+            "MEDIACONV_AUDIO_TRANSCODED_FILE=/data/data/com.winlator.cmod/files/imagefs/home/xuser/transcoded.wav",
+            "MEDIACONV_BLANK_AUDIO_FILE=/data/data/com.winlator.cmod/files/imagefs/home/xuser/blank.wav",
+            "MEDIACONV_BLANK_VIDEO_FILE=/data/data/com.winlator.cmod/files/imagefs/home/xuser/blank.mkv",
+    };
 
 
     public ShortcutSettingsDialog(ShortcutsFragment fragment, Shortcut shortcut) {
@@ -292,9 +302,27 @@ public class ShortcutSettingsDialog extends ContentDialog {
         boolean isXInputDisabled = shortcut.getExtra("disableXinput", "0").equals("1");
         cbDisabledXInput.setChecked(isXInputDisabled);
 
+        final Runnable showGStreamerWorkaroundWarning = () -> ContentDialog.alert(context, R.string.enable_gstreamer_workaround_alert, null);
+
+        final CheckBox cbGStreamerWorkaroundToggle = findViewById(R.id.CBGStreamerWorkaroundToggle);
+        String isGStreamerWorkaroundEnabled = shortcut.getExtra("gstreamerWorkaround", "0");
+        cbGStreamerWorkaroundToggle.setChecked(isGStreamerWorkaroundEnabled.equals("1") ? true : false);
+
+
+
+        cbGStreamerWorkaroundToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked && cbGStreamerWorkaroundToggle.isChecked())
+                showGStreamerWorkaroundWarning.run();
+        });
+
+
 //        final CheckBox cbRelativeMouseMovement = findViewById(R.id.CBRelativeMouseMovement);
 //        String isRelativeMouseMovement = shortcut.getExtra("relativeMouseMovement", shortcut.container.isRelativeMouseMovement() ? "1" : "0");
 //        cbRelativeMouseMovement.setChecked(isRelativeMouseMovement.equals("1") ? true : false);
+
+        final CheckBox cbSimTouchScreen = findViewById(R.id.CBTouchscreenMode);
+        String isTouchScreenMode = shortcut.getExtra("simTouchScreen");
+        cbSimTouchScreen.setChecked(isTouchScreenMode.equals("1") ? true : false);
 
         ContainerDetailFragment.createWinComponentsTabFromShortcut(this, getContentView(),
                 shortcut.getExtra("wincomponents", shortcut.container.getWinComponents()), isDarkMode);
@@ -331,10 +359,55 @@ public class ShortcutSettingsDialog extends ContentDialog {
         final Spinner sStartupSelection = findViewById(R.id.SStartupSelection);
         sStartupSelection.setSelection(Integer.parseInt(shortcut.getExtra("startupSelection", String.valueOf(shortcut.container.getStartupSelection()))));
 
+        final Spinner sSharpnessEffect = findViewById(R.id.SSharpnessEffect);
+        final SeekBar sbSharpnessLevel = findViewById(R.id.SBSharpnessLevel);
+        final SeekBar sbSharpnessDenoise = findViewById(R.id.SBSharpnessDenoise);
+        final TextView tvSharpnessLevel = findViewById(R.id.TVSharpnessLevel);
+        final TextView tvSharpnessDenoise = findViewById(R.id.TVSharpnessDenoise);
+
+        AppUtils.setSpinnerSelectionFromValue(sSharpnessEffect, shortcut.getExtra("sharpnessEffect", "None"));
+
+        sbSharpnessLevel.setProgress(Integer.parseInt(shortcut.getExtra("sharpnessLevel", "100")));
+        tvSharpnessLevel.setText(shortcut.getExtra("sharpnessLevel", "100") + "%");
+        sbSharpnessLevel.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                tvSharpnessLevel.setText(progress + "%");
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+        sbSharpnessDenoise.setProgress(Integer.parseInt(shortcut.getExtra("sharpnessDenoise", "100")));
+        tvSharpnessDenoise.setText(shortcut.getExtra("sharpnessDenoise", "100") + "%");
+        sbSharpnessDenoise.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                tvSharpnessDenoise.setText(progress + "%");
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+
         final CPUListView cpuListView = findViewById(R.id.CPUListView);
         cpuListView.setCheckedCPUList(shortcut.getExtra("cpuList", shortcut.container.getCPUList(true)));
-        final CPUListView cpuListViewWoW64 = findViewById(R.id.CPUListViewWoW64);
-        cpuListViewWoW64.setCheckedCPUList(shortcut.getExtra("cpuListWoW64", shortcut.container.getCPUListWoW64(true)));
+//        final CPUListView cpuListViewWoW64 = findViewById(R.id.CPUListViewWoW64);
+//        cpuListViewWoW64.setCheckedCPUList(shortcut.getExtra("cpuListWoW64", shortcut.container.getCPUListWoW64(true)));
 
         setOnConfirmCallback(() -> {
             String name = etName.getText().toString().trim();
@@ -374,6 +447,12 @@ public class ShortcutSettingsDialog extends ContentDialog {
 //                boolean relativeMouseMovement = cbRelativeMouseMovement.isChecked();
 //                shortcut.putExtra("relativeMouseMovement", relativeMouseMovement ? "1" : "0");
 
+                boolean gstreamerWorkaround = cbGStreamerWorkaroundToggle.isChecked();
+                shortcut.putExtra("gstreamerWorkaround", gstreamerWorkaround ? "1" : "0");
+
+                boolean touchscreenMode = cbSimTouchScreen.isChecked();
+                shortcut.putExtra("simTouchScreen", touchscreenMode ? "1" : "0");
+
                 String execArgs = etExecArgs.getText().toString();
                 shortcut.putExtra("execArgs", !execArgs.isEmpty() ? execArgs : null);
                 shortcut.putExtra("screenSize", !screenSize.equals(shortcut.container.getScreenSize()) ? screenSize : null);
@@ -402,7 +481,10 @@ public class ShortcutSettingsDialog extends ContentDialog {
                 String wincomponents = containerDetailFragment.getWinComponents(getContentView());
                 shortcut.putExtra("wincomponents", !wincomponents.equals(shortcut.container.getWinComponents()) ? wincomponents : null);
 
+
+
                 String envVars = envVarsView.getEnvVars();
+
                 shortcut.putExtra("envVars", !envVars.isEmpty() ? envVars : null);
 
                 String box64Preset = Box86_64PresetManager.getSpinnerSelectedId(sBox64Preset);
@@ -416,6 +498,13 @@ public class ShortcutSettingsDialog extends ContentDialog {
                 byte startupSelection = (byte)sStartupSelection.getSelectedItemPosition();
                 shortcut.putExtra("startupSelection", (startupSelection != shortcut.container.getStartupSelection()) ? String.valueOf(startupSelection) : null);
 
+                String sharpeningEffect = sSharpnessEffect.getSelectedItem().toString();
+                String sharpeningLevel = String.valueOf(sbSharpnessLevel.getProgress());
+                String sharpeningDenoise = String.valueOf(sbSharpnessDenoise.getProgress());
+                shortcut.putExtra("sharpnessEffect", sharpeningEffect);
+                shortcut.putExtra("sharpnessLevel", sharpeningLevel);
+                shortcut.putExtra("sharpnessDenoise", sharpeningDenoise);
+
                 ArrayList<ControlsProfile> profiles = inputControlsManager.getProfiles(true);
                 int controlsProfile = sControlsProfile.getSelectedItemPosition() > 0 ? profiles.get(sControlsProfile.getSelectedItemPosition() - 1).id : 0;
                 shortcut.putExtra("controlsProfile", controlsProfile > 0 ? String.valueOf(controlsProfile) : null);
@@ -423,8 +512,8 @@ public class ShortcutSettingsDialog extends ContentDialog {
                 String cpuList = cpuListView.getCheckedCPUListAsString();
                 shortcut.putExtra("cpuList", !cpuList.equals(shortcut.container.getCPUList(true)) ? cpuList : null);
 
-                String cpuListWoW64 = cpuListViewWoW64.getCheckedCPUListAsString();
-                shortcut.putExtra("cpuListWoW64", !cpuListWoW64.equals(shortcut.container.getCPUListWoW64(true)) ? cpuListWoW64 : null);
+//                String cpuListWoW64 = cpuListViewWoW64.getCheckedCPUListAsString();
+//                shortcut.putExtra("cpuListWoW64", !cpuListWoW64.equals(shortcut.container.getCPUListWoW64(true)) ? cpuListWoW64 : null);
 
                 // Save all changes to the shortcut
                 shortcut.saveData();

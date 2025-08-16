@@ -23,8 +23,10 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -52,6 +54,7 @@ import com.winlator.cmod.contentdialog.StorageInfoDialog;
 import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.PreloaderDialog;
+import com.winlator.cmod.inputcontrols.ControllerManager;
 import com.winlator.cmod.xenvironment.ImageFs;
 
 import java.io.File;
@@ -518,6 +521,70 @@ public class ContainersFragment extends Fragment {
         }
 
         private void runContainer(Container container) {
+            final Context context = getContext();
+            final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+            final String DONT_SHOW_KEY = "dont_show_controller_notice";
+
+            // 1. Check if the user has opted out of the warning
+            if (prefs.getBoolean(DONT_SHOW_KEY, false)) {
+                proceedWithLaunch(container);
+                return;
+            }
+
+            // 2. Check if any controllers are assigned
+            ControllerManager controllerManager = ControllerManager.getInstance();
+            boolean hasAssignedControllers = false;
+            for (int i = 0; i < 4; i++) {
+                // We only need to check if a device is assigned to any slot
+                if (controllerManager.getAssignedDeviceForSlot(i) != null) {
+                    hasAssignedControllers = true;
+                    break;
+                }
+            }
+
+            // 3. If controllers are already assigned, launch immediately
+            if (hasAssignedControllers) {
+                proceedWithLaunch(container);
+                return;
+            }
+
+            // 4. If no controllers are assigned and the notice is enabled, show the dialog
+            // Create a custom layout for the dialog programmatically
+            LinearLayout layout = new LinearLayout(context);
+            layout.setOrientation(LinearLayout.VERTICAL);
+            int padding = (int) (20 * getResources().getDisplayMetrics().density); // 20dp padding
+            layout.setPadding(padding, padding, padding, padding);
+
+            TextView messageView = new TextView(context);
+            messageView.setText("No controllers have been assigned. If you are using a physical controller, open the Controller Manager and assign it to a slot.");
+            messageView.setTextSize(16f);
+            layout.addView(messageView);
+
+            CheckBox checkbox = new CheckBox(context);
+            checkbox.setText("Don't show this again");
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            params.topMargin = padding; // Add margin to the top of the checkbox
+            checkbox.setLayoutParams(params);
+            layout.addView(checkbox);
+
+            new AlertDialog.Builder(context)
+                    .setTitle("Controller Notice")
+                    .setView(layout)
+                    .setPositiveButton("OK", (dialog, which) -> {
+                        // If the user checks the box, save the preference
+                        if (checkbox.isChecked()) {
+                            prefs.edit().putBoolean(DONT_SHOW_KEY, true).apply();
+                        }
+                        // Proceed with the launch after the user clicks OK
+                        proceedWithLaunch(container);
+                    })
+                    .setCancelable(false) // Prevent dismissing by tapping outside
+                    .show();
+        }
+        private void proceedWithLaunch(Container container) {
             final Context context = getContext();
 
             File box64File = new File(context.getFilesDir(), "imagefs/usr/bin/box64");

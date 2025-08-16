@@ -205,21 +205,29 @@ public class ContainerManager {
 
     public ArrayList<Shortcut> loadShortcuts() {
         ArrayList<Shortcut> shortcuts = new ArrayList<>();
+
         for (Container container : containers) {
             File desktopDir = container.getDesktopDir();
-            ArrayList<File> files = new ArrayList<>();
-            if (desktopDir.exists())
-                files.addAll(Arrays.asList(desktopDir.listFiles()));
-            if (files != null) {
-                for (File file : files) {
-                    if (file.getName().endsWith(".desktop")) shortcuts.add(new Shortcut(container, file));
+            File[] list = (desktopDir.exists() ? desktopDir.listFiles() : null);
+            if (list == null) continue;
+
+            for (File file : list) {
+                if (!file.getName().toLowerCase().endsWith(".desktop")) continue;
+
+                try {
+                    shortcuts.add(new Shortcut(container, file));
+                } catch (Exception ex) {
+                    Log.w("ContainerManager",
+                            "Skipping malformed shortcut: " + file.getAbsolutePath(), ex);
+                    // TODO: move the bad file to a “quarantine” folder or delete it
                 }
             }
         }
 
-        shortcuts.sort(Comparator.comparing(a -> a.name));
+        shortcuts.sort(Comparator.comparing(a -> a.name, String::compareToIgnoreCase));
         return shortcuts;
     }
+
 
     public int getNextContainerId() {
         return maxContainerId + 1;

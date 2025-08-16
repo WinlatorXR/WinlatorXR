@@ -102,6 +102,7 @@ public class ControlsEditorActivity extends AppCompatActivity implements View.On
             }
             else if (type == ControlElement.Type.RANGE_BUTTON) {
                 view.findViewById(R.id.LLRangeOptions).setVisibility(View.VISIBLE);
+                view.findViewById(R.id.CBToggleSwitch).setVisibility(View.VISIBLE);
             }
 
             loadBindingSpinners(element, view);

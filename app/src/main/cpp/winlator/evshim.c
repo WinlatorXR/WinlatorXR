@@ -1,4 +1,7 @@
-/* ─────────── evshim.c (Multi-Controller Foundation) ─────────── */
+/* NOTE: This class is compiled but unused here. Though it can be used for arm64ec based containers, it is now included in the imagefs.txz */
+/* You can choose to preload this from the native lib dir in the apk, via BionicProgramLauncherComponent. But if you do, the architecture */
+/* may not work with x86_64 Wine based containers without additional patches to link related binaries to the imageFs libSDL2 and it's symlinks */
+/* ─────────── evshim.c (Multi-Controller & Dynamic SDL) ─────────── */
 
 #define _GNU_SOURCE
 #include <dlfcn.h>
@@ -9,263 +12,279 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <SDL.h>
-#include <sys/mman.h>
+#include <SDL2/SDL.h>
+#include <stdarg.h>
 
-#if defined(__GNUC__) || defined(__clang__)
-#define memory_barrier() __sync_synchronize()
-#else
-#define memory_barrier()
-#endif
+static int g_debug_enabled = 0;
 
-#ifdef __ANDROID__
-#include <android/log.h>
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO , "EVSHIM_GUEST", __VA_ARGS__)
-#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, "EVSHIM_GUEST", __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, "EVSHIM_GUEST", __VA_ARGS__)
-#endif
+#define LOGI(...) dprintf(STDOUT_FILENO, __VA_ARGS__)
+#define LOGE(...) dprintf(STDERR_FILENO, __VA_ARGS__)
+#define LOGD(...) do { if (g_debug_enabled) dprintf(STDOUT_FILENO, __VA_ARGS__); } while (0)
 
 #define MAX_GAMEPADS 4
+static int vjoy_ids[MAX_GAMEPADS] = {-1};
+static int read_fd  [MAX_GAMEPADS] = {-1};
+static int rumble_fd[MAX_GAMEPADS] = {-1};
+static void *handle = NULL;
+static pthread_mutex_t shm_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct gamepad_io {
     int16_t lx, ly, rx, ry, lt, rt;
     uint8_t btn[15];
     uint8_t hat;
-    uint8_t _padding[4]; // Pad to 32 bytes for input section
+    uint8_t _padding[4];
     uint16_t low_freq_rumble;
     uint16_t high_freq_rumble;
 };
 
+static int (*p_SDL_Init)(uint32_t flags);
+static const char * (*p_SDL_GetError)(void);
+static SDL_Joystick * (*p_SDL_JoystickOpen)(int device_index);
+static int (*p_SDL_JoystickAttachVirtualEx)(const SDL_VirtualJoystickDesc *desc);
+static int (*p_SDL_JoystickSetVirtualAxis)(SDL_Joystick *joystick, int axis, int16_t value);
+static int (*p_SDL_JoystickSetVirtualButton)(SDL_Joystick *joystick, int button, uint8_t value);
+static int (*p_SDL_JoystickSetVirtualHat)(SDL_Joystick *joystick, int hat, uint8_t value);
+static void (*p_SDL_PumpEvents)(void);
+static void (*p_SDL_Delay)(uint32_t ms);
+static void (*p_SDL_GetVersion)(SDL_version *);
 
-// --- Arrays to hold data for each controller ---
-static volatile struct gamepad_io *io_pads[MAX_GAMEPADS] = {NULL};
-static int vjoy_ids[MAX_GAMEPADS] = {-1};
 
-// Rumble callback to know WHICH controller to vibrate
-static int OnRumble(void *userdata, uint16_t low_frequency_rumble, uint16_t high_frequency_rumble) {
-    int player_index = (int)(intptr_t)userdata;
-    if (player_index < 0 || player_index >= MAX_GAMEPADS || !io_pads[player_index]) return -1;
+#define GETFUNCPTR(name)\
+do {\
+	if (!(p_##name = (typeof(p_##name))dlsym(handle, #name))) {\
+        LOGE("Failed to load SDL symbol, %s\n", #name);\
+    }\
+} while (0)
 
-    io_pads[player_index]->low_freq_rumble = low_frequency_rumble;
-    io_pads[player_index]->high_freq_rumble = high_frequency_rumble;
+static int OnRumble(void *userdata,
+                    uint16_t low_frequency_rumble,
+                    uint16_t high_frequency_rumble)
+{
+    int idx = (int)(intptr_t)userdata;
+    if (idx < 0 || idx >= MAX_GAMEPADS || rumble_fd[idx] < 0) return -1;
 
-    LOGD("Rumble P%d: Low=%u, High=%u", player_index, low_frequency_rumble, high_frequency_rumble);
+    uint16_t vals[2] = { low_frequency_rumble, high_frequency_rumble };
+
+    pthread_mutex_lock(&shm_mutex);             /* NEW */
+    ssize_t w = pwrite(rumble_fd[idx], vals, sizeof(vals), 32);
+    pthread_mutex_unlock(&shm_mutex);           /* NEW */
+
+    if (w != (ssize_t)sizeof(vals))
+        LOGE("Rumble write failed (P%d): %s\n", idx, strerror(errno));
+
+    LOGD("Rumble P%d  low=%u  high=%u\n", idx,
+         low_frequency_rumble, high_frequency_rumble);
     return 0;
 }
 
-// The updater thread now takes a player index to know which controller to manage
-void *vjoy_updater(void *arg) {
-    int player_index = (int)(intptr_t)arg;
-    SDL_Joystick *js = SDL_JoystickOpen(vjoy_ids[player_index]);
-    volatile struct gamepad_io *shared_pad = io_pads[player_index];
 
-    if (!js || !shared_pad) { /* ... error handling ... */ }
 
-    // Create a local struct to hold the last sent state
-    struct gamepad_io last_state;
-    memset(&last_state, 0, sizeof(struct gamepad_io));
-
-    LOGI(">>> VJOY UPDATER for Player %d is LIVE in PID %d <<<", player_index, getpid());
-
-    while (1) {
-        memory_barrier(); // Ensure we read the latest from shared memory
-
-        // Compare the current shared memory state with the last state we sent
-        if (memcmp((void*)shared_pad, &last_state, sizeof(struct gamepad_io)) != 0) {
-            // Data has changed! Update the virtual joystick.
-            LOGD("P%d State Changed. Updating vjoy.", player_index);
-
-            SDL_JoystickSetVirtualAxis(js, 0, shared_pad->lx);
-            SDL_JoystickSetVirtualAxis(js, 1, shared_pad->ly);
-            SDL_JoystickSetVirtualAxis(js, 2, shared_pad->rx);
-            SDL_JoystickSetVirtualAxis(js, 3, shared_pad->ry);
-            SDL_JoystickSetVirtualAxis(js, 4, shared_pad->lt);
-            SDL_JoystickSetVirtualAxis(js, 5, shared_pad->rt);
-            for (int i = 0; i < 15; ++i) {
-                SDL_JoystickSetVirtualButton(js, i, shared_pad->btn[i]);
-            }
-            SDL_JoystickSetVirtualHat(js, 0, shared_pad->hat);
-
-            // Update our local copy to reflect the new state
-            memcpy(&last_state, (void*)shared_pad, sizeof(struct gamepad_io));
-        }
-
-        SDL_PumpEvents(); // Still need to pump events regardless
-        SDL_Delay(5);     // A short delay is still good practice
+static void *event_pump_thread(void *arg) {
+    for (;;) {
+        p_SDL_PumpEvents();
+        p_SDL_Delay(5);
     }
     return NULL;
 }
 
-// The constructor now creates all controllers in a loop
+static void *vjoy_updater(void *arg)
+{
+    int idx = (int)(intptr_t)arg;
+
+    int fd = read_fd[idx];
+    if (fd < 0) {
+        LOGE("P%d: read_fd not initialised – aborting thread\n", idx);
+        return NULL;
+    }
+
+    SDL_Joystick *js = p_SDL_JoystickOpen(vjoy_ids[idx]);
+    if (!js) {
+        LOGE("P%d: SDL_JoystickOpen failed\n", idx);
+        return NULL;
+    }
+
+    struct gamepad_io cur, last_state = {0};
+
+    LOGI("VJOY UPDATER P%d running (PID %d)\n", idx, getpid());
+
+    for (;;) {
+        pthread_mutex_lock(&shm_mutex);
+
+        ssize_t n = read(fd, &cur, sizeof cur);
+
+        if (n == sizeof cur && memcmp(&cur, &last_state, sizeof cur) != 0) {
+
+            p_SDL_JoystickSetVirtualAxis (js, 0, cur.lx);
+            p_SDL_JoystickSetVirtualAxis (js, 1, cur.ly);
+            p_SDL_JoystickSetVirtualAxis (js, 2, cur.rx);
+            p_SDL_JoystickSetVirtualAxis (js, 3, cur.ry);
+            p_SDL_JoystickSetVirtualAxis (js, 4, cur.lt);
+            p_SDL_JoystickSetVirtualAxis (js, 5, cur.rt);
+
+            for (int i = 0; i < 15; ++i)
+                p_SDL_JoystickSetVirtualButton(js, i, cur.btn[i]);
+
+            p_SDL_JoystickSetVirtualHat(js, 0, cur.hat);
+
+            last_state = cur;
+        }
+        else if (n < 0) {
+            LOGE("P%d: read error: %s\n", idx, strerror(errno));
+        }
+
+        pthread_mutex_unlock(&shm_mutex);
+
+        p_SDL_Delay(5);
+    }
+
+    return NULL;
+}
+
 __attribute__((constructor))
-static void initialize_all_pads() {
-    LOGI("EVSHIM Initializing for Multi-Controller support...");
+static void initialize_all_pads(void)
+{
+    const char *dbg = getenv("EVSHIM_DEBUG");
+    g_debug_enabled = dbg && strchr("1yY", *dbg);
 
-    if (SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC) < 0) {
-        LOGE("SDL_Init failed: %s", SDL_GetError());
-        return;
-    }
+    LOGI("EVSHIM initializing…\n");
 
-    const char* max_players_str = getenv("EVSHIM_MAX_PLAYERS");
-    int num_players = max_players_str ? atoi(max_players_str) : 1;
-    if (num_players > MAX_GAMEPADS) num_players = MAX_GAMEPADS;
+    handle = dlopen("libSDL2-2.0.so.0", RTLD_LAZY | RTLD_GLOBAL);
+    if (!handle) { LOGE("dlopen SDL failed: %s\n", dlerror()); return; }
 
-    for (int i = 0; i < num_players; i++) {
-        char mem_path[256];
-        if (i == 0) {
-            // Player 1 looks for the original, non-numbered path.
-            snprintf(mem_path, sizeof(mem_path), "/data/data/com.winlator.cmod/files/imagefs/tmp/gamepad.mem");
-        } else {
-            // Players 2, 3, 4 look for the numbered path.
-            snprintf(mem_path, sizeof(mem_path), "/data/data/com.winlator.cmod/files/imagefs/tmp/gamepad%d.mem", i);
-        }
+    GETFUNCPTR(SDL_Init);  GETFUNCPTR(SDL_GetError);
+    GETFUNCPTR(SDL_JoystickOpen);  GETFUNCPTR(SDL_JoystickAttachVirtualEx);
+    GETFUNCPTR(SDL_JoystickSetVirtualAxis);  GETFUNCPTR(SDL_JoystickSetVirtualButton);
+    GETFUNCPTR(SDL_JoystickSetVirtualHat);   GETFUNCPTR(SDL_PumpEvents);
+    GETFUNCPTR(SDL_Delay);  GETFUNCPTR(SDL_GetVersion);
 
-        int fd = open(mem_path, O_RDWR);
-        if (fd < 0) {
-            LOGE("P%d: Failed to open memory file '%s': %s", i, mem_path, strerror(errno));
+    p_SDL_Init(SDL_INIT_JOYSTICK);
+
+    SDL_version v; p_SDL_GetVersion(&v);
+    LOGI("SDL %d.%d.%d bound\n", v.major, v.minor, v.patch);
+
+    int players = getenv("EVSHIM_MAX_PLAYERS") ? atoi(getenv("EVSHIM_MAX_PLAYERS")) : 1;
+    if (players > MAX_GAMEPADS) players = MAX_GAMEPADS;
+
+
+    /* per-player setup */
+    for (int i = 0; i < players; ++i) {
+
+        char path[256];
+        snprintf(path, sizeof path,
+                 "/data/data/com.winlator.cmod/files/imagefs/tmp/gamepad%s.mem",
+                 (i == 0) ? "" : (char[2]){'0' + i, '\0'});
+
+        /* open once – store for reader + writer */
+        read_fd  [i] = open(path, O_RDONLY);
+        rumble_fd[i] = open(path, O_WRONLY);
+
+        if (read_fd[i]  < 0 || rumble_fd[i] < 0) {
+            LOGE("P%d: failed to open shared file '%s': %s\n", i, path, strerror(errno));
+            if (read_fd[i]  >= 0) close(read_fd[i]);
+            if (rumble_fd[i] >= 0) close(rumble_fd[i]);
+            read_fd[i] = rumble_fd[i] = -1;
             continue;
         }
 
-        io_pads[i] = (volatile struct gamepad_io*) mmap(NULL, sizeof(struct gamepad_io), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-        close(fd);
+        /* SDL virtual device */
+        SDL_VirtualJoystickDesc d = {0};
+        d.version = SDL_VIRTUAL_JOYSTICK_DESC_VERSION;
+        d.type    = SDL_JOYSTICK_TYPE_GAMECONTROLLER;
+        d.naxes   = 6; d.nbuttons = 15; d.nhats = 1;
+        d.Rumble  = &OnRumble;  d.userdata = (void*)(intptr_t)i;
 
-        if (io_pads[i] == MAP_FAILED) {
-            LOGE("P%d: mmap failed for file '%s': %s", i, mem_path, strerror(errno));
-            io_pads[i] = NULL;
-            continue;
-        }
+        char name[64];
+        snprintf(name, sizeof name, (i < 2) ? "B (Player %d)" : "A (Player %d)", i + 1);
+        d.name = strdup(name);
 
-        SDL_VirtualJoystickDesc desc;
-        SDL_zero(desc);
-        desc.version = SDL_VIRTUAL_JOYSTICK_DESC_VERSION;
-        // All controllers are the proper GameController type.
-        desc.type = SDL_JOYSTICK_TYPE_GAMECONTROLLER;
-        desc.naxes = 6;
-        desc.nbuttons = 15;
-        desc.nhats = 1;
-
-        char device_name[64];
-
-        // --- The empirically-proven "B/A" Naming Scheme ---
-        // This is the only known naming that produces the correct 1,2,3,4 controller order.
-        if (i < 2) {
-            snprintf(device_name, sizeof(device_name), "B (Player %d)", i + 1);
-        } else {
-            snprintf(device_name, sizeof(device_name), "A (Player %d)", i + 1);
-        }
-        // --- End of Naming Scheme ---
-
-        desc.name = device_name;
-
-        // All controllers get rumble.
-        desc.Rumble = &OnRumble;
-        desc.userdata = (void*)(intptr_t)i;
-
-        vjoy_ids[i] = SDL_JoystickAttachVirtualEx(&desc);
+        vjoy_ids[i] = p_SDL_JoystickAttachVirtualEx(&d);
         if (vjoy_ids[i] < 0) {
-            LOGE("P%d: Failed to attach virtual joystick: %s", i, SDL_GetError());
+            LOGE("P%d: SDL attach failed: %s\n", i, p_SDL_GetError());
+            close(read_fd[i]);   read_fd[i]   = -1;
+            close(rumble_fd[i]); rumble_fd[i] = -1;
             continue;
         }
+        LOGD("P%d: virtual joystick id=%d ready\n", i, vjoy_ids[i]);
 
-        LOGD("P%d: Successfully created vjoy instance (id=%d)", i, vjoy_ids[i]);
-
-        pthread_t th;
-        pthread_create(&th, NULL, vjoy_updater, (void*)(intptr_t)i);
-        pthread_detach(th);
+        pthread_t up_tid;
+        pthread_create(&up_tid, NULL, vjoy_updater, (void*)(intptr_t)i);
+        pthread_detach(up_tid);
     }
-
-
 }
 
 /* ------------  “hide /dev/input/event*” hooks  -------------------- */
-#define _GNU_SOURCE
-#include <dlfcn.h>
-#include <fcntl.h>
-#include <stdarg.h>
-#include <unistd.h>
-#include <linux/input.h>
-#include <sys/ioctl.h>   /* declares the bionic-inline ioctl */
-#include <errno.h>
-#include <string.h>
-
-#undef ioctl             /* drop the inline version so we can replace it */
+#undef ioctl
 
 static inline int is_event_node(const char *p)
 { return p && !strncmp(p, "/dev/input/event", 16); }
 
-/* ---------- open()/open64() hooks ----------------------------------- */
 typedef int (*open_f)(const char *, int, ...);
 static open_f real_open;
 
 static int open_common(const char *path, int flags, va_list ap)
 {
     if (is_event_node(path)) { errno = ENOENT; return -1; }
-
     if (!real_open) real_open = (open_f)dlsym(RTLD_NEXT, "open");
-
     mode_t mode = 0;
     if (flags & O_CREAT) mode = va_arg(ap, mode_t);
     return real_open(path, flags, mode);
 }
 
-int open(const char *path, int flags, ...)
-__attribute__((visibility("default")));
+int open(const char *path, int flags, ...) __attribute__((visibility("default")));
 int open(const char *path, int flags, ...)
 {
-    va_list ap; va_start(ap, flags);
+    va_list ap;
+    va_start(ap, flags);
     int r = open_common(path, flags, ap);
-    va_end(ap); return r;
+    va_end(ap);
+    return r;
 }
 
-int open64(const char *path, int flags, ...)
-__attribute__((visibility("default")));
+int open64(const char *path, int flags, ...) __attribute__((visibility("default")));
 int open64(const char *path, int flags, ...)
 {
-    va_list ap; va_start(ap, flags);
+    va_list ap;
+    va_start(ap, flags);
     int r = open_common(path, flags, ap);
-    va_end(ap); return r;
+    va_end(ap);
+    return r;
 }
 
-/* ---------------- ioctl wrapper ------------------- */
 typedef int (*ioctl_f)(int, int, ...);
 static ioctl_f real_ioctl;
 
-__attribute__((visibility("default")))
+int ioctl(int fd, int req, ...) __attribute__((visibility("default")));
 int ioctl(int fd, int req, ...)
 {
-    if (!real_ioctl)
-        real_ioctl = (ioctl_f)dlsym(RTLD_NEXT, "ioctl");
-
-    /* reject any ioctl on /dev/input/event* ----------------------- */
+    if (!real_ioctl) real_ioctl = (ioctl_f)dlsym(RTLD_NEXT, "ioctl");
     char linkbuf[64], path[64];
     snprintf(linkbuf, sizeof linkbuf, "/proc/self/fd/%d", fd);
     ssize_t n = readlink(linkbuf, path, sizeof path - 1);
-    if (n > 0) { path[n] = 0;
+    if (n > 0) {
+        path[n] = 0;
         if (is_event_node(path)) { errno = ENOTTY; return -1; }
     }
-
-    va_list ap; va_start(ap, req);
+    va_list ap;
+    va_start(ap, req);
     void *arg = va_arg(ap, void *);
     va_end(ap);
     return real_ioctl(fd, req, arg);
 }
 
-
-/* ---------- read() hook (optional) ---------------------------------- */
 typedef ssize_t (*read_f)(int, void *, size_t);
 static read_f real_read;
 
-ssize_t read(int fd, void *buf, size_t count)
-__attribute__((visibility("default")));
+ssize_t read(int fd, void *buf, size_t count) __attribute__((visibility("default")));
 ssize_t read(int fd, void *buf, size_t count)
 {
     if (!real_read) real_read = (read_f)dlsym(RTLD_NEXT, "read");
-
     char linkbuf[64], path[64];
     snprintf(linkbuf, sizeof(linkbuf), "/proc/self/fd/%d", fd);
     ssize_t n = readlink(linkbuf, path, sizeof(path) - 1);
-    if (n > 0) { path[n] = 0; if (is_event_node(path)) { errno = EAGAIN; return -1; } }
-
+    if (n > 0) {
+        path[n] = 0;
+        if (is_event_node(path)) { errno = EAGAIN; return -1; }
+    }
     return real_read(fd, buf, count);
 }
 /* --------------------------------------------------------------------- */

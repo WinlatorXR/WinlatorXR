@@ -48,6 +48,30 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:id="@+id/SGraphicsDriverMaxDeviceMemory"
+            android:entries="@array/device_memory_entries"
             android:spinnerMode="dialog"/>
+
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/graphics_driver_frame_sync"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:paddingBottom="8dp"/>
+
+        <Spinner
+            style="@style/ComboBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/SGraphicsDriverFrameSync"
+            android:entries="@array/frame_sync_entries"
+            android:spinnerMode="dialog"/>
+
+        <CheckBox
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/CBAdrenotoolsTurnip"
+            android:checked="true"
+            android:text="@string/graphics_driver_adrenotools_turnip" />
     </LinearLayout>
 </ScrollView>

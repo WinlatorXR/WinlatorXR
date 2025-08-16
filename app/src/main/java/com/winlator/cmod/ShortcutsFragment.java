@@ -362,14 +362,62 @@ public class ShortcutsFragment extends Fragment {
         fileObservers.clear();
     }
     public void loadShortcutsList() {
-        ArrayList<Shortcut> shortcuts = manager.loadShortcuts();
 
-        // Validate and remove corrupted shortcuts
-        shortcuts.removeIf(shortcut -> shortcut == null || shortcut.file == null || shortcut.file.getName().isEmpty());
+        ArrayList<Shortcut> shortcuts = new ArrayList<>();
+        ArrayList<File> quarantined   = new ArrayList<>();
+
+        // ContainerManager can still throw (e.g. I/O permission issues).
+        // Keep the whole call in one try/catch so the UI never dies.
+        try {
+            for (Container c : manager.getContainers()) {
+                for (File f : c.getDesktopDir().listFiles((dir, n) -> n.endsWith(".desktop"))) {
+                    try {
+                        Shortcut s = new Shortcut(c, f);   // may throw
+                        // very cheap logical sanity check
+                        if (s.name == null || s.name.trim().isEmpty()) {
+                            throw new IllegalStateException("empty name");
+                        }
+                        shortcuts.add(s);
+
+                    } catch (Throwable t) {               // <-- swallow & quarantine
+                        Log.e("ShortcutsFragment", "Bad shortcut: " + f.getAbsolutePath(), t);
+                        quarantined.add(f);
+                    }
+                }
+            }
+
+        } catch (Throwable fatal) {
+            Log.e("ShortcutsFragment", "Fatal error while scanning shortcuts!", fatal);
+            Toast.makeText(getContext(),
+                    "Couldn’t load shortcuts (see log).", Toast.LENGTH_LONG).show();
+        }
+
+        // ---- UI update ----
+        Collections.sort(shortcuts, (a, b) -> {
+            if (a == null || b == null) return 0;
+            String an = a.name == null ? "" : a.name;
+            String bn = b.name == null ? "" : b.name;
+            return an.compareToIgnoreCase(bn);
+        });
 
         recyclerView.setAdapter(new ShortcutsAdapter(shortcuts));
-        if (shortcuts.isEmpty()) emptyTextView.setVisibility(View.VISIBLE);
-        else emptyTextView.setVisibility(View.GONE); // Ensure the empty text view is hidden if there are shortcuts
+        emptyTextView.setVisibility(shortcuts.isEmpty() ? View.VISIBLE : View.GONE);
+
+        // ---- quarantine report ----
+        if (!quarantined.isEmpty()) {
+            Toast.makeText(getContext(),
+                    quarantined.size() + " shortcut(s) ignored (corrupted):",
+                    Toast.LENGTH_LONG).show();
+
+            // Move them out of the way so the crash never happens again.
+            for (File bad : quarantined) {
+                File dst = new File(bad.getParent(), bad.getName() + ".bad");
+                Toast.makeText(getContext(), bad.getName() + " renamed to " + dst.getName(), Toast.LENGTH_LONG).show();
+                // ignore return value – it’s a best-effort quarantine
+                //noinspection ResultOfMethodCallIgnored
+                bad.renameTo(dst);
+            }
+        }
     }
 
 
@@ -602,9 +650,9 @@ public class ShortcutsFragment extends Fragment {
 
             // Check for FRONTEND_INSTRUCTIONS.txt
             File instructionsFile = new File(frontendDir, "FRONTEND_INSTRUCTIONS.txt");
-            if (!instructionsFile.exists()) {
+            if (true) {
                 try (FileWriter writer = new FileWriter(instructionsFile, false)) {
-                    writer.write("Instructions for adding Winlator shortcuts to Frontends (WIP):\n\n");
+                    writer.write("Instructions for adding Winlator shortcuts to Frontends:\n\n");
                     writer.write("Daijisho:\n\n");
                     writer.write("1. Open Daijisho\n");
                     writer.write("2. Navigate to the Settings tab.\n");
@@ -625,7 +673,7 @@ public class ShortcutsFragment extends Fragment {
                     writer.write("Expand Advanced:\n");
                     writer.write("File handling: Default\n");
                     writer.write("Use custom launch: True\n");
-                    writer.write("am start command: am start -n " + getContext().getPackageName() + "/com.winlator.cmod.XServerDisplayActivity -e shortcut_path {file_path}\n\n");
+                    writer.write("am start command: am start -n " + "com.winlator.cmod/com.winlator.cmod.XServerDisplayActivity -e shortcut_path {file_path}\n\n");
                     writer.write("4. Click Save\n");
                     writer.write("5. Scan the folder for your game\n");
                     writer.write("6. Launch your game!\n");
@@ -643,7 +691,7 @@ public class ShortcutsFragment extends Fragment {
                 writer.write("shortname: windows\n");
                 writer.write("extensions: desktop\n");
                 writer.write("launch: am start\n");
-                writer.write("  -n " + getContext().getPackageName() + "/.XServerDisplayActivity\n");
+                writer.write("  -n " + "com.winlator.cmod/com.winlator.cmod.XServerDisplayActivity\n");
                 writer.write("  -e shortcut_path {file.path}\n");
                 writer.write("  --activity-clear-task\n");
                 writer.write("  --activity-clear-top\n");
@@ -667,9 +715,9 @@ public class ShortcutsFragment extends Fragment {
                 try (BufferedReader reader = new BufferedReader(new FileReader(shortcut.file))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        if (line.startsWith("container_id:")) {
+                        if (line.startsWith("container_id=")) {
                             // Replace the existing container_id line
-                            lines.add("container_id:" + shortcut.container.id);
+                            lines.add("container_id=" + shortcut.container.id);
                             containerIdFound = true;
                         } else {
                             lines.add(line);
@@ -679,7 +727,7 @@ public class ShortcutsFragment extends Fragment {
 
                 // If no container_id was found, add it
                 if (!containerIdFound) {
-                    lines.add("container_id:" + shortcut.container.id);
+                    lines.add("container_id=" + shortcut.container.id);
                 }
 
                 // Write the contents to the export file
@@ -781,17 +829,31 @@ public class ShortcutsFragment extends Fragment {
         } catch (Exception e) {}
     }
 
-    public void updateShortcutOnScreen(String shortLabel, String longLabel, int containerId, String shortcutPath, Icon icon, String uuid) {
-        ShortcutManager shortcutManager = getSystemService(requireContext(), ShortcutManager.class);
-        try {
-            for (ShortcutInfo shortcutInfo : shortcutManager.getPinnedShortcuts()) {
-                if (shortcutInfo.getId().equals(uuid)) {
-                    shortcutManager.updateShortcuts(Collections.singletonList(
-                            buildScreenShortCut(shortLabel, longLabel, containerId, shortcutPath, icon, uuid)));
-                    break;
-                }
+    public void updateShortcutOnScreen(String shortLabel,
+                                       String longLabel,
+                                       int    containerId,
+                                       String shortcutPath,
+                                       Icon   icon,
+                                       String uuid) {
+
+        ShortcutManager sm =
+                androidx.core.content.ContextCompat.getSystemService(
+                        requireContext(), ShortcutManager.class);
+
+        if (sm == null) {                    // ⇦ grace-fully bail out on devices
+            Log.w("ShortcutsFragment",       //    that don’t expose ShortcutManager
+                    "ShortcutManager not available; cannot update pinned shortcut");
+            return;
+        }
+
+        for (ShortcutInfo info : sm.getPinnedShortcuts()) {
+            if (uuid.equals(info.getId())) {
+                sm.updateShortcuts(Collections.singletonList(
+                        buildScreenShortCut(shortLabel, longLabel,
+                                containerId, shortcutPath, icon, uuid)));
+                break;
             }
-        } catch (Exception e) {}
+        }
     }
 
     private static boolean safeDelete(@Nullable File f) {

@@ -480,6 +480,16 @@
                         android:layout_height="wrap_content"
                         android:text="@string/enable_box86_64_logs"
                         android:layout_marginTop="8dp" />
+
+                    <View style="@style/FieldSeparator" />
+
+                    <CheckBox
+                        android:id="@+id/CBEnablePebLogs"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8.0dip"
+                        android:text="@string/enable_peb_logs" />
+
                 </LinearLayout>
 
                 <TextView

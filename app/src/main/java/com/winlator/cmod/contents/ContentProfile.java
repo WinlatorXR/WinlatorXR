@@ -16,9 +16,14 @@ public class ContentProfile {
     public static final String MARK_WINE_BINPATH = "binPath";
     public static final String MARK_WINE_LIBPATH = "libPath";
     public static final String MARK_WINE_PREFIX_PACK = "prefixPack";
+    public static final String MARK_PROTON = "proton";
+    public static final String MARK_PROTON_BINPATH = "binPath";
+    public static final String MARK_PROTON_LIBPATH = "libPath";
+    public static final String MARK_PROTON_PREFIX_PACK = "prefixPack";
 
     public enum ContentType {
         CONTENT_TYPE_WINE("Wine"),
+        CONTENT_TYPE_PROTON("Proton"),
         CONTENT_TYPE_DXVK("DXVK"),
         CONTENT_TYPE_VKD3D("VKD3D"),
         CONTENT_TYPE_BOX64("Box64"),
@@ -58,5 +63,9 @@ public class ContentProfile {
     public String wineLibPath;
     public String wineBinPath;
     public String winePrefixPack;
+    public String protonLibPath;
+
+    public String protonBinPath;
+    public String protonPrefixPack;
     public String remoteUrl;
 }

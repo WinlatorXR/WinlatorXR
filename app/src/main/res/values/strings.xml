@@ -465,7 +465,7 @@
     <string name="help_steamgrid">SteamGrid API Key</string>
     <string name="disable_xinput_for_shortcut">Disable Xinput (For Exclusive M/KB Control)</string>
     <string name="fullscreen_stretched">Ignore Aspect Ratio (Fullscreen Stretched)</string>
-    <string name="export_container">Export Container</string>
+    <string name="export_container">Backup Container</string>
     <string name="exporting_container">Exporting Container...</string>
     <string name="importing_container">Importing Container...</string>
 
@@ -691,6 +691,29 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="right_stick">Right stick</string>
     <string name="left_stick">Left stick</string>
     <string name="enable_stick_gyro">Enable Analog Stick Gyroscopic Motion</string>
+
+    <string name="graphics_driver_adrenotools_turnip">Use Adrenotools Turnip</string>
+    <string name="graphics_driver_frame_sync">Frame Synchronization</string>
+    <string name="vkbasalt">vkBasalt</string>
+    <string name="vkbasalt_sharpness_effects">Sharpness Effect</string>
+    <string name="vkbasalt_sharpness_level">Sharpness Level</string>
+    <string name="vkbasalt_sharpness_denoise">Sharpeness Denoise</string>
+    <string name="enable_peb_logs">Log Windows PEB Data</string>
+    <string name="enable_gstreamer_workaround">Enable GStreamer Video Decoder Workaround</string>
+    <string name="enable_gstreamer_workaround_alert">Enabling this option will add environmental variables to this container\'s configuration that could impact your ability to launch games. Do not enable this unless you are certain the issue is specific to in-game video playback.</string>
+    <string name="workarounds">Workarounds</string>
+    <string name="system_update_warning">
+    A mandatory update to the system files is needed to ensure compatibility and stability.&lt;br/&gt;&lt;br/&gt;
+    &lt;b&gt;Important:&lt;/b&gt; After the update, your existing containers WILL will have issues. It is STRONGLY recommended to create a new container and migrate your data (See below)&lt;br/&gt;&lt;br/&gt;
+    &lt;b&gt;Migrating Data with Saves Manager:&lt;/b&gt;&lt;br/&gt;
+    Use the Saves Manager from the main menu. Register your saves from the old container by navigating and selecting its containing folder, then use the pop-up menu on each registered Save to Transfer (copy) it to the new container. You may also select the AppData directory, and backup an entire container\'s data to another.&lt;br/&gt;&lt;br/&gt;
+    &lt;b&gt;Migrating Shortcuts:&lt;/b&gt;&lt;br/&gt;
+    While you can duplicate shortcuts via their pop-up menu, it is advised to recreate them manually from inside your new container to prevent issues with mismatched drive paths.
+</string>    <string name="installing_contents">Installing contents...</string>
+    <string name="renderer">Renderer</string>
+    <string name="gl">gl</string>
+    <string name="vulkan">vulkan</string>
+    <string name="gdi">gdi</string>
 
 
 </resources>

@@ -22,6 +22,7 @@ import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.core.Callback;
 import com.winlator.cmod.core.DefaultVersion;
 import com.winlator.cmod.core.EnvVars;
+import com.winlator.cmod.core.EvshimPatcher;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.GPUInformation;
 import com.winlator.cmod.core.ProcessHelper;
@@ -71,54 +72,6 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
 
     public Container getContainer() { return this.container; }
     public void setContainer(Container container) { this.container = container; }
-
-
-//    private void ensureSysvServerRunning() {
-//
-//        if (shmServer != null) return; // already running in this process
-//
-//
-//// Build a UnixSocketConfig object pointing at …/usr/tmp/.sysvshm/SM0
-//
-//        File rootDir = environment.getImageFs().getRootDir();
-//
-//        UnixSocketConfig sockConf = UnixSocketConfig.createSocket(
-//
-//                rootDir.getPath(),
-//
-//                UnixSocketConfig.SYSVSHM_SERVER_PATH); // relative path constant
-//
-//
-//        shmMgr = new SysVSharedMemory();
-//
-//        shmServer = new XConnectorEpoll(
-//
-//                sockConf, // <-- correct type
-//
-//                new SysVSHMConnectionHandler(shmMgr),
-//
-//                new SysVSHMRequestHandler());
-//
-//
-//        shmServer.setCanReceiveAncillaryMessages(true); // <-- allow FD passing
-//
-//
-//        shmServer.start(); // non-blocking; runs its own thread
-//
-//        Log.d("SysVSHM", "server started on " + sockConf.path);
-//
-//
-//// right after shmServer.start();
-//
-//        int PAD_SIZE = 4096; // sizeof(struct shm_pad)
-//
-//        int id = shmMgr.get(PAD_SIZE);
-//
-//        Log.d("SysVSHM", "pre-created pad segment id=" + id);
-//
-//
-//    }
-
 
 
     private void extractBox86_64Files() {
@@ -207,6 +160,11 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
             else
                 extractBox86_64Files();
 //            checkDependencies();
+            // If we end up needing to inject winebus.so into user installed contents
+//            EvshimPatcher.patchWineTree(
+//                    environment.getContext(),
+//                    new File(environment.getImageFs().getWinePath()),
+//                    wineInfo.isArm64EC());
             pid = execGuestProgram();
         }
     }
@@ -303,12 +261,17 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         boolean enableBox86_64Logs = preferences.getBoolean("enable_box86_64_logs", false);
         boolean openWithAndroidBrowser = preferences.getBoolean("open_with_android_browser", false);
         boolean shareAndroidClipboard = preferences.getBoolean("share_android_clipboard", false);
+        boolean enablePebLogs = preferences.getBoolean("enable_peb_logs", false);
+
 
         if (openWithAndroidBrowser)
             envVars.put("WINE_OPEN_WITH_ANDROID_BROWSER", "1");
         if (shareAndroidClipboard) {
             envVars.put("WINE_FROM_ANDROID_CLIPBOARD", "1");
             envVars.put("WINE_TO_ANDROID_CLIPBOARD", "1");
+        }
+        if (enablePebLogs) {
+            envVars.put("WINE_LOG_PEB_DATA", "1");
         }
 
         EnvVars envVars = new EnvVars();
@@ -322,12 +285,6 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
             envVars.put("EVSHIM_SHM_ID", 1);
 
         }
-
-        // GStreamer media codec workaround
-        envVars.put("MEDIACONV_VIDEO_TRANSCODED_FILE", "/sdcard/transcoded.mkv");
-        envVars.put("MEDIACONV_BLANK_VIDEO_FILE", "/sdcard/blank.mkv");
-        envVars.put("MEDIACONV_AUDIO_DUMP_FILE", "/sdcard/audio.dump");
-
 
         addBox64EnvVars(envVars, enableBox86_64Logs);
 
@@ -389,11 +346,11 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
 //            ld_preload = imageFs.getLibDir() + "/libandroid-sysvshm.so";
 //        }
 
-        String nativeDir = context.getApplicationInfo().nativeLibraryDir; // e.g. /data/app/…/lib/arm64
+        //String nativeDir = context.getApplicationInfo().nativeLibraryDir; // e.g. /data/app/…/lib/arm64
 
-        String evshimPath = nativeDir + "/libevshim.so";
+        String sysvPath = imageFs.getLibDir() + "/libandroid-sysvshm.so";
 
-        String sysvPath = imageFs.getLibDir() + "/libandroid-sysvshm.so"; // unchanged
+        String evshimPath = imageFs.getLibDir() + "/libevshim.so";
 
 
         if (new File(sysvPath).exists()) ld_preload += sysvPath;

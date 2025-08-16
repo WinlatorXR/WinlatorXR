@@ -398,6 +398,17 @@
                     android:layout_height="wrap_content">
 
                     <LinearLayout style="@style/FieldSet">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/renderer" />
+
+                        <Spinner
+                            style="@style/ComboBox"
+                            android:id="@+id/SRenderer"
+                            android:layout_width="match_parent" />
+
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -642,13 +653,13 @@
                         style="@style/FieldSetLabel"
                         android:text="@string/box86_box64" />
                 </FrameLayout>
-                
+
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:id="@+id/fexcoreFrame"
                     android:layout_marginTop="8dp">
-                
+
                     <LinearLayout style="@style/FieldSet">
                         <TextView
                             android:layout_width="wrap_content"
@@ -664,40 +675,40 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/fexcore_tso_preset" />
-                        
+
                         <Spinner
                             style="@style/ComboBox"
                             android:id="@+id/SFEXCoreTSOPreset"
                             android:layout_width="match_parent" />
-                        
+
                        <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/fexcore_x87reduced_precision" />
-                        
+
                         <Spinner
                             style="@style/ComboBox"
                             android:id="@+id/SFEXCoreX87ReducedPrecision"
                             android:layout_width="match_parent"/>
-                       
+
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/fexcore_multiblock" />
-                        
+
                        <Spinner
                             style="@style/ComboBox"
                             android:id="@+id/SFEXCoreMultiblock"
                             android:layout_width="match_parent"/>
                     </LinearLayout>
-                    
+
                     <TextView
                         android:id="@+id/TVFEXCore"
                         style="@style/FieldSetLabel"
                         android:text="@string/fexcore_config" />
-                    
+
                 </FrameLayout>
-                
+
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -723,6 +734,12 @@
                             android:checked="true"
                             android:enabled="false"
                             android:layout_marginTop="8dp" />
+
+                        <CheckBox
+                            android:id="@+id/CBGStreamerWorkaroundToggle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/enable_gstreamer_workaround" />
 
 <!--                        <CheckBox-->
 <!--                            android:id="@+id/CBRelativeMouseMovement"-->
@@ -839,18 +856,18 @@
                     android:gravity="center_horizontal"
                     android:layout_marginTop="4dp" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/processor_affinity_32_bit_apps"
-                    android:layout_marginTop="8dp" />
+<!--                <TextView-->
+<!--                    android:layout_width="wrap_content"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:text="@string/processor_affinity_32_bit_apps"-->
+<!--                    android:layout_marginTop="8dp" />-->
 
-                <com.winlator.cmod.widget.CPUListView
-                    android:id="@+id/CPUListViewWoW64"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_horizontal"
-                    android:layout_marginTop="4dp" />
+<!--                <com.winlator.cmod.widget.CPUListView-->
+<!--                    android:id="@+id/CPUListViewWoW64"-->
+<!--                    android:layout_width="match_parent"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:gravity="center_horizontal"-->
+<!--                    android:layout_marginTop="4dp" />-->
             </LinearLayout>
 
             <LinearLayout

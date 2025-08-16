@@ -85,16 +85,18 @@ public class AdrenotoolsManager {
             Log.d("AdrenotoolsManager", "Checking if container driver version " + config.get("version") + " matches " + getDriverName(adrenoToolsDriverId));
             if (config.get("version").contains(getDriverName(adrenoToolsDriverId))) {
                 Log.d("AdrenotoolsManager", "Found a match for container " + container.getName());
-                container.setGraphicsDriverConfig(GraphicsDriverConfigDialog.writeGraphicsDriverConfig(DefaultVersion.WRAPPER, config.get("blacklistedExtensions"), config.get("maxDeviceMemory")));
+                config.put("version", DefaultVersion.WRAPPER);
+                container.setGraphicsDriverConfig(GraphicsDriverConfigDialog.toGraphicsDriverConfig(config));
                 container.saveData();
             }     
         }
         for (Shortcut shortcut : containerManager.loadShortcuts()) {
-            String version = shortcut.getExtra("wrapperGraphicsDriverVersion");
-            Log.d("AdrenotoolsManager", "Checking if shortcut driver version " + version + " matches " + getDriverName(adrenoToolsDriverId));
-            if (version.contains(getDriverName(adrenoToolsDriverId))) {
+            HashMap<String, String> config = GraphicsDriverConfigDialog.parseGraphicsDriverConfig(shortcut.getExtra("graphicsDriverConfig", shortcut.container.getGraphicsDriverConfig()));
+            Log.d("AdrenotoolsManager", "Checking if shortcut driver version " + config.get("version") + " matches " + getDriverName(adrenoToolsDriverId));
+            if (config.get("version").contains(getDriverName(adrenoToolsDriverId))) {
                 Log.d("AdrenotoolsManager", "Found a match for shortcut " + shortcut.name);
-                shortcut.putExtra("wrapperGraphicsDriverVersion", "System");
+                config.put("version", DefaultVersion.WRAPPER);
+                shortcut.putExtra("graphicsDriverConfig", GraphicsDriverConfigDialog.toGraphicsDriverConfig(config));
                 shortcut.saveData();
             }
         }

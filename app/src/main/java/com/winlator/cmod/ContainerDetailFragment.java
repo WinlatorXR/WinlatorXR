@@ -181,7 +181,11 @@ public class ContainerDetailFragment extends Fragment {
 
         Spinner sDesktopBackgroundType = view.findViewById(R.id.SDesktopBackgroundType);
         sDesktopBackgroundType.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
+
         // Registry Keys
+        Spinner sRenderer = view.findViewById(R.id.SRenderer);
+        sRenderer.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
+
         Spinner SCSMT = view.findViewById(R.id.SCSMT);
         SCSMT.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
 
@@ -376,6 +380,8 @@ public class ContainerDetailFragment extends Fragment {
 
         view.findViewById(R.id.BTHelpDXWrapper).setOnClickListener((v) -> AppUtils.showHelpBox(context, v, R.string.dxwrapper_help_content));
 
+
+
         Spinner sAudioDriver = view.findViewById(R.id.SAudioDriver);
         AppUtils.setSpinnerSelectionFromIdentifier(sAudioDriver, isEditMode() ? container.getAudioDriver() : Container.DEFAULT_AUDIO_DRIVER);
 
@@ -451,6 +457,16 @@ public class ContainerDetailFragment extends Fragment {
 //        final CheckBox cbSdl2Toggle = view.findViewById(R.id.CBSdl2Toggle);
 //        cbSdl2Toggle.setChecked(isEditMode() && container.getEnvVars().contains("SDL_XINPUT_ENABLED=1"));
 
+        final Runnable showGStreamerWorkaroundWarning = () -> ContentDialog.alert(context, R.string.enable_gstreamer_workaround_alert, null);
+
+        final CheckBox cbGStreamerWorkaroundToggle = view.findViewById(R.id.CBGStreamerWorkaroundToggle);
+        // In ContainerDetailFragment.java
+        cbGStreamerWorkaroundToggle.setChecked(isEditMode() && container.isGstreamerWorkaround());
+
+        cbGStreamerWorkaroundToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (isChecked && cbGStreamerWorkaroundToggle.isChecked())
+                    showGStreamerWorkaroundWarning.run();
+            });
 
         final EditText etLC_ALL = view.findViewById(R.id.ETlcall);
         Locale systemLocal = Locale.getDefault();
@@ -502,10 +518,10 @@ public class ContainerDetailFragment extends Fragment {
         RCManager.loadRCFileSpinner(rcManager, container == null ? 0 : container.getRCFileId(), sRCFile, id -> rcfileIds[0] = id);
 
         final CPUListView cpuListView = view.findViewById(R.id.CPUListView);
-        final CPUListView cpuListViewWoW64 = view.findViewById(R.id.CPUListViewWoW64);
+//        final CPUListView cpuListViewWoW64 = view.findViewById(R.id.CPUListViewWoW64);
 
         cpuListView.setCheckedCPUList(isEditMode() ? container.getCPUList(true) : Container.getFallbackCPUList());
-        cpuListViewWoW64.setCheckedCPUList(isEditMode() ? container.getCPUListWoW64(true) : Container.getFallbackCPUListWoW64());
+//        cpuListViewWoW64.setCheckedCPUList(isEditMode() ? container.getCPUListWoW64(true) : Container.getFallbackCPUListWoW64());
 
         final Spinner sPrimaryController = view.findViewById(R.id.SPrimaryController);
         sPrimaryController.setSelection(isEditMode() ? container.getPrimaryController() : 1);
@@ -553,8 +569,9 @@ public class ContainerDetailFragment extends Fragment {
                 String drives = getDrives(view);
                 boolean showFPS = cbShowFPS.isChecked();
                 boolean fullscreenStretched = cbFullscreenStretched.isChecked();
+
                 String cpuList = cpuListView.getCheckedCPUListAsString();
-                String cpuListWoW64 = cpuListViewWoW64.getCheckedCPUListAsString();
+//                String cpuListWoW64 = cpuListViewWoW64.getCheckedCPUListAsString();
                 boolean wow64Mode = cbWoW64Mode.isChecked();
 //                boolean isRelativeMouseMovement = cbRelativeMouseMovement.isChecked();
                 byte startupSelection = (byte) sStartupSelection.getSelectedItemPosition();
@@ -590,6 +607,9 @@ public class ContainerDetailFragment extends Fragment {
 //                    }
 //                }
 
+                // Handle GStreamer Workaround environment variables based on the toggle state
+                boolean gstreamerWorkaround = cbGStreamerWorkaroundToggle.isChecked();
+
 
 
                 if (isEditMode()) {
@@ -598,7 +618,7 @@ public class ContainerDetailFragment extends Fragment {
                     container.setScreenSize(screenSize);
                     container.setEnvVars(envVars);
                     container.setCPUList(cpuList);
-                    container.setCPUListWoW64(cpuListWoW64);
+//                    container.setCPUListWoW64(cpuListWoW64);
                     container.setGraphicsDriver(graphicsDriver);
                     container.setGraphicsDriverConfig(graphicsDriverConfig);
                     container.setDXWrapper(dxwrapper);
@@ -623,6 +643,7 @@ public class ContainerDetailFragment extends Fragment {
                     container.setLC_ALL(lc_all);
                     container.setPrimaryController(primaryController);
                     container.setControllerMapping(controllerMapping);
+                    container.setGstreamerWorkaround(gstreamerWorkaround);
                     container.saveData();
                     saveWineRegistryKeys(view);
                     FEXCoreManager.saveFEXCoreSpinners(container, sFEXCoreTSOPreset, sFEXCoreMultiBlock, sFEXCoreX87ReducedPrecision);
@@ -634,7 +655,7 @@ public class ContainerDetailFragment extends Fragment {
                     data.put("screenSize", screenSize);
                     data.put("envVars", envVars);
                     data.put("cpuList", cpuList);
-                    data.put("cpuListWoW64", cpuListWoW64);
+//                    data.put("cpuListWoW64", cpuListWoW64);
                     data.put("graphicsDriver", graphicsDriver);
                     data.put("graphicsDriverConfig", graphicsDriverConfig);
                     data.put("dxwrapper", dxwrapper);
@@ -660,6 +681,7 @@ public class ContainerDetailFragment extends Fragment {
                     data.put("lc_all", lc_all);
                     data.put("primaryController", primaryController);
                     data.put("controllerMapping", controllerMapping);
+                    data.put("gstreamerWorkaround", gstreamerWorkaround);
 
                     preloaderDialog.show(R.string.creating_container);
 
@@ -688,6 +710,10 @@ public class ContainerDetailFragment extends Fragment {
     private void saveWineRegistryKeys(View view) {
         File userRegFile = new File(container.getRootDir(), ".wine/user.reg");
         try (WineRegistryEditor registryEditor = new WineRegistryEditor(userRegFile)) {
+
+            Spinner sRenderer = view.findViewById(R.id.SRenderer);
+            registryEditor.setStringValue("Software\\Wine\\Direct3D", "renderer", sRenderer.getSelectedItem().toString());
+
             Spinner sCSMT = view.findViewById(R.id.SCSMT);
             registryEditor.setDwordValue("Software\\Wine\\Direct3D", "csmt", sCSMT.getSelectedItemPosition() != 0 ? 3 : 0);
 
@@ -752,6 +778,12 @@ public class ContainerDetailFragment extends Fragment {
         File userRegFile = new File(containerDir, ".wine/user.reg");
 
         try (WineRegistryEditor registryEditor = new WineRegistryEditor(userRegFile)) {
+
+            List<String> rendererList = Arrays.asList(context.getString(R.string.gl), context.getString(R.string.vulkan), context.getString(R.string.gdi));
+            Spinner sRenderer = view.findViewById(R.id.SRenderer);
+            sRenderer.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, rendererList));
+            AppUtils.setSpinnerSelectionFromValue(sRenderer, registryEditor.getStringValue("Software\\Wine\\Direct3D", "renderer", "gl"));
+
             List<String> stateList = Arrays.asList(context.getString(R.string.disable), context.getString(R.string.enable));
             Spinner sCSMT = view.findViewById(R.id.SCSMT);
             sCSMT.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, stateList));
@@ -1145,6 +1177,8 @@ public class ContainerDetailFragment extends Fragment {
         ArrayList<String> wineVersions = new ArrayList<>();
         wineVersions.addAll(Arrays.asList(versions));
         for (ContentProfile profile : contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_WINE))
+            wineVersions.add(ContentsManager.getEntryName(profile));
+        for (ContentProfile profile : contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_PROTON))
             wineVersions.add(ContentsManager.getEntryName(profile));
         sWineVersion.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, wineVersions));
         if (isEditMode()) AppUtils.setSpinnerSelectionFromValue(sWineVersion, container.getWineVersion());

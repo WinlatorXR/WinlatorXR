@@ -38,7 +38,6 @@ public class EnvVarsView extends FrameLayout {
         {"DXVK_HUD", "SELECT_MULTIPLE", "devinfo", "fps", "frametimes", "submissions", "drawcalls", "pipelines", "descriptors", "memory", "gpuload", "version", "api", "cs", "compiler", "samplers"},
         {"MESA_EXTENSION_MAX_YEAR", "NUMBER"},
         {"PULSE_LATENCY_MSEC", "NUMBER"},
-        {"MESA_VK_WSI_PRESENT_MODE", "SELECT", "immediate", "mailbox", "fifo", "relaxed"},
         {"MANGOHUD", "CHECKBOX", "0", "1"}
     };
     private final LinearLayout container;

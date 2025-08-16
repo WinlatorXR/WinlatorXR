@@ -320,4 +320,32 @@ public final class FEXCoreManager {
             }
         }
     }
+
+    private static String parseConfigFile() {
+        try {
+            JSONObject jobj = new JSONObject(FileUtils.readString(configFile));
+            JSONObject config = jobj.getJSONObject("Config");
+            String tsoPreset = presetFromTSOValues(config.getString("TSOEnabled"), config.getString("VectorTSOEnabled"), config.getString("MemcpySetTSOEnabled"), config.getString("HalfBarrierTSOEnabled"));
+            String x87mode = (config.getString("X87ReducedPrecision").equals("1")) ? "Fast" : "Slow";
+            String multiBlockValue = (config.getString("Multiblock").equals("1")) ? "Enabled" : "Disabled";
+            return String.format("TSOMode %s, x87Mode %s, MultiBlock %s", tsoPreset, x87mode, multiBlockValue);
+        } catch (JSONException e) {
+            // Return a default or error string if parsing fails
+            return "TSOMode Fast, x87Mode Fast, MultiBlock Disabled";
+        }
+    }
+
+    public static String printFEXCoreSettings(Context ctx, Container container) {
+        File imageFsRoot = new File(ctx.getFilesDir(), "imagefs");
+        imageFS = ImageFs.find(imageFsRoot);
+        configFile = new File(imageFS.home_path + "-" + container.id + "/.fex-emu/Config.json");
+        return parseConfigFile();
+    }
+
+    public static String printFEXCoreSettings(Context ctx, Shortcut shortcut) {
+        File imageFsRoot = new File(ctx.getFilesDir(), "imagefs");
+        imageFS = ImageFs.find(imageFsRoot);
+        configFile = new File(imageFS.home_path + "-" + shortcut.container.id + "/.fex-emu/AppConfig/" + shortcut.getExecutable() + ".json");
+        return parseConfigFile();
+    }
 }

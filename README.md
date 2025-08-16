@@ -1,12 +1,15 @@
 <img width="505" height="128" alt="logo" src="https://github.com/user-attachments/assets/272af339-23d9-4afc-abd8-2cb255665cf9" />
 
-WinlatorXR is a port of Winlator for Meta Quest and Pico headsets. It uses https://github.com/amwatson/2DVrHybrid to combine 2D Android UI APIs with XR integration.
+WinlatorXR is a port of Winlator for Meta Quest and Pico headsets. It uses 2D/VR hybrid app flow documented by [amwatson](https://github.com/amwatson/2DVrHybrid).
 
-* Winlator is originally developed by brunodev85 but as he does not opensource the latest versions then I am forced to use an own fork for this project.
-* In 2024 WinlatorXR was based on GLIBC fork by longjunyu2 but as he stopped communicating, the project was inactive for a long time and later it stopped working.
-* In 2025 Pipetto-crypto ported Winlator to Bionic/Proton which is a massive boost for Meta Quest integration.
-* His integration was enhanced by coffincolors in Winlator CMOD fork which is now base for WinlatorXR.
-* Pico support and XR enhancement were brought by Tobbe85.
+* Winlator is originally developed by [brunodev85](https://github.com/brunodev85/winlator) but as he does not opensource the latest versions then I am forced to use a custom fork for this project.
+* In 2024 WinlatorXR was based on Glibc fork by [longjunyu2](https://github.com/longjunyu2/winlator) but as he stopped communicating, the project was inactive for a long time and later it stopped working.
+* In 2025 [Pipetto-crypto](https://github.com/Pipetto-crypto/winlator) ported Winlator to Bionic/Proton which is a massive boost for Meta Quest integration.
+* His integration was enhanced by [coffincolors](https://github.com/coffincolors/winlator) in Winlator CMOD fork which is now base for WinlatorXR.
+* Pico support and XR enhancement were brought by [Tobbe85](https://github.com/tobbe85/winlator).
+
+![WinlatorXR history](https://github.com/user-attachments/assets/947c4be7-fe9e-435e-92c9-9ca1d55bef79)
+
 
 ### How to compile
 
@@ -67,3 +70,4 @@ Winlator is an Android application that lets you to run Windows (x86_64) applica
 Many thanks to [ptitSeb](https://github.com/ptitSeb) (Box86/Box64), [Danylo](https://blogs.igalia.com/dpiliaiev/tags/mesa/) (Turnip), [alexvorxx](https://github.com/alexvorxx) (Mods/Tips) and others.
 
 Thank you to all the people who believe in this project.
+

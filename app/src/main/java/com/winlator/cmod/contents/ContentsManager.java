@@ -7,6 +7,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.winlator.cmod.core.EvshimPatcher;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.TarCompressorUtils;
 
@@ -52,6 +53,7 @@ public class ContentsManager {
     public enum ContentDirName {
         CONTENT_MAIN_DIR_NAME("contents"),
         CONTENT_WINE_DIR_NAME("wine"),
+        CONTENT_PROTON_DIR_NAME("proton"),
         CONTENT_DXVK_DIR_NAME("dxvk"),
         CONTENT_VKD3D_DIR_NAME("vkd3d"),
         CONTENT_BOX64_DIR_NAME("box64");
@@ -217,6 +219,17 @@ public class ContentsManager {
             }
         }
 
+        if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_PROTON) {
+            File bin = new File(file, profile.protonBinPath);
+            File lib = new File(file, profile.protonLibPath);
+            File cp = new File(file, profile.protonPrefixPack);
+
+            if (!bin.exists() || !bin.isDirectory() || !lib.exists() || !lib.isDirectory() || !cp.exists() || !cp.isFile()) {
+                callback.onFailed(InstallFailedReason.ERROR_MISSINGFILES, null);
+                return;
+            }
+        }
+
         callback.onSucceed(profile);
     }
 
@@ -262,6 +275,12 @@ public class ContentsManager {
                 profile.wineLibPath = wineJSONObject.getString(ContentProfile.MARK_WINE_LIBPATH);
                 profile.wineBinPath = wineJSONObject.getString(ContentProfile.MARK_WINE_BINPATH);
                 profile.winePrefixPack = wineJSONObject.getString(ContentProfile.MARK_WINE_PREFIX_PACK);
+            }
+            if (typeName.equals(ContentProfile.ContentType.CONTENT_TYPE_PROTON.toString())) {
+                JSONObject protonJSONObject = profileJSONObject.getJSONObject(ContentProfile.MARK_PROTON);
+                profile.protonLibPath = protonJSONObject.getString(ContentProfile.MARK_PROTON_LIBPATH);
+                profile.protonBinPath = protonJSONObject.getString(ContentProfile.MARK_PROTON_BINPATH);
+                profile.protonPrefixPack = protonJSONObject.getString(ContentProfile.MARK_PROTON_PREFIX_PACK);
             }
 
             profile.type = ContentProfile.ContentType.getTypeByName(typeName);
@@ -397,7 +416,7 @@ public class ContentsManager {
     }
 
     public boolean applyContent(ContentProfile profile) {
-        if (profile.type != ContentProfile.ContentType.CONTENT_TYPE_WINE) {
+        if (profile.type != ContentProfile.ContentType.CONTENT_TYPE_WINE && profile.type != ContentProfile.ContentType.CONTENT_TYPE_PROTON) {
             for (ContentProfile.ContentFile contentFile : profile.fileList) {
                 File targetFile = new File(getPathFromTemplate(contentFile.target));
                 File sourceFile = new File(getInstallDir(context, profile), contentFile.source);
@@ -409,8 +428,18 @@ public class ContentsManager {
                     FileUtils.chmod(targetFile, 0771);
                 }
             }
-        } else {
-            // TODO: do nothing?
+        }
+        else {
+            // If we end up needing to inject winebus.so into user-installed contents
+//            File installDir = getInstallDir(context, profile);
+//            boolean arm64ec = profile.verName.contains("arm64ec");
+//            File wineRoot = new File(installDir,        // root of the .wcp
+//                    profile.type == ContentProfile.ContentType.CONTENT_TYPE_PROTON
+//                            ? profile.protonLibPath     // “proton-…”
+//                            : profile.wineLibPath       // “wine-…”
+//            ).getParentFile().getParentFile().getParentFile(); // climb back to top
+//
+//            EvshimPatcher.patchWineTree(context, wineRoot, arm64ec);
         }
         return true;
     }

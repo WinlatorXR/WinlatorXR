@@ -532,7 +532,20 @@
                         android:layout_width="match_parent"
                         android:id="@+id/SStartupSelection"
                         android:entries="@array/startup_selection_entries" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/workarounds" />
+
+                    <CheckBox
+                        android:id="@+id/CBGStreamerWorkaroundToggle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/enable_gstreamer_workaround" />
+
                 </LinearLayout>
+
 
                 <TextView
                     android:id="@+id/TVSystem"
@@ -568,6 +581,12 @@
 <!--                        android:layout_width="wrap_content"-->
 <!--                        android:layout_height="wrap_content"-->
 <!--                        android:text="@string/relative_mouse_movement" />-->
+
+                    <CheckBox
+                        android:id="@+id/CBTouchscreenMode"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/simulate_touch_screen" />
 
                 </LinearLayout>
 
@@ -705,6 +724,92 @@
                     android:text="@string/system" />
             </FrameLayout>
 
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" >
+
+                <LinearLayout style="@style/FieldSet" >
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/vkbasalt_sharpness_effects" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" >
+
+                        <Spinner
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:id="@+id/SSharpnessEffect"
+                            style="@style/ComboBox"
+                            android:entries="@array/vkbasalt_sharpness_entries"
+                            android:spinnerMode="dialog" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal" >
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/vkbasalt_sharpness_level" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:id="@+id/TVSharpnessLevel" />
+                        </LinearLayout>
+
+                        <SeekBar
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:min="0"
+                            android:id="@+id/SBSharpnessLevel"
+                            android:max="100" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal" >
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/vkbasalt_sharpness_denoise" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_gravity="end"
+                                android:gravity="end"
+                                android:layout_height="wrap_content"
+                                android:id="@+id/TVSharpnessDenoise" />
+
+                        </LinearLayout>
+
+                        <SeekBar
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:min="0"
+                            android:id="@+id/SBSharpnessDenoise"
+                            android:max="100" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <TextView
+                    style="@style/FieldSetLabel"
+                    android:background="#ffffff"
+                    android:text="@string/vkbasalt" />
+            </FrameLayout>
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -718,18 +823,18 @@
                 android:gravity="center_horizontal"
                 android:layout_marginTop="4dp" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/processor_affinity_32_bit_apps"
-                android:layout_marginTop="8dp" />
+<!--            <TextView-->
+<!--                android:layout_width="wrap_content"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:text="@string/processor_affinity_32_bit_apps"-->
+<!--                android:layout_marginTop="8dp" />-->
 
-            <com.winlator.cmod.widget.CPUListView
-                android:id="@+id/CPUListViewWoW64"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_horizontal"
-                android:layout_marginTop="4dp" />
+<!--            <com.winlator.cmod.widget.CPUListView-->
+<!--                android:id="@+id/CPUListViewWoW64"-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:gravity="center_horizontal"-->
+<!--                android:layout_marginTop="4dp" />-->
 
         </LinearLayout>
     </LinearLayout>

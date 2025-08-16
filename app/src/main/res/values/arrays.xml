@@ -20,12 +20,15 @@
     </string-array>
     <string-array name="graphics_driver_entries">
         <item>Wrapper</item>
+        <item>Wrapper-v2</item>
     </string-array>
     <string-array name="wrapper_graphics_driver_version_entries">
         <item>System</item>
         <item>v762</item>
         <item>v805</item>
         <item>turnip25.1.0</item>
+        <item>turnip25.3.0_R3_Auto</item>
+        <item>turnip25.3.0_R3_Gmem</item>
     </string-array>
     <string-array name="audio_driver_entries">
         <item>ALSA-Reflector</item>
@@ -48,9 +51,9 @@
         <item>WineD3D</item>
     </string-array>
     <string-array name="dxvk_version_entries">
-        <item>0.40.1</item>
-        <item>0.96</item>
-        <item>1.5.5</item>
+<!--        <item>0.40.1</item>-->
+<!--        <item>0.96</item>-->
+<!--        <item>1.5.5</item>-->
         <item>1.7.1</item>
         <item>1.10.1</item>
         <item>1.10.3</item>
@@ -58,12 +61,11 @@
         <item>2.2.116</item>
         <item>2.3.1</item>
         <item>2.3.1-arm64ec-gplasync</item>
-        <item>2.4</item>
+<!--        <item>2.4</item>-->
         <item>2.4-gplasync</item>
         <item>2.4-24-gplasync</item>
         <item>2.4.1</item>
         <item>2.4.1-gplasync</item>
-        <item>2.4.1-arm64ec</item>
     </string-array>
     <string-array name="dxvk_max_device_memory_entries">
         <item>0 (Default)</item>
@@ -78,6 +80,11 @@
     <item>1024 MB</item>
     <item>2048 MB</item>
     <item>4096 MB</item>
+    </string-array>
+    <string-array name="frame_sync_entries">
+        <item>Never</item>
+        <item>Normal</item>
+        <item>Always</item>
     </string-array>
     <string-array name="video_memory_size_entries">
         <item>32 MB</item>
@@ -112,8 +119,8 @@
         <item>0.3.7</item>
     </string-array>
     <string-array name="box64_version_entries">
-<!--        <item>0.3.6</item>-->
-<!--        <item>0.3.2</item>--> <!-- Disabled until proper linking of proton-9.0-x86_64 to libSDL2 -->
+        <item>0.3.2</item>
+        <item>0.3.6</item>
         <item>0.3.7</item>
     </string-array>
     <string-array name="wowbox64_version_entries">
@@ -139,7 +146,6 @@
     <string-array name="startup_selection_entries">
         <item>Normal (Load all services)</item>
         <item>Essential (Load only essential services)</item>
-        <item>Aggressive (Stop services on startup)</item>
     </string-array>
     <string-array name="vkd3d_version_entries">
         <item>2.8</item>
@@ -318,5 +324,10 @@
     <string-array name="wine_entries">
         <item>proton-9.0-x86_64</item>
         <item>proton-9.0-arm64ec</item>
+    </string-array>
+    <string-array name="vkbasalt_sharpness_entries">
+        <item>None</item>
+        <item>CAS</item>
+        <item>DLS</item>
     </string-array>
 </resources>

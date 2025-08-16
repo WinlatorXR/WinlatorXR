@@ -253,48 +253,36 @@ public class WinHandler {
     /** Called on every sensor sample (yaw=X, pitch=Y mapping happens in MotionControls). */
     public void updateGyroData(float rawGyroX, float rawGyroY) {
         if (!gyroEnabled) {
-            // Decay to zero and send once if changed.
-            smoothGyroX *= smoothingFactor;
-            smoothGyroY *= smoothingFactor;
-            if (Math.abs(smoothGyroX) < EPS) smoothGyroX = 0f;
-            if (Math.abs(smoothGyroY) < EPS) smoothGyroY = 0f;
-
-            gyroX = Mathf.clamp(smoothGyroX, -0.95f, 0.95f);
-            gyroY = Mathf.clamp(smoothGyroY, -0.95f, 0.95f);
-
-            if (Math.abs(gyroX - lastSentGX) > EPS || Math.abs(gyroY - lastSentGY) > EPS) {
+            // Reset to zero immediately if gyro is disabled.
+            if (gyroX != 0f || gyroY != 0f) {
+                gyroX = gyroY = 0f;
                 sendGamepadState();
                 pokeSharedMemory();
-                lastSentGX = gyroX; lastSentGY = gyroY;
+                lastSentGX = gyroX;
+                lastSentGY = gyroY;
             }
             return;
         }
 
-        // Armed if toggled/holding, or LT-gated and LT is pressed.
         boolean active = isGyroActive || (processGyroWithLeftTrigger && isLeftTriggerPressed());
 
         if (!active) {
-            smoothGyroX *= smoothingFactor;
-            smoothGyroY *= smoothingFactor;
-            if (Math.abs(smoothGyroX) < EPS) smoothGyroX = 0f;
-            if (Math.abs(smoothGyroY) < EPS) smoothGyroY = 0f;
-
-            gyroX = Mathf.clamp(smoothGyroX, -0.95f, 0.95f);
-            gyroY = Mathf.clamp(smoothGyroY, -0.95f, 0.95f);
-
-            if (Math.abs(gyroX - lastSentGX) > EPS || Math.abs(gyroY - lastSentGY) > EPS) {
+            // Reset immediately to zero when not active.
+            if (gyroX != 0f || gyroY != 0f) {
+                gyroX = gyroY = 0f;
                 sendGamepadState();
                 pokeSharedMemory();
-                lastSentGX = gyroX; lastSentGY = gyroY;
+                lastSentGX = gyroX;
+                lastSentGY = gyroY;
             }
             return;
         }
 
-        // ---- Active path ----
+        // ---- Active gyro processing ----
 
-        // Deadzone
-        if (Math.abs(rawGyroX) < gyroDeadzone) rawGyroX = 0f;
-        if (Math.abs(rawGyroY) < gyroDeadzone) rawGyroY = 0f;
+        // Apply deadzone
+        rawGyroX = Math.abs(rawGyroX) < gyroDeadzone ? 0f : rawGyroX;
+        rawGyroY = Math.abs(rawGyroY) < gyroDeadzone ? 0f : rawGyroY;
 
         // Inversion
         if (invertGyroX) rawGyroX = -rawGyroX;
@@ -303,24 +291,28 @@ public class WinHandler {
         // Gains (TYPE_GYROSCOPE is rad/s)
         final float baseGainX = 0.60f;
         final float baseGainY = 0.45f;
-        float gx = rawGyroX * (baseGainX * gyroSensitivityX);
-        float gy = rawGyroY * (baseGainY * gyroSensitivityY);
+        float gx = rawGyroX * baseGainX * gyroSensitivityX;
+        float gy = rawGyroY * baseGainY * gyroSensitivityY;
 
-        // Exponential smoothing
-        smoothGyroX = smoothGyroX * smoothingFactor + gx * (1f - smoothingFactor);
-        smoothGyroY = smoothGyroY * smoothingFactor + gy * (1f - smoothingFactor);
+        // Exponential smoothing, but immediate zero respect
+        if (rawGyroX == 0f) smoothGyroX = 0f;
+        else smoothGyroX = smoothGyroX * smoothingFactor + gx * (1f - smoothingFactor);
+
+        if (rawGyroY == 0f) smoothGyroY = 0f;
+        else smoothGyroY = smoothGyroY * smoothingFactor + gy * (1f - smoothingFactor);
 
         // Clamp into stick range
         gyroX = Mathf.clamp(smoothGyroX, -0.95f, 0.95f);
         gyroY = Mathf.clamp(smoothGyroY, -0.95f, 0.95f);
 
+        // Only send updates if significant change occurs
         if (Math.abs(gyroX - lastSentGX) > EPS || Math.abs(gyroY - lastSentGY) > EPS) {
             sendGamepadState();
             pokeSharedMemory();
-            lastSentGX = gyroX; lastSentGY = gyroY;
+            lastSentGX = gyroX;
+            lastSentGY = gyroY;
         }
     }
-
     /** Force current values into SHM immediately. Safe to call anytime. */
     public void pokeSharedMemory() {
         if (gamepadBuffer == null) return;
@@ -360,32 +352,33 @@ public class WinHandler {
             return true; // consume quietly
         }
 
+        // Saved for reference - can re-enable if regex loop is avoided
         // Prompt for inactive/unassigned controllers
-        String groupKey = ControllerManager.makePhysicalGroupKey(device);
-        if ((assignedSlot == -1 || !controllerManager.isSlotEnabled(assignedSlot))
-                && !ignoredDeviceIds.contains(deviceId)
-                && !ignoredGroups.contains(groupKey)) {
-
-            if (!isShowingAssignDialog && !XrActivity.isEnabled(activity)) {
-                isShowingAssignDialog = true;
-                activity.runOnUiThread(() -> {
-                    String checkboxMessage = "Don't prompt for this controller again.";
-                    ContentDialog.confirmWithCheckbox(
-                            activity,
-                            device.getName() + " Detected\n\nThis controller is not active. Open assignment menu?",
-                            checkboxMessage,
-                            (result) -> {
-                                if (result.confirmed) {
-                                    ControllerAssignmentDialog.show(activity);
-                                } else if (result.checkboxChecked) {
-                                    ignoredDeviceIds.add(deviceId);
-                                }
-                                isShowingAssignDialog = false;
-                            });
-                });
-            }
-            return true;
-        }
+//        String groupKey = ControllerManager.makePhysicalGroupKey(device);
+//        if ((assignedSlot == -1 || !controllerManager.isSlotEnabled(assignedSlot))
+//                && !ignoredDeviceIds.contains(deviceId)
+//                && !ignoredGroups.contains(groupKey)) {
+//
+//            if (!isShowingAssignDialog) {
+//                isShowingAssignDialog = true;
+//                activity.runOnUiThread(() -> {
+//                    String checkboxMessage = "Don't prompt for this controller again.";
+//                    ContentDialog.confirmWithCheckbox(
+//                            activity,
+//                            device.getName() + " Detected\n\nThis controller is not active. Open assignment menu?",
+//                            checkboxMessage,
+//                            (result) -> {
+//                                if (result.confirmed) {
+//                                    ControllerAssignmentDialog.show(activity);
+//                                } else if (result.checkboxChecked) {
+//                                    ignoredDeviceIds.add(deviceId);
+//                                }
+//                                isShowingAssignDialog = false;
+//                            });
+//                });
+//            }
+//            return true;
+//        }
 
         // P1
         if (assignedSlot == 0) {
@@ -454,29 +447,31 @@ public class WinHandler {
             return true; // consume quietly
         }
 
-        // Prompt for inactive/unassigned on DOWN
-        if (isDown
-                && ((assignedSlot == -1 || !controllerManager.isSlotEnabled(assignedSlot))
-                && !ignoredGroups.contains(ControllerManager.makePhysicalGroupKey(device))
-                && !ignoredDeviceIds.contains(deviceId))) {
 
-            if (!isShowingAssignDialog && !XrActivity.isEnabled(activity)) {
-                isShowingAssignDialog = true;
-                activity.runOnUiThread(() -> {
-                    String msg = "This controller is not active. Open assignment menu? (" + device.getName() + ")";
-                    String checkboxMessage = "Don't prompt for this controller again.";
-                    ContentDialog.confirmWithCheckbox(activity, msg, checkboxMessage, result -> {
-                        if (result.confirmed) {
-                            ControllerAssignmentDialog.show(activity);
-                        } else if (result.checkboxChecked) {
-                            ignoredDeviceIds.add(deviceId);
-                        }
-                        isShowingAssignDialog = false;
-                    });
-                });
-            }
-            return true;
-        }
+        // Saved for reference - can re-enable if regex loop is avoided
+        // Prompt for inactive/unassigned on DOWN
+//        if (isDown
+//                && ((assignedSlot == -1 || !controllerManager.isSlotEnabled(assignedSlot))
+//                && !ignoredGroups.contains(ControllerManager.makePhysicalGroupKey(device))
+//                && !ignoredDeviceIds.contains(deviceId))) {
+//
+//            if (!isShowingAssignDialog) {
+//                isShowingAssignDialog = true;
+//                activity.runOnUiThread(() -> {
+//                    String msg = "This controller is not active. Open assignment menu? (" + device.getName() + ")";
+//                    String checkboxMessage = "Don't prompt for this controller again.";
+//                    ContentDialog.confirmWithCheckbox(activity, msg, checkboxMessage, result -> {
+//                        if (result.confirmed) {
+//                            ControllerAssignmentDialog.show(activity);
+//                        } else if (result.checkboxChecked) {
+//                            ignoredDeviceIds.add(deviceId);
+//                        }
+//                        isShowingAssignDialog = false;
+//                    });
+//                });
+//            }
+//            return true;
+//        }
 
         if (assignedSlot == -1) return false;
 
