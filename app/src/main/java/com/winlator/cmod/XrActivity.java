@@ -51,7 +51,6 @@ public class XrActivity extends XServerDisplayActivity implements TextWatcher {
     private static boolean isImmersive = false;
     private static boolean isSBS = false;
     private static boolean isVR = false;
-    private static boolean isDebugUDP = false;
     private static boolean usePassthrough = false;
     private static boolean[] currentButtons = new boolean[ControllerButton.values().length];
     private static final KeyCharacterMap chars = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD);
@@ -82,7 +81,6 @@ public class XrActivity extends XServerDisplayActivity implements TextWatcher {
         mouseSpeed = PreferenceManager.getDefaultSharedPreferences(this).getFloat("cursor_speed", 1.0f);
 
         EditText text = findViewById(R.id.XRTextInput);
-        text.setVisibility(View.VISIBLE);
         text.getEditableText().clear();
         text.addTextChangedListener(this);
 
@@ -187,15 +185,28 @@ public class XrActivity extends XServerDisplayActivity implements TextWatcher {
         return isDeviceSupported;
     }
 
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        instance.findViewById(R.id.XRTextInput).setVisibility(View.GONE);
+    }
+
     public void callMenuAction(int item) {
         switch (item) {
             case R.id.main_menu_keyboard:
-                isVR = false;
-                isSBS = false;
-                isImmersive = false;
-                instance.resetText();
-                AppUtils.showKeyboard(instance);
-                instance.findViewById(R.id.XRTextInput).requestFocus();
+                new Thread(() -> {
+                    sleep(250); //ensure onWindowFocusChanged was called
+                    runOnUiThread(() -> {
+                        View input = instance.findViewById(R.id.XRTextInput);
+                        input.setVisibility(View.VISIBLE);
+                        isVR = false;
+                        isSBS = false;
+                        isImmersive = false;
+                        instance.resetText();
+                        AppUtils.showKeyboard(instance);
+                        input.requestFocus();
+                    });
+                }).start();
                 break;
             case R.id.xr_passthrough:
                 usePassthrough = !usePassthrough;
@@ -361,14 +372,10 @@ public class XrActivity extends XServerDisplayActivity implements TextWatcher {
                 isVR = xrAPI.hasFlag(XrAPI.FLAG_VR);
                 getInstance().nativeSetUseVR(isVR);
                 if (isVR) {
+                    xrAPI.ENABLE_UDP_DEBUG = true;
                     isSBS = xrAPI.hasFlag(XrAPI.FLAG_SBS);
                     xrAPI.sendUDP(xrAPI.encodeAxes(lastAxes, 0), XrAPI.DEFAULT_PORT);
                     //xrAPI.sendFile(xrAPI.encodeAxes(lastAxes, 0), 0);
-                }
-
-                isDebugUDP = xrAPI.hasDebugIP();
-                if (isDebugUDP) {
-                    xrAPI.sendDebugUDP(xrAPI.encodeAxes(lastAxes, 0), XrAPI.DEFAULT_PORT);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
