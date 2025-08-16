@@ -372,6 +372,7 @@ public class XrActivity extends XServerDisplayActivity implements TextWatcher {
                 isVR = xrAPI.hasFlag(XrAPI.FLAG_VR);
                 getInstance().nativeSetUseVR(isVR);
                 if (isVR) {
+                    //Uncomment the line below and put a udp_debug folder in your Winlator D:/ drive with a file named the IP on LAN to send XR data via UDP traffic to that IP
                     //xrAPI.ENABLE_UDP_DEBUG = true;
                     isSBS = xrAPI.hasFlag(XrAPI.FLAG_SBS);
                     xrAPI.sendUDP(xrAPI.encodeAxes(lastAxes, 0), XrAPI.DEFAULT_PORT);
