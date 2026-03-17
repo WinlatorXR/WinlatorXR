@@ -34,6 +34,7 @@ import androidx.preference.PreferenceManager;
 import com.winlator.cmod.R;
 import com.winlator.cmod.XServerDisplayActivity;
 import com.winlator.cmod.xr.XrAPI;
+import com.winlator.cmod.xr.XrInputAPI;
 import com.winlator.cmod.xr.RuntimeMeta;
 import com.winlator.cmod.xr.RuntimePFD;
 import com.winlator.cmod.xr.RuntimePico;
@@ -77,6 +78,7 @@ public class XrActivity extends XServerDisplayActivity {
 
     // XR input/output
     private XrAPI xrAPI = null;
+    private XrInputAPI xrInputAPI = null;
     private XrController xrController = null;
     private XrKeyboard xrKeyboard = null;
 
@@ -277,6 +279,9 @@ public class XrActivity extends XServerDisplayActivity {
 
         // XServer input
         try (XLock lock = instance.getXServer().lock(XServer.Lockable.WINDOW_MANAGER, XServer.Lockable.INPUT_DEVICE)) {
+            //Process input messages from the XR Input API
+            updateXrInputAPI();
+
             if (mouseEmulation) {
                 xrController.updateMouseAxes(axes, isImmersive && isHeadTrackingAllowed);
                 xrController.updateMouseSnapturn(buttons, isImmersive ? 125 : 25);
@@ -353,6 +358,21 @@ public class XrActivity extends XServerDisplayActivity {
             } else {
                 xrAPI.updateImplementation();
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void updateXrInputAPI() {
+        try {
+            if (xrInputAPI == null) {
+                // Set the param to true and put a udp_debug folder in your Winlator D:\ drive
+                // with a file named the IP on LAN to send XR data via UDP traffic to that IP.
+                xrInputAPI = new XrInputAPI(false);
+            }
+
+            //Right now the InputAPI is receive-only
+            xrInputAPI.updateImplementation();
         } catch (Exception e) {
             e.printStackTrace();
         }
