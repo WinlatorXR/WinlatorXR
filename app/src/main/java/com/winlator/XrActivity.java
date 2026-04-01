@@ -277,6 +277,7 @@ public class XrActivity extends XServerDisplayActivity {
 
         // XServer input
         try (XLock lock = instance.getXServer().lock(XServer.Lockable.WINDOW_MANAGER, XServer.Lockable.INPUT_DEVICE)) {
+            xrAPI.consumeInputs(instance.getXServer());
             if (mouseEmulation) {
                 xrController.updateMouseAxes(axes, isImmersive && isHeadTrackingAllowed);
                 xrController.updateMouseSnapturn(buttons, isImmersive ? 125 : 25);

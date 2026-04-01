@@ -22,6 +22,8 @@ import androidx.annotation.NonNull;
 import android.annotation.SuppressLint;
 import android.os.Build;
 
+import com.winlator.cmod.xserver.XServer;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -29,6 +31,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Scanner;
 
@@ -79,9 +82,15 @@ public class XrAPI implements XrInterface, Runnable {
         this.debugMode = debugMode;
     }
 
-    public void dataReceived(@NonNull String message) {
+    public void consumeInputs(XServer xServer) {
         if (impl != null) {
-            impl.dataReceived(message);
+            impl.consumeInputs(xServer);
+        }
+    }
+
+    public void dataReceived(PortIntent intent, @NonNull String message) {
+        if (impl != null) {
+            impl.dataReceived(intent, message);
         }
     }
 
@@ -93,8 +102,8 @@ public class XrAPI implements XrInterface, Runnable {
         return impl != null ? impl.getFlags() : "";
     }
 
-    public int getPortIn() {
-        return impl != null ? impl.getPortIn() : 0;
+    public int getPortIn(PortIntent intent) {
+        return impl != null ? impl.getPortIn(intent) : 0;
     }
 
     public int[] getPortsOut() {
@@ -117,14 +126,36 @@ public class XrAPI implements XrInterface, Runnable {
 
     @Override
     public void run() {
-        byte[] buffer = new byte[BUFFER_SIZE];
-        try (DatagramSocket socket = new DatagramSocket(getPortIn())) {
-            DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+        int size = PortIntent.values().length;
+        ArrayList<byte[]> buffer = new ArrayList<>();
+        DatagramSocket[] socket = new DatagramSocket[size];
+        DatagramPacket[] packet = new DatagramPacket[size];
+        for (PortIntent intent : PortIntent.values()) {
+            int port = getPortIn(intent);
+            int index = intent.ordinal();
+            try {
+                buffer.add(new byte[BUFFER_SIZE]);
+                if (port > 0) {
+                    socket[index] = new DatagramSocket(port);
+                    packet[index] = new DatagramPacket(buffer.get(index), buffer.get(index).length);
+                }
+            } catch (Exception e) {
+                System.err.println("Error listening for UDP packets: " + e.getMessage());
+                socket[index] = null;
+                packet[index] = null;
+            }
             running = true;
+        }
 
+        try {
             while (running) {
-                socket.receive(packet);
-                dataReceived(new String(buffer, 0, packet.getLength()));
+                for (PortIntent intent : PortIntent.values()) {
+                    int index = intent.ordinal();
+                    if ((socket[index] != null) && (packet[index] != null)) {
+                        socket[index].receive(packet[index]);
+                        dataReceived(intent, new String(buffer.get(index), 0, packet[index].getLength()));
+                    }
+                }
                 Thread.sleep(10);
             }
         } catch (Exception e) {
@@ -187,6 +218,7 @@ public class XrAPI implements XrInterface, Runnable {
                 if (version.startsWith("0.2")) impl = new XrVersion02();
                 if (version.startsWith("0.3")) impl = new XrVersion03();
                 if (version.startsWith("0.4")) impl = new XrVersion04();
+                if (version.startsWith("0.5")) impl = new XrVersion05();
             } catch (Exception e) {
                 System.err.println("Error reading version file: " + e.getMessage());
             }
