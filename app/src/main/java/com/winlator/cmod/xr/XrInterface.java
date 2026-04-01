@@ -20,6 +20,8 @@ package com.winlator.cmod.xr;
 
 import androidx.annotation.NonNull;
 
+import com.winlator.cmod.xserver.XServer;
+
 public interface XrInterface {
 
     enum AppInput {
@@ -40,10 +42,16 @@ public interface XrInterface {
         R_A, R_B, R_GRIP, R_THUMBSTICK_PRESS, R_THUMBSTICK_LEFT, R_THUMBSTICK_RIGHT, R_THUMBSTICK_UP, R_THUMBSTICK_DOWN, R_TRIGGER,
     }
 
-    void dataReceived(@NonNull String message);
+    enum PortIntent {
+        HMD_STATE,
+        XSERVER_INPUT
+    }
+
+    void consumeInputs(XServer xServer);
+    void dataReceived(PortIntent intent, @NonNull String message);
     String encode(@NonNull float[] axes, @NonNull boolean[] buttons, int clientIndex);
     String getFlags();
-    int getPortIn();
+    int getPortIn(PortIntent intent);
     int[] getPortsOut();
     float getValue(@NonNull AppInput index);
     void setValue(@NonNull AppInput index, float value);

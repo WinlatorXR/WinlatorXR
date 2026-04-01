@@ -1,62 +1,30 @@
-/*
- * Copyright (C) 2024-2026 WinlatorXR
- *
- * This file is part of WinlatorXR.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
 package com.winlator.cmod.xr;
 
 import androidx.annotation.NonNull;
 
-import com.winlator.XrActivity;
 import com.winlator.cmod.xserver.Keyboard;
 import com.winlator.cmod.xserver.Pointer;
 import com.winlator.cmod.xserver.XKeycode;
+import com.winlator.cmod.xserver.XServer;
 
-import java.io.File;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 
-public class XrInputVersion01 implements XrInputInterface {
+public class XrVersion05 extends XrVersion04 {
 
-    private final XrActivity instance;
-    private List<String> pendingInputs = new ArrayList<>();
-
-    private final File dir;
-
-    public XrInputVersion01(File dir) {
-        this.dir = dir;
-        instance = XrActivity.getInstance();
-    }
+    private final ArrayList<String> pendingInputs = new ArrayList<>();
 
     @Override
-    public void dataReceived(@NonNull String message) {
-        try {
-              pendingInputs.add(message);
-        } catch (Exception e) {
-            System.err.println("Error receiving data: " + e.getMessage());
+    public void consumeInputs(XServer xServer) {
+        Pointer mouse = xServer.pointer;
+        Keyboard keyboard = xServer.keyboard;
+
+        ArrayList<String> inputs;
+        synchronized (pendingInputs) {
+            inputs = new ArrayList<>(pendingInputs);
+            pendingInputs.clear();
         }
-    }
 
-    @Override
-    public void consumeInputs() {
-        Pointer mouse = instance.getXServer().pointer;
-        Keyboard keyboard = instance.getXServer().keyboard;
-
-        for (String message : pendingInputs) {
+        for (String message : inputs) {
             String[] parts = message.split(",");
 
             if (parts.length > 1) {
@@ -92,7 +60,7 @@ public class XrInputVersion01 implements XrInputInterface {
                 }
                 else if (parts[0].equalsIgnoreCase("K")) {
                     //Eg: K,50,38 to press SHIFT_L and A at the same time
-                    List<XKeycode> sendKeys = new ArrayList<>();
+                    ArrayList<XKeycode> sendKeys = new ArrayList<>();
 
                     for (int i = 1; i < parts.length; i++) {
                         sendKeys.add(keyFromString(parts[i]));
@@ -114,28 +82,34 @@ public class XrInputVersion01 implements XrInputInterface {
                 }
             }
         }
-
-        pendingInputs.clear();
     }
 
     @Override
-    public XKeycode keyFromString(@NonNull String idString) {
-        byte id = Byte.parseByte(idString);
+    public void dataReceived(PortIntent intent, @NonNull String message) {
+        if (intent == PortIntent.HMD_STATE) {
+            super.dataReceived(intent, message);
+        } else if (intent == PortIntent.XSERVER_INPUT) {
+            synchronized (pendingInputs) {
+                pendingInputs.add(message);
+            }
+        }
+    }
 
+    @Override
+    public int getPortIn(PortIntent intent) {
+        return switch (intent) {
+            case HMD_STATE -> super.getPortIn(intent);
+            case XSERVER_INPUT -> 7728;
+        };
+    }
+
+    private XKeycode keyFromString(@NonNull String idString) {
+        byte id = Byte.parseByte(idString);
         for (XKeycode key : XKeycode.values()) {
             if (key.id == id) {
                 return key;
             }
         }
-
         return XKeycode.KEY_NONE;
-    }
-
-    public int getPortIn() {
-        return 7728;
-    }
-
-    public int[] getPortsOut() {
-        return new int[]{7287};
     }
 }

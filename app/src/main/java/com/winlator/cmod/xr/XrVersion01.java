@@ -20,6 +20,8 @@ package com.winlator.cmod.xr;
 
 import androidx.annotation.NonNull;
 
+import com.winlator.cmod.xserver.XServer;
+
 import java.io.File;
 import java.util.Locale;
 
@@ -37,17 +39,23 @@ public class XrVersion01 implements XrInterface {
     }
 
     @Override
-    public void dataReceived(@NonNull String message) {
-        try {
-            String[] parts = message.split("\\s+");
-            for (int i = 0; i < parts.length; i++) {
-                float value = Float.parseFloat(parts[i]);
-                if (value > 0) {
-                    input[i] = value;
+    public void consumeInputs(XServer xServer) {
+    }
+
+    @Override
+    public void dataReceived(PortIntent intent, @NonNull String message) {
+        if (intent == PortIntent.HMD_STATE) {
+            try {
+                String[] parts = message.split("\\s+");
+                for (int i = 0; i < parts.length; i++) {
+                    float value = Float.parseFloat(parts[i]);
+                    if (value > 0) {
+                        input[i] = value;
+                    }
                 }
+            } catch (NumberFormatException e) {
+                System.err.println("Error parsing float values: " + e.getMessage());
             }
-        } catch (NumberFormatException e) {
-            System.err.println("Error parsing float values: " + e.getMessage());
         }
     }
 
@@ -94,8 +102,8 @@ public class XrVersion01 implements XrInterface {
         return "";
     }
 
-    public int getPortIn() {
-        return 7278;
+    public int getPortIn(PortIntent intent) {
+        return intent == PortIntent.HMD_STATE ? 7278 : 0;
     }
 
     public int[] getPortsOut() {
