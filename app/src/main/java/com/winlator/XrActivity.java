@@ -33,20 +33,20 @@ import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.R;
 import com.winlator.cmod.XServerDisplayActivity;
-import com.winlator.cmod.xr.XrAPI;
-import com.winlator.cmod.xr.RuntimeMeta;
-import com.winlator.cmod.xr.RuntimePFD;
-import com.winlator.cmod.xr.RuntimePico;
-import com.winlator.cmod.xr.XrContentDialog;
-import com.winlator.cmod.xr.XrController;
-import com.winlator.cmod.xr.XrKeyboard;
+import com.winlator.xr.XrAPI;
+import com.winlator.xr.RuntimeMeta;
+import com.winlator.xr.RuntimePFD;
+import com.winlator.xr.RuntimePico;
+import com.winlator.xr.XrContentDialog;
+import com.winlator.xr.XrController;
+import com.winlator.xr.XrKeyboard;
 import com.winlator.cmod.xserver.Drawable;
 import com.winlator.cmod.xserver.XKeycode;
 import com.winlator.cmod.xserver.XLock;
 import com.winlator.cmod.xserver.XServer;
 
-import static com.winlator.cmod.xr.XrInterface.AppInput;
-import static com.winlator.cmod.xr.XrInterface.ControllerButton;
+import static com.winlator.xr.XrInterface.AppInput;
+import static com.winlator.xr.XrInterface.ControllerButton;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;

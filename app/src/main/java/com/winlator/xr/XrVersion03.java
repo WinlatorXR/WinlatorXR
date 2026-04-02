@@ -16,9 +16,21 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.winlator.cmod.xr;
+package com.winlator.xr;
 
 import com.winlator.XrActivity;
 
-public class RuntimePFD extends XrActivity {
+public class XrVersion03 extends XrVersion02 {
+
+    public XrVersion03() {
+        super();
+    }
+
+    public String getFlags() {
+        StringBuilder binary = new StringBuilder();
+        binary.append(" ");
+        binary.append(XrActivity.getImmersive() ? "T" : "F");
+        binary.append(XrActivity.getSBS() ? "T" : "F");
+        return binary.toString();
+    }
 }

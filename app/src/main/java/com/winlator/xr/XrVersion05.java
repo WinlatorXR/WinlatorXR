@@ -1,4 +1,4 @@
-package com.winlator.cmod.xr;
+package com.winlator.xr;
 
 import androidx.annotation.NonNull;
 

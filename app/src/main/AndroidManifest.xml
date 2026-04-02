@@ -84,7 +84,7 @@
 
 
         <activity
-            android:name=".xr.RuntimeMeta"
+            android:name="com.winlator.xr.RuntimeMeta"
             android:configChanges="density|orientation|screenSize|keyboard|keyboardHidden|uiMode"
             android:exported="true"
             android:launchMode="singleTask"
@@ -100,7 +100,7 @@
         </activity>
 
         <activity
-            android:name=".xr.RuntimePico"
+            android:name="com.winlator.xr.RuntimePico"
             android:configChanges="density|orientation|screenSize|keyboard|keyboardHidden|uiMode"
             android:exported="true"
             android:launchMode="singleTask"
@@ -116,7 +116,7 @@
         </activity>
 
         <activity
-            android:name=".xr.RuntimePFD"
+            android:name="com.winlator.xr.RuntimePFD"
             android:configChanges="density|orientation|screenSize|keyboard|keyboardHidden|uiMode"
             android:exported="true"
             android:launchMode="singleTask"

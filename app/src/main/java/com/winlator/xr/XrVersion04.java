@@ -16,9 +16,16 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.winlator.cmod.xr;
+package com.winlator.xr;
 
-import com.winlator.XrActivity;
+public class XrVersion04 extends XrVersion03 {
 
-public class RuntimePico extends XrActivity {
+    public XrVersion04() {
+        super();
+    }
+
+    @Override
+    public int[] getPortsOut() {
+        return new int[]{7872, 7873};
+    }
 }
