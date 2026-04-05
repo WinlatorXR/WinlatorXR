@@ -31,11 +31,10 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Scanner;
 
-public class XrAPI implements XrInterface, Runnable {
+public class XrAPI implements XrInterface {
 
     private static final int BUFFER_SIZE = 1024;
     @SuppressLint("SdCardPath")
@@ -124,45 +123,6 @@ public class XrAPI implements XrInterface, Runnable {
         }
     }
 
-    @Override
-    public void run() {
-        int size = PortIntent.values().length;
-        ArrayList<byte[]> buffer = new ArrayList<>();
-        DatagramSocket[] socket = new DatagramSocket[size];
-        DatagramPacket[] packet = new DatagramPacket[size];
-        for (PortIntent intent : PortIntent.values()) {
-            int port = getPortIn(intent);
-            int index = intent.ordinal();
-            try {
-                buffer.add(new byte[BUFFER_SIZE]);
-                if (port > 0) {
-                    socket[index] = new DatagramSocket(port);
-                    packet[index] = new DatagramPacket(buffer.get(index), buffer.get(index).length);
-                }
-            } catch (Exception e) {
-                System.err.println("Error listening for UDP packets: " + e.getMessage());
-                socket[index] = null;
-                packet[index] = null;
-            }
-            running = true;
-        }
-
-        try {
-            while (running) {
-                for (PortIntent intent : PortIntent.values()) {
-                    int index = intent.ordinal();
-                    if ((socket[index] != null) && (packet[index] != null)) {
-                        socket[index].receive(packet[index]);
-                        dataReceived(intent, new String(buffer.get(index), 0, packet[index].getLength()));
-                    }
-                }
-                Thread.sleep(10);
-            }
-        } catch (Exception e) {
-            System.err.println("Error listening for UDP packets: " + e.getMessage());
-        }
-    }
-
     public void send(@NonNull byte[] bytes) throws Exception {
         //Send data to localhost
         InetAddress address = InetAddress.getLocalHost();
@@ -224,11 +184,41 @@ public class XrAPI implements XrInterface, Runnable {
             }
         }
 
-        // Create UDP listener background thread
+        // Create UDP listener background threads
         if (impl != null) {
-            Thread udpThread = new Thread(this);
-            udpThread.setDaemon(true);
-            udpThread.start();
+            startUDPthreads();
+        }
+    }
+
+    private void startUDPthreads() {
+        running = true;
+        for (PortIntent intent : PortIntent.values()) {
+            try {
+                int port = getPortIn(intent);
+                if (port > 0) {
+                    // initialize UDP
+                    byte[] buffer = new byte[BUFFER_SIZE];
+                    DatagramSocket socket = new DatagramSocket(port);
+                    DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+
+                    // start listening to the port
+                    Thread udpThread = new Thread(() -> {
+                        try {
+                            while (running) {
+                                socket.receive(packet);
+                                dataReceived(intent, new String(buffer, 0, packet.getLength()));
+                                Thread.sleep(10);
+                            }
+                        } catch (Exception e) {
+                            System.err.println("Error listening for UDP packets: " + e.getMessage());
+                        }
+                    });
+                    udpThread.setDaemon(true);
+                    udpThread.start();
+                }
+            } catch (Exception e) {
+                System.err.println("Error listening for UDP packets: " + e.getMessage());
+            }
         }
     }
 }
