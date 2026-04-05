@@ -274,12 +274,13 @@ public class XrController {
         XrInterface.ControllerButton primaryDown = primaryController == 0 ? XrInterface.ControllerButton.L_THUMBSTICK_DOWN : XrInterface.ControllerButton.R_THUMBSTICK_DOWN;
 
         // Apply values
+        currentButtons = buttons;
         mouse.setX((int) smoothedMouse[0]);
         mouse.setY((int) smoothedMouse[1]);
-        mouse.setButton(Pointer.Button.BUTTON_LEFT, buttons[primaryTrigger.ordinal()]);
-        mouse.setButton(Pointer.Button.BUTTON_RIGHT, buttons[primaryGrip.ordinal()]);
-        mouse.setButton(Pointer.Button.BUTTON_SCROLL_UP, buttons[primaryUp.ordinal()]);
-        mouse.setButton(Pointer.Button.BUTTON_SCROLL_DOWN, buttons[primaryDown.ordinal()]);
+        mapButton(primaryTrigger, Pointer.Button.BUTTON_LEFT);
+        mapButton(primaryGrip, Pointer.Button.BUTTON_RIGHT);
+        mapButton(primaryUp, Pointer.Button.BUTTON_SCROLL_UP);
+        mapButton(primaryDown, Pointer.Button.BUTTON_SCROLL_DOWN);
 
         // Limit cursor updates to the FPS (this prevents freezing)
         long timestamp = System.currentTimeMillis();
@@ -329,6 +330,13 @@ public class XrController {
             diff += 360;
         }
         return diff;
+    }
+
+    private void mapButton(XrInterface.ControllerButton xrButton, Pointer.Button button) {
+        Pointer mouse = instance.getXServer().pointer;
+        if (currentButtons[xrButton.ordinal()] != lastButtons[xrButton.ordinal()]) {
+            mouse.setButton(button, currentButtons[xrButton.ordinal()]);
+        }
     }
 
     private void mapKey(XrInterface.ControllerButton xrButton, byte xKeycode) {
