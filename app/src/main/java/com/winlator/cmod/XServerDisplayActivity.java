@@ -126,7 +126,7 @@ import com.winlator.cmod.xenvironment.components.NetworkInfoUpdateComponent;
 import com.winlator.cmod.xenvironment.components.PulseAudioComponent;
 import com.winlator.cmod.xenvironment.components.SysVSharedMemoryComponent;
 import com.winlator.cmod.xenvironment.components.XServerComponent;
-import com.winlator.xr.ReshadeUtils;
+import com.winlator.xr.ModdingUtils;
 import com.winlator.xr.XrDialog;
 import com.winlator.cmod.xserver.Pointer;
 import com.winlator.cmod.xserver.Property;
@@ -1653,7 +1653,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         // Setup reshade
         if (shortcut != null) {
             try {
-                ReshadeUtils.update(this, imageFs, shortcut);
+                ModdingUtils.updateReshade(this, imageFs, shortcut);
             } catch (Exception e) {
                 e.printStackTrace();
             }

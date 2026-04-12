@@ -30,7 +30,7 @@ import com.winlator.cmod.xenvironment.ImageFs;
 
 import java.io.File;
 
-public class ReshadeUtils {
+public class ModdingUtils {
 
     private static final String PATH_CHARS = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM01234567890.";
     private static final TarCompressorUtils.Type PKG_TYPE = TarCompressorUtils.Type.ZSTD;
@@ -38,32 +38,33 @@ public class ReshadeUtils {
     private static final String RESHADE_DIRECTX_DLL = "dxgi.dll";
     private static final String RESHADE_DIRECTX_PKG = "reshade-directx.tzst";
     private static final String RESHADE_PLUGINS_PKG = "reshade-plugins.tzst";
+    private static final String TAG = "ModdingUtils";
 
-    public static void update(Context context, ImageFs imageFs, Shortcut shortcut) {
+    public static void updateReshade(Context context, ImageFs imageFs, Shortcut shortcut) {
         // Get destination path
         File dst = getLocalExeFile(imageFs, shortcut).getParentFile();
         boolean useReshade = shortcut.getExtra("useReshade", "0").equals("1");
         boolean forceDXGI = useReshade && shortcut.getExtra("forceDXGI", "0").equals("1");
 
         // Update packages
-        updatePlugins(context, useReshade, dst);
-        updateDirectX(context, useReshade, forceDXGI, dst);
+        updateReshadePlugins(context, useReshade, dst);
+        updateReshadeDirectX(context, useReshade, forceDXGI, dst);
 
         // Workaround for launchers
         File ue = locateUE(dst);
         if (ue != null) {
-            updatePlugins(context, useReshade, ue);
-            updateDirectX(context, useReshade, forceDXGI, ue);
+            updateReshadePlugins(context, useReshade, ue);
+            updateReshadeDirectX(context, useReshade, forceDXGI, ue);
         }
     }
 
-    private static void updateDirectX(Context context, boolean useReshade, boolean forceDXGI, File dst) {
+    private static void updateReshadeDirectX(Context context, boolean useReshade, boolean forceDXGI, File dst) {
         // Add or remove Reshade files
         TarCompressorUtils.Status extracted;
         extracted = TarCompressorUtils.isExtracted(PKG_TYPE, context, RESHADE_DIRECTX_PKG, dst);
         if (extracted != TarCompressorUtils.Status.PARTIAL) {
             if (useReshade) {
-                Log.i("ReshadeUtils", "Extracting reshade to " + dst.getAbsolutePath());
+                Log.i(TAG, "Extracting reshade to " + dst.getAbsolutePath());
                 TarCompressorUtils.extract(PKG_TYPE, context, RESHADE_DIRECTX_PKG, dst);
                 if (forceDXGI || isUsingDXGI(dst)) {
                     deleteClones(dst, RESHADE_DIRECTX_CLONES);
@@ -71,7 +72,7 @@ public class ReshadeUtils {
                     cloneFile(new File(dst, RESHADE_DIRECTX_DLL), RESHADE_DIRECTX_CLONES);
                 }
             } else {
-                Log.i("ReshadeUtils", "Removing reshade from " + dst.getAbsolutePath());
+                Log.i(TAG, "Removing reshade from " + dst.getAbsolutePath());
                 TarCompressorUtils.remove(PKG_TYPE, context, RESHADE_DIRECTX_PKG, dst);
                 deleteClones(dst, RESHADE_DIRECTX_CLONES);
             }
@@ -79,15 +80,15 @@ public class ReshadeUtils {
 
         // Log current status
         extracted = TarCompressorUtils.isExtracted(PKG_TYPE, context, RESHADE_DIRECTX_PKG, dst);
-        Log.i("ReshadeUtils", "Reshade isExtracted=" + extracted);
+        Log.i(TAG, "Reshade isExtracted=" + extracted);
     }
 
-    private static void updatePlugins(Context context, boolean useReshade, File dst) {
+    private static void updateReshadePlugins(Context context, boolean useReshade, File dst) {
         if (useReshade) {
-            Log.i("ReshadeUtils", "Extracting reshade to " + dst.getAbsolutePath());
+            Log.i(TAG, "Extracting reshade to " + dst.getAbsolutePath());
             TarCompressorUtils.extract(PKG_TYPE, context, RESHADE_PLUGINS_PKG, dst);
         } else {
-            Log.i("ReshadeUtils", "Removing reshade from " + dst.getAbsolutePath());
+            Log.i(TAG, "Removing reshade from " + dst.getAbsolutePath());
             TarCompressorUtils.remove(PKG_TYPE, context, RESHADE_PLUGINS_PKG, dst);
         }
     }
@@ -109,7 +110,7 @@ public class ReshadeUtils {
         int linkFollow = 0;
         File exe = getLocalFile(imageFs, shortcut);
         while (exe.getAbsolutePath().endsWith(".lnk")) {
-            Log.i("ReshadeUtils", "Shortcut lead to shortcut " + exe.getAbsolutePath());
+            Log.i(TAG, "Shortcut lead to shortcut " + exe.getAbsolutePath());
             try {
                 Iterable<String[]> drives = Container.drivesIterator(shortcut.container.getDrives());
                 exe = MSLink.getLocalFile(imageFs.getRootDir(), ImageFs.WINEPREFIX, drives, exe);
