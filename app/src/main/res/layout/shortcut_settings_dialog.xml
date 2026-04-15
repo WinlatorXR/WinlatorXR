@@ -269,7 +269,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:text="@string/xr_3d" />
+            android:text="@string/xr_mods" />
 
         <CheckBox
             android:id="@+id/CBUseReshade"
@@ -282,6 +282,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/force_dxgi" />
+
+        <CheckBox
+            android:id="@+id/CBUseTrackIR"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/use_trackir" />
 
 
         <!-- Secondary Executable Options -->

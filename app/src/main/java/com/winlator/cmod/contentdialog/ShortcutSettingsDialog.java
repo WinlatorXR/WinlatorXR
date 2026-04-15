@@ -224,6 +224,11 @@ public class ShortcutSettingsDialog extends ContentDialog {
         cbForceDXGI.setChecked(forceDXGI);
         cbUseReshade.setOnCheckedChangeListener((compoundButton, checked) -> cbForceDXGI.setEnabled(checked));
 
+        // TrackIR intergration
+        boolean useTrackIR = shortcut.getExtra("useTrackIR", "0").equals("1");
+        final CheckBox cbUseTrackIR = findViewById(R.id.CBUseTrackIR);
+        cbUseTrackIR.setChecked(useTrackIR);
+
         // Initialize the TextView for the legacy mode message
 //        TextView tvLegacyInputMessage = findViewById(R.id.TVLegacyInputMessage);
 
@@ -488,6 +493,7 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
                 shortcut.putExtra("useReshade", cbUseReshade.isChecked() ? "1" : null);
                 shortcut.putExtra("forceDXGI", cbForceDXGI.isChecked() ? "1" : null);
+                shortcut.putExtra("useTrackIR", cbUseTrackIR.isChecked() ? "1" : null);
                 shortcut.putExtra("fullscreenStretched", cbFullscreenStretched.isChecked() ? "1" : null);
 
                 String wincomponents = containerDetailFragment.getWinComponents(getContentView());

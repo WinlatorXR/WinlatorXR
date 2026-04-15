@@ -1654,6 +1654,10 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         if (shortcut != null) {
             try {
                 ModdingUtils.updateReshade(this, imageFs, shortcut);
+                String exec = ModdingUtils.updateTrackIR(this, imageFs, shortcut, container);
+                if (exec != null) {
+                    scheduleSecondaryExecution(exec, 5);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
