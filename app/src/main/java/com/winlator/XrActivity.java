@@ -269,6 +269,7 @@ public class XrActivity extends XServerDisplayActivity {
         xrController.updateHaptics(xrAPI);
 
         // Android UI input
+        lastActive = System.currentTimeMillis();
         if (!xrController.updateAndroidInput(buttons))
             return;
 
@@ -289,7 +290,6 @@ public class XrActivity extends XServerDisplayActivity {
             }
             xrController.updateMouseState(buttons);
             xrController.updateKeyboardButtons(buttons);
-            lastActive = System.currentTimeMillis();
         }
     }
 

@@ -500,6 +500,13 @@
                     android:text="@string/assign"
                     android:layout_marginBottom="6dp"/>
             </com.google.android.flexbox.FlexboxLayout>
+
+            <Button
+                android:id="@+id/BTConfigureAnalogSticks"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Override Joystick Behavior"
+                android:layout_marginTop="8dp" />
         </LinearLayout>
 
     </LinearLayout>

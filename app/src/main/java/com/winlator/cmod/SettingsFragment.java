@@ -233,10 +233,6 @@ public class SettingsFragment extends Fragment {
 //
 //        rgGyroMode.check(selectedMode == 0 ? R.id.RBHoldMode : R.id.RBToggleMode);
 
-        // Initialize the "Configure Analog Sticks" button
-        Button btConfigureAnalogSticks = view.findViewById(R.id.BTConfigureAnalogSticks);
-        btConfigureAnalogSticks.setOnClickListener(v -> showAnalogStickConfigDialog());
-
 
         // Configure Frontend Export Path button
 
@@ -327,12 +323,6 @@ public class SettingsFragment extends Fragment {
             e.commit();
         });
 
-        final CheckBox cbUsePT = view.findViewById(R.id.CBUsePT);
-        cbUsePT.setChecked(preferences.getBoolean("use_pt", true));
-
-        final CheckBox cbUseCS = view.findViewById(R.id.CBUseCS);
-        cbUseCS.setChecked(preferences.getBoolean("use_cs", false));
-
         final CheckBox cbEnableWineDebug = view.findViewById(R.id.CBEnableWineDebug);
         cbEnableWineDebug.setChecked(preferences.getBoolean("enable_wine_debug", false));
 
@@ -400,6 +390,12 @@ public class SettingsFragment extends Fragment {
             selectBackupFileForRestore();
         });
 
+        final Button bButtonBox64RC = view.findViewById(R.id.BTBox64RC);
+        bButtonBox64RC.setOnClickListener(view1 -> getActivity().getSupportFragmentManager().beginTransaction()
+                .setCustomAnimations(R.anim.slide_in_up, R.anim.slide_out_down)  // Forward animation
+                .replace(R.id.FLFragmentContainer, new Box86_64RCFragment())
+                .commit());
+
 //        int finalSelectedIndex = selectedIndex;
             saveButton = view.findViewById(R.id.BTConfirm);
             saveButton.setVisibility(View.GONE);
@@ -410,8 +406,6 @@ public class SettingsFragment extends Fragment {
             editor.putString("box64_preset", Box86_64PresetManager.getSpinnerSelectedId(sBox64Preset));
             editor.putBoolean("use_dri3", cbUseDRI3.isChecked());
             editor.putBoolean("use_xr", cbUseXR.isChecked());
-            editor.putBoolean("use_pt", cbUsePT.isChecked());
-            editor.putBoolean("use_cs", cbUseCS.isChecked());
             editor.putFloat("cursor_speed", sbCursorSpeed.getProgress() / 100.0f);
             editor.putBoolean("enable_wine_debug", cbEnableWineDebug.isChecked());
             editor.putBoolean("enable_box86_64_logs", cbEnableBox86_64Logs.isChecked());
@@ -513,19 +507,12 @@ public class SettingsFragment extends Fragment {
 //        TextView gyroSettingsLabel = view.findViewById(R.id.TVGyroSettings);
 //        applyFieldSetLabelStyle(gyroSettingsLabel, isDarkMode);
 
-        TextView gameControllerLabel = view.findViewById(R.id.TVGameControllerLabel);
-        applyFieldSetLabelStyle(gameControllerLabel, isDarkMode);
-
         // Advanced tab labels
         TextView logsLabel = view.findViewById(R.id.TVLogs);
         applyFieldSetLabelStyle(logsLabel, isDarkMode);
 
         TextView experimentalLabel = view.findViewById(R.id.TVExperimental);
         applyFieldSetLabelStyle(experimentalLabel, isDarkMode);
-
-        TextView ImageFsLabel = view.findViewById(R.id.TVImageFs);
-        applyFieldSetLabelStyle(ImageFsLabel, isDarkMode);
-
     }
 
     private void applyFieldSetLabelStyle(TextView textView, boolean isDarkMode) {
@@ -1036,162 +1023,4 @@ public class SettingsFragment extends Fragment {
 //        // Show the dialog
 //        builder.create().show();
 //    }
-
-    private void showAnalogStickConfigDialog() {
-        // Inflate the dialog layout
-        LayoutInflater inflater = LayoutInflater.from(getContext());
-        View dialogView = inflater.inflate(R.layout.analog_stick_config_dialog, null);
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setView(dialogView);
-        builder.setTitle("Configure Analog Sticks");
-        builder.setCancelable(false);
-
-        // Initialize UI elements
-        SeekBar sbLeftDeadzone = dialogView.findViewById(R.id.SBLeftDeadzone);
-        TextView tvLeftDeadzone = dialogView.findViewById(R.id.TVLeftDeadzone);
-
-        SeekBar sbLeftSensitivity = dialogView.findViewById(R.id.SBLeftSensitivity);
-        TextView tvLeftSensitivity = dialogView.findViewById(R.id.TVLeftSensitivity);
-
-        SeekBar sbRightDeadzone = dialogView.findViewById(R.id.SBRightDeadzone);
-        TextView tvRightDeadzone = dialogView.findViewById(R.id.TVRightDeadzone);
-
-        SeekBar sbRightSensitivity = dialogView.findViewById(R.id.SBRightSensitivity);
-        TextView tvRightSensitivity = dialogView.findViewById(R.id.TVRightSensitivity);
-
-        CheckBox cbInvertLeftX = dialogView.findViewById(R.id.CBInvertLeftStickX);
-        CheckBox cbInvertLeftY = dialogView.findViewById(R.id.CBInvertLeftStickY);
-        CheckBox cbInvertRightX = dialogView.findViewById(R.id.CBInvertRightStickX);
-        CheckBox cbInvertRightY = dialogView.findViewById(R.id.CBInvertRightStickY);
-
-        // New checkbox for square deadzone
-        CheckBox cbLeftStickSquareDeadzone = dialogView.findViewById(R.id.CBLeftStickSquareDeadzone);
-
-        // Load current preferences
-        float currentDeadzoneLeft = preferences.getFloat(PreferenceKeys.DEADZONE_LEFT, 0.1f) * 100; // Convert to percentage
-        float currentDeadzoneRight = preferences.getFloat(PreferenceKeys.DEADZONE_RIGHT, 0.1f) * 100;
-        float currentSensitivityLeft = preferences.getFloat(PreferenceKeys.SENSITIVITY_LEFT, 1.0f) * 100; // Convert to percentage
-        float currentSensitivityRight = preferences.getFloat(PreferenceKeys.SENSITIVITY_RIGHT, 1.0f) * 100;
-        boolean squareDeadzoneLeft = preferences.getBoolean(PreferenceKeys.SQUARE_DEADZONE_LEFT, false);
-
-        boolean invertLeftX = preferences.getBoolean(PreferenceKeys.INVERT_LEFT_X, false);
-        boolean invertLeftY = preferences.getBoolean(PreferenceKeys.INVERT_LEFT_Y, false);
-        boolean invertRightX = preferences.getBoolean(PreferenceKeys.INVERT_RIGHT_X, false);
-        boolean invertRightY = preferences.getBoolean(PreferenceKeys.INVERT_RIGHT_Y, false);
-
-        // Set initial values
-        sbLeftDeadzone.setProgress((int) currentDeadzoneLeft);
-        tvLeftDeadzone.setText("Deadzone: " + sbLeftDeadzone.getProgress() + "%");
-
-        sbLeftSensitivity.setProgress((int) currentSensitivityLeft);
-        tvLeftSensitivity.setText("Sensitivity: " + sbLeftSensitivity.getProgress() + "%");
-
-        sbRightDeadzone.setProgress((int) currentDeadzoneRight);
-        tvRightDeadzone.setText("Deadzone: " + sbRightDeadzone.getProgress() + "%");
-
-        sbRightSensitivity.setProgress((int) currentSensitivityRight);
-        tvRightSensitivity.setText("Sensitivity: " + sbRightSensitivity.getProgress() + "%");
-
-        cbInvertLeftX.setChecked(invertLeftX);
-        cbInvertLeftY.setChecked(invertLeftY);
-        cbInvertRightX.setChecked(invertRightX);
-        cbInvertRightY.setChecked(invertRightY);
-
-        cbLeftStickSquareDeadzone.setChecked(squareDeadzoneLeft);
-
-        // Set listeners to update TextViews as SeekBars change
-        sbLeftDeadzone.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                tvLeftDeadzone.setText("Deadzone: " + progress + "%");
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-
-        sbLeftSensitivity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                tvLeftSensitivity.setText("Sensitivity: " + progress + "%");
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-
-        sbRightDeadzone.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                tvRightDeadzone.setText("Deadzone: " + progress + "%");
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-
-        sbRightSensitivity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                tvRightSensitivity.setText("Sensitivity: " + progress + "%");
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-
-        // Set up the dialog buttons
-        builder.setPositiveButton("Save", (dialog, which) -> {
-            // Retrieve and save the updated settings
-            float newDeadzoneLeft = sbLeftDeadzone.getProgress() / 100.0f;
-            float newDeadzoneRight = sbRightDeadzone.getProgress() / 100.0f;
-            float newSensitivityLeft = sbLeftSensitivity.getProgress() / 100.0f;
-            float newSensitivityRight = sbRightSensitivity.getProgress() / 100.0f;
-
-            boolean newInvertLeftX = cbInvertLeftX.isChecked();
-            boolean newInvertLeftY = cbInvertLeftY.isChecked();
-            boolean newInvertRightX = cbInvertRightX.isChecked();
-            boolean newInvertRightY = cbInvertRightY.isChecked();
-
-            // Save to SharedPreferences
-            SharedPreferences.Editor editor = preferences.edit();
-            editor.putFloat(PreferenceKeys.DEADZONE_LEFT, newDeadzoneLeft);
-            editor.putFloat(PreferenceKeys.DEADZONE_RIGHT, newDeadzoneRight);
-            editor.putFloat(PreferenceKeys.SENSITIVITY_LEFT, newSensitivityLeft);
-            editor.putFloat(PreferenceKeys.SENSITIVITY_RIGHT, newSensitivityRight);
-            editor.putBoolean(PreferenceKeys.INVERT_LEFT_X, newInvertLeftX);
-            editor.putBoolean(PreferenceKeys.INVERT_LEFT_Y, newInvertLeftY);
-            editor.putBoolean(PreferenceKeys.INVERT_RIGHT_X, newInvertRightX);
-            editor.putBoolean(PreferenceKeys.INVERT_RIGHT_Y, newInvertRightY);
-            editor.putBoolean(PreferenceKeys.SQUARE_DEADZONE_LEFT, cbLeftStickSquareDeadzone.isChecked());
-            editor.apply();
-
-            // Optionally, notify ExternalController instances to reload preferences
-            // If you have a central manager or singleton, you can call a method here
-            // For example:
-            // ExternalControllerManager.getInstance().reloadPreferences();
-
-            // We'll assume ExternalController instances listen to preference changes
-        });
-
-        builder.setNegativeButton("Cancel", null);
-
-        // Create and show the dialog
-        AlertDialog dialog = builder.create();
-        dialog.show();
-    }
-
 }

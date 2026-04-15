@@ -599,9 +599,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 ControllerAssignmentDialog.show(this);
                 drawerLayout.closeDrawers();
                 break;
-            case R.id.main_menu_box_rc:
-                show(new Box86_64RCFragment(), false);  // Forward animation
-                break;
             case R.id.main_menu_contents:
                 show(new ContentsFragment(), false);  // Forward animation
                 break;
