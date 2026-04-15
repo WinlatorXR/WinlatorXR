@@ -273,8 +273,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Frontend Export Path"
-                                android:textColor="@color/abc_decor_view_status_guard"/>
+                                android:text="Frontend Export Path"/>
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -286,8 +285,7 @@
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:text="Default Path: Downloads/Winlator/Frontend"
-                                    android:textColor="@color/abc_decor_view_status_guard"/>
+                                    android:text="Default Path: Downloads/Winlator/Frontend"/>
                                 <Button
                                     android:id="@+id/BTChooseFrontendExportPath"
                                     android:layout_width="wrap_content"
