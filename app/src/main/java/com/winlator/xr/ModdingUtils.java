@@ -38,7 +38,7 @@ public class ModdingUtils {
     private static final String RESHADE_DIRECTX_DLL = "dxgi.dll";
     private static final String RESHADE_DIRECTX_PKG = "reshade-directx.tzst";
     private static final String RESHADE_PLUGINS_PKG = "reshade-plugins.tzst";
-    private static final String TRACKIR_PATH = "opentrack_wxr/opentrack.exe";
+    private static final String TRACKIR_PATH = "C:\\opentrack_wxr\\opentrack.exe";
     private static final String TRACKIR_PKG = "opentrack_wxr.tzst";
     private static final String TAG = "ModdingUtils";
 
@@ -60,19 +60,17 @@ public class ModdingUtils {
         }
     }
 
-    public static String updateTrackIR(Context context, ImageFs imageFs, Shortcut shortcut, Container container) {
+    public static String updateTrackIR(Context context, ImageFs imageFs, Shortcut shortcut) {
         // Get destination path
-        File dst = getLocalExeFile(imageFs, shortcut).getParentFile();
+        File dst = new File(imageFs.getRootDir(), ImageFs.WINEPREFIX + "/drive_c/");
         boolean useTrackIR = shortcut.getExtra("useTrackIR", "0").equals("1");
 
         //update archive
         if (useTrackIR) {
             Log.i(TAG, "Extracting TrackIR to " + dst.getAbsolutePath());
             TarCompressorUtils.extract(PKG_TYPE, context, TRACKIR_PKG, dst);
-            return getSandboxedPath(imageFs, container, new File(dst, TRACKIR_PATH));
+            return TRACKIR_PATH;
         } else {
-            Log.i(TAG, "Removing TrackIR from " + dst.getAbsolutePath());
-            TarCompressorUtils.remove(PKG_TYPE, context, TRACKIR_PKG, dst);
             return null;
         }
     }
@@ -169,27 +167,6 @@ public class ModdingUtils {
             }
         }
         return new File(imageFs.getRootDir(), ImageFs.WINEPREFIX + "/drive_" + sb);
-    }
-
-    private static String getSandboxedPath(ImageFs imageFs, Container container, File file) {
-        // Get sandboxed drive
-        String output = "";
-        String base = new File(imageFs.getRootDir(), ImageFs.WINEPREFIX + "/drive_c/").getAbsolutePath();
-        if (file.getAbsolutePath().startsWith(base)) {
-            output = "C:\\";
-        } else {
-            for (String[] it : Container.drivesIterator(container.getDrives())) {
-                if (file.getAbsolutePath().startsWith(it[1])) {
-                    output = it[0].toUpperCase() + ":\\";
-                    base = it[1];
-                }
-            }
-        }
-
-        // Get full path
-        String path = file.getAbsolutePath().substring(base.length() + 1);
-        output += path.replace("/", "\\");
-        return output;
     }
 
     private static boolean isUsingDXGI(File dst) {

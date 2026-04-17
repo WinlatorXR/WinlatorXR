@@ -543,6 +543,18 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             Log.d("XServerDisplayActivity", "No valid secondary executable or delay is zero, skipping scheduling.");
         }
 
+        // Setup TrackIR emulation
+        if (shortcut != null) {
+            try {
+                String exec = ModdingUtils.updateTrackIR(this, imageFs, shortcut);
+                if (exec != null) {
+                    scheduleSecondaryExecution(exec, 10);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
         graphicsDriver = container.getGraphicsDriver();
         String graphicsDriverConfig = container.getGraphicsDriverConfig();
         audioDriver = container.getAudioDriver();
@@ -1654,10 +1666,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         if (shortcut != null) {
             try {
                 ModdingUtils.updateReshade(this, imageFs, shortcut);
-                String exec = ModdingUtils.updateTrackIR(this, imageFs, shortcut, container);
-                if (exec != null) {
-                    scheduleSecondaryExecution(exec, 5);
-                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
