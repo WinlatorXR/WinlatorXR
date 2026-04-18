@@ -42,7 +42,24 @@ public class ModdingUtils {
     private static final String TRACKIR_PKG = "opentrack_wxr.tzst";
     private static final String TAG = "ModdingUtils";
 
+    public static String getRuntimeForTrackIR(Shortcut shortcut) {
+        if (shortcut == null) {
+            return null;
+        }
+        return shortcut.getExtra("useTrackIR", "0").equals("1") ? TRACKIR_PATH : null;
+    }
+
+    public static void unpackTrackIR(Context context, ImageFs imageFs) {
+        File dst = new File(imageFs.getRootDir(), ImageFs.WINEPREFIX + "/drive_c/");
+        Log.i(TAG, "Extracting TrackIR to " + dst.getAbsolutePath());
+        TarCompressorUtils.extract(PKG_TYPE, context, TRACKIR_PKG, dst);
+    }
+
     public static void updateReshade(Context context, ImageFs imageFs, Shortcut shortcut) {
+        if (shortcut == null) {
+            return;
+        }
+
         // Get destination path
         File dst = getLocalExeFile(imageFs, shortcut).getParentFile();
         boolean useReshade = shortcut.getExtra("useReshade", "0").equals("1");
@@ -57,21 +74,6 @@ public class ModdingUtils {
         if (ue != null) {
             updateReshadePlugins(context, useReshade, ue);
             updateReshadeDirectX(context, useReshade, forceDXGI, ue);
-        }
-    }
-
-    public static String updateTrackIR(Context context, ImageFs imageFs, Shortcut shortcut) {
-        // Get destination path
-        File dst = new File(imageFs.getRootDir(), ImageFs.WINEPREFIX + "/drive_c/");
-        boolean useTrackIR = shortcut.getExtra("useTrackIR", "0").equals("1");
-
-        //update archive
-        if (useTrackIR) {
-            Log.i(TAG, "Extracting TrackIR to " + dst.getAbsolutePath());
-            TarCompressorUtils.extract(PKG_TYPE, context, TRACKIR_PKG, dst);
-            return TRACKIR_PATH;
-        } else {
-            return null;
         }
     }
 

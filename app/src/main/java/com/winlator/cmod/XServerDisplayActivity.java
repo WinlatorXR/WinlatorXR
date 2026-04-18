@@ -544,15 +544,13 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         }
 
         // Setup TrackIR emulation
-        if (shortcut != null) {
-            try {
-                String exec = ModdingUtils.updateTrackIR(this, imageFs, shortcut);
-                if (exec != null) {
-                    scheduleSecondaryExecution(exec, 10);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+        try {
+            String exec = ModdingUtils.getRuntimeForTrackIR(shortcut);
+            if (exec != null) {
+                scheduleSecondaryExecution(exec, 10);
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
         graphicsDriver = container.getGraphicsDriver();
@@ -1662,13 +1660,12 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         String rootPath = imageFs.getRootDir().getPath();
         FileUtils.clear(imageFs.getTmpDir());
 
-        // Setup reshade
-        if (shortcut != null) {
-            try {
-                ModdingUtils.updateReshade(this, imageFs, shortcut);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+        // Setup OpenXR mods
+        try {
+            ModdingUtils.unpackTrackIR(this, imageFs);
+            ModdingUtils.updateReshade(this, imageFs, shortcut);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
         // Create the appropriate launcher based on the container type
