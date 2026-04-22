@@ -295,6 +295,8 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         ControllerManager.getInstance().init(this);
 
+        ModdingUtils.unpackTrackIR(this);
+
         setupAudioDeviceListener();
 
 
@@ -1662,7 +1664,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         // Setup OpenXR mods
         try {
-            ModdingUtils.unpackTrackIR(this, imageFs);
             ModdingUtils.updateReshade(this, imageFs, shortcut);
         } catch (Exception e) {
             e.printStackTrace();
