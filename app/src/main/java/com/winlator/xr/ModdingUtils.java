@@ -51,8 +51,12 @@ public class ModdingUtils {
 
     public static void unpackTrackIR(Context context, ImageFs imageFs) {
         File dst = new File(imageFs.getRootDir(), ImageFs.WINEPREFIX + "/drive_c/");
-        Log.i(TAG, "Extracting TrackIR to " + dst.getAbsolutePath());
-        TarCompressorUtils.extract(PKG_TYPE, context, TRACKIR_PKG, dst);
+        TarCompressorUtils.Status extracted;
+        extracted = TarCompressorUtils.isExtracted(PKG_TYPE, context, TRACKIR_PKG, dst);
+        if (extracted != TarCompressorUtils.Status.FULL) {
+            Log.i(TAG, "Extracting TrackIR to " + dst.getAbsolutePath());
+            TarCompressorUtils.extract(PKG_TYPE, context, TRACKIR_PKG, dst);
+        }
     }
 
     public static void updateReshade(Context context, ImageFs imageFs, Shortcut shortcut) {
