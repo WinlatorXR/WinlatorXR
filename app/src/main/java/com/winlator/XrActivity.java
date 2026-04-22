@@ -33,11 +33,11 @@ import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.R;
 import com.winlator.cmod.XServerDisplayActivity;
-import com.winlator.xr.XrAPI;
-import com.winlator.xr.RuntimeMeta;
-import com.winlator.xr.RuntimePFD;
-import com.winlator.xr.RuntimePico;
-import com.winlator.xr.XrContentDialog;
+import com.winlator.xr.api.XrAPI;
+import com.winlator.xr.runtime.MetaQuest;
+import com.winlator.xr.runtime.Pico;
+import com.winlator.xr.runtime.PlayForDream;
+import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.xr.XrController;
 import com.winlator.xr.XrKeyboard;
 import com.winlator.cmod.xserver.Drawable;
@@ -45,8 +45,8 @@ import com.winlator.cmod.xserver.XKeycode;
 import com.winlator.cmod.xserver.XLock;
 import com.winlator.cmod.xserver.XServer;
 
-import static com.winlator.xr.XrInterface.AppInput;
-import static com.winlator.xr.XrInterface.ControllerButton;
+import static com.winlator.xr.api.XrInterface.AppInput;
+import static com.winlator.xr.api.XrInterface.ControllerButton;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -295,13 +295,13 @@ public class XrActivity extends XServerDisplayActivity {
 
     private static Class getRuntime() {
         if (Build.MANUFACTURER.compareToIgnoreCase("PICO") == 0) {
-            return RuntimePico.class;
+            return Pico.class;
         } else if (Build.MANUFACTURER.compareToIgnoreCase("PLAY FOR DREAM") == 0) {
-            return RuntimePFD.class;
+            return PlayForDream.class;
         } else if (Build.MANUFACTURER.compareToIgnoreCase("OCULUS") == 0) {
-            return RuntimeMeta.class;
+            return MetaQuest.class;
         } else if (Build.MANUFACTURER.compareToIgnoreCase("META") == 0) {
-            return RuntimeMeta.class;
+            return MetaQuest.class;
         } else {
             return null;
         }

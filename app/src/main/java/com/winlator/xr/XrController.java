@@ -33,6 +33,9 @@ import com.winlator.cmod.contentdialog.NavigationDialog;
 import com.winlator.cmod.xserver.Keyboard;
 import com.winlator.cmod.xserver.Pointer;
 import com.winlator.cmod.xserver.XKeycode;
+import com.winlator.xr.api.XrAPI;
+import com.winlator.xr.api.XrInterface;
+import com.winlator.xr.ui.XrContentDialog;
 
 import java.util.Vector;
 

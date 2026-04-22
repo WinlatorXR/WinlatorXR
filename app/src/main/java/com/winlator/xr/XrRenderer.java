@@ -34,6 +34,7 @@ import com.winlator.cmod.widget.XServerView;
 import com.winlator.cmod.xserver.Drawable;
 import com.winlator.cmod.xserver.XLock;
 import com.winlator.cmod.xserver.XServer;
+import com.winlator.xr.ui.XrContentDialog;
 
 import javax.microedition.khronos.opengles.GL10;
 

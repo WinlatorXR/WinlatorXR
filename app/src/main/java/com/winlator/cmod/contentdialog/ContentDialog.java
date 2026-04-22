@@ -25,7 +25,7 @@ import com.winlator.cmod.R;
 import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.Callback;
 import com.winlator.cmod.inputcontrols.ControllerManager;
-import com.winlator.xr.XrContentDialog;
+import com.winlator.xr.ui.XrContentDialog;
 
 import java.util.ArrayList;
 

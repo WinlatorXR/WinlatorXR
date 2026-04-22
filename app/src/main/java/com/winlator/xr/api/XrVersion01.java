@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.winlator.xr;
+package com.winlator.xr.api;
 
 import androidx.annotation.NonNull;
 

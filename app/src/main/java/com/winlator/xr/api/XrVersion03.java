@@ -16,16 +16,21 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.winlator.xr;
+package com.winlator.xr.api;
 
-public class XrVersion04 extends XrVersion03 {
+import com.winlator.XrActivity;
 
-    public XrVersion04() {
+public class XrVersion03 extends XrVersion02 {
+
+    public XrVersion03() {
         super();
     }
 
-    @Override
-    public int[] getPortsOut() {
-        return new int[]{7872, 7873};
+    public String getFlags() {
+        StringBuilder binary = new StringBuilder();
+        binary.append(" ");
+        binary.append(XrActivity.getImmersive() ? "T" : "F");
+        binary.append(XrActivity.getSBS() ? "T" : "F");
+        return binary.toString();
     }
 }
