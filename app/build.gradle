@@ -33,7 +33,7 @@ android {
         targetSdkVersion 28
 
         versionCode 23
-        versionName "cats-05"
+        versionName "cats-06"
 
         // External native build from Winlator
         externalNativeBuild {
