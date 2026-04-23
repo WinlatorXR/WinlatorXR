@@ -22,7 +22,6 @@ import android.content.Context;
 import android.util.Log;
 
 import com.winlator.cmod.container.Container;
-import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.MSLink;
 import com.winlator.cmod.core.TarCompressorUtils;
@@ -38,42 +37,42 @@ public class ModdingUtils {
     private static final String RESHADE_DIRECTX_DLL = "dxgi.dll";
     private static final String RESHADE_DIRECTX_PKG = "reshade-directx.tzst";
     private static final String RESHADE_PLUGINS_PKG = "reshade-plugins.tzst";
-    private static final String TRACKIR_DESTIONATION = "/sdcard/Download/Winlator";
-    private static final String TRACKIR_PATH = "D:\\Winlator\\opentrack_wxr\\opentrack.exe";
+    private static final String TRACKIR_PATH = "C:\\opentrack_wxr\\opentrack.exe";
     private static final String TRACKIR_PKG = "opentrack_wxr.tzst";
     private static final String TAG = "ModdingUtils";
 
-    public static String getRuntimeForTrackIR(Shortcut shortcut) {
-        if (shortcut == null) {
-            return null;
+    public static File getLocalExeFile(ImageFs imageFs, String executable, Container container) {
+        int linkFollow = 0;
+        File exe = getLocalFile(imageFs, executable, container);
+        while (exe.getAbsolutePath().endsWith(".lnk")) {
+            Log.i(TAG, "Shortcut lead to shortcut " + exe.getAbsolutePath());
+            try {
+                Iterable<String[]> drives = Container.drivesIterator(container.getDrives());
+                exe = MSLink.getLocalFile(imageFs.getRootDir(), ImageFs.WINEPREFIX, drives, exe);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            linkFollow++;
+            if (linkFollow > 5) {
+                break;
+            }
         }
-        return shortcut.getExtra("useTrackIR", "0").equals("1") ? TRACKIR_PATH : null;
+        return exe;
     }
 
-    public static void unpackTrackIR(Context context) {
-        File dst = new File(TRACKIR_DESTIONATION);
-        if (!dst.exists()) {
-            dst.mkdirs();
-            dst.mkdir();
-        }
-        TarCompressorUtils.Status extracted;
-        extracted = TarCompressorUtils.isExtracted(PKG_TYPE, context, TRACKIR_PKG, dst);
-        if (extracted != TarCompressorUtils.Status.FULL) {
+    public static String getRuntimeForTrackIR() {
+        return TRACKIR_PATH;
+    }
+
+    public static void unpackTrackIR(Context context, ImageFs imageFs) {
+        File dst = new File(imageFs.getRootDir(), ImageFs.WINEPREFIX + "/drive_c/");
+        if (TarCompressorUtils.isExtracted(PKG_TYPE, context, TRACKIR_PKG, dst) != TarCompressorUtils.Status.FULL) {
             Log.i(TAG, "Extracting TrackIR to " + dst.getAbsolutePath());
             TarCompressorUtils.extract(PKG_TYPE, context, TRACKIR_PKG, dst);
         }
     }
 
-    public static void updateReshade(Context context, ImageFs imageFs, Shortcut shortcut) {
-        if (shortcut == null) {
-            return;
-        }
-
-        // Get destination path
-        File dst = getLocalExeFile(imageFs, shortcut).getParentFile();
-        boolean useReshade = shortcut.getExtra("useReshade", "0").equals("1");
-        boolean forceDXGI = useReshade && shortcut.getExtra("forceDXGI", "0").equals("1");
-
+    public static void updateReshade(Context context, File dst, boolean useReshade, boolean forceDXGI) {
         // Update packages
         updateReshadePlugins(context, useReshade, dst);
         updateReshadeDirectX(context, useReshade, forceDXGI, dst);
@@ -134,28 +133,8 @@ public class ModdingUtils {
         }
     }
 
-    private static File getLocalExeFile(ImageFs imageFs, Shortcut shortcut) {
-        int linkFollow = 0;
-        File exe = getLocalFile(imageFs, shortcut);
-        while (exe.getAbsolutePath().endsWith(".lnk")) {
-            Log.i(TAG, "Shortcut lead to shortcut " + exe.getAbsolutePath());
-            try {
-                Iterable<String[]> drives = Container.drivesIterator(shortcut.container.getDrives());
-                exe = MSLink.getLocalFile(imageFs.getRootDir(), ImageFs.WINEPREFIX, drives, exe);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            linkFollow++;
-            if (linkFollow > 5) {
-                break;
-            }
-        }
-        return exe;
-    }
-
-    private static File getLocalFile(ImageFs imageFs, Shortcut shortcut) {
-        String winepath = shortcut.getFullExecutable();
-        String output = winepath.substring(winepath.indexOf("wine ") + 5);
+    private static File getLocalFile(ImageFs imageFs, String executable, Container container) {
+        String output = executable.substring(executable.indexOf("wine ") + 5);
         output = output.replace(":", "");
         char drive = output.charAt(0);
         if ((drive >= 'A') && (drive <= 'Z')) {
@@ -172,7 +151,7 @@ public class ModdingUtils {
             sb.append(output.charAt(i));
         }
 
-        for (String[] it : Container.drivesIterator(shortcut.container.getDrives())) {
+        for (String[] it : Container.drivesIterator(container.getDrives())) {
             if (it[0].compareToIgnoreCase(drive + "") == 0) {
                 return new File(it[1], sb.substring(2));
             }

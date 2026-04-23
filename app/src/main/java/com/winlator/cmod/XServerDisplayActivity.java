@@ -295,8 +295,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         ControllerManager.getInstance().init(this);
 
-        ModdingUtils.unpackTrackIR(this);
-
         setupAudioDeviceListener();
 
 
@@ -547,9 +545,9 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         // Setup TrackIR emulation
         try {
-            String exec = ModdingUtils.getRuntimeForTrackIR(shortcut);
-            if (exec != null) {
-                scheduleSecondaryExecution(exec, 10);
+            ModdingUtils.unpackTrackIR(this, imageFs);
+            if ((shortcut != null) && shortcut.getExtra("useTrackIR", "0").equals("1")) {
+                scheduleSecondaryExecution(ModdingUtils.getRuntimeForTrackIR(), 10);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -1662,11 +1660,16 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         String rootPath = imageFs.getRootDir().getPath();
         FileUtils.clear(imageFs.getTmpDir());
 
-        // Setup OpenXR mods
-        try {
-            ModdingUtils.updateReshade(this, imageFs, shortcut);
-        } catch (Exception e) {
-            e.printStackTrace();
+        // Setup reshade
+        if (shortcut != null) {
+            try {
+                File dst = ModdingUtils.getLocalExeFile(imageFs, shortcut.getFullExecutable(), shortcut.container).getParentFile();
+                boolean useReshade = shortcut.getExtra("useReshade", "0").equals("1");
+                boolean forceDXGI = useReshade && shortcut.getExtra("forceDXGI", "0").equals("1");
+                ModdingUtils.updateReshade(this, dst, useReshade, forceDXGI);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
         // Create the appropriate launcher based on the container type
