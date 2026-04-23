@@ -20,7 +20,7 @@ import android.widget.TextView;
 
 import androidx.preference.PreferenceManager;
 
-import com.winlator.XrActivity;
+import com.winlator.xr.XrActivity;
 import com.winlator.cmod.R;
 import com.winlator.cmod.XServerDisplayActivity;
 import com.winlator.cmod.inputcontrols.ControllerManager;

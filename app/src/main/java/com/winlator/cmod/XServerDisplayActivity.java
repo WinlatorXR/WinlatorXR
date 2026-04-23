@@ -58,7 +58,7 @@ import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.navigation.NavigationView;
-import com.winlator.XrActivity;
+import com.winlator.xr.XrActivity;
 import com.winlator.cmod.box86_64.rc.RCFile;
 import com.winlator.cmod.box86_64.rc.RCManager;
 import com.winlator.cmod.container.Container;

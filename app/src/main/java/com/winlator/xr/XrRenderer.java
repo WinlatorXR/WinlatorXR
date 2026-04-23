@@ -23,7 +23,6 @@ import android.os.Build;
 import android.util.DisplayMetrics;
 import android.util.Pair;
 
-import com.winlator.XrActivity;
 import com.winlator.cmod.math.XForm;
 import com.winlator.cmod.renderer.GLRenderer;
 import com.winlator.cmod.renderer.RenderableWindow;

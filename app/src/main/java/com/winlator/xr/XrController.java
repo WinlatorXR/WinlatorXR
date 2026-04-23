@@ -27,7 +27,6 @@ import androidx.preference.PreferenceManager;
 import com.drbeef.externalhapticsservice.HapticsConstants;
 import com.drbeef.externalhapticsservice.HapticServiceClient;
 
-import com.winlator.XrActivity;
 import com.winlator.cmod.container.Container;
 import com.winlator.cmod.contentdialog.NavigationDialog;
 import com.winlator.cmod.xserver.Keyboard;

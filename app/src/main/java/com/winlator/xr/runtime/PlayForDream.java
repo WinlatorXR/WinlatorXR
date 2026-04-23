@@ -18,7 +18,7 @@
  */
 package com.winlator.xr.runtime;
 
-import com.winlator.XrActivity;
+import com.winlator.xr.XrActivity;
 
 public class PlayForDream extends XrActivity {
 }

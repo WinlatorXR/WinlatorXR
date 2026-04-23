@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.winlator;
+package com.winlator.xr;
 
 import android.app.Activity;
 import android.app.ActivityOptions;
@@ -38,8 +38,6 @@ import com.winlator.xr.runtime.MetaQuest;
 import com.winlator.xr.runtime.Pico;
 import com.winlator.xr.runtime.PlayForDream;
 import com.winlator.xr.ui.XrContentDialog;
-import com.winlator.xr.XrController;
-import com.winlator.xr.XrKeyboard;
 import com.winlator.cmod.xserver.Drawable;
 import com.winlator.cmod.xserver.XKeycode;
 import com.winlator.cmod.xserver.XLock;

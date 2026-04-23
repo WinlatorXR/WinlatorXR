@@ -3,7 +3,7 @@ package com.winlator.cmod.renderer;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 
-import com.winlator.XrActivity;
+import com.winlator.xr.XrActivity;
 import com.winlator.cmod.xserver.Drawable;
 
 import java.nio.ByteBuffer;
