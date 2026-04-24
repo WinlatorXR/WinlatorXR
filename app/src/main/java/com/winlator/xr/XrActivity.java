@@ -26,7 +26,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Pair;
 import android.view.Display;
-import android.view.View;
 import android.content.SharedPreferences;
 
 import androidx.preference.PreferenceManager;
@@ -42,6 +41,7 @@ import com.winlator.cmod.xserver.Drawable;
 import com.winlator.cmod.xserver.XKeycode;
 import com.winlator.cmod.xserver.XLock;
 import com.winlator.cmod.xserver.XServer;
+import com.winlator.xr.ui.XrKeyboard;
 
 import static com.winlator.xr.api.XrInterface.AppInput;
 import static com.winlator.xr.api.XrInterface.ControllerButton;
@@ -76,7 +76,6 @@ public class XrActivity extends XServerDisplayActivity {
     // XR input/output
     private XrAPI xrAPI = null;
     private XrController xrController = null;
-    private XrKeyboard xrKeyboard = null;
 
     static {
         System.loadLibrary("xr");
@@ -98,7 +97,6 @@ public class XrActivity extends XServerDisplayActivity {
     @Override
     public synchronized void onPause() {
         xrController.unload();
-        xrKeyboard.unload();
         super.onPause();
     }
 
@@ -107,7 +105,6 @@ public class XrActivity extends XServerDisplayActivity {
         super.onResume();
         instance = this;
         xrController = new XrController();
-        xrKeyboard = new XrKeyboard();
         sendManufacturer(Build.MANUFACTURER.toUpperCase());
     }
 
@@ -167,24 +164,10 @@ public class XrActivity extends XServerDisplayActivity {
         return getRuntime() != null;
     }
 
-    @Override
-    public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        instance.findViewById(R.id.XRTextInput).setVisibility(View.GONE);
-    }
-
     public void callMenuAction(int item) {
         switch (item) {
             case R.id.main_menu_keyboard:
-                new Thread(() -> {
-                    xrKeyboard.sleep(250); //ensure onWindowFocusChanged was called
-                    runOnUiThread(() -> {
-                        isVR = false;
-                        isAER = false;
-                        isImmersive = false;
-                        xrKeyboard.show();
-                    });
-                }).start();
+                new XrKeyboard(instance).show();
                 break;
             case R.id.main_menu_magnifier:
                 lastDistance -= 1.0f;
@@ -198,7 +181,7 @@ public class XrActivity extends XServerDisplayActivity {
             case R.id.main_menu_reshade:
                 isImmersive = false;
                 isSBS = false;
-                xrKeyboard.sendKey(XKeycode.KEY_HOME);
+                XrKeyboard.sendKey(XKeycode.KEY_HOME);
                 break;
         }
     }
