@@ -80,7 +80,7 @@
         <Button style="@style/KeyButton" android:text=","/>
 
         <Button
-            android:layout_weight="4"
+            android:layout_weight="5"
             style="@style/KeyButton"
             android:text="Space"/>
 

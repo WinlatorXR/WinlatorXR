@@ -251,7 +251,10 @@ public class XrActivity extends XServerDisplayActivity {
 
         // Android UI input
         lastActive = System.currentTimeMillis();
-        if (!xrController.updateAndroidInput(buttons))
+        if (XrKeyboard.isShown()) {
+            XrKeyboard.update(axes, buttons, lastDistance);
+            return;
+        } else if (!xrController.updateAndroidInput(buttons))
             return;
 
         // Switch immersive/SBS mode
