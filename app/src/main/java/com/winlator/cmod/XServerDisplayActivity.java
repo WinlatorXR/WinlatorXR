@@ -545,7 +545,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         // Setup TrackIR emulation
         try {
-            ModdingUtils.unpackTrackIR(this, imageFs);
+            ModdingUtils.unpackTrackIR(this);
             if ((shortcut != null) && shortcut.getExtra("useTrackIR", "0").equals("1")) {
                 scheduleSecondaryExecution(ModdingUtils.getRuntimeForTrackIR(), 10);
             }

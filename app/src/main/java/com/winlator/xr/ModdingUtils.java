@@ -37,7 +37,8 @@ public class ModdingUtils {
     private static final String RESHADE_DIRECTX_DLL = "dxgi.dll";
     private static final String RESHADE_DIRECTX_PKG = "reshade-directx.tzst";
     private static final String RESHADE_PLUGINS_PKG = "reshade-plugins.tzst";
-    private static final String TRACKIR_PATH = "C:\\opentrack_wxr\\opentrack.exe";
+    private static final String TRACKIR_DESTIONATION = "/sdcard/Download/Winlator";
+    private static final String TRACKIR_PATH = "D:\\Winlator\\opentrack_wxr\\opentrack.exe";
     private static final String TRACKIR_PKG = "opentrack_wxr.tzst";
     private static final String TAG = "ModdingUtils";
 
@@ -64,8 +65,8 @@ public class ModdingUtils {
         return TRACKIR_PATH;
     }
 
-    public static void unpackTrackIR(Context context, ImageFs imageFs) {
-        File dst = new File(imageFs.getRootDir(), ImageFs.WINEPREFIX + "/drive_c/");
+    public static void unpackTrackIR(Context context) {
+        File dst = new File(TRACKIR_DESTIONATION);
         if (TarCompressorUtils.isExtracted(PKG_TYPE, context, TRACKIR_PKG, dst) != TarCompressorUtils.Status.FULL) {
             Log.i(TAG, "Extracting TrackIR to " + dst.getAbsolutePath());
             TarCompressorUtils.extract(PKG_TYPE, context, TRACKIR_PKG, dst);
