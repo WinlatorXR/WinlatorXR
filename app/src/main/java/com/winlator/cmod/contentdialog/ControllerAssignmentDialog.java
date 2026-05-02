@@ -130,6 +130,13 @@ public class ControllerAssignmentDialog {
         if (XrActivity.isEnabled(view.getContext())) {
             xr.setVisibility(View.VISIBLE);
 
+            CheckBox cbMouseLeftHanded = view.findViewById(R.id.CBPlayerXRMouseLeftHanded);
+            loadConfig(cbMouseLeftHanded, "use_xr_leftHanded", false, XrActivity.mouseLeftHanded);
+            cbMouseLeftHanded.setOnCheckedChangeListener((compoundButton, checked) -> {
+                saveConfig(view, "use_xr_leftHanded", checked);
+                XrActivity.mouseLeftHanded = checked;
+            });
+
             CheckBox cbMouseLightgun = view.findViewById(R.id.CBPlayerXRMouseLightgun);
             loadConfig(cbMouseLightgun, "use_xr_lightgun", false, XrActivity.mouseLightgun);
             cbMouseLightgun.setOnCheckedChangeListener((compoundButton, checked) -> {
@@ -142,8 +149,10 @@ public class ControllerAssignmentDialog {
             cbMouse.setOnCheckedChangeListener((compoundButton, checked) -> {
                 saveConfig(view, "use_xr_mouse", checked);
                 XrActivity.mouseEmulation = checked;
+                cbMouseLeftHanded.setEnabled(checked);
                 cbMouseLightgun.setEnabled(checked);
             });
+            cbMouseLeftHanded.setEnabled(cbMouse.isChecked());
             cbMouseLightgun.setEnabled(cbMouse.isChecked());
 
             CheckBox cbWhheel = view.findViewById(R.id.CBPlayerXRWheelEmulation);

@@ -83,12 +83,12 @@ public class XrController {
 
     public boolean updateAndroidInput(boolean[] buttons) {
         // Get OpenXR input
-        int primaryController = instance.container.getPrimaryController();
-        XrInterface.ControllerButton primaryPress = primaryController == 0 ? XrInterface.ControllerButton.L_THUMBSTICK_PRESS : XrInterface.ControllerButton.R_THUMBSTICK_PRESS;        XrInterface.ControllerButton primaryTrigger = primaryController == 0 ? XrInterface.ControllerButton.L_TRIGGER : XrInterface.ControllerButton.R_TRIGGER;
-        XrInterface.ControllerButton primaryUp = primaryController == 0 ? XrInterface.ControllerButton.L_THUMBSTICK_UP : XrInterface.ControllerButton.R_THUMBSTICK_UP;
-        XrInterface.ControllerButton primaryDown = primaryController == 0 ? XrInterface.ControllerButton.L_THUMBSTICK_DOWN : XrInterface.ControllerButton.R_THUMBSTICK_DOWN;
-        XrInterface.ControllerButton primaryLeft = primaryController == 0 ? XrInterface.ControllerButton.L_THUMBSTICK_LEFT : XrInterface.ControllerButton.R_THUMBSTICK_LEFT;
-        XrInterface.ControllerButton primaryRight = primaryController == 0 ? XrInterface.ControllerButton.L_THUMBSTICK_RIGHT : XrInterface.ControllerButton.R_THUMBSTICK_RIGHT;
+        XrInterface.ControllerButton primaryPress = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_PRESS : XrInterface.ControllerButton.R_THUMBSTICK_PRESS;
+        XrInterface.ControllerButton primaryTrigger = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_TRIGGER : XrInterface.ControllerButton.R_TRIGGER;
+        XrInterface.ControllerButton primaryUp = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_UP : XrInterface.ControllerButton.R_THUMBSTICK_UP;
+        XrInterface.ControllerButton primaryDown = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_DOWN : XrInterface.ControllerButton.R_THUMBSTICK_DOWN;
+        XrInterface.ControllerButton primaryLeft = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_LEFT : XrInterface.ControllerButton.R_THUMBSTICK_LEFT;
+        XrInterface.ControllerButton primaryRight = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_RIGHT : XrInterface.ControllerButton.R_THUMBSTICK_RIGHT;
 
         // Pass the input to the Android UI
         XrContentDialog dialog = XrContentDialog.getFrontInstance();
@@ -166,13 +166,12 @@ public class XrController {
 
     public void updateKeyboardButtons(boolean[] buttons) {
         // Get OpenXR input
-        int primaryController = instance.container.getPrimaryController();
-        XrInterface.ControllerButton secondaryGrip = primaryController == 1 ? XrInterface.ControllerButton.L_GRIP : XrInterface.ControllerButton.R_GRIP;
-        XrInterface.ControllerButton secondaryTrigger = primaryController == 1 ? XrInterface.ControllerButton.L_TRIGGER : XrInterface.ControllerButton.R_TRIGGER;
-        XrInterface.ControllerButton secondaryUp = primaryController == 1 ? XrInterface.ControllerButton.L_THUMBSTICK_UP : XrInterface.ControllerButton.R_THUMBSTICK_UP;
-        XrInterface.ControllerButton secondaryDown = primaryController == 1 ? XrInterface.ControllerButton.L_THUMBSTICK_DOWN : XrInterface.ControllerButton.R_THUMBSTICK_DOWN;
-        XrInterface.ControllerButton secondaryLeft = primaryController == 1 ? XrInterface.ControllerButton.L_THUMBSTICK_LEFT : XrInterface.ControllerButton.R_THUMBSTICK_LEFT;
-        XrInterface.ControllerButton secondaryRight = primaryController == 1 ? XrInterface.ControllerButton.L_THUMBSTICK_RIGHT : XrInterface.ControllerButton.R_THUMBSTICK_RIGHT;
+        XrInterface.ControllerButton secondaryGrip = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_GRIP : XrInterface.ControllerButton.R_GRIP;
+        XrInterface.ControllerButton secondaryTrigger = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_TRIGGER : XrInterface.ControllerButton.R_TRIGGER;
+        XrInterface.ControllerButton secondaryUp = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_UP : XrInterface.ControllerButton.R_THUMBSTICK_UP;
+        XrInterface.ControllerButton secondaryDown = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_DOWN : XrInterface.ControllerButton.R_THUMBSTICK_DOWN;
+        XrInterface.ControllerButton secondaryLeft = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_LEFT : XrInterface.ControllerButton.R_THUMBSTICK_LEFT;
+        XrInterface.ControllerButton secondaryRight = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_RIGHT : XrInterface.ControllerButton.R_THUMBSTICK_RIGHT;
 
         // Pass the controller mapping into XServer
         currentButtons = buttons;
@@ -192,9 +191,8 @@ public class XrController {
 
     public void updateMouseAxes(float[] axes, boolean headMapping) {
         // Get OpenXR input
-        int primaryController = instance.container.getPrimaryController();
-        XrInterface.ControllerAxis mouseAxisX = primaryController == 0 ? XrInterface.ControllerAxis.L_X : XrInterface.ControllerAxis.R_X;
-        XrInterface.ControllerAxis mouseAxisY = primaryController == 0 ? XrInterface.ControllerAxis.L_Y : XrInterface.ControllerAxis.R_Y;
+        XrInterface.ControllerAxis mouseAxisX = XrActivity.mouseLeftHanded ? XrInterface.ControllerAxis.L_X : XrInterface.ControllerAxis.R_X;
+        XrInterface.ControllerAxis mouseAxisY = XrActivity.mouseLeftHanded ? XrInterface.ControllerAxis.L_Y : XrInterface.ControllerAxis.R_Y;
 
         // Mouse control with hand
         float f = 0.75f;
@@ -230,11 +228,10 @@ public class XrController {
 
     public void updateMouseLightgun(float[] axes, float distance) {
         // Get values
-        int primaryController = instance.container.getPrimaryController();
-        float x = axes[primaryController == 0 ? XrInterface.ControllerAxis.L_X.ordinal() : XrInterface.ControllerAxis.R_X.ordinal()] - axes[XrInterface.ControllerAxis.HMD_X.ordinal()];;
-        float y = axes[primaryController == 0 ? XrInterface.ControllerAxis.L_Y.ordinal() : XrInterface.ControllerAxis.R_Y.ordinal()] - axes[XrInterface.ControllerAxis.HMD_Y.ordinal()];;
-        float yaw = axes[primaryController == 0 ? XrInterface.ControllerAxis.L_YAW.ordinal() : XrInterface.ControllerAxis.R_YAW.ordinal()];
-        float pitch = axes[primaryController == 0 ? XrInterface.ControllerAxis.L_PITCH.ordinal() : XrInterface.ControllerAxis.R_PITCH.ordinal()];
+        float x = axes[XrActivity.mouseLeftHanded ? XrInterface.ControllerAxis.L_X.ordinal() : XrInterface.ControllerAxis.R_X.ordinal()] - axes[XrInterface.ControllerAxis.HMD_X.ordinal()];;
+        float y = axes[XrActivity.mouseLeftHanded ? XrInterface.ControllerAxis.L_Y.ordinal() : XrInterface.ControllerAxis.R_Y.ordinal()] - axes[XrInterface.ControllerAxis.HMD_Y.ordinal()];;
+        float yaw = axes[XrActivity.mouseLeftHanded ? XrInterface.ControllerAxis.L_YAW.ordinal() : XrInterface.ControllerAxis.R_YAW.ordinal()];
+        float pitch = axes[XrActivity.mouseLeftHanded ? XrInterface.ControllerAxis.L_PITCH.ordinal() : XrInterface.ControllerAxis.R_PITCH.ordinal()];
         float cx = (float) instance.getXServer().windowManager.rootWindow.getWidth() / 2;
         float cy = (float) instance.getXServer().windowManager.rootWindow.getHeight() / 2;
         float aspect = (float) Math.pow(cx / cy, 0.15);
@@ -253,9 +250,8 @@ public class XrController {
     public void updateMouseSnapturn(boolean[] buttons, int step) {
         // Get OpenXR input
         Pointer mouse = instance.getXServer().pointer;
-        int primaryController = instance.container.getPrimaryController();
-        XrInterface.ControllerButton primaryLeft = primaryController == 0 ? XrInterface.ControllerButton.L_THUMBSTICK_LEFT : XrInterface.ControllerButton.R_THUMBSTICK_LEFT;
-        XrInterface.ControllerButton primaryRight = primaryController == 0 ? XrInterface.ControllerButton.L_THUMBSTICK_RIGHT : XrInterface.ControllerButton.R_THUMBSTICK_RIGHT;
+        XrInterface.ControllerButton primaryLeft = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_LEFT : XrInterface.ControllerButton.R_THUMBSTICK_LEFT;
+        XrInterface.ControllerButton primaryRight = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_RIGHT : XrInterface.ControllerButton.R_THUMBSTICK_RIGHT;
 
         // Apply snapturn to the input
         if (getButtonClicked(buttons, primaryLeft)) {
@@ -269,11 +265,10 @@ public class XrController {
     public void updateMouseState(boolean[] buttons) {
         // Get OpenXR input
         Pointer mouse = instance.getXServer().pointer;
-        int primaryController = instance.container.getPrimaryController();
-        XrInterface.ControllerButton primaryGrip = primaryController == 0 ? XrInterface.ControllerButton.L_GRIP : XrInterface.ControllerButton.R_GRIP;
-        XrInterface.ControllerButton primaryTrigger = primaryController == 0 ? XrInterface.ControllerButton.L_TRIGGER : XrInterface.ControllerButton.R_TRIGGER;
-        XrInterface.ControllerButton primaryUp = primaryController == 0 ? XrInterface.ControllerButton.L_THUMBSTICK_UP : XrInterface.ControllerButton.R_THUMBSTICK_UP;
-        XrInterface.ControllerButton primaryDown = primaryController == 0 ? XrInterface.ControllerButton.L_THUMBSTICK_DOWN : XrInterface.ControllerButton.R_THUMBSTICK_DOWN;
+        XrInterface.ControllerButton primaryGrip = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_GRIP : XrInterface.ControllerButton.R_GRIP;
+        XrInterface.ControllerButton primaryTrigger = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_TRIGGER : XrInterface.ControllerButton.R_TRIGGER;
+        XrInterface.ControllerButton primaryUp = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_UP : XrInterface.ControllerButton.R_THUMBSTICK_UP;
+        XrInterface.ControllerButton primaryDown = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_DOWN : XrInterface.ControllerButton.R_THUMBSTICK_DOWN;
 
         // Apply values
         currentButtons = buttons;
