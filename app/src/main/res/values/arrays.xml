@@ -2,21 +2,14 @@
 <resources>
     <string-array name="screen_size_entries">
         <item>Custom</item>
-        <item>690x360 (16:9)</item>
-        <item>780x360 (19.5:9)</item>
-        <item>640x480 (4:3)</item>
         <item>800x600 (4:3)</item>
-        <item>854x480 (16:9)</item>
-        <item>960x544 (16:9)</item>
         <item>1024x768 (4:3)</item>
         <item>1280x720 (16:9)</item>
-        <item>1280x800 (16:10)</item>
-        <item>1280x1024 (5:4)</item>
-        <item>1366x768 (16:9)</item>
-        <item>1440x900 (16:10)</item>
-        <item>1560x720 (19.5:9)</item>
         <item>1600x900 (16:9)</item>
         <item>1920x1080 (16:9)</item>
+        <item>1440x1440 (1:1)</item>
+        <item>1600x1600 (1:1)</item>
+        <item>2160x2160 (1:1)</item>
     </string-array>
     <string-array name="graphics_driver_entries">
         <item>Wrapper</item>
