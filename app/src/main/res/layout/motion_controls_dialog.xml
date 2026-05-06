@@ -31,9 +31,14 @@
                     android:id="@+id/cbGyroEnabled"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/enable_stick_gyro"
-                    android:layout_marginBottom="0dp" />
+                    android:text="@string/enable_stick_gyro" />
 
+                <CheckBox
+                    android:id="@+id/cbWheelEmulation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/wheel_emulation"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <!-- Gyro Target Stick (Right-aligned) -->

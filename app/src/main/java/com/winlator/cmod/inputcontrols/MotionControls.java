@@ -206,17 +206,11 @@ public class MotionControls implements SensorEventListener {
 
         CheckBox cbInvX = v.findViewById(R.id.cbInvertGyroX);
         CheckBox cbInvY = v.findViewById(R.id.cbInvertGyroY);
+        CheckBox cbWheel = v.findViewById(R.id.cbWheelEmulation);
 
         Spinner spActivator = v.findViewById(R.id.spGyroTriggerButton);
 
         RadioGroup rgMode   = v.findViewById(R.id.rgGyroMode);
-
-        if (XrActivity.isEnabled(v.getContext())) {
-            v.findViewById(R.id.TVGyroTriggerButton).setVisibility(View.GONE);
-            v.findViewById(R.id.TVGyroMode).setVisibility(View.GONE);
-            spActivator.setVisibility(View.GONE);
-            rgMode.setVisibility(View.GONE);
-        }
 
         // Load prefs
         boolean enabled = prefs.getBoolean("gyro_enabled", false);
@@ -230,6 +224,25 @@ public class MotionControls implements SensorEventListener {
         boolean invY = prefs.getBoolean("invert_gyro_y", false);
         int savedKey = prefs.getInt("gyro_trigger_button", KeyEvent.KEYCODE_BUTTON_L1);
         int mode = prefs.getInt("gyro_mode", 0);
+
+        if (XrActivity.isEnabled(v.getContext())) {
+            v.findViewById(R.id.TVGyroTriggerButton).setVisibility(View.GONE);
+            v.findViewById(R.id.TVGyroMode).setVisibility(View.GONE);
+            spActivator.setVisibility(View.GONE);
+            rgMode.setVisibility(View.GONE);
+
+            if (XrActivity.isActive()) {
+                cbWheel.setChecked(XrActivity.wheelEmulation);
+                cbWheel.setEnabled(enabled);
+                cbWheel.setVisibility(View.VISIBLE);
+                cbWheel.setOnCheckedChangeListener((compoundButton, checked) -> {
+                    SharedPreferences.Editor e = prefs.edit();
+                    e.putBoolean("use_xr_wheel", checked);
+                    e.apply();
+                    XrActivity.wheelEmulation = checked;
+                });
+            }
+        }
 
         cbEnabled.setChecked(enabled);
         rgTarget.check(toLeft ? R.id.rbTargetLeft : R.id.rbTargetRight);
@@ -278,7 +291,10 @@ public class MotionControls implements SensorEventListener {
             // No need to call sendGamepadState() here — WinHandler.updateGyroData() pushes on sensor ticks.
         };
 
-        cbEnabled.setOnCheckedChangeListener((b, c) -> pushAll.run());
+        cbEnabled.setOnCheckedChangeListener((b, c) -> {
+            pushAll.run();
+            cbWheel.setEnabled(c);
+        });
         rgTarget.setOnCheckedChangeListener((g, id) -> pushAll.run());
         sbXSens.setOnSeekBarChangeListener(simple(p -> { tvXSens.setText(ctx.getString(R.string.percent_fmt, p)); pushAll.run(); }));
         sbYSens.setOnSeekBarChangeListener(simple(p -> { tvYSens.setText(ctx.getString(R.string.percent_fmt, p)); pushAll.run(); }));
