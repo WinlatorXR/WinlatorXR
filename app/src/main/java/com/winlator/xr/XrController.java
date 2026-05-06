@@ -297,10 +297,16 @@ public class XrController {
         float dy = axes[XrInterface.ControllerAxis.R_Y.ordinal()] - axes[XrInterface.ControllerAxis.L_Y.ordinal()];
         float dz = axes[XrInterface.ControllerAxis.R_Z.ordinal()] - axes[XrInterface.ControllerAxis.L_Z.ordinal()];
         float size = (float) Math.sqrt(dx * dx + dy * dy);
-        if ((Math.abs(dz) > 0.1) || (size > 0.4f)) {
+        if ((Math.abs(dz) > 0.15) || (size > 0.5f)) {
             return;
         }
-        XrActivity.getInstance().getWinHandler().updateGyroData(-dy * 4.0f, 0);
+
+        // Get value from primary thumbstick
+        XrInterface.ControllerAxis primaryThumbstick = XrActivity.mouseLeftHanded ? XrInterface.ControllerAxis.L_THUMBSTICK_Y : XrInterface.ControllerAxis.R_THUMBSTICK_Y;
+        float thumbstick = axes[primaryThumbstick.ordinal()];
+
+        // Send values through gyro system
+        XrActivity.getInstance().getWinHandler().updateGyroData(-dy * 4.0f, thumbstick * 2.0f);
     }
 
     public boolean getButtonClicked(boolean[] buttons, XrInterface.ControllerButton button) {
