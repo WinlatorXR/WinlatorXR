@@ -34,6 +34,7 @@ import androidx.preference.PreferenceManager;
 import com.winlator.cmod.R;
 import com.winlator.cmod.XServerDisplayActivity;
 import com.winlator.xr.api.XrAPI;
+import com.winlator.xr.api.XrInterface;
 import com.winlator.xr.runtime.MetaQuest;
 import com.winlator.xr.runtime.Pico;
 import com.winlator.xr.runtime.PlayForDream;
@@ -285,8 +286,8 @@ public class XrActivity extends XServerDisplayActivity {
                 if (mouseLightgun && !isImmersive && !isVR)
                     xrController.updateMouseLightgun(axes, lastDistance);
             }
-            if (wheelEmulation && !isImmersive && !isVR) {
-                xrController.updateWheelEmulation(axes, buttons);
+            if (wheelEmulation && !isVR) {
+                xrController.updateWheelEmulation(axes);
             }
             xrController.updateMouseState(buttons);
             xrController.updateKeyboardButtons(buttons);

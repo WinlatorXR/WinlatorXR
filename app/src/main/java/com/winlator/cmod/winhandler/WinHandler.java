@@ -23,6 +23,7 @@ import com.winlator.cmod.inputcontrols.ExternalController;
 import com.winlator.cmod.inputcontrols.GamepadState;
 import com.winlator.cmod.math.Mathf;
 import com.winlator.cmod.xserver.XServer;
+import com.winlator.xr.XrActivity;
 
 import java.io.File;
 import java.io.IOException;
@@ -263,7 +264,7 @@ public class WinHandler {
             return;
         }
 
-        boolean active = isGyroActive || (processGyroWithLeftTrigger && isLeftTriggerPressed());
+        boolean active = XrActivity.isEnabled(null) || isGyroActive || (processGyroWithLeftTrigger && isLeftTriggerPressed());
 
         if (!active) {
             // Reset immediately to zero when not active.

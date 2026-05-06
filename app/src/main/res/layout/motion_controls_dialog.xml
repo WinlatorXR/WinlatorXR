@@ -90,6 +90,7 @@
                 android:paddingEnd="12dp">
 
                 <TextView
+                    android:id="@+id/TVGyroTriggerButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/gyro_activator_button"
@@ -104,6 +105,7 @@
                     android:layout_marginBottom="12dp"/>
 
                 <TextView
+                    android:id="@+id/TVGyroMode"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/gyro_mode"

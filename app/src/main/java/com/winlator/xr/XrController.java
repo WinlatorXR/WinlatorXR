@@ -291,7 +291,7 @@ public class XrController {
         }
     }
 
-    public void updateWheelEmulation(float[] axes, boolean[] buttons) {
+    public void updateWheelEmulation(float[] axes) {
         // Detect the controllers are in a pose where wheel makes sense
         float dx = axes[XrInterface.ControllerAxis.R_X.ordinal()] - axes[XrInterface.ControllerAxis.L_X.ordinal()];
         float dy = axes[XrInterface.ControllerAxis.R_Y.ordinal()] - axes[XrInterface.ControllerAxis.L_Y.ordinal()];
@@ -300,18 +300,7 @@ public class XrController {
         if ((Math.abs(dz) > 0.1) || (size > 0.4f)) {
             return;
         }
-
-        // Lock mouse pointer
-        smoothedMouse[0] = 0;
-        smoothedMouse[1] = 0;
-
-        // Overwrite the left/right buttons based on the state
-        float deadzone = 0.02f;
-        float sensitivity = 500;
-        XrInterface.ControllerButton target = dy > 0 ? XrInterface.ControllerButton.L_THUMBSTICK_LEFT : XrInterface.ControllerButton.L_THUMBSTICK_RIGHT;
-        if ((Math.abs(dy) > deadzone) && (Math.abs(dy) * sensitivity > System.currentTimeMillis() % 100)) {
-            buttons[target.ordinal()] = true;
-        }
+        XrActivity.getInstance().getWinHandler().updateGyroData(-dy * 4.0f, 0);
     }
 
     public boolean getButtonClicked(boolean[] buttons, XrInterface.ControllerButton button) {

@@ -32,6 +32,7 @@ import androidx.preference.PreferenceManager;
 import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.winhandler.WinHandler;
+import com.winlator.xr.XrActivity;
 
 import java.util.List;
 
@@ -209,6 +210,13 @@ public class MotionControls implements SensorEventListener {
         Spinner spActivator = v.findViewById(R.id.spGyroTriggerButton);
 
         RadioGroup rgMode   = v.findViewById(R.id.rgGyroMode);
+
+        if (XrActivity.isEnabled(v.getContext())) {
+            v.findViewById(R.id.TVGyroTriggerButton).setVisibility(View.GONE);
+            v.findViewById(R.id.TVGyroMode).setVisibility(View.GONE);
+            spActivator.setVisibility(View.GONE);
+            rgMode.setVisibility(View.GONE);
+        }
 
         // Load prefs
         boolean enabled = prefs.getBoolean("gyro_enabled", false);

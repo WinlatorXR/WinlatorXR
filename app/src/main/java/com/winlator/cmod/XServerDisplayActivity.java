@@ -401,7 +401,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         Menu menu = navigationView.getMenu();
         if (XrActivity.isEnabled(this)) {
-            menu.findItem(R.id.main_menu_motion_controls).setVisible(false);
             menu.findItem(R.id.main_menu_input_controls).setVisible(false);
             menu.findItem(R.id.main_menu_pip_mode).setVisible(false);
             menu.findItem(R.id.main_menu_relative_mouse).setVisible(false);
