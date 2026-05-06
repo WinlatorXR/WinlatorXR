@@ -444,7 +444,7 @@
     <string name="refresh_rate">Refresh rate</string>
     <string name="light_gun_mouse">Use light gun / laser pointer mouse mapping</string>
     <string name="left_handed_mouse">Use left-handed mouse mapping</string>
-    <string name="wheel_emulation">Use controllers as a wheel (experimental)</string>
+    <string name="wheel_emulation">Use controllers as a wheel</string>
     <string name="controller_as_mouse">Use XR controller as mouse</string>
     <string name="primary_controller">Primary controller</string>
     <string name="left_controller">Left controller</string>
@@ -705,10 +705,10 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="dpad_left">D‑Pad Left</string>
     <string name="dpad_right">D‑Pad Right</string>
     <string name="controller_manager">Controller Manager</string>
-    <string name="gyro_target_stick">Apply gyro to</string>
+    <string name="gyro_target_stick">Apply to</string>
     <string name="right_stick">Right stick</string>
     <string name="left_stick">Left stick</string>
-    <string name="enable_stick_gyro">Enable Analog Stick Gyroscopic Motion</string>
+    <string name="enable_stick_gyro">Map motions to analog joystick</string>
 
     <string name="graphics_driver_adrenotools_turnip">Use Adrenotools Turnip</string>
     <string name="graphics_driver_frame_sync">Frame Synchronization</string>

@@ -33,6 +33,7 @@ import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.R;
 import com.winlator.cmod.XServerDisplayActivity;
+import com.winlator.cmod.inputcontrols.ControllerManager;
 import com.winlator.xr.api.XrAPI;
 import com.winlator.xr.runtime.MetaQuest;
 import com.winlator.xr.runtime.Pico;
@@ -95,6 +96,12 @@ public class XrActivity extends XServerDisplayActivity {
         mouseLeftHanded = prefs.getBoolean("use_xr_leftHanded", false);
         mouseLightgun = prefs.getBoolean("use_xr_lightgun", false);
         wheelEmulation = prefs.getBoolean("use_xr_wheel", false);
+
+        ControllerManager controllerManager = ControllerManager.getInstance();
+        controllerManager.scanForDevices();
+        if (!controllerManager.isSlotEnabled(0)) {
+            controllerManager.setSlotEnabled(0, true);
+        }
     }
 
     @Override
@@ -285,8 +292,8 @@ public class XrActivity extends XServerDisplayActivity {
                 if (mouseLightgun && !isImmersive && !isVR)
                     xrController.updateMouseLightgun(axes, lastDistance);
             }
-            if (wheelEmulation && !isImmersive && !isVR) {
-                xrController.updateWheelEmulation(axes, buttons);
+            if (wheelEmulation && !isVR) {
+                xrController.updateWheelEmulation(axes);
             }
             xrController.updateMouseState(buttons);
             xrController.updateKeyboardButtons(buttons);

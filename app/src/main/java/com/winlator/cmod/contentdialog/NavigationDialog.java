@@ -1,7 +1,6 @@
 package com.winlator.cmod.contentdialog;
 
 import android.content.Context;
-import android.content.res.Configuration;
 import android.graphics.Color;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
@@ -28,12 +27,7 @@ public class NavigationDialog extends ContentDialog {
         findViewById(R.id.BTCancel).setVisibility(View.GONE);
 
         GridLayout grid = findViewById(R.id.main_menu_grid);
-        int orientation = context.getResources().getConfiguration().orientation;
-        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            grid.setColumnCount(4);
-        } else {
-            grid.setColumnCount(2);
-        }
+        grid.setColumnCount(3);
 
         NavigationView navigation = context.findViewById(R.id.NavigationView);
         Menu menu = navigation.getMenu();
