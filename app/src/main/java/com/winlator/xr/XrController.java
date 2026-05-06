@@ -249,16 +249,15 @@ public class XrController {
 
     public void updateMouseSnapturn(boolean[] buttons, int step) {
         // Get OpenXR input
-        Pointer mouse = instance.getXServer().pointer;
         XrInterface.ControllerButton primaryLeft = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_LEFT : XrInterface.ControllerButton.R_THUMBSTICK_LEFT;
         XrInterface.ControllerButton primaryRight = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_RIGHT : XrInterface.ControllerButton.R_THUMBSTICK_RIGHT;
 
         // Apply snapturn to the input
         if (getButtonClicked(buttons, primaryLeft)) {
-            smoothedMouse[0] = mouse.getClampedX() - step;
+            smoothedMouse[0] -= step;
         }
         if (getButtonClicked(buttons, primaryRight)) {
-            smoothedMouse[0] = mouse.getClampedX() + step;
+            smoothedMouse[0] += step;
         }
     }
 
