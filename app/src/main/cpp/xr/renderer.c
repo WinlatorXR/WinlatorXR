@@ -326,7 +326,7 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
         XrVector4f fwd = {0, 0, -distance, 0};
         fwd = XrVector4fMultiplyMatrix4f(mat, &fwd);
         pos.x = renderer->InvertedViewPose[0][frame].position.x + fwd.x;
-        pos.y = renderer->InvertedViewPose[0][frame].position.y + fwd.y;
+        pos.y = renderer->InvertedViewPose[0][frame].position.y + fwd.y - 0.5f;
         pos.z = renderer->InvertedViewPose[0][frame].position.z + fwd.z;
     }
 
