@@ -304,9 +304,32 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
     XrVector3f yaw_axis = {0, 1, 0};
     XrQuaternionf pitch = XrQuaternionfCreateFromVectorAngle(pitch_axis, -menu_pitch);
     XrQuaternionf yaw = XrQuaternionfCreateFromVectorAngle(yaw_axis, menu_yaw);
+    XrQuaternionf rot = XrQuaternionfMultiply(pitch, yaw);
     XrVector3f pos = {renderer->InvertedViewPose[0][frame].position.x - sinf(menu_yaw) * cosf(menu_pitch) * distance,
                       renderer->InvertedViewPose[0][frame].position.y - sinf(menu_pitch) * distance,
                       renderer->InvertedViewPose[0][frame].position.z - cosf(menu_yaw) * cosf(menu_pitch) * distance};
+
+    if (renderer->ConfigInt[CONFIG_IMMERSIVE]) {
+        renderer->ConfigFloat[CONFIG_MENU_PITCH] = 0;
+        renderer->ConfigFloat[CONFIG_MENU_YAW] = renderer->HmdOrientation.y;
+
+        // Get orientation without roll
+        XrVector3f roll_axis = {0, 0, 1};
+        rot = renderer->InvertedViewPose[0][frame].orientation;
+        float roll = ToRadians(XrQuaternionfEulerAngles(rot).z);
+        XrQuaternionf invRoll = XrQuaternionfCreateFromVectorAngle(roll_axis, roll);
+        rot = XrQuaternionfMultiply(rot, invRoll);
+
+        // Move screen position forward
+        float mat[16];
+        XrQuaternionfToMatrix4f(&rot, mat);
+        XrVector4f fwd = {0, 0, -distance, 0};
+        fwd = XrVector4fMultiplyMatrix4f(mat, &fwd);
+        pos.x = renderer->InvertedViewPose[0][frame].position.x + fwd.x;
+        pos.y = renderer->InvertedViewPose[0][frame].position.y + fwd.y;
+        pos.z = renderer->InvertedViewPose[0][frame].position.z + fwd.z;
+    }
+
 
     XrCompositionLayerProjectionView projection_layer_elements[2] = {};
     struct XrFramebuffer* framebuffer = &renderer->Framebuffer[0];
@@ -334,12 +357,6 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
             if (renderer->ConfigInt[CONFIG_SBS] && (eye == 1))
             {
                 x += w;
-            }
-            if (renderer->ConfigInt[CONFIG_IMMERSIVE]) {
-                XrVector3f roll_axis = {0, 0, 1};
-                XrVector3f rotation = XrQuaternionfEulerAngles(pose.orientation);
-                XrQuaternionf invRoll = XrQuaternionfCreateFromVectorAngle(roll_axis, ToRadians(rotation.z));
-                pose.orientation = XrQuaternionfMultiply(pose.orientation, invRoll);
             }
 
             memset(&projection_layer_elements[eye], 0, sizeof(XrCompositionLayerProjectionView));
@@ -378,7 +395,7 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
         cylinder_layer.subImage.imageRect.extent.height = h;
         cylinder_layer.subImage.swapchain = framebuffer->Handle;
         cylinder_layer.subImage.imageArrayIndex = 0;
-        cylinder_layer.pose.orientation = XrQuaternionfMultiply(pitch, yaw);
+        cylinder_layer.pose.orientation = rot;
         cylinder_layer.pose.position = pos;
         cylinder_layer.radius = radius;
         cylinder_layer.centralAngle = (float)(M_PI * 0.5);
@@ -411,7 +428,7 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
         quad_layer.subImage.imageRect.extent.height = h;
         quad_layer.subImage.swapchain = framebuffer->Handle;
         quad_layer.subImage.imageArrayIndex = 0;
-        quad_layer.pose.orientation = XrQuaternionfMultiply(pitch, yaw);
+        quad_layer.pose.orientation = rot;
         quad_layer.pose.position = pos;
         quad_layer.size.width = 4 * size;
         quad_layer.size.height = 4 * size;

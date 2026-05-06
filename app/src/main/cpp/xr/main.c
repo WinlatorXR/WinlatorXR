@@ -149,7 +149,7 @@ JNIEXPORT jboolean JNICALL Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env
         xr_module_renderer.ConfigInt[CONFIG_FRAMESYNC] = xr_vr;
         xr_module_renderer.ConfigInt[CONFIG_AER] = aer;
         xr_module_renderer.ConfigInt[CONFIG_SBS] = sbs;
-        xr_module_renderer.ConfigInt[CONFIG_VR] = immersive || xr_vr;
+        xr_module_renderer.ConfigInt[CONFIG_VR] = xr_vr;
 
         // Recenter on the first frame
         static bool first_frame = true;
