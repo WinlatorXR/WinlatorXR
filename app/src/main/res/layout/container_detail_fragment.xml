@@ -913,18 +913,6 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/primary_controller"
-                    android:visibility="gone" />
-                <Spinner
-                    style="@style/ComboBox"
-                    android:layout_width="match_parent"
-                    android:id="@+id/SPrimaryController"
-                    android:entries="@array/xr_controllers"
-                    android:visibility="gone" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
                     android:text="@string/button_a" />
                 <Spinner
                     style="@style/ComboBox"

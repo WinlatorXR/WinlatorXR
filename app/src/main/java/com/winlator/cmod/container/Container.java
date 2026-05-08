@@ -78,7 +78,6 @@ public class Container {
     private int cpuLevel = 75;
     private int gpuLevel = 75;
     private int refreshRate = 72;
-    private int primaryController = 1;
     private String controllerMapping = new String(new char[XrControllerMapping.values().length]);
     private String fexcoreVersion = DefaultVersion.FEXCORE;
     private String box64Version = DefaultVersion.BOX64;
@@ -210,14 +209,6 @@ public class Container {
 
     public void setRefreshRate(int refreshRate) {
         this.refreshRate = refreshRate;
-    }
-
-    public int getPrimaryController() {
-        return primaryController;
-    }
-
-    public void setPrimaryController(int primaryController) {
-        this.primaryController = primaryController;
     }
 
     public byte getControllerMapping(XrControllerMapping input) {
@@ -475,7 +466,6 @@ public class Container {
             data.put("cpuLevel", cpuLevel);
             data.put("gpuLevel", gpuLevel);
             data.put("refreshRate", refreshRate);
-            data.put("primaryController", primaryController);
             data.put("controllerMapping", controllerMapping);
             data.put("gstreamerWorkaround", gstreamerWorkaround);
             if (!WineInfo.isMainWineVersion(wineVersion)) data.put("wineVersion", wineVersion);
@@ -590,9 +580,6 @@ public class Container {
                     break;
                 case "refreshRate" :
                     setRefreshRate(data.getInt(key));
-                    break;
-                case "primaryController" :
-                    setPrimaryController(data.getInt(key));
                     break;
                 case "controllerMapping" :
                     controllerMapping = data.getString(key);

@@ -532,8 +532,6 @@ public class ContainerDetailFragment extends Fragment {
         final Spinner sRefreshRate = view.findViewById(R.id.SRefreshRate);
         AppUtils.setSpinnerSelectionFromNumber(sRefreshRate, isEditMode() ? "" + container.getRefreshRate() : "72");
 
-        final Spinner sPrimaryController = view.findViewById(R.id.SPrimaryController);
-        sPrimaryController.setSelection(isEditMode() ? container.getPrimaryController() : 1);
         setControllerMapping(view.findViewById(R.id.SButtonA), Container.XrControllerMapping.BUTTON_A, XKeycode.KEY_A.ordinal());
         setControllerMapping(view.findViewById(R.id.SButtonB), Container.XrControllerMapping.BUTTON_B, XKeycode.KEY_B.ordinal());
         setControllerMapping(view.findViewById(R.id.SButtonX), Container.XrControllerMapping.BUTTON_X, XKeycode.KEY_X.ordinal());
@@ -594,7 +592,6 @@ public class ContainerDetailFragment extends Fragment {
                 // Capture missing properties
                 String midiSoundFont = sMIDISoundFont.getSelectedItemPosition() == 0 ? "" : sMIDISoundFont.getSelectedItem().toString();
                 String lc_all = etLC_ALL.getText().toString();
-                int primaryController = sPrimaryController.getSelectedItemPosition();
                 String controllerMapping = getControllerMapping(view);
 
                 // Define final input type
@@ -655,7 +652,6 @@ public class ContainerDetailFragment extends Fragment {
                     container.setCpuLevel(StringUtils.parseInt(sCPULevel.getSelectedItem()));
                     container.setGpuLevel(StringUtils.parseInt(sGPULevel.getSelectedItem()));
                     container.setRefreshRate(StringUtils.parseInt(sRefreshRate.getSelectedItem()));
-                    container.setPrimaryController(primaryController);
                     container.setControllerMapping(controllerMapping);
                     container.setGstreamerWorkaround(gstreamerWorkaround);
                     container.saveData();
@@ -696,7 +692,6 @@ public class ContainerDetailFragment extends Fragment {
                     data.put("cpuLevel", StringUtils.parseInt(sCPULevel.getSelectedItem()));
                     data.put("gpuLevel", StringUtils.parseInt(sGPULevel.getSelectedItem()));
                     data.put("refreshRate", StringUtils.parseInt(sRefreshRate.getSelectedItem()));
-                    data.put("primaryController", primaryController);
                     data.put("controllerMapping", controllerMapping);
                     data.put("gstreamerWorkaround", gstreamerWorkaround);
 
