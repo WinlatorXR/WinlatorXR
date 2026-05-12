@@ -36,6 +36,8 @@
     <string-array name="dxwrapper_entries">
         <item>WineD3D</item>
         <item>DXVK</item>
+    </string-array>
+    <string-array name="dx12wrapper_entries">
         <item>VKD3D</item>
     </string-array>
     <string-array name="ddrawrapper_entries">

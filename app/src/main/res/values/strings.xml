@@ -111,7 +111,8 @@
     <string name="press_any_button_on_your_controller">Press any button on your controller</string>
     <string name="bindings">bindings</string>
     <string name="show_touchscreen_controls">Show Touchscreen Controls</string>
-    <string name="dxwrapper">DX Wrapper</string>
+    <string name="dxwrapper">DirectX 8–11 Emulation</string>
+    <string name="dx12wrapper">DirectX 12 Emulation</string>
     <string name="mouse_warp_override">Mouse Warp Override</string>
     <string name="direct3d">Direct3D</string>
     <string name="directsound">DirectSound</string>
@@ -641,7 +642,7 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="dll_emulator">32bit Emulator</string>
     <string name="open_with_android_browser">Open Android Browser in Wine</string>
     <string name="share_android_clipboard">Share Android Clipboard with Wine</string>
-    <string name="ddraw_wrapper">DDraw/Glide Wrapper</string>
+    <string name="ddraw_wrapper">DirectX 1–7 Emulation</string>
     <string name="fexcore_version">FEXCore Version</string>
     <string name="graphics_driver_max_device_memory">Max Device Memory</string>
 
