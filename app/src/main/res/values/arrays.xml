@@ -41,6 +41,7 @@
         <item>VKD3D</item>
     </string-array>
     <string-array name="ddrawrapper_entries">
+        <item>CnC-DDraw</item>
         <item>Dd7To9-v1.2</item>
         <item>Dd7To9-v1.7</item>
         <item>WineD3D</item>
