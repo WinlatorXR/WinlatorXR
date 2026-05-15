@@ -38,7 +38,7 @@
     <!-- Light Theme Fullscreen -->
     <style name="AppThemeFullscreen" parent="@style/AppTheme">
         <item name="android:windowFullscreen">true</item>
-        <item name="android:windowBackground">#000000</item>
+        <item name="android:windowBackground">#FFFFFF</item>
         <item name="android:windowTranslucentStatus">true</item>
         <item name="android:windowTranslucentNavigation">true</item>
     </style>
