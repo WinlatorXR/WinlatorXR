@@ -187,5 +187,26 @@
             android:name="com.yvr.intent.category.VR"
             android:value="vr_only" />
 
+        <!-- Store from Ludashi-plus -->
+        <activity android:exported="false" android:name="com.winlator.cmod.store.GogMainActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:exported="false" android:name="com.winlator.cmod.store.GogLoginActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:exported="false" android:name="com.winlator.cmod.store.GogGamesActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:exported="false" android:name="com.winlator.cmod.store.EpicMainActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:exported="false" android:name="com.winlator.cmod.store.EpicLoginActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:exported="false" android:name="com.winlator.cmod.store.EpicGamesActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:exported="false" android:name="com.winlator.cmod.store.AmazonMainActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:exported="false" android:name="com.winlator.cmod.store.AmazonLoginActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:exported="false" android:name="com.winlator.cmod.store.AmazonGamesActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:exported="false" android:name="com.winlator.cmod.store.SteamMainActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:exported="false" android:name="com.winlator.cmod.store.SteamLoginActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:exported="false" android:name="com.winlator.cmod.store.GogGameDetailActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:exported="false" android:name="com.winlator.cmod.store.EpicGameDetailActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:exported="false" android:name="com.winlator.cmod.store.AmazonGameDetailActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:exported="false" android:name="com.winlator.cmod.store.EpicFreeGamesActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:exported="false" android:name="com.winlator.cmod.store.DownloadsActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:exported="false" android:name="com.winlator.cmod.store.QrLoginActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:configChanges="orientation|screenSize|keyboardHidden" android:exported="false" android:name="com.winlator.cmod.store.SteamGamesActivity" android:screenOrientation="fullSensor" android:theme="@style/AppTheme.Dark"/>
+        <activity android:configChanges="orientation|screenSize|keyboardHidden" android:exported="false" android:name="com.winlator.cmod.store.SteamGameDetailActivity" android:screenOrientation="fullSensor" android:theme="@style/AppTheme.Dark"/>
+        <service android:exported="false" android:name="com.winlator.cmod.store.SteamForegroundService" android:foregroundServiceType="dataSync"/>
     </application>
 </manifest>
