@@ -43,9 +43,10 @@ public class NavActivity extends AppCompatActivity {
         if (addHeader) {
             addHeader(root);
         }
-        if (view != null) {
-            addFillView(root, view);
+        if (view == null) {
+            view = new View(getBaseContext());
         }
+        addFillView(root, view);
         addNavigationView(root);
         addNavigationGrid(root);
         setNavigationGrid();

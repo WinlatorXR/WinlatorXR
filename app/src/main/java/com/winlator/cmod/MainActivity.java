@@ -43,6 +43,7 @@ import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.navigation.NavigationView;
@@ -648,17 +649,18 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     private void show(Fragment fragment, boolean reverse) {
         FragmentManager fragmentManager = getSupportFragmentManager();
-        if (reverse) {
-            fragmentManager.beginTransaction()
-                    .setCustomAnimations(R.anim.slide_in_down, R.anim.slide_out_up)  // Reverse animation
-                    .replace(R.id.FLFragmentContainer, fragment)
-                    .commit();
-        } else {
-            fragmentManager.beginTransaction()
-                    .setCustomAnimations(R.anim.slide_in_up, R.anim.slide_out_down)  // Forward animation
-                    .replace(R.id.FLFragmentContainer, fragment)
-                    .commit();
+        Fragment currentFragment = fragmentManager.findFragmentById(R.id.FLFragmentContainer);
+
+        // Do nothing if the target fragment is already displayed
+        if (currentFragment != null && currentFragment.getClass().equals(fragment.getClass())) {
+            drawerLayout.closeDrawer(GravityCompat.START);
+            return;
         }
+
+        FragmentTransaction transaction = fragmentManager.beginTransaction();
+        if (reverse) transaction.setCustomAnimations(R.anim.slide_in_down, R.anim.slide_out_up);
+        else transaction.setCustomAnimations(R.anim.slide_in_up, R.anim.slide_out_down);
+        transaction.replace(R.id.FLFragmentContainer, fragment).commit();
 
         drawerLayout.closeDrawer(GravityCompat.START);
     }

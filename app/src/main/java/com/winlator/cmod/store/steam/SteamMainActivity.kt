@@ -26,7 +26,7 @@ class SteamMainActivity : NavActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         SteamPrefs.init(this)
-        setContentView(null);
+        setContentView(null, true);
 
         if (needsNotificationPermission()) {
             requestPermissions(
