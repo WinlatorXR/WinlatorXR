@@ -111,6 +111,9 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             finish()
             return
         }
+
+        repo.initialize(this)
+
         // Use in-memory cache — avoids a SQLite read on every resume/rotate.
         // Cache is invalidated on LibrarySynced, DownloadComplete, DownloadCancelled,
         // and markUninstalled(), so installed state is always current.
