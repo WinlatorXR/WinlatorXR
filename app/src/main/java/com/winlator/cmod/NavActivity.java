@@ -32,6 +32,7 @@ import com.google.android.material.navigation.NavigationView;
 public class NavActivity extends AppCompatActivity {
     private GridLayout gridLayout;
     private NavigationView navigationView;
+    private static long finishTimestamp;
 
     @Override
     public void setContentView(View view) {
@@ -127,6 +128,7 @@ public class NavActivity extends AppCompatActivity {
             layout.setPadding(padding, padding, padding, padding);
             layout.setOrientation(LinearLayout.VERTICAL);
             layout.setOnClickListener(view -> {
+                finishTimestamp = System.currentTimeMillis();
                 SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
                 SharedPreferences.Editor e = sharedPreferences.edit();
                 e.putString("tab_last", item.getTitle().toString());
@@ -217,5 +219,13 @@ public class NavActivity extends AppCompatActivity {
     public void startActivity(Intent intent) {
         super.startActivity(intent);
         overridePendingTransition(0, 0);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (Math.abs(finishTimestamp - System.currentTimeMillis()) < 100) {
+            finish();
+        }
     }
 }
