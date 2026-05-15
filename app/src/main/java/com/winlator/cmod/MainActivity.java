@@ -56,7 +56,6 @@ import com.winlator.cmod.container.ContainerManager;
 import com.winlator.cmod.inputcontrols.ControllerManager;
 import com.winlator.cmod.saves.Save;
 import com.winlator.cmod.saves.SaveManager;
-import com.winlator.cmod.store.SteamMainActivity;
 import com.winlator.cmod.xenvironment.ImageFsInstaller;
 
 import java.io.File;
@@ -607,7 +606,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 show(new SavesFragment(), false);  // Forward animation
                 break;
             case R.id.main_menu_store:
-                startActivity(new Intent(this, SteamMainActivity.class));
+                show(new StoreFragment(), false);  // Forward animation
                 break;
             case R.id.main_menu_settings:
                 show(new SettingsFragment(), false);  // Forward animation
