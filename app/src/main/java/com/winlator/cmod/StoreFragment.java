@@ -61,4 +61,10 @@ public class StoreFragment extends Fragment {
         }
         return super.onOptionsItemSelected(menuItem);
     }
+
+    @Override
+    public void startActivity(Intent intent) {
+        super.startActivity(intent);
+        getActivity().overridePendingTransition(0, 0);
+    }
 }

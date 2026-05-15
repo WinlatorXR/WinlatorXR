@@ -1,6 +1,7 @@
 package com.winlator.cmod;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -204,5 +205,17 @@ public class NavActivity extends AppCompatActivity {
         navigationView.inflateMenu(R.menu.main_menu);
         navigationView.setVisibility(View.GONE);
         root.addView(navigationView);
+    }
+
+    @Override
+    public void finish() {
+        super.finish();
+        overridePendingTransition(0, 0);
+    }
+
+    @Override
+    public void startActivity(Intent intent) {
+        super.startActivity(intent);
+        overridePendingTransition(0, 0);
     }
 }
