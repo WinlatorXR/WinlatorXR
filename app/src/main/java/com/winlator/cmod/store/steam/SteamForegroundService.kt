@@ -51,8 +51,12 @@ class SteamForegroundService : Service() {
         startForeground(NOTIFICATION_ID, buildNotification("Connecting to Steam…"))
         Log.i(TAG, "Service started")
 
-        SteamRepository.getInstance().initialize(this)
-        SteamRepository.getInstance().connect()
+        try {
+            SteamRepository.getInstance().initialize(this)
+            SteamRepository.getInstance().connect()
+        } catch (e: AssertionError) {
+            e.printStackTrace()
+        }
 
         return START_STICKY   // restart if killed by OS
     }

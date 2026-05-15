@@ -401,7 +401,11 @@ public final class SteamRepository {
                 pumpHandler.postDelayed(() -> {
                     if (pumping.get() && !connected) {
                         Log.i(TAG, "Auto-reconnect: calling connect()");
-                        steamClient.connect();
+                        try {
+                            steamClient.connect();
+                        } catch (AssertionError e) {
+                            e.printStackTrace();
+                        }
                     }
                 }, delayMs);
             }
