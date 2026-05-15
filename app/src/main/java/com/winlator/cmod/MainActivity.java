@@ -37,6 +37,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -125,11 +128,19 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         // Apply the theme based on the preference
         if (isDarkMode) {
-            setTheme(R.style.AppTheme_Dark);
+            setTheme(R.style.AppThemeFullscreen_Dark);
         } else {
-            setTheme(R.style.AppTheme);
+            setTheme(R.style.AppThemeFullscreen);
         }
 
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(
+                        getWindow(), getWindow().getDecorView());
+
+        if (controller != null) {
+            controller.hide(WindowInsetsCompat.Type.systemBars());
+            controller.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        }
 
         setContentView(R.layout.main_activity);
 
