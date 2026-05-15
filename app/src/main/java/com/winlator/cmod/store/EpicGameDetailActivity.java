@@ -1,6 +1,5 @@
 package com.winlator.cmod.store;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -12,7 +11,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Html;
-import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -21,6 +19,9 @@ import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.winlator.cmod.NavActivity;
+import com.winlator.cmod.R;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -36,7 +37,7 @@ import java.util.List;
  *   RESULT_CANCELED — nothing changed
  *   RESULT_REFRESH  — install state changed
  */
-public class EpicGameDetailActivity extends Activity {
+public class EpicGameDetailActivity extends NavActivity {
 
     public static final int RESULT_REFRESH = 100;
     private static final String TAG = "BH_EPIC_DETAIL";
@@ -97,7 +98,7 @@ public class EpicGameDetailActivity extends Activity {
         // Header
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setBackgroundColor(0xFF0D2040);
+        header.setBackgroundColor(getColor(R.color.colorPrimary));
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(8), dp(8), dp(8), dp(8));
 
@@ -1071,10 +1072,5 @@ public class EpicGameDetailActivity extends Activity {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(42));
         lp.bottomMargin = dp(8);
         return lp;
-    }
-
-    private int dp(int v) {
-        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v,
-            getResources().getDisplayMetrics());
     }
 }

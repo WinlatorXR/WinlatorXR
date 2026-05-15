@@ -1,10 +1,8 @@
 package com.winlator.cmod.store;
 
-import android.app.Activity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -12,9 +10,13 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
+
+import com.winlator.cmod.NavActivity;
+import com.winlator.cmod.R;
+
 import java.util.List;
 
-public class DownloadsActivity extends Activity {
+public class DownloadsActivity extends NavActivity {
 
     private static final int COLOR_GOG  = 0xFF6C3483;
     private static final int COLOR_EPIC = 0xFF0078F0;
@@ -50,7 +52,7 @@ public class DownloadsActivity extends Activity {
         // Header
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setBackgroundColor(0xFF111111);
+        header.setBackgroundColor(getColor(R.color.colorPrimary));
         header.setPadding(dp(8), dp(12), dp(16), dp(12));
         header.setGravity(Gravity.CENTER_VERTICAL);
 
@@ -203,10 +205,5 @@ public class DownloadsActivity extends Activity {
         if ("EPIC".equals(store))   return COLOR_EPIC;
         if ("AMAZON".equals(store)) return COLOR_AMZ;
         return 0xFF555555;
-    }
-
-    private int dp(int v) {
-        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v,
-                getResources().getDisplayMetrics());
     }
 }

@@ -1,6 +1,5 @@
 package com.winlator.cmod.store
 
-import android.app.Activity
 import android.app.AlertDialog
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -8,10 +7,11 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import com.winlator.cmod.NavActivity
+import com.winlator.cmod.R
 import java.io.File
 import java.net.URL
 
@@ -21,7 +21,7 @@ import java.net.URL
  * Cancel: installBtn toggles Install → Cancel while downloading (same pattern as Epic/GOG/Amazon).
  * Launch: uses AmazonLaunchHelper.choosePrimaryExe() + picker dialog for multiple exes.
  */
-class SteamGameDetailActivity : Activity(), SteamRepository.SteamEventListener {
+class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListener {
 
     companion object {
         const val EXTRA_APP_ID = "steam_app_id"
@@ -434,7 +434,7 @@ class SteamGameDetailActivity : Activity(), SteamRepository.SteamEventListener {
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(dp(8), dp(8), dp(8), dp(8))
-            setBackgroundColor(Color.parseColor("#212121"))
+            setBackgroundColor(getColor(R.color.colorPrimary))
         }
         val backBtn = Button(this).apply {
             text = "← Back"
@@ -565,6 +565,4 @@ class SteamGameDetailActivity : Activity(), SteamRepository.SteamEventListener {
             else                    -> "%.0f KB".format(bytes / 1024.0)
         }
     }
-
-    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 }

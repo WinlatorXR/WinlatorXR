@@ -1,9 +1,6 @@
 package com.winlator.cmod.store;
 
-import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -13,6 +10,8 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.winlator.cmod.NavActivity;
+
 /**
  * Entry point for the GOG integration.
  * Shows either a login card or a signed-in card depending on
@@ -21,7 +20,7 @@ import android.widget.TextView;
  * Launched from the side menu (ID=10).
  * On resume (return from GogLoginActivity) refreshes the card visibility.
  */
-public class GogMainActivity extends Activity {
+public class GogMainActivity extends NavActivity {
 
     private LinearLayout loginCard;
     private LinearLayout loggedInCard;
@@ -43,7 +42,7 @@ public class GogMainActivity extends Activity {
         root.addView(loginCard, lp);
         root.addView(loggedInCard, new FrameLayout.LayoutParams(-1, -1));
 
-        setContentView(root);
+        setContentView(root, true);
         refreshView();
     }
 
@@ -54,11 +53,6 @@ public class GogMainActivity extends Activity {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private int dp(int v) {
-        float density = getResources().getDisplayMetrics().density;
-        return (int) (v * density);
-    }
 
     private boolean isLoggedIn() {
         String token = getSharedPreferences("bh_gog_prefs", 0)

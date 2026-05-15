@@ -1,6 +1,5 @@
 package com.winlator.cmod.store
 
-import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -10,6 +9,7 @@ import android.view.View
 import android.widget.*
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
+import com.winlator.cmod.NavActivity
 
 /**
  * QR code login screen.
@@ -24,7 +24,7 @@ import com.google.zxing.qrcode.QRCodeWriter
  *     → onSuccess()       → navigate to SteamGamesActivity
  *     → onFailure()       → show error + retry button
  */
-class QrLoginActivity : Activity(), SteamQrAuthManager.QrAuthListener {
+class QrLoginActivity : NavActivity(), SteamQrAuthManager.QrAuthListener {
 
     private lateinit var qrImage: ImageView
     private lateinit var tvStatus: TextView
@@ -258,8 +258,6 @@ class QrLoginActivity : Activity(), SteamQrAuthManager.QrAuthListener {
         tvStatus.setTextColor(if (isError) Color.RED else GRAY_TEXT)
         progressBar.visibility = if (loading) View.VISIBLE else View.GONE
     }
-
-    private fun dp(v: Int) = (v * resources.displayMetrics.density + 0.5f).toInt()
 
     private fun wrapLp() = LinearLayout.LayoutParams(
         LinearLayout.LayoutParams.MATCH_PARENT,

@@ -1,6 +1,5 @@
 package com.winlator.cmod.store
 
-import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -13,6 +12,8 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import com.winlator.cmod.NavActivity
+import com.winlator.cmod.R
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
@@ -23,7 +24,7 @@ import java.util.concurrent.Executors
  * Each row shows the Steam library portrait art (600x900) loaded async,
  * falling back to the header image (header.jpg) if portrait isn't available.
  */
-class SteamGamesActivity : Activity(), SteamRepository.SteamEventListener {
+class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
 
     private val ui = Handler(Looper.getMainLooper())
     private lateinit var statusText: TextView
@@ -306,7 +307,7 @@ class SteamGamesActivity : Activity(), SteamRepository.SteamEventListener {
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(dp(8), dp(8), dp(8), dp(8))
-            setBackgroundColor(Color.parseColor("#212121"))
+            setBackgroundColor(getColor(R.color.colorPrimary))
             gravity = Gravity.CENTER_VERTICAL
         }
         val backBtn = Button(this).apply {
@@ -529,8 +530,6 @@ class SteamGamesActivity : Activity(), SteamRepository.SteamEventListener {
         bytes >= 1_048_576L     -> "%.1f MB".format(bytes / 1_048_576.0)
         else                    -> "%.0f KB".format(bytes / 1024.0)
     }
-
-    private fun dp(v: Int) = (v * resources.displayMetrics.density + 0.5f).toInt()
 
     companion object {
         private val BG      = Color.parseColor("#1B1B1B")

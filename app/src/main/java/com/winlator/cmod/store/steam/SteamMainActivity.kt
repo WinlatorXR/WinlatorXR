@@ -1,11 +1,11 @@
 package com.winlator.cmod.store
 
 import android.Manifest
-import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import com.winlator.cmod.NavActivity
 
 /**
  * Entry point for the Steam store tab.
@@ -17,7 +17,7 @@ import android.os.Bundle
  * The notification prompt appears at a natural checkpoint — after the user
  * consciously opened the Steam tab — rather than interrupting first-run setup.
  */
-class SteamMainActivity : Activity() {
+class SteamMainActivity : NavActivity() {
 
     companion object {
         private const val REQ_NOTIFICATIONS = 1001
@@ -26,6 +26,7 @@ class SteamMainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         SteamPrefs.init(this)
+        setContentView(null);
 
         if (needsNotificationPermission()) {
             requestPermissions(

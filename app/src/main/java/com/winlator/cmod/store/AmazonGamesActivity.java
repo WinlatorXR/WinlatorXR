@@ -1,6 +1,5 @@
 package com.winlator.cmod.store;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -13,7 +12,6 @@ import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -37,6 +35,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import android.content.Intent;
 
+import com.winlator.cmod.NavActivity;
+import com.winlator.cmod.R;
+
 /**
  * Amazon Games library screen — UI mirrors GogGamesActivity.
  *
@@ -45,7 +46,7 @@ import android.content.Intent;
  * Exe picker shown on install complete if multiple .exe files found.
  * Installed state stored in bh_amazon_prefs: amazon_exe_{productId}.
  */
-public class AmazonGamesActivity extends Activity {
+public class AmazonGamesActivity extends NavActivity {
 
     private static final String TAG          = "BH_AMAZON";
     private static final String PREFS_NAME   = "bh_amazon_prefs";
@@ -102,7 +103,7 @@ public class AmazonGamesActivity extends Activity {
         // Header
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setBackgroundColor(COLOR_HDR_BG);
+        header.setBackgroundColor(getColor(R.color.colorPrimary));
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(8), dp(8), dp(8), dp(8));
 
@@ -227,7 +228,7 @@ public class AmazonGamesActivity extends Activity {
         scrollView.addView(gameListLayout, new FrameLayout.LayoutParams(-1, -2));
 
         root.addView(scrollView, new LinearLayout.LayoutParams(-1, 0, 1f));
-        setContentView(root);
+        setContentView(root, false);
     }
 
     // ── Library sync ──────────────────────────────────────────────────────────
@@ -1363,10 +1364,6 @@ public class AmazonGamesActivity extends Activity {
         dir.delete();
     }
 
-    private int dp(int v) {
-        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v,
-                getResources().getDisplayMetrics());
-    }
     // ── Full-screen detail ────────────────────────────────────────────────────
 
     private void openDetailScreen(AmazonGame game) {

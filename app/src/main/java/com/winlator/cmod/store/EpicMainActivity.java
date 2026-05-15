@@ -1,6 +1,5 @@
 package com.winlator.cmod.store;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -12,13 +11,15 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.winlator.cmod.NavActivity;
+
 /**
  * Entry point for the Epic Games integration.
  *
  * Shows login card or signed-in card based on EpicCredentialStore login state.
  * Launched from the side menu (ID=12 / 0xc).
  */
-public class EpicMainActivity extends Activity {
+public class EpicMainActivity extends NavActivity {
 
     private LinearLayout loginCard;
     private LinearLayout loggedInCard;
@@ -40,7 +41,7 @@ public class EpicMainActivity extends Activity {
         root.addView(loginCard,    new FrameLayout.LayoutParams(-1, -1));
         root.addView(loggedInCard, new FrameLayout.LayoutParams(-1, -1));
 
-        setContentView(root);
+        setContentView(root, true);
         refreshView();
     }
 
@@ -48,10 +49,6 @@ public class EpicMainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         refreshView();
-    }
-
-    private int dp(int v) {
-        return (int) (v * getResources().getDisplayMetrics().density);
     }
 
     private void refreshView() {

@@ -1,6 +1,5 @@
 package com.winlator.cmod.store;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -12,11 +11,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Html;
-import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -24,12 +21,13 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.winlator.cmod.NavActivity;
+import com.winlator.cmod.R;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.InputStreamReader;
 import java.util.List;
 
 /**
@@ -43,7 +41,7 @@ import java.util.List;
  *   RESULT_CANCELED  — nothing changed
  *   RESULT_REFRESH   — install state changed (uninstall, exe set); caller should refresh card
  */
-public class GogGameDetailActivity extends Activity {
+public class GogGameDetailActivity extends NavActivity {
 
     public static final int RESULT_REFRESH = 100;
 
@@ -139,7 +137,7 @@ public class GogGameDetailActivity extends Activity {
         // ── Fixed header bar ──────────────────────────────────────────────────
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setBackgroundColor(0xFF1A1A2E);
+        header.setBackgroundColor(getColor(R.color.colorPrimary));
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(8), dp(8), dp(8), dp(8));
 
@@ -1051,10 +1049,5 @@ public class GogGameDetailActivity extends Activity {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(42));
         lp.bottomMargin = dp(8);
         return lp;
-    }
-
-    private int dp(int v) {
-        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v,
-            getResources().getDisplayMetrics());
     }
 }

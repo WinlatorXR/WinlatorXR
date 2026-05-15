@@ -1,8 +1,6 @@
 package com.winlator.cmod.store;
 
-import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -14,7 +12,6 @@ import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -40,11 +37,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import android.content.Intent;
+
+import com.winlator.cmod.NavActivity;
+import com.winlator.cmod.R;
 
 /**
  * Displays the signed-in user's GOG library as scrollable game cards.
@@ -60,7 +59,7 @@ import android.content.Intent;
  *   4. Check builds?generation=2 → store gog_gen_{id}
  *   5. Build card views on main thread
  */
-public class GogGamesActivity extends Activity {
+public class GogGamesActivity extends NavActivity {
 
     private static final String TAG = "BH_GOG";
     private static final String CACHE_KEY = "gog_library_cache";
@@ -108,7 +107,7 @@ public class GogGamesActivity extends Activity {
         // Header
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setBackgroundColor(0xFF1A1A2E);
+        header.setBackgroundColor(getColor(R.color.colorPrimary));
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(8), dp(8), dp(8), dp(8));
 
@@ -1529,11 +1528,6 @@ public class GogGamesActivity extends Activity {
                 .setCancelable(false)
                 .show()
         );
-    }
-
-    private int dp(int v) {
-        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v,
-                getResources().getDisplayMetrics());
     }
 
     private static String httpGet(String url, String token) {

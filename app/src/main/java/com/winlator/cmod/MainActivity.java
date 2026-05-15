@@ -138,7 +138,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         navigationView.setNavigationItemSelectedListener(this);
 
         gridLayout = findViewById(R.id.NavigationGrid);
-        MenuItem toOpen = setNavigationGrid();
+        setNavigationGrid();
 
         setSupportActionBar(findViewById(R.id.Toolbar));
         ActionBar actionBar = getSupportActionBar();
@@ -185,17 +185,36 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
 
         }
-
-        if (toOpen != null) {
-            onNavigationItemSelected(toOpen);
-        }
     }
 
-    private MenuItem setNavigationGrid() {
+    @Override
+    protected void onResume() {
+        super.onResume();
+        restoreTab();
+    }
+
+    private void restoreTab() {
         MenuItem output = null;
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         String tab = sharedPreferences.getString("tab_last", "");
+        NavigationView navigation = findViewById(R.id.NavigationView);
+        Menu menu = navigation.getMenu();
+        for (int i = 0; i < menu.size(); i++) {
+            MenuItem item = menu.getItem(i);
+            if (!item.isVisible()) {
+                continue;
+            }
 
+            if (item.getTitle().toString().compareTo(tab) == 0) {
+                output = item;
+            }
+        }
+        if (output != null) {
+            onNavigationItemSelected(output);
+        }
+    }
+
+    private void setNavigationGrid() {
         Context context = getBaseContext();
         NavigationView navigation = findViewById(R.id.NavigationView);
         Menu menu = navigation.getMenu();
@@ -211,13 +230,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             layout.setOrientation(LinearLayout.VERTICAL);
             layout.setOnClickListener(view -> {
                 onNavigationItemSelected(item);
+                SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
                 SharedPreferences.Editor e = sharedPreferences.edit();
                 e.putString("tab_last", item.getTitle().toString());
                 e.commit();
             });
-            if (item.getTitle().toString().compareTo(tab) == 0) {
-                output = item;
-            }
 
             layout.setOnFocusChangeListener((view, focused) -> {
                 if (focused) {
@@ -247,7 +264,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
             gridLayout.addView(layout);
         }
-        return output;
     }
 
     public int dpToPx(float dp, Context context){

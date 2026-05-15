@@ -7,7 +7,6 @@
  */
 package com.winlator.cmod.store;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -16,7 +15,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.Gravity;
 import android.widget.Button;
 import android.widget.FrameLayout;
@@ -24,6 +22,9 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
+
+import com.winlator.cmod.NavActivity;
+import com.winlator.cmod.R;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -45,7 +46,7 @@ import java.util.List;
  * Tapping any card opens the Epic Store page in the system browser.
  * No authentication required.
  */
-public class EpicFreeGamesActivity extends Activity {
+public class EpicFreeGamesActivity extends NavActivity {
 
     private static final String TAG = "BH_EPIC_FREE";
 
@@ -81,7 +82,7 @@ public class EpicFreeGamesActivity extends Activity {
         // Header
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setBackgroundColor(COLOR_HDR_BG);
+        header.setBackgroundColor(getColor(R.color.colorPrimary));
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(8), dp(8), dp(8), dp(8));
 
@@ -457,12 +458,6 @@ public class EpicFreeGamesActivity extends Activity {
         } catch (Exception e) {
             return iso.substring(0, 10);
         }
-    }
-
-    private int dp(int dp) {
-        return Math.round(TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP, dp,
-                getResources().getDisplayMetrics()));
     }
 
     // ── Data model ────────────────────────────────────────────────────────────

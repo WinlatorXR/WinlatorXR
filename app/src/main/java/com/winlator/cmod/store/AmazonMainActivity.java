@@ -1,6 +1,5 @@
 package com.winlator.cmod.store;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -12,6 +11,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.winlator.cmod.NavActivity;
+
 /**
  * Entry point for the Amazon Games integration.
  *
@@ -21,7 +22,7 @@ import android.widget.Toast;
  * Launched from the side menu (ID=11 / 0xb).
  * On resume (return from AmazonLoginActivity) refreshes card visibility.
  */
-public class AmazonMainActivity extends Activity {
+public class AmazonMainActivity extends NavActivity {
 
     private LinearLayout loginCard;
     private LinearLayout loggedInCard;
@@ -40,7 +41,7 @@ public class AmazonMainActivity extends Activity {
         root.addView(loginCard,    new FrameLayout.LayoutParams(-1, -1));
         root.addView(loggedInCard, new FrameLayout.LayoutParams(-1, -1));
 
-        setContentView(root);
+        setContentView(root, true);
         refreshView();
     }
 
@@ -51,10 +52,6 @@ public class AmazonMainActivity extends Activity {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private int dp(int v) {
-        return (int) (v * getResources().getDisplayMetrics().density);
-    }
 
     private void refreshView() {
         if (loginCard == null) return;

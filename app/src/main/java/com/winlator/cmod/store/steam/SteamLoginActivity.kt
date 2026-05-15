@@ -1,6 +1,5 @@
 package com.winlator.cmod.store
 
-import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
@@ -12,6 +11,7 @@ import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
+import com.winlator.cmod.NavActivity
 
 /**
  * Steam credential login screen.
@@ -26,7 +26,7 @@ import android.widget.*
  *     → if Steam Guard required → dialog shown → user submits code
  *     → onSuccess → SteamRepository.loginWithToken() → SteamGamesActivity
  */
-class SteamLoginActivity : Activity(), SteamAuthManager.AuthListener {
+class SteamLoginActivity : NavActivity(), SteamAuthManager.AuthListener {
 
     private lateinit var etUsername: EditText
     private lateinit var etPassword: EditText
@@ -143,7 +143,7 @@ class SteamLoginActivity : Activity(), SteamAuthManager.AuthListener {
         }
         ll.addView(tvStatus, wrapLp())
 
-        setContentView(root)
+        setContentView(root, true)
     }
 
     // -------------------------------------------------------------------------
@@ -298,9 +298,6 @@ class SteamLoginActivity : Activity(), SteamAuthManager.AuthListener {
             setBackgroundColor(INPUT_BG)
             setPadding(dp(14), dp(10), dp(14), dp(10))
         }
-
-    private fun dp(value: Int): Int =
-        (value * resources.displayMetrics.density + 0.5f).toInt()
 
     private fun fullLp(height: Int) =
         LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, height)
