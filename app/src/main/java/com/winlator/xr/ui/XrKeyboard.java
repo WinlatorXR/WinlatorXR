@@ -304,7 +304,7 @@ public class XrKeyboard extends ContentDialog {
             boolean first = true;
             for (KeyEvent keyEvent : events) {
                 if (!first) sleep(50);
-                server.keyboard.onKeyEvent(keyEvent);
+                server.keyboard.onKeyEvent(keyEvent, true);
                 first = false;
             }
         }
