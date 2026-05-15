@@ -74,15 +74,18 @@ public class ModdingUtils {
     }
 
     public static void updateReshade(Context context, File dst, boolean useReshade, boolean forceDXGI) {
-        // Update packages
-        updateReshadePlugins(context, useReshade, dst);
-        updateReshadeDirectX(context, useReshade, forceDXGI, dst);
+        boolean hasExe = false;
+        for (File file : dst.listFiles()) {
+            if (file.getAbsolutePath().endsWith(".exe"))
+                hasExe = true;
+            if (!file.isDirectory())
+                continue;
+            updateReshade(context, file, useReshade, forceDXGI);
+        }
 
-        // Workaround for launchers
-        File ue = locateUE(dst);
-        if (ue != null) {
-            updateReshadePlugins(context, useReshade, ue);
-            updateReshadeDirectX(context, useReshade, forceDXGI, ue);
+        if (hasExe) {
+            updateReshadePlugins(context, useReshade, dst);
+            updateReshadeDirectX(context, useReshade, forceDXGI, dst);
         }
     }
 
@@ -161,28 +164,21 @@ public class ModdingUtils {
     }
 
     private static boolean isUsingDXGI(File dst) {
-        if (locateUE(dst) != null) {
-            return true;
-        } else if (locateUnity(dst)) {
-            return true;
-        } else {
-            return false;
-        }
+        return locateUE(dst) || locateUnity(dst);
     }
 
-    private static File locateUE(File dst) {
+    private static boolean locateUE(File dst) {
         File[] files = dst.listFiles();
         if (files != null) {
             for (File file : files) {
                 if (file.isDirectory()) {
-                    File result = locateUE(file);
-                    if (result != null) {
-                        return result;
+                    if (locateUE(file)) {
+                        return true;
                     }
                 }
             }
         }
-        return dst.getAbsolutePath().endsWith("Binaries/Win64") ? dst : null;
+        return dst.getAbsolutePath().endsWith("Binaries/Win64");
     }
 
     private static boolean locateUnity(File dst) {

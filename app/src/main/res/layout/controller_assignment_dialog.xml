@@ -76,6 +76,29 @@
                 app:justifyContent="flex_start">
 
                 <CheckBox
+                    android:id="@+id/CBPlayerXRMouseLeftHanded"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/xr_selector"
+                    app:layout_flexShrink="0" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="12dp"
+                    android:text="@string/left_handed_mouse"
+                    android:textSize="16sp"
+                    app:layout_flexShrink="0" />
+            </com.google.android.flexbox.FlexboxLayout>
+            <com.google.android.flexbox.FlexboxLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:alignItems="center"
+                app:flexWrap="nowrap"
+                app:justifyContent="flex_start">
+
+                <CheckBox
                     android:id="@+id/CBPlayerXRMouseLightgun"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -88,29 +111,6 @@
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="12dp"
                     android:text="@string/light_gun_mouse"
-                    android:textSize="16sp"
-                    app:layout_flexShrink="0" />
-            </com.google.android.flexbox.FlexboxLayout>
-            <com.google.android.flexbox.FlexboxLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:alignItems="center"
-                app:flexWrap="nowrap"
-                app:justifyContent="flex_start">
-
-                <CheckBox
-                    android:id="@+id/CBPlayerXRWheelEmulation"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:background="@drawable/xr_selector"
-                    app:layout_flexShrink="0" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="12dp"
-                    android:text="@string/wheel_emulation"
                     android:textSize="16sp"
                     app:layout_flexShrink="0" />
             </com.google.android.flexbox.FlexboxLayout>

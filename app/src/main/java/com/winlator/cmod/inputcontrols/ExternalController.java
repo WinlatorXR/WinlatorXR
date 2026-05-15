@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.XServerDisplayActivity;
+import com.winlator.xr.XrActivity;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -623,6 +624,7 @@ public class ExternalController {
 
     public static boolean isGameController(InputDevice device) {
         if (device == null) return false;
+        if (XrActivity.isEnabled(null)) return true;
         int sources = device.getSources();
         // Exclude devices with SOURCE_MOUSE from being considered controllers
         return !device.isVirtual() && ((sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD ||

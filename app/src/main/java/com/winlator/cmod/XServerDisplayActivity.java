@@ -401,7 +401,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         Menu menu = navigationView.getMenu();
         if (XrActivity.isEnabled(this)) {
-            menu.findItem(R.id.main_menu_motion_controls).setVisible(false);
             menu.findItem(R.id.main_menu_input_controls).setVisible(false);
             menu.findItem(R.id.main_menu_pip_mode).setVisible(false);
             menu.findItem(R.id.main_menu_relative_mouse).setVisible(false);
@@ -597,10 +596,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         }
 
         this.graphicsDriverConfig = GraphicsDriverConfigDialog.parseGraphicsDriverConfig(graphicsDriverConfig);
-
-        if (dxwrapper.equals("dxvk") || dxwrapper.equals("vkd3d")) {
-            this.dxwrapperConfig = DXVKConfigDialog.parseConfig(dxwrapperConfig);
-        }
+        this.dxwrapperConfig = DXVKConfigDialog.parseConfig(dxwrapperConfig);
 
 
 
@@ -1588,8 +1584,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         String dxwrapper = this.dxwrapper;
         if (dxwrapper.equals("dxvk"))
             dxwrapper = "dxvk-"+dxwrapperConfig.get("version");
-        else if (dxwrapper.equals("vkd3d"))
-            dxwrapper = "vkd3d-"+dxwrapperConfig.get("vkd3dVersion");
 
         if (!dxwrapper.equals(container.getExtra("dxwrapper"))) {
             extractDXWrapperFiles(dxwrapper);
@@ -2306,11 +2300,8 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         if (dxwrapper.equals("dxvk")) {
             DXVKConfigDialog.setEnvVars(this, dxwrapperConfig, envVars);
-        } else if (dxwrapper.equals("vkd3d")) {
-            VKD3DConfigDialog.setEnvVars(this, dxwrapperConfig, envVars);
         }
-
-
+        VKD3DConfigDialog.setEnvVars(this, dxwrapperConfig, envVars);
 
         boolean useDRI3 = preferences.getBoolean("use_dri3", true);
         if (!useDRI3) {
@@ -2551,24 +2542,16 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     private static final String TAG = "DXWrapperExtraction";
 
     private void extractDXWrapperFiles(String dxwrapper) {
-        final String[] dlls = {"d3d10.dll", "d3d10_1.dll", "d3d10core.dll", "d3d11.dll", "d3d12.dll", "d3d12core.dll", "d3d8.dll", "d3d9.dll", "dxgi.dll"};
+        final String[] dlls = {"d3d10.dll", "d3d10_1.dll", "d3d10core.dll", "d3d11.dll", "d3d8.dll", "d3d9.dll", "dxgi.dll"};
 
         File rootDir = imageFs.getRootDir();
         File windowsDir = new File(rootDir, ImageFs.WINEPREFIX + "/drive_c/windows");
 
-        if (dxwrapper.contains("vkd3d")) {
-            ContentProfile profile = contentsManager.getProfileByEntryName(dxwrapper);
-            Log.d(TAG, "Extracting DXVK 2.4.1");
-            TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "dxwrapper/dxvk-2.4.1" + ".tzst", windowsDir, onExtractFileListener);
-            if (profile != null) {
-                Log.d(TAG, "Applying user-defined VKD3D content profile: " + dxwrapper);
-                contentsManager.applyContent(profile);
-            } else {
-                Log.d(TAG, "Extracting fallback VKD3D .tzst archive: " + dxwrapper);
-                TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "dxwrapper/" + dxwrapper + ".tzst", windowsDir, onExtractFileListener);
-            }
-            Log.d(TAG, "Finished VKD3D extraction for " + dxwrapper);
-        } else if (dxwrapper.contains("dxvk")) {
+        String vkd3d = "vkd3d-" + dxwrapperConfig.get("vkd3dVersion");
+        Log.d(TAG, "Extracting fallback VKD3D .tzst archive: " + vkd3d);
+        TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "dxwrapper/" + vkd3d + ".tzst", windowsDir, onExtractFileListener);
+
+        if (dxwrapper.contains("dxvk")) {
             Log.d(TAG, "Extracting DXVK wrapper files, version: " + dxwrapper);
 
             ContentProfile profile = contentsManager.getProfileByEntryName(dxwrapper);

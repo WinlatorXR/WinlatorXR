@@ -32,6 +32,7 @@ import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.R;
 import com.winlator.cmod.XServerDisplayActivity;
+import com.winlator.cmod.inputcontrols.ControllerManager;
 import com.winlator.xr.api.XrAPI;
 import com.winlator.xr.runtime.MetaQuest;
 import com.winlator.xr.runtime.Pico;
@@ -63,6 +64,7 @@ public class XrActivity extends XServerDisplayActivity {
     public static boolean isUDP = false;
     public static boolean isVR = false;
     public static boolean mouseEmulation;
+    public static boolean mouseLeftHanded;
     public static boolean mouseLightgun;
     public static boolean wheelEmulation;
 
@@ -90,8 +92,15 @@ public class XrActivity extends XServerDisplayActivity {
         boolean curvedScreen = prefs.getBoolean("use_cs", false);
         nativeSetCurvedScreen(curvedScreen);
         mouseEmulation = prefs.getBoolean("use_xr_mouse", true);
+        mouseLeftHanded = prefs.getBoolean("use_xr_leftHanded", false);
         mouseLightgun = prefs.getBoolean("use_xr_lightgun", false);
         wheelEmulation = prefs.getBoolean("use_xr_wheel", false);
+
+        ControllerManager controllerManager = ControllerManager.getInstance();
+        controllerManager.scanForDevices();
+        if (!controllerManager.isSlotEnabled(0)) {
+            controllerManager.setSlotEnabled(0, true);
+        }
     }
 
     @Override
@@ -265,12 +274,12 @@ public class XrActivity extends XServerDisplayActivity {
             xrAPI.consumeInputs(instance.getXServer());
             if (mouseEmulation) {
                 xrController.updateMouseAxes(axes, isImmersive && isHeadTrackingAllowed);
-                xrController.updateMouseSnapturn(buttons, isImmersive ? 125 : 25);
+                xrController.updateMouseSnapturn(buttons, isImmersive ? 250 : 50);
                 if (mouseLightgun && !isImmersive && !isVR)
                     xrController.updateMouseLightgun(axes, lastDistance);
             }
-            if (wheelEmulation && !isImmersive && !isVR) {
-                xrController.updateWheelEmulation(axes, buttons);
+            if (wheelEmulation && !isVR) {
+                xrController.updateWheelEmulation(axes);
             }
             xrController.updateMouseState(buttons);
             xrController.updateKeyboardButtons(buttons);
@@ -292,9 +301,8 @@ public class XrActivity extends XServerDisplayActivity {
     }
 
     private void updateShortcuts(boolean[] buttons) {
-        int primaryController = instance.container.getPrimaryController();
-        ControllerButton primaryGrip = primaryController == 0 ? ControllerButton.L_GRIP : ControllerButton.R_GRIP;
-        ControllerButton secondaryPress = primaryController == 1 ? ControllerButton.L_THUMBSTICK_PRESS : ControllerButton.R_THUMBSTICK_PRESS;
+        ControllerButton primaryGrip = mouseLeftHanded ? ControllerButton.L_GRIP : ControllerButton.R_GRIP;
+        ControllerButton secondaryPress = !mouseLeftHanded ? ControllerButton.L_THUMBSTICK_PRESS : ControllerButton.R_THUMBSTICK_PRESS;
         if (xrController.getButtonClicked(buttons, secondaryPress)) {
             if (buttons[primaryGrip.ordinal()]) {
                 isSBS = !isSBS;

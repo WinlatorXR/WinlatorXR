@@ -111,7 +111,8 @@
     <string name="press_any_button_on_your_controller">Press any button on your controller</string>
     <string name="bindings">bindings</string>
     <string name="show_touchscreen_controls">Show Touchscreen Controls</string>
-    <string name="dxwrapper">DX Wrapper</string>
+    <string name="dxwrapper">DirectX 8–11 Emulation</string>
+    <string name="dx12wrapper">DirectX 12 Emulation</string>
     <string name="mouse_warp_override">Mouse Warp Override</string>
     <string name="direct3d">Direct3D</string>
     <string name="directsound">DirectSound</string>
@@ -120,9 +121,9 @@
     <string name="directshow">DirectShow</string>
     <string name="directx">DirectX</string>
     <string name="xaudio">XAudio</string>
+    <string name="vcrun2005">Visual C++ 2005</string>
     <string name="vcrun2010">Visual C++ 2010</string>
-    <string name="windowsmediafoundation">Windows Media Foundation</string>
-    <string name="opengl">OpenGL</string>
+    <string name="wmdecoder">Windows Media Decoder</string>
     <string name="settings">Settings</string>
     <string name="exec_arguments">Exec Arguments</string>
     <string name="win_components">Win Components</string>
@@ -443,7 +444,8 @@
     <string name="gpu_level">GPU level</string>
     <string name="refresh_rate">Refresh rate</string>
     <string name="light_gun_mouse">Use light gun / laser pointer mouse mapping</string>
-    <string name="wheel_emulation">Use controllers as a wheel (experimental)</string>
+    <string name="left_handed_mouse">Use left-handed mouse mapping</string>
+    <string name="wheel_emulation">Use controllers as a wheel</string>
     <string name="controller_as_mouse">Use XR controller as mouse</string>
     <string name="primary_controller">Primary controller</string>
     <string name="left_controller">Left controller</string>
@@ -640,7 +642,7 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="dll_emulator">32bit Emulator</string>
     <string name="open_with_android_browser">Open Android Browser in Wine</string>
     <string name="share_android_clipboard">Share Android Clipboard with Wine</string>
-    <string name="ddraw_wrapper">DDraw/Glide Wrapper</string>
+    <string name="ddraw_wrapper">DirectX 1–7 Emulation</string>
     <string name="fexcore_version">FEXCore Version</string>
     <string name="graphics_driver_max_device_memory">Max Device Memory</string>
 
@@ -704,10 +706,10 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="dpad_left">D‑Pad Left</string>
     <string name="dpad_right">D‑Pad Right</string>
     <string name="controller_manager">Controller Manager</string>
-    <string name="gyro_target_stick">Apply gyro to</string>
+    <string name="gyro_target_stick">Apply to</string>
     <string name="right_stick">Right stick</string>
     <string name="left_stick">Left stick</string>
-    <string name="enable_stick_gyro">Enable Analog Stick Gyroscopic Motion</string>
+    <string name="enable_stick_gyro">Map motions to analog joystick</string>
 
     <string name="graphics_driver_adrenotools_turnip">Use Adrenotools Turnip</string>
     <string name="graphics_driver_frame_sync">Frame Synchronization</string>

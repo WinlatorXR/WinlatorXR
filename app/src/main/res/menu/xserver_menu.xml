@@ -73,6 +73,11 @@
 
     <!-- ===== More quick actions at bottom ===== -->
     <item
+        android:id="@+id/main_menu_xr"
+        android:icon="@drawable/icon_xr"
+        android:title="@string/xr" />
+
+    <item
         android:id="@+id/main_menu_advanced"
         android:icon="@drawable/icon_popup_menu_cpu"
         android:title="@string/advanced" />
@@ -86,11 +91,6 @@
         android:id="@+id/main_menu_touchpad_help"
         android:title="@string/touchpad_help"
         android:icon="@drawable/icon_help" />
-
-    <item
-        android:id="@+id/main_menu_xr"
-        android:icon="@drawable/icon_xr"
-        android:title="@string/xr" />
 
     <item
         android:id="@+id/main_menu_exit"
