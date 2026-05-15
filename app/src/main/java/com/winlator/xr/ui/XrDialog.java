@@ -18,6 +18,7 @@
  */
 package com.winlator.xr.ui;
 
+import android.app.Activity;
 import android.content.SharedPreferences;
 import android.view.View;
 import android.widget.CheckBox;
@@ -27,12 +28,11 @@ import androidx.preference.PreferenceManager;
 
 import com.winlator.xr.XrActivity;
 import com.winlator.cmod.R;
-import com.winlator.cmod.XServerDisplayActivity;
 import com.winlator.cmod.contentdialog.ContentDialog;
 
 public class XrDialog extends ContentDialog {
 
-    public XrDialog(XServerDisplayActivity activity) {
+    public XrDialog(Activity activity) {
         super(activity, R.layout.xr_dialog);
         setTitle(R.string.xr);
 

@@ -34,6 +34,7 @@ import com.winlator.cmod.xserver.Drawable;
 import com.winlator.cmod.xserver.XLock;
 import com.winlator.cmod.xserver.XServer;
 import com.winlator.xr.ui.XrContentDialog;
+import com.winlator.xr.ui.XrKeyboard;
 
 import javax.microedition.khronos.opengles.GL10;
 
@@ -195,7 +196,7 @@ public class XrRenderer extends GLRenderer {
         quadVertices.bind(bgrMaterial.programId);
 
         XForm.identity(tmpXForm2);
-        float aspect = xServer.screenInfo.width / (float)xServer.screenInfo.height;;
+        float aspect = xServer.screenInfo.width / (float)xServer.screenInfo.height;
         try (XLock lock = xServer.lock(XServer.Lockable.DRAWABLE_MANAGER)) {
             float div = XrActivity.getSBS() ? 2 : 1;
             XrContentDialog dialog = XrContentDialog.getFrontInstance();
@@ -203,7 +204,9 @@ public class XrRenderer extends GLRenderer {
                 Drawable drawable = dialog.getDrawable();
                 if (drawable != null) {
                     float scale = xServer.screenInfo.height / 1200.0f;
-                    if (Build.MANUFACTURER.compareToIgnoreCase("PICO") == 0) {
+                    if (XrKeyboard.isShown()) {
+                        scale = xServer.screenInfo.height / (float)drawable.width / aspect;
+                    } else if (Build.MANUFACTURER.compareToIgnoreCase("PICO") == 0) {
                         scale = 0.75f;
                         DisplayMetrics displayMetrics = new DisplayMetrics();
                         XrActivity.getInstance().getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
@@ -213,6 +216,9 @@ public class XrRenderer extends GLRenderer {
 
                     int offsetX = (int) ((xServer.screenInfo.width - drawable.width * aspect * scale) / 2 / div);
                     int offsetY = (int) ((xServer.screenInfo.height - drawable.height * scale) / 2);
+                    if (XrKeyboard.isShown()) {
+                        offsetY = (int) (xServer.screenInfo.height - viewTransformation.sceneOffsetY - drawable.height * scale);
+                    }
                     renderDrawable(drawable, offsetX, offsetY, bgrMaterial, false, scale * aspect / div, scale);
                     if (div > 1) {
                         offsetX += (int) (xServer.screenInfo.width / div);

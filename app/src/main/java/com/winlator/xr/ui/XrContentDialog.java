@@ -40,6 +40,7 @@ public class XrContentDialog extends Dialog {
     private static int counter;
     private static int[] pixels;
     private static Bitmap bitmap;
+    private static Bitmap bitmapCopy;
     private static Canvas canvas;
     private static Drawable drawable;
     private static ArrayList<XrContentDialog> instances = new ArrayList<>();
@@ -68,6 +69,11 @@ public class XrContentDialog extends Dialog {
         if (counter++ > 10) {
             XrActivity.getInstance().runOnUiThread(this::redraw);
             counter = 0;
+        }
+        if (bitmapCopy != null) {
+            synchronized (this) {
+                drawable.drawBitmap(bitmapCopy);
+            }
         }
         return drawable;
     }
@@ -121,7 +127,9 @@ public class XrContentDialog extends Dialog {
 
         //Double buffering
         if (bitmap != null) {
-            drawable.drawBitmap(bitmap);
+            synchronized (this) {
+                bitmapCopy = bitmap.copy(bitmap.getConfig(), true);
+            }
         }
     }
 
