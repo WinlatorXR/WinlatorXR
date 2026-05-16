@@ -9,6 +9,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -127,13 +128,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         isDarkMode = sharedPreferences.getBoolean("dark_mode", false);
 
-        // Apply the theme based on the preference
-        if (isDarkMode) {
-            setTheme(R.style.AppThemeFullscreen_Dark);
-        } else {
-            setTheme(R.style.AppThemeFullscreen);
-        }
-
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(
                         getWindow(), getWindow().getDecorView());
@@ -202,6 +196,16 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     protected void onResume() {
         super.onResume();
+
+        // Apply the theme based on the preference
+        if (isDarkMode) {
+            setTheme(R.style.AppThemeFullscreen_Dark);
+            getWindow().setBackgroundDrawable(new ColorDrawable(Color.BLACK));
+        } else {
+            setTheme(R.style.AppThemeFullscreen);
+            getWindow().setBackgroundDrawable(new ColorDrawable(Color.WHITE));
+        }
+
         restoreTab();
     }
 
