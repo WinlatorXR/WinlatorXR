@@ -144,16 +144,27 @@ public class AdrenotoolsManager {
         }
         ArrayList<String> toRemove = new ArrayList<>();
         for (String name : mRemoteFiles.keySet()) {
-            if (driversList.contains(name)) {
+            boolean containsDriver = false;
+            for (String driver : driversList) {
+                if (getRawName(driver).compareTo(getRawName(name)) == 0) {
+                    containsDriver = true;
+                    break;
+                }
+            }
+            if (containsDriver) {
                 toRemove.add(name);
             } else {
                 driversList.add(name);
             }
         }
         for (String name : toRemove) {
-            driversList.remove(name);
+            mRemoteFiles.remove(name);
         }
         return driversList;
+    }
+
+    private String getRawName(String name) {
+        return name.replaceAll("[._\\s]", "");
     }
     
     private boolean isFromResources(String driver) {
@@ -253,6 +264,7 @@ public class AdrenotoolsManager {
         mRemoteFiles.clear();
         for (String zip : zips) {
             String name = zip.substring(zip.lastIndexOf('/') + 1);
+            name = name.substring(0, name.lastIndexOf('.'));
             mRemoteFiles.put(name, zip);
         }
     }
