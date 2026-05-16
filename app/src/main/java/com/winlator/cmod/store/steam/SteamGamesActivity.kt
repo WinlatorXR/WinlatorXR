@@ -249,6 +249,11 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
                     uninstallBtn.setOnClickListener(null)
                 }
 
+                row.setOnClickListener {
+                    startActivity(Intent(this@SteamGamesActivity, SteamGameDetailActivity::class.java)
+                        .putExtra(SteamGameDetailActivity.EXTRA_APP_ID, game.appId))
+                }
+
                 // Reset art to placeholder then kick off async load
                 artView.setImageResource(android.R.color.darker_gray)
                 loadCoverArt(artView, game.appId)
@@ -409,11 +414,6 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             setBackgroundColor(BG)
             divider = null
             dividerHeight = dp(1)
-            setOnItemClickListener { _, _, pos, _ ->
-                val game = games.getOrNull(pos) ?: return@setOnItemClickListener
-                startActivity(Intent(this@SteamGamesActivity, SteamGameDetailActivity::class.java)
-                    .putExtra(SteamGameDetailActivity.EXTRA_APP_ID, game.appId))
-            }
         }
         root.addView(listView, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
