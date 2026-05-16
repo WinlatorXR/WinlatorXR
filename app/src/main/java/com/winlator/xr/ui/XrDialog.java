@@ -38,17 +38,17 @@ public class XrDialog extends ContentDialog {
 
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(activity);
         boolean isImmersive = XrActivity.isImmersive;
-        boolean isSBS = XrActivity.isSBS;
 
         CheckBox cbSBS = findViewById(R.id.CBEnableSBS);
         cbSBS.setEnabled(XrActivity.getInstance().lastMode3D < 0);
-        cbSBS.setChecked(isSBS);
+        cbSBS.setChecked(XrActivity.isSBS);
         CheckBox cbImmersiveMode = findViewById(R.id.CBEnableImmersiveMode);
         cbImmersiveMode.setEnabled(!XrActivity.isUDP);
         cbImmersiveMode.setChecked(isImmersive);
         CheckBox cbCurvedScreen = findViewById(R.id.CBEnableCurvedScreen);
         cbCurvedScreen.setChecked(preferences.getBoolean("use_cs", false));
         CheckBox cbPassthrough = findViewById(R.id.CBEnablePassthrough);
+        cbPassthrough.setEnabled(!isImmersive);
         cbPassthrough.setChecked(preferences.getBoolean("use_pt", true));
         TextView tvToApplyClose = findViewById(R.id.TVToApplyClose);
 
@@ -66,6 +66,7 @@ public class XrDialog extends ContentDialog {
 
             boolean warn = (XrActivity.isImmersive != isImmersive);
             tvToApplyClose.setVisibility(warn ? View.VISIBLE : View.GONE);
+            cbPassthrough.setEnabled(!XrActivity.isImmersive);
         };
 
         // Apply changes immediatelly
