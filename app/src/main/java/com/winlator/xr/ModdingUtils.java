@@ -32,6 +32,7 @@ import java.io.File;
 public class ModdingUtils {
 
     private static final String PATH_CHARS = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM01234567890.";
+    private static final String PATH_ZDRIVE = "/data/data/com.winlator.cmod/files/imagefs/";
     private static final TarCompressorUtils.Type PKG_TYPE = TarCompressorUtils.Type.ZSTD;
     private static final String[] RESHADE_DIRECTX_CLONES = {"d3d10.dll", "d3d11.dll", "d3d12.dll"};
     private static final String RESHADE_DIRECTX_DLL = "dxgi.dll";
@@ -159,6 +160,9 @@ public class ModdingUtils {
             if (it[0].compareToIgnoreCase(drive + "") == 0) {
                 return new File(it[1], sb.substring(2));
             }
+        }
+        if (sb.charAt(0) == 'z') {
+            return new File(PATH_ZDRIVE, sb.substring(2));
         }
         return new File(imageFs.getRootDir(), ImageFs.WINEPREFIX + "/drive_" + sb);
     }
