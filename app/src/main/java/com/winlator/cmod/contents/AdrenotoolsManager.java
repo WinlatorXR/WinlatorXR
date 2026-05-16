@@ -28,18 +28,27 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class AdrenotoolsManager {
+
+    public static final String REMOTE_PROFILES = "https://github.com/StevenMXZ/Adreno-Tools-Drivers/releases/";
     
     private File adrenotoolsContentDir;
     private Context mContext;
+    private HashMap<String, String> mRemoteFiles;
     
     public AdrenotoolsManager(Context context) {
         this.mContext = context;
         this.adrenotoolsContentDir = new File(mContext.getFilesDir(), "imagefs/contents/adrenotools");
         if (!adrenotoolsContentDir.exists())
             adrenotoolsContentDir.mkdirs();
+
+        mRemoteFiles = new HashMap<>();
     }
         
     public String getLibraryName(String adrenoToolsDriverId) {
+        if (isRemote(adrenoToolsDriverId)) {
+            return adrenoToolsDriverId;
+        }
+
         String libraryName = "";
         File driverPath = new File(adrenotoolsContentDir, adrenoToolsDriverId);
         try {
@@ -53,6 +62,10 @@ public class AdrenotoolsManager {
     }
     
     public String getDriverName(String adrenoToolsDriverId) {
+        if (isRemote(adrenoToolsDriverId)) {
+            return adrenoToolsDriverId;
+        }
+
         String driverName = "";
         File driverPath = new File(adrenotoolsContentDir, adrenoToolsDriverId);
         try {
@@ -66,6 +79,10 @@ public class AdrenotoolsManager {
     }
 
     public String getDriverVersion(String adrenoToolsDriverId) {
+        if (isRemote(adrenoToolsDriverId)) {
+            return "";
+        }
+
         String driverVersion = "";
         File driverPath = new File(adrenotoolsContentDir, adrenoToolsDriverId);
         try {
@@ -76,6 +93,14 @@ public class AdrenotoolsManager {
         catch (JSONException e) {
         }
         return driverVersion;
+    }
+
+    public String getDriverUrl(String adrenoToolsDriverId) {
+        return mRemoteFiles.get(adrenoToolsDriverId);
+    }
+
+    public boolean isRemote(String adrenoToolsDriverId) {
+        return mRemoteFiles.containsKey(adrenoToolsDriverId);
     }
 
     private void reloadContainers(String adrenoToolsDriverId) {
@@ -116,6 +141,17 @@ public class AdrenotoolsManager {
             boolean fromResources = isFromResources("graphics_driver/adrenotools-" + f.getName() + ".tzst");
             if (!fromResources && new File(f, "meta.json").exists())
                 driversList.add(f.getName());
+        }
+        ArrayList<String> toRemove = new ArrayList<>();
+        for (String name : mRemoteFiles.keySet()) {
+            if (driversList.contains(name)) {
+                toRemove.add(name);
+            } else {
+                driversList.add(name);
+            }
+        }
+        for (String name : toRemove) {
+            driversList.remove(name);
         }
         return driversList;
     }
@@ -212,4 +248,12 @@ public class AdrenotoolsManager {
             }
         }
     }
- }
+
+    public void setRemoteProfiles(ArrayList<String> zips) {
+        mRemoteFiles.clear();
+        for (String zip : zips) {
+            String name = zip.substring(zip.lastIndexOf('/') + 1);
+            mRemoteFiles.put(name, zip);
+        }
+    }
+}

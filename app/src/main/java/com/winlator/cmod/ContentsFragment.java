@@ -79,16 +79,7 @@ public class ContentsFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-
-        new Thread(() -> {
-            String json = Downloader.downloadString(ContentsManager.REMOTE_PROFILES);
-            if (json == null)
-                return;
-            getActivity().runOnUiThread(() -> {
-                manager.setRemoteProfiles(json);
-                loadContentList();
-            });
-        }).start();
+        reload();
     }
 
     @Override
@@ -278,6 +269,26 @@ public class ContentsFragment extends Fragment {
         }
     }
 
+    private void reload() {
+        new Thread(() -> {
+            ArrayList<String> zips = Downloader.getGithubZipLinks(AdrenotoolsManager.REMOTE_PROFILES);
+            getActivity().runOnUiThread(() -> {
+                adrenotoolsManager.setRemoteProfiles(zips);
+                loadContentList();
+            });
+        }).start();
+
+        new Thread(() -> {
+            String json = Downloader.downloadString(ContentsManager.REMOTE_PROFILES);
+            if (json == null)
+                return;
+            getActivity().runOnUiThread(() -> {
+                manager.setRemoteProfiles(json);
+                loadContentList();
+            });
+        }).start();
+    }
+
     private class ContentItemAdapter extends RecyclerView.Adapter<ContentItemAdapter.ViewHolder> {
         private final List<ContentProfile> data;
 
@@ -396,12 +407,14 @@ public class ContentsFragment extends Fragment {
             private TextView tvName;
             private TextView tvVersion;
             private ImageButton btMenu;
+            private ProgressBar progressBar;
 
             public ViewHolder(View v) {
                 super(v);
                 tvName = v.findViewById(R.id.TVName);
                 tvVersion = v.findViewById(R.id.TVVersion);
                 btMenu = v.findViewById(R.id.BTMenu);
+                progressBar = v.findViewById(R.id.Progress);
             }
         }
 
@@ -417,10 +430,35 @@ public class ContentsFragment extends Fragment {
 
         @Override
         public void onBindViewHolder(ViewHolder viewHolder, final int position) {
-            viewHolder.tvName.setText(adrenotoolsManager.getDriverName(driversList.get(position)));
-            viewHolder.tvVersion.setText(adrenotoolsManager.getDriverVersion(driversList.get(position)));
+            String driver = driversList.get(position);
+            viewHolder.tvName.setText(adrenotoolsManager.getDriverName(driver));
+            viewHolder.tvVersion.setText(adrenotoolsManager.getDriverVersion(driver));
+            if (adrenotoolsManager.isRemote(driver)) {
+                viewHolder.btMenu.setImageResource(R.drawable.icon_popup_menu_download);
+            } else {
+                viewHolder.btMenu.setImageResource(R.drawable.icon_remove);
+            }
             viewHolder.btMenu.setOnClickListener((v) -> {
-                removeAtIndex(position);
+                if (adrenotoolsManager.isRemote(driver)) {
+                    viewHolder.btMenu.setVisibility(View.GONE);
+                    viewHolder.progressBar.setVisibility(View.VISIBLE);
+
+                    new Thread(() -> {
+                        long timestamp = System.currentTimeMillis();
+                        File output = new File(getContext().getCacheDir(), "temp_" + timestamp);
+                        if (Downloader.downloadFile(adrenotoolsManager.getDriverUrl(driver), output)) {
+                            adrenotoolsManager.installDriver(Uri.fromFile(output));
+                        }
+                        getActivity().runOnUiThread(() -> {
+                            viewHolder.progressBar.setVisibility(View.GONE);
+                            viewHolder.btMenu.setVisibility(View.VISIBLE);
+                            reload();
+                        });
+                    }).start();
+                } else {
+                    removeAtIndex(position);
+                    reload();
+                }
             });
         }
 
