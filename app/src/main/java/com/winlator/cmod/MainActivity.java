@@ -9,6 +9,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -37,9 +38,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.navigation.NavigationView;
@@ -123,13 +128,14 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         isDarkMode = sharedPreferences.getBoolean("dark_mode", false);
 
-        // Apply the theme based on the preference
-        if (isDarkMode) {
-            setTheme(R.style.AppTheme_Dark);
-        } else {
-            setTheme(R.style.AppTheme);
-        }
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(
+                        getWindow(), getWindow().getDecorView());
 
+        if (controller != null) {
+            controller.hide(WindowInsetsCompat.Type.systemBars());
+            controller.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        }
 
         setContentView(R.layout.main_activity);
 
@@ -138,7 +144,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         navigationView.setNavigationItemSelectedListener(this);
 
         gridLayout = findViewById(R.id.NavigationGrid);
-        MenuItem toOpen = setNavigationGrid();
+        setNavigationGrid();
 
         setSupportActionBar(findViewById(R.id.Toolbar));
         ActionBar actionBar = getSupportActionBar();
@@ -185,17 +191,46 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
 
         }
-
-        if (toOpen != null) {
-            onNavigationItemSelected(toOpen);
-        }
     }
 
-    private MenuItem setNavigationGrid() {
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        // Apply the theme based on the preference
+        if (isDarkMode) {
+            setTheme(R.style.AppThemeFullscreen_Dark);
+            getWindow().setBackgroundDrawable(new ColorDrawable(Color.BLACK));
+        } else {
+            setTheme(R.style.AppThemeFullscreen);
+            getWindow().setBackgroundDrawable(new ColorDrawable(Color.WHITE));
+        }
+
+        restoreTab();
+    }
+
+    private void restoreTab() {
         MenuItem output = null;
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         String tab = sharedPreferences.getString("tab_last", "");
+        NavigationView navigation = findViewById(R.id.NavigationView);
+        Menu menu = navigation.getMenu();
+        for (int i = 0; i < menu.size(); i++) {
+            MenuItem item = menu.getItem(i);
+            if (!item.isVisible()) {
+                continue;
+            }
 
+            if (item.getTitle().toString().compareTo(tab) == 0) {
+                output = item;
+            }
+        }
+        if (output != null) {
+            onNavigationItemSelected(output);
+        }
+    }
+
+    private void setNavigationGrid() {
         Context context = getBaseContext();
         NavigationView navigation = findViewById(R.id.NavigationView);
         Menu menu = navigation.getMenu();
@@ -211,13 +246,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             layout.setOrientation(LinearLayout.VERTICAL);
             layout.setOnClickListener(view -> {
                 onNavigationItemSelected(item);
+                SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
                 SharedPreferences.Editor e = sharedPreferences.edit();
                 e.putString("tab_last", item.getTitle().toString());
                 e.commit();
             });
-            if (item.getTitle().toString().compareTo(tab) == 0) {
-                output = item;
-            }
 
             layout.setOnFocusChangeListener((view, focused) -> {
                 if (focused) {
@@ -247,7 +280,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
             gridLayout.addView(layout);
         }
-        return output;
     }
 
     public int dpToPx(float dp, Context context){
@@ -599,14 +631,14 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 ControllerAssignmentDialog.show(this);
                 drawerLayout.closeDrawers();
                 break;
-            case R.id.main_menu_box_rc:
-                show(new Box86_64RCFragment(), false);  // Forward animation
-                break;
             case R.id.main_menu_contents:
                 show(new ContentsFragment(), false);  // Forward animation
                 break;
             case R.id.main_menu_saves:
                 show(new SavesFragment(), false);  // Forward animation
+                break;
+            case R.id.main_menu_store:
+                show(new StoreFragment(), false);  // Forward animation
                 break;
             case R.id.main_menu_settings:
                 show(new SettingsFragment(), false);  // Forward animation
@@ -621,17 +653,18 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     private void show(Fragment fragment, boolean reverse) {
         FragmentManager fragmentManager = getSupportFragmentManager();
-        if (reverse) {
-            fragmentManager.beginTransaction()
-                    .setCustomAnimations(R.anim.slide_in_down, R.anim.slide_out_up)  // Reverse animation
-                    .replace(R.id.FLFragmentContainer, fragment)
-                    .commit();
-        } else {
-            fragmentManager.beginTransaction()
-                    .setCustomAnimations(R.anim.slide_in_up, R.anim.slide_out_down)  // Forward animation
-                    .replace(R.id.FLFragmentContainer, fragment)
-                    .commit();
+        Fragment currentFragment = fragmentManager.findFragmentById(R.id.FLFragmentContainer);
+
+        // Do nothing if the target fragment is already displayed
+        if (currentFragment != null && currentFragment.getClass().equals(fragment.getClass())) {
+            drawerLayout.closeDrawer(GravityCompat.START);
+            return;
         }
+
+        FragmentTransaction transaction = fragmentManager.beginTransaction();
+        if (reverse) transaction.setCustomAnimations(R.anim.slide_in_down, R.anim.slide_out_up);
+        else transaction.setCustomAnimations(R.anim.slide_in_up, R.anim.slide_out_down);
+        transaction.replace(R.id.FLFragmentContainer, fragment).commit();
 
         drawerLayout.closeDrawer(GravityCompat.START);
     }

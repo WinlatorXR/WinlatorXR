@@ -58,7 +58,7 @@ import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.navigation.NavigationView;
-import com.winlator.XrActivity;
+import com.winlator.xr.XrActivity;
 import com.winlator.cmod.box86_64.rc.RCFile;
 import com.winlator.cmod.box86_64.rc.RCManager;
 import com.winlator.cmod.container.Container;
@@ -126,8 +126,8 @@ import com.winlator.cmod.xenvironment.components.NetworkInfoUpdateComponent;
 import com.winlator.cmod.xenvironment.components.PulseAudioComponent;
 import com.winlator.cmod.xenvironment.components.SysVSharedMemoryComponent;
 import com.winlator.cmod.xenvironment.components.XServerComponent;
-import com.winlator.cmod.xr.ReshadeUtils;
-import com.winlator.cmod.xr.XrDialog;
+import com.winlator.xr.ModdingUtils;
+import com.winlator.xr.ui.XrDialog;
 import com.winlator.cmod.xserver.Pointer;
 import com.winlator.cmod.xserver.Property;
 import com.winlator.cmod.xserver.ScreenInfo;
@@ -401,7 +401,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         Menu menu = navigationView.getMenu();
         if (XrActivity.isEnabled(this)) {
-            menu.findItem(R.id.main_menu_motion_controls).setVisible(false);
             menu.findItem(R.id.main_menu_input_controls).setVisible(false);
             menu.findItem(R.id.main_menu_pip_mode).setVisible(false);
             menu.findItem(R.id.main_menu_relative_mouse).setVisible(false);
@@ -543,6 +542,16 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             Log.d("XServerDisplayActivity", "No valid secondary executable or delay is zero, skipping scheduling.");
         }
 
+        // Setup TrackIR emulation
+        try {
+            ModdingUtils.unpackTrackIR(this);
+            if ((shortcut != null) && shortcut.getExtra("useTrackIR", "0").equals("1")) {
+                scheduleSecondaryExecution(ModdingUtils.getRuntimeForTrackIR(), 10);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         graphicsDriver = container.getGraphicsDriver();
         String graphicsDriverConfig = container.getGraphicsDriverConfig();
         audioDriver = container.getAudioDriver();
@@ -587,10 +596,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         }
 
         this.graphicsDriverConfig = GraphicsDriverConfigDialog.parseGraphicsDriverConfig(graphicsDriverConfig);
-
-        if (dxwrapper.equals("dxvk") || dxwrapper.equals("vkd3d")) {
-            this.dxwrapperConfig = DXVKConfigDialog.parseConfig(dxwrapperConfig);
-        }
+        this.dxwrapperConfig = DXVKConfigDialog.parseConfig(dxwrapperConfig);
 
 
 
@@ -1578,8 +1584,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         String dxwrapper = this.dxwrapper;
         if (dxwrapper.equals("dxvk"))
             dxwrapper = "dxvk-"+dxwrapperConfig.get("version");
-        else if (dxwrapper.equals("vkd3d"))
-            dxwrapper = "vkd3d-"+dxwrapperConfig.get("vkd3dVersion");
 
         if (!dxwrapper.equals(container.getExtra("dxwrapper"))) {
             extractDXWrapperFiles(dxwrapper);
@@ -1653,7 +1657,10 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         // Setup reshade
         if (shortcut != null) {
             try {
-                ReshadeUtils.update(this, imageFs, shortcut);
+                File dst = ModdingUtils.getLocalExeFile(imageFs, shortcut.getFullExecutable(), shortcut.container).getParentFile();
+                boolean useReshade = shortcut.getExtra("useReshade", "0").equals("1");
+                boolean forceDXGI = useReshade && shortcut.getExtra("forceDXGI", "0").equals("1");
+                ModdingUtils.updateReshade(this, dst, useReshade, forceDXGI);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -2293,11 +2300,8 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         if (dxwrapper.equals("dxvk")) {
             DXVKConfigDialog.setEnvVars(this, dxwrapperConfig, envVars);
-        } else if (dxwrapper.equals("vkd3d")) {
-            VKD3DConfigDialog.setEnvVars(this, dxwrapperConfig, envVars);
         }
-
-
+        VKD3DConfigDialog.setEnvVars(this, dxwrapperConfig, envVars);
 
         boolean useDRI3 = preferences.getBoolean("use_dri3", true);
         if (!useDRI3) {
@@ -2539,24 +2543,16 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     private static final String TAG = "DXWrapperExtraction";
 
     private void extractDXWrapperFiles(String dxwrapper) {
-        final String[] dlls = {"d3d10.dll", "d3d10_1.dll", "d3d10core.dll", "d3d11.dll", "d3d12.dll", "d3d12core.dll", "d3d8.dll", "d3d9.dll", "dxgi.dll"};
+        final String[] dlls = {"d3d10.dll", "d3d10_1.dll", "d3d10core.dll", "d3d11.dll", "d3d8.dll", "d3d9.dll", "dxgi.dll"};
 
         File rootDir = imageFs.getRootDir();
         File windowsDir = new File(rootDir, ImageFs.WINEPREFIX + "/drive_c/windows");
 
-        if (dxwrapper.contains("vkd3d")) {
-            ContentProfile profile = contentsManager.getProfileByEntryName(dxwrapper);
-            Log.d(TAG, "Extracting DXVK 2.4.1");
-            TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "dxwrapper/dxvk-2.4.1" + ".tzst", windowsDir, onExtractFileListener);
-            if (profile != null) {
-                Log.d(TAG, "Applying user-defined VKD3D content profile: " + dxwrapper);
-                contentsManager.applyContent(profile);
-            } else {
-                Log.d(TAG, "Extracting fallback VKD3D .tzst archive: " + dxwrapper);
-                TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "dxwrapper/" + dxwrapper + ".tzst", windowsDir, onExtractFileListener);
-            }
-            Log.d(TAG, "Finished VKD3D extraction for " + dxwrapper);
-        } else if (dxwrapper.contains("dxvk")) {
+        String vkd3d = "vkd3d-" + dxwrapperConfig.get("vkd3dVersion");
+        Log.d(TAG, "Extracting fallback VKD3D .tzst archive: " + vkd3d);
+        TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "dxwrapper/" + vkd3d + ".tzst", windowsDir, onExtractFileListener);
+
+        if (dxwrapper.contains("dxvk")) {
             Log.d(TAG, "Extracting DXVK wrapper files, version: " + dxwrapper);
 
             ContentProfile profile = contentsManager.getProfileByEntryName(dxwrapper);

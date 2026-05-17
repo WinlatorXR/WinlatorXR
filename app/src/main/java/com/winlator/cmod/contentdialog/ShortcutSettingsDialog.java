@@ -139,6 +139,11 @@ public class ShortcutSettingsDialog extends ContentDialog {
         final View vDXWrapperConfig = findViewById(R.id.BTDXWrapperConfig);
         vDXWrapperConfig.setTag(shortcut.getExtra("dxwrapperConfig", shortcut.container.getDXWrapperConfig()));
 
+        final View vDX12WrapperConfig = findViewById(R.id.BTDX12WrapperConfig);
+        vDX12WrapperConfig.setTag(shortcut.getExtra("dxwrapperConfig", shortcut.container.getDXWrapperConfig()));
+        vDX12WrapperConfig.setOnClickListener((v) -> (new VKD3DConfigDialog(vDXWrapperConfig)).show());
+        vDX12WrapperConfig.setVisibility(View.VISIBLE);
+
         ContainerDetailFragment.setupDXWrapperSpinner(sDXWrapper, vDXWrapperConfig);
         ContainerDetailFragment.setupDDrawSpinner(sDDrawrapper, shortcut.getExtra("ddrawrapper", shortcut.container.getDDrawWrapper()));
         loadGraphicsDriverSpinner(sGraphicsDriver, sDXWrapper, vGraphicsDriverConfig, shortcut.getExtra("graphicsDriver", shortcut.container.getGraphicsDriver()),
@@ -223,6 +228,11 @@ public class ShortcutSettingsDialog extends ContentDialog {
         cbForceDXGI.setEnabled(useReshade);
         cbForceDXGI.setChecked(forceDXGI);
         cbUseReshade.setOnCheckedChangeListener((compoundButton, checked) -> cbForceDXGI.setEnabled(checked));
+
+        // TrackIR intergration
+        boolean useTrackIR = shortcut.getExtra("useTrackIR", "0").equals("1");
+        final CheckBox cbUseTrackIR = findViewById(R.id.CBUseTrackIR);
+        cbUseTrackIR.setChecked(useTrackIR);
 
         // Initialize the TextView for the legacy mode message
 //        TextView tvLegacyInputMessage = findViewById(R.id.TVLegacyInputMessage);
@@ -488,6 +498,7 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
                 shortcut.putExtra("useReshade", cbUseReshade.isChecked() ? "1" : null);
                 shortcut.putExtra("forceDXGI", cbForceDXGI.isChecked() ? "1" : null);
+                shortcut.putExtra("useTrackIR", cbUseTrackIR.isChecked() ? "1" : null);
                 shortcut.putExtra("fullscreenStretched", cbFullscreenStretched.isChecked() ? "1" : null);
 
                 String wincomponents = containerDetailFragment.getWinComponents(getContentView());

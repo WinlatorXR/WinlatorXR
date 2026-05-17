@@ -188,6 +188,7 @@ public abstract class TarCompressorUtils {
 
                 FileUtils.chmod(file, 0771);
             }
+            tar.close();
             return true;
         }
         catch (IOException e) {
@@ -223,6 +224,7 @@ public abstract class TarCompressorUtils {
                 }
             }
 
+            tar.close();
             if (incomplete) {
                 return existing ? Status.PARTIAL : Status.NONE;
             } else {
@@ -254,6 +256,7 @@ public abstract class TarCompressorUtils {
                 File file = new File(destination, entry.getName());
                 FileUtils.delete(file);
             }
+            tar.close();
             return true;
         }
         catch (IOException e) {
@@ -354,6 +357,7 @@ public abstract class TarCompressorUtils {
 
                 FileUtils.chmod(file, 0771);
             }
+            tar.close();
             return true;
         } catch (IOException e) {
             Log.e("RestoreOp", "Failed to extract tar file", e);

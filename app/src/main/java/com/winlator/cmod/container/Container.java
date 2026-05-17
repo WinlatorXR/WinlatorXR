@@ -31,9 +31,9 @@ public class Container {
     public static final String DEFAULT_DXWRAPPER = "dxvk";
     public static final String DEFAULT_DXWRAPPERCONFIG = "version=" + DefaultVersion.DXVK + ",framerate=0,maxDeviceMemory=0,async=0,asyncCache=0" + ",vkd3dVersion=" + DefaultVersion.VKD3D + ",vkd3dLevel=12_1";
     public static final String DEFAULT_GRAPHICSDRIVERCONFIG = "version=" + DefaultVersion.WRAPPER + ";blacklistedExtensions=" + ";maxDeviceMemory=0" + ";adrenotoolsTurnip=1" + ";frameSync=Normal";
-    public static final String DEFAULT_DDRAWRAPPER = "dd7to9";
-    public static final String DEFAULT_WINCOMPONENTS = "direct3d=1,directsound=0,directmusic=0,directshow=0,directplay=0,xaudio=0,vcrun2010=1,opengl=0";
-    public static final String FALLBACK_WINCOMPONENTS = "direct3d=1,directsound=1,directmusic=1,directshow=1,directplay=1,xaudio=1,vcrun2010=1,opengl=0";
+    public static final String DEFAULT_DDRAWRAPPER = "dd7to9-v1.7";
+    public static final String DEFAULT_WINCOMPONENTS = "direct3d=1,directsound=0,directmusic=0,directshow=0,directplay=0,xaudio=0,vcrun2005=1,vcrun2010=1,wmdecoder=1";
+    public static final String FALLBACK_WINCOMPONENTS = "direct3d=1,directsound=1,directmusic=1,directshow=1,directplay=1,xaudio=1,vcrun2005=1,vcrun2010=1,wmdecoder=1";
 
     public static final String[] MEDIACONV_ENV_VARS = {
             "MEDIACONV_AUDIO_DUMP_FILE=/data/data/com.winlator.cmod/files/imagefs/home/xuser/audio.dmp",
@@ -78,7 +78,6 @@ public class Container {
     private int cpuLevel = 75;
     private int gpuLevel = 75;
     private int refreshRate = 72;
-    private int primaryController = 1;
     private String controllerMapping = new String(new char[XrControllerMapping.values().length]);
     private String fexcoreVersion = DefaultVersion.FEXCORE;
     private String box64Version = DefaultVersion.BOX64;
@@ -210,14 +209,6 @@ public class Container {
 
     public void setRefreshRate(int refreshRate) {
         this.refreshRate = refreshRate;
-    }
-
-    public int getPrimaryController() {
-        return primaryController;
-    }
-
-    public void setPrimaryController(int primaryController) {
-        this.primaryController = primaryController;
     }
 
     public byte getControllerMapping(XrControllerMapping input) {
@@ -475,7 +466,6 @@ public class Container {
             data.put("cpuLevel", cpuLevel);
             data.put("gpuLevel", gpuLevel);
             data.put("refreshRate", refreshRate);
-            data.put("primaryController", primaryController);
             data.put("controllerMapping", controllerMapping);
             data.put("gstreamerWorkaround", gstreamerWorkaround);
             if (!WineInfo.isMainWineVersion(wineVersion)) data.put("wineVersion", wineVersion);
@@ -590,9 +580,6 @@ public class Container {
                     break;
                 case "refreshRate" :
                     setRefreshRate(data.getInt(key));
-                    break;
-                case "primaryController" :
-                    setPrimaryController(data.getInt(key));
                     break;
                 case "controllerMapping" :
                     controllerMapping = data.getString(key);

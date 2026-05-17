@@ -257,23 +257,24 @@ void XrInputUpdate(struct XrEngine* engine, struct XrInput* input)
         input->ButtonsRight |= (int)RThumb;
 
     // thumbstick
+    float deadzone = 0.6f;
     input->JoystickState[0] = XrInputGetActionStateVector2(session, input->JoystickLeft);
     input->JoystickState[1] = XrInputGetActionStateVector2(session, input->JoystickRight);
-    if (input->JoystickState[0].currentState.x > 0.5)
+    if (input->JoystickState[0].currentState.x > deadzone)
         input->ButtonsLeft |= (int)Right;
-    if (input->JoystickState[0].currentState.x < -0.5)
+    if (input->JoystickState[0].currentState.x < -deadzone)
         input->ButtonsLeft |= (int)Left;
-    if (input->JoystickState[0].currentState.y > 0.5)
+    if (input->JoystickState[0].currentState.y > deadzone)
         input->ButtonsLeft |= (int)Up;
-    if (input->JoystickState[0].currentState.y < -0.5)
+    if (input->JoystickState[0].currentState.y < -deadzone)
         input->ButtonsLeft |= (int)Down;
-    if (input->JoystickState[1].currentState.x > 0.5)
+    if (input->JoystickState[1].currentState.x > deadzone)
         input->ButtonsRight |= (int)Right;
-    if (input->JoystickState[1].currentState.x < -0.5)
+    if (input->JoystickState[1].currentState.x < -deadzone)
         input->ButtonsRight |= (int)Left;
-    if (input->JoystickState[1].currentState.y > 0.5)
+    if (input->JoystickState[1].currentState.y > deadzone)
         input->ButtonsRight |= (int)Up;
-    if (input->JoystickState[1].currentState.y < -0.5)
+    if (input->JoystickState[1].currentState.y < -deadzone)
         input->ButtonsRight |= (int)Down;
 
     // pose

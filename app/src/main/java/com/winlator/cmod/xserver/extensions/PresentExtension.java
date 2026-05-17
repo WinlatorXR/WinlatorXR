@@ -28,7 +28,7 @@ import java.io.IOException;
 
 public class PresentExtension implements Extension {
     public static final byte MAJOR_OPCODE = -103;
-    private static final int FAKE_INTERVAL = 1000000 / 60;
+    private static final int FAKE_INTERVAL = 1000000 / 72;
     public enum Kind {PIXMAP, MSC_NOTIFY}
     public enum Mode {COPY, FLIP, SKIP}
     private final SparseArray<Event> events = new SparseArray<>();

@@ -8,6 +8,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Downloader {
 
@@ -62,5 +65,34 @@ public class Downloader {
             e.printStackTrace();
             return null;
         }
+    }
+
+    public static ArrayList<String> extractContaining(String input, String regex) {
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(input);
+
+        ArrayList<String> urls = new ArrayList<>();
+        while (matcher.find()) {
+            urls.add(matcher.group());
+        }
+        return urls;
+    }
+
+    public static ArrayList<String> getGithubZipLinks(String releases) {
+        ArrayList<String> output = new ArrayList<>();
+        String page = Downloader.downloadString(releases);
+        if (page == null)
+            return output;
+        ArrayList<String> urls = Downloader.extractContaining(page, "https?://[^\\s\"]*expanded_assets[^\\s\"]*");
+        for (String url : urls) {
+            String assets = Downloader.downloadString(url);
+            if (assets == null)
+                continue;
+            ArrayList<String> files = Downloader.extractContaining(assets, "download/[^\\s\"']+?\\.zip");
+            for (String file : files) {
+                output.add(releases + file);
+            }
+        }
+        return output;
     }
 }

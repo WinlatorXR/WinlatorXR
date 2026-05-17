@@ -7,7 +7,7 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 import com.winlator.cmod.renderer.GLRenderer;
-import com.winlator.cmod.xr.XrRenderer;
+import com.winlator.xr.XrRenderer;
 import com.winlator.cmod.xserver.XServer;
 
 @SuppressLint("ViewConstructor")

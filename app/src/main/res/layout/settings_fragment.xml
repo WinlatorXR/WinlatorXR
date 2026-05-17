@@ -10,178 +10,211 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="vertical">
 
-            <FrameLayout
+            <!-- TWO COLUMN ROOT -->
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp">
 
-                <LinearLayout style="@style/FieldSet">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/box64_preset" />
+                <!-- LEFT COLUMN -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:paddingEnd="8dp">
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <Spinner
-                            style="@style/ComboBox"
-                            android:id="@+id/SBox64Preset"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:spinnerMode="dialog" />
-
-                        <ImageButton
-                            style="@style/ListMenuButton"
-                            android:id="@+id/BTAddBox64Preset"
-                            android:src="@drawable/icon_add" />
-
-                        <ImageButton
-                            style="@style/ListMenuButton"
-                            android:id="@+id/BTEditBox64Preset"
-                            android:src="@drawable/icon_edit" />
-
-                        <ImageButton
-                            style="@style/ListMenuButton"
-                            android:id="@+id/BTDuplicateBox64Preset"
-                            android:src="@drawable/icon_duplicate" />
-
-                        <ImageButton
-                            style="@style/ListMenuButton"
-                            android:id="@+id/BTRemoveBox64Preset"
-                            android:layout_marginRight="0dp"
-                            android:src="@drawable/icon_remove" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/TVBox86Box64"
-                    style="@style/FieldSetLabel"
-                    android:text="@string/box86_box64" />
-            </FrameLayout>
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <LinearLayout style="@style/FieldSet">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/midi_sound_font" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <Spinner
-                            android:id="@+id/SMIDISoundFont"
-                            style="@style/ComboBox"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1" />
-
-                        <ImageButton
-                            android:id="@+id/BTInstallSF"
-                            style="@style/ListMenuButton"
-                            android:src="@drawable/icon_add" />
-
-                        <ImageButton
-                            android:id="@+id/BTRemoveSF"
-                            style="@style/ListMenuButton"
-                            android:layout_marginRight="0dp"
-                            android:src="@drawable/icon_remove" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/TVSound"
-                    style="@style/FieldSetLabel"
-                    android:text="@string/sound" />
-            </FrameLayout>
-
-            <!-- Theme Settings -->
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-                <LinearLayout style="@style/FieldSet">
-                    <CheckBox
-                        android:id="@+id/CBDarkMode"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Enable Dark Mode" />
-                </LinearLayout>
-                <TextView
-                    android:id="@+id/TVTheme"
-                    style="@style/FieldSetLabel"
-                    android:text="Theme" />
-            </FrameLayout>
-
-            <!-- Shortcuts -->
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-                <LinearLayout style="@style/FieldSet">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Frontend Export Path" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-                        <TextView
-                            android:id="@+id/TVFrontendExportPath"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Default Path: Downloads/Winlator/Frontend" />
-                        <Button
-                            android:id="@+id/BTChooseFrontendExportPath"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Choose Path" />
-                    </LinearLayout>
-                </LinearLayout>
-                <TextView
-                    android:id="@+id/TVShortcutSettings"
-                    style="@style/FieldSetLabel"
-                    android:text="Shortcut Settings" />
-            </FrameLayout>
-
-
-            <!-- Big Picture Mode -->
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <LinearLayout style="@style/FieldSet">
-
-                    <!-- SteamGridDB API Key Section -->
-                    <CheckBox
-                        android:id="@+id/CBEnableBigPictureMode"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Enable Big Picture Mode on App Launch"
-                        android:visibility="gone" />
-
+                    <!-- BOX64 -->
                     <FrameLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content">
 
                         <LinearLayout style="@style/FieldSet">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/box64_preset" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <Spinner
+                                    style="@style/ComboBox"
+                                    android:id="@+id/SBox64Preset"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:spinnerMode="dialog" />
+
+                                <ImageButton
+                                    style="@style/ListMenuButton"
+                                    android:id="@+id/BTAddBox64Preset"
+                                    android:src="@drawable/icon_add" />
+
+                                <ImageButton
+                                    style="@style/ListMenuButton"
+                                    android:id="@+id/BTEditBox64Preset"
+                                    android:src="@drawable/icon_edit" />
+
+                                <ImageButton
+                                    style="@style/ListMenuButton"
+                                    android:id="@+id/BTDuplicateBox64Preset"
+                                    android:src="@drawable/icon_duplicate" />
+
+                                <ImageButton
+                                    style="@style/ListMenuButton"
+                                    android:id="@+id/BTRemoveBox64Preset"
+                                    android:layout_marginRight="0dp"
+                                    android:src="@drawable/icon_remove" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/TVBox86Box64"
+                            style="@style/FieldSetLabel"
+                            android:text="@string/box86_box64" />
+                    </FrameLayout>
+
+                    <!-- XSERVER -->
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <LinearLayout style="@style/FieldSet">
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_marginTop="8dp">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/cursor_speed"/>
+
+                                <TextView
+                                    android:id="@+id/TVCursorSpeed"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content" />
+                            </LinearLayout>
+
+                            <SeekBar
+                                android:id="@+id/SBCursorSpeed"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:min="10"
+                                android:max="200" />
+
+                            <CheckBox
+                                android:id="@+id/CBUseDRI3"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/use_dri3_extension"
+                                android:layout_marginTop="8dp" />
+
+                            <CheckBox
+                                android:id="@+id/CBUseXR"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/use_xr"
+                                android:layout_marginTop="8dp" />
+
+                            <!-- New Xinput Toggle Checkbox -->
+                            <CheckBox
+                                android:id="@+id/CBXinputToggle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Disable Controller Input"
+                                android:layout_marginTop="8dp" />
+
+                            <CheckBox
+                                android:id="@+id/CBXTouchscreenToggle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Enable Touchscreen Mode Globally"
+                                android:layout_marginTop="8dp" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/TVXServer"
+                            style="@style/FieldSetLabel"
+                            android:text="@string/xserver" />
+                    </FrameLayout>
+
+                    <!-- LOGS -->
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <LinearLayout style="@style/FieldSet">
+                            <CheckBox
+                                android:id="@+id/CBEnableWineDebug"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/enable_wine_debug" />
+
+                            <HorizontalScrollView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content">
+
+                                <LinearLayout
+                                    android:id="@+id/LLWineDebugChannels"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:padding="4dp" />
+                            </HorizontalScrollView>
+
+                            <CheckBox
+                                android:id="@+id/CBEnableBox86_64Logs"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/enable_box86_64_logs"
+                                android:layout_marginTop="8dp" />
+
+                            <CheckBox
+                                android:id="@+id/CBEnablePebLogs"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8.0dip"
+                                android:text="@string/enable_peb_logs" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/TVLogs"
+                            style="@style/FieldSetLabel"
+                            android:text="@string/logs" />
+                    </FrameLayout>
+                </LinearLayout>
+
+                <!-- RIGHT COLUMN -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:paddingStart="8dp">
+
+                    <!-- MIDI -->
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <LinearLayout style="@style/FieldSet">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/midi_sound_font" />
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -189,412 +222,243 @@
                                 android:gravity="center_vertical"
                                 android:orientation="horizontal">
 
-                                <CheckBox
-                                    android:id="@+id/CBEnableCustomApiKey"
-                                    android:layout_width="wrap_content"
+                                <Spinner
+                                    android:id="@+id/SMIDISoundFont"
+                                    style="@style/ComboBox"
+                                    android:layout_width="0dp"
                                     android:layout_height="wrap_content"
-                                    android:text="Set SteamGrid API Key? (Cover Art)" />
+                                    android:layout_weight="1" />
 
-                                <ImageView
-                                    android:id="@+id/BTHelpApiKey"
-                                    style="@style/HelpButton"
-                                    android:contentDescription="@string/help_steamgrid"
-                                    android:src="@drawable/icon_help" />
+                                <ImageButton
+                                    android:id="@+id/BTInstallSF"
+                                    style="@style/ListMenuButton"
+                                    android:src="@drawable/icon_add" />
+
+                                <ImageButton
+                                    android:id="@+id/BTRemoveSF"
+                                    style="@style/ListMenuButton"
+                                    android:layout_marginRight="0dp"
+                                    android:src="@drawable/icon_remove" />
                             </LinearLayout>
-
-                            <EditText
-                                android:id="@+id/ETCustomApiKey"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:hint="Enter your API Key here"
-                                android:visibility="gone" />
                         </LinearLayout>
 
                         <TextView
-                            android:id="@+id/TVCustomApiKey"
+                            android:id="@+id/TVSound"
                             style="@style/FieldSetLabel"
-                            android:text="SteamGridDB API Key" />
+                            android:text="@string/sound" />
                     </FrameLayout>
 
-                </LinearLayout>
+                    <!-- THEME -->
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+                        <LinearLayout style="@style/FieldSet">
+                            <CheckBox
+                                android:id="@+id/CBDarkMode"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Enable Dark Mode" />
+                        </LinearLayout>
+                        <TextView
+                            android:id="@+id/TVTheme"
+                            style="@style/FieldSetLabel"
+                            android:text="Theme" />
+                    </FrameLayout>
 
-                <TextView
-                    android:id="@+id/TVBigPictureMode"
-                    style="@style/FieldSetLabel"
-                    android:text="Big Picture Mode"
-                    android:visibility="gone" />
-            </FrameLayout>
+                    <!-- SHORTCUT -->
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+                        <LinearLayout style="@style/FieldSet">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Frontend Export Path"/>
 
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+                                <TextView
+                                    android:id="@+id/TVFrontendExportPath"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="Default Path: Downloads/Winlator/Frontend"/>
+                                <Button
+                                    android:id="@+id/BTChooseFrontendExportPath"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Choose Path" />
+                            </LinearLayout>
+                        </LinearLayout>
+                        <TextView
+                            android:id="@+id/TVShortcutSettings"
+                            style="@style/FieldSetLabel"
+                            android:text="Shortcut Settings" />
+                    </FrameLayout>
 
-                <LinearLayout style="@style/FieldSet">
-                    <LinearLayout
+                    <!-- BIG PICTURE -->
+                    <FrameLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="8dp">
+                        android:visibility="gone">
+
+                        <LinearLayout style="@style/FieldSet">
+
+                            <CheckBox
+                                android:id="@+id/CBEnableBigPictureMode"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Enable Big Picture Mode on App Launch" />
+
+                            <FrameLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content" >
+
+                                <LinearLayout style="@style/FieldSet">
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:gravity="center_vertical"
+                                        android:orientation="horizontal">
+
+                                        <CheckBox
+                                            android:id="@+id/CBEnableCustomApiKey"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="Set SteamGrid API Key? (Cover Art)" />
+
+                                        <ImageView
+                                            android:id="@+id/BTHelpApiKey"
+                                            style="@style/HelpButton"
+                                            android:contentDescription="@string/help_steamgrid"
+                                            android:src="@drawable/icon_help" />
+                                    </LinearLayout>
+
+                                    <EditText
+                                        android:id="@+id/ETCustomApiKey"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="8dp"
+                                        android:hint="Enter your API Key here"
+                                        android:visibility="gone" />
+                                </LinearLayout>
+
+                                <TextView
+                                    android:id="@+id/TVCustomApiKey"
+                                    style="@style/FieldSetLabel"
+                                    android:text="SteamGridDB API Key" />
+                            </FrameLayout>
+
+                        </LinearLayout>
 
                         <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/cursor_speed"/>
+                            android:id="@+id/TVBigPictureMode"
+                            style="@style/FieldSetLabel"
+                            android:text="Big Picture Mode" />
+                    </FrameLayout>
 
-                        <TextView
-                            android:id="@+id/TVCursorSpeed"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
-                    </LinearLayout>
-
-                    <SeekBar
-                        android:id="@+id/SBCursorSpeed"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:min="10"
-                        android:max="200" />
-
-                    <CheckBox
-                        android:id="@+id/CBUseDRI3"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/use_dri3_extension"
-                        android:layout_marginTop="8dp" />
-
-                    <CheckBox
-                        android:id="@+id/CBUseXR"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/use_xr"
-                        android:layout_marginTop="8dp" />
-
-                    <CheckBox
-                        android:id="@+id/CBUsePT"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/use_pt" />
-
-                    <CheckBox
-                        android:id="@+id/CBUseCS"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/use_curved_screen" />
-
-                    <!-- First ever mod =D - Cursor Lock Checkbox. You now live with relative mouse mode, Bye, Felicia -->
-<!--                    <CheckBox-->
-<!--                        android:id="@+id/CBCursorLock"-->
-<!--                        android:layout_width="wrap_content"-->
-<!--                        android:layout_height="wrap_content"-->
-<!--                        android:text="True Mouse Control (Toggle with Volume Down)"-->
-<!--                        android:layout_marginTop="8dp" />-->
-
-                    <!-- New Xinput Toggle Checkbox -->
-                    <CheckBox
-                        android:id="@+id/CBXinputToggle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Disable Controller Input"
-                        android:layout_marginTop="8dp" />
-
-                    <CheckBox
-                        android:id="@+id/CBXTouchscreenToggle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Enable Touchscreen Mode Globally"
-                        android:layout_marginTop="8dp" />
-
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/TVXServer"
-                    style="@style/FieldSetLabel"
-                    android:text="@string/xserver" />
-            </FrameLayout>
-
-<!--            &lt;!&ndash; Gyroscope Settings Section &ndash;&gt;-->
-<!--            <FrameLayout-->
-<!--                android:layout_width="match_parent"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:layout_marginTop="16dp"> &lt;!&ndash; Add margin for spacing &ndash;&gt;-->
-
-<!--                <LinearLayout style="@style/FieldSet">-->
-
-<!--                    &lt;!&ndash; Enable Gyroscope Checkbox &ndash;&gt;-->
-<!--                    <CheckBox-->
-<!--                        android:id="@+id/CBGyroEnabled"-->
-<!--                        android:layout_width="wrap_content"-->
-<!--                        android:layout_height="wrap_content"-->
-<!--                        android:text="Enable Right-Stick Gyroscope (Experimental)"-->
-<!--                        android:layout_marginBottom="16dp" /> &lt;!&ndash; Added margin for better spacing &ndash;&gt;-->
-
-<!--                    &lt;!&ndash; Gyro Activator Button Label &ndash;&gt;-->
-<!--                    <TextView-->
-<!--                        android:id="@+id/TVGyroTriggerLabel"-->
-<!--                        android:layout_width="wrap_content"-->
-<!--                        android:layout_height="wrap_content"-->
-<!--                        android:text="Gyro Activator Button:"-->
-<!--                        android:layout_marginBottom="8dp"/> &lt;!&ndash; Add some bottom margin for better spacing &ndash;&gt;-->
-
-<!--                    &lt;!&ndash; Spinner for selecting the gyro trigger button &ndash;&gt;-->
-<!--                    <Spinner-->
-<!--                        android:id="@+id/SBGyroTriggerButton"-->
-<!--                        android:layout_width="match_parent"-->
-<!--                        android:layout_height="wrap_content"-->
-<!--                        android:entries="@array/button_options"-->
-<!--                        android:layout_marginBottom="16dp" /> &lt;!&ndash; Add bottom margin to separate it from other elements &ndash;&gt;-->
-
-<!--                    &lt;!&ndash; RadioGroup for selecting gyro mode (toggle/hold) &ndash;&gt;-->
-<!--                    <RadioGroup-->
-<!--                        android:id="@+id/RGyroMode"-->
-<!--                        android:layout_width="wrap_content"-->
-<!--                        android:layout_height="wrap_content"-->
-<!--                        android:orientation="horizontal">-->
-
-<!--                        <RadioButton-->
-<!--                            android:id="@+id/RBHoldMode"-->
-<!--                            android:layout_width="wrap_content"-->
-<!--                            android:layout_height="wrap_content"-->
-<!--                            android:text="Hold Mode"-->
-<!--                            android:layout_marginEnd="16dp" /> &lt;!&ndash; Add end margin for spacing &ndash;&gt;-->
-
-<!--                        <RadioButton-->
-<!--                            android:id="@+id/RBToggleMode"-->
-<!--                            android:layout_width="wrap_content"-->
-<!--                            android:layout_height="wrap_content"-->
-<!--                            android:text="Toggle Mode" />-->
-<!--                    </RadioGroup>-->
-
-<!--                    &lt;!&ndash; Configure Gyroscope Button &ndash;&gt;-->
-<!--                    <Button-->
-<!--                        android:id="@+id/BTConfigureGyro"-->
-<!--                        android:layout_width="wrap_content"-->
-<!--                        android:layout_height="wrap_content"-->
-<!--                        android:text="Calibrate Gyroscope"-->
-<!--                        android:layout_marginTop="16dp" />-->
-
-<!--                </LinearLayout>-->
-
-<!--                <TextView-->
-<!--                    android:id="@+id/TVGyroSettings"-->
-<!--                    style="@style/FieldSetLabel"-->
-<!--                    android:text="Gyro Settings" />-->
-<!--            </FrameLayout>-->
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <LinearLayout style="@style/FieldSet">
-
-                    <!--                    <LinearLayout-->
-                    <!--                        android:layout_width="match_parent"-->
-                    <!--                        android:layout_height="wrap_content"-->
-                    <!--                        android:orientation="horizontal">-->
-
-                    <!--                        <TextView-->
-                    <!--                            android:layout_width="wrap_content"-->
-                    <!--                            android:layout_height="wrap_content"-->
-                    <!--                            android:text="@string/trigger_type"-->
-                    <!--                            android:layout_gravity="center"/>-->
-
-                    <!--                        <ImageView-->
-                    <!--                            android:id="@+id/BTHelpTriggerMode"-->
-                    <!--                            android:layout_gravity="center"-->
-                    <!--                            style="@style/HelpButton" />-->
-                    <!--                    </LinearLayout>-->
-
-
-                    <!--                    <RadioGroup-->
-                    <!--                        android:id="@+id/RGTriggerType"-->
-                    <!--                        android:layout_width="match_parent"-->
-                    <!--                        android:layout_height="wrap_content"-->
-                    <!--                        android:orientation="horizontal">-->
-                    <!--                        <RadioButton-->
-                    <!--                            android:id="@+id/RBTriggerIsButton"-->
-                    <!--                            android:layout_width="wrap_content"-->
-                    <!--                            android:layout_height="wrap_content"-->
-                    <!--                            android:layout_weight="1"-->
-                    <!--                            android:text="@string/as_button"/>-->
-
-                    <!--                        <RadioButton-->
-                    <!--                            android:id="@+id/RBTriggerIsAxis"-->
-                    <!--                            android:layout_width="wrap_content"-->
-                    <!--                            android:layout_height="wrap_content"-->
-                    <!--                            android:layout_weight="1"-->
-                    <!--                            android:text="@string/as_axis"/>-->
-
-                    <!--                        <RadioButton-->
-                    <!--                            android:id="@+id/RBTriggerIsMixed"-->
-                    <!--                            android:visibility="gone"-->
-                    <!--                            android:layout_width="wrap_content"-->
-                    <!--                            android:layout_height="wrap_content"-->
-                    <!--                            android:layout_weight="1"-->
-                    <!--                            android:text="@string/mixed"/>-->
-                    <!--                    </RadioGroup>-->
-
-                    <!--                    <CheckBox-->
-                    <!--                        android:id="@+id/CBLegacyInputMode"-->
-                    <!--                        android:layout_width="wrap_content"-->
-                    <!--                        android:layout_height="wrap_content"-->
-                    <!--                        android:text="@string/enable_legacy_input_mode"-->
-                    <!--                        android:layout_marginTop="8dp" />-->
-
-                    <Button
-                        android:id="@+id/BTConfigureAnalogSticks"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Override Joystick Behavior"
-                        android:layout_marginTop="8dp" />
-
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/TVGameControllerLabel"
-                    style="@style/FieldSetLabel"
-                    android:text="@string/game_controller" />
-            </FrameLayout>
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <LinearLayout style="@style/FieldSet">
-                    <CheckBox
-                        android:id="@+id/CBEnableWineDebug"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/enable_wine_debug" />
-
-                    <HorizontalScrollView
+                    <!-- EXPERIMENTAL -->
+                    <FrameLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content">
 
-                        <LinearLayout
-                            android:id="@+id/LLWineDebugChannels"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:padding="4dp" />
-                    </HorizontalScrollView>
+                        <LinearLayout style="@style/FieldSet">
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
 
-                    <View style="@style/FieldSeparator" />
+                                <CheckBox
+                                    android:id="@+id/CBEnableFileProvider"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="center"
+                                    android:text="@string/enable_file_provider" />
 
-                    <CheckBox
-                        android:id="@+id/CBEnableBox86_64Logs"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/enable_box86_64_logs"
-                        android:layout_marginTop="8dp" />
+                                <ImageView
+                                    android:id="@+id/BTHelpFileProvider"
+                                    android:layout_gravity="center"
+                                    style="@style/HelpButton" />
+                            </LinearLayout>
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical" >
 
-                    <View style="@style/FieldSeparator" />
+                                <CheckBox
+                                    android:id="@+id/CBOpenWithAndroidBrowser"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="left|center"
+                                    android:text="@string/open_with_android_browser" />
 
-                    <CheckBox
-                        android:id="@+id/CBEnablePebLogs"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8.0dip"
-                        android:text="@string/enable_peb_logs" />
+                                <CheckBox
+                                    android:id="@+id/CBShareAndroidClipboard"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="left|center"
+                                    android:text="@string/share_android_clipboard" />
+                            </LinearLayout>
+                        </LinearLayout>
 
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/TVLogs"
-                    style="@style/FieldSetLabel"
-                    android:text="@string/logs" />
-            </FrameLayout>
+                        <TextView
+                            android:id="@+id/TVExperimental"
+                            style="@style/FieldSetLabel"
+                            android:text="@string/experimental" />
+                    </FrameLayout>
 
 
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <LinearLayout style="@style/FieldSet">
-                    <LinearLayout
+                    <!-- BUTTON ROW -->
+                    <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:layout_height="wrap_content">
 
-                        <CheckBox
-                            android:id="@+id/CBEnableFileProvider"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="center"
-                            android:text="@string/enable_file_provider" />
+                        <LinearLayout style="@style/FieldSet" android:orientation="vertical">
+                           <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
 
-                        <ImageView
-                            android:id="@+id/BTHelpFileProvider"
-                            android:layout_gravity="center"
-                            style="@style/HelpButton" />
-                    </LinearLayout>
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical" >
+                            <Button
+                                style="@style/ButtonPositive"
+                                android:id="@+id/BTReInstallImagefs"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/reinstall_imagefs" />
 
-                        <CheckBox
-                            android:id="@+id/CBOpenWithAndroidBrowser"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="left|center"
-                            android:text="@string/open_with_android_browser" />
+                            <Button
+                                style="@style/ButtonPositive"
+                                android:id="@+id/BTBox64RC"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/box64_rc_file" />
 
-                        <CheckBox
-                            android:id="@+id/CBShareAndroidClipboard"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="left|center"
-                            android:text="@string/share_android_clipboard" />
-                    </LinearLayout>
+                           </LinearLayout>
+
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                                <Button
+                                    style="@style/ButtonPositive"
+                                    android:id="@+id/BTBackupData"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="Backup Data" />
+
+                                <Button
+                                    style="@style/ButtonPositive"
+                                    android:id="@+id/BTRestoreData"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="Restore Data" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </FrameLayout>
                 </LinearLayout>
-
-                <TextView
-                    android:id="@+id/TVExperimental"
-                    style="@style/FieldSetLabel"
-                    android:text="@string/experimental" />
-            </FrameLayout>
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <LinearLayout style="@style/FieldSet">
-
-                    <Button
-                        style="@style/ButtonPositive"
-                        android:id="@+id/BTReInstallImagefs"
-                        android:layout_width="240dp"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_horizontal"
-                        android:text="@string/reinstall_imagefs" />
-
-                    <Button
-                        style="@style/ButtonPositive"
-                        android:id="@+id/BTBackupData"
-                        android:layout_width="240dp"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_horizontal"
-                        android:text="Backup Data" />
-
-                    <Button
-                        style="@style/ButtonPositive"
-                        android:id="@+id/BTRestoreData"
-                        android:layout_width="240dp"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_horizontal"
-                        android:text="Restore Data" />
-
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/TVImageFs"
-                    style="@style/FieldSetLabel"
-                    android:text="@string/imagefs" />
-            </FrameLayout>
+            </LinearLayout>
         </LinearLayout>
     </ScrollView>
 
@@ -602,8 +466,7 @@
         android:id="@+id/BTConfirm"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="right|bottom"
-        android:tint="#ffffff"
-        android:src="@drawable/icon_confirm"
-        android:layout_margin="16dp" />
+        android:layout_gravity="end|bottom"
+        android:layout_margin="16dp"
+        android:src="@drawable/icon_confirm" />
 </FrameLayout>

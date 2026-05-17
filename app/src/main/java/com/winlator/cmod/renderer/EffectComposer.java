@@ -3,7 +3,7 @@ package com.winlator.cmod.renderer;
 import android.opengl.GLES20;
 import android.util.Log;
 
-import com.winlator.XrActivity;
+import com.winlator.xr.XrActivity;
 import com.winlator.cmod.renderer.effects.Effect;
 import com.winlator.cmod.renderer.effects.ToonEffect;
 import com.winlator.cmod.renderer.material.ShaderMaterial;

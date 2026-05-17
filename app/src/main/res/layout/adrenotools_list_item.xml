@@ -38,5 +38,12 @@
         android:src="@drawable/icon_remove"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-
+    <ProgressBar
+        android:id="@+id/Progress"
+        style="@style/ListMenuButton"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="24dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

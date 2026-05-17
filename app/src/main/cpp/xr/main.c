@@ -60,14 +60,14 @@ void OXRCheckErrors(XrResult result, const char* file, int line) {
 
 char gManufacturer[128] = {0};
 
-JNIEXPORT void JNICALL Java_com_winlator_XrActivity_sendManufacturer(JNIEnv *env, jobject thiz, jstring manufacturer) {
+JNIEXPORT void JNICALL Java_com_winlator_xr_XrActivity_sendManufacturer(JNIEnv *env, jobject thiz, jstring manufacturer) {
     const char *nativeStr = (*env)->GetStringUTFChars(env, manufacturer, 0);
     strncpy(gManufacturer, nativeStr, sizeof(gManufacturer) - 1);
     gManufacturer[sizeof(gManufacturer) - 1] = '\0';
     (*env)->ReleaseStringUTFChars(env, manufacturer, nativeStr);
 }
 
-JNIEXPORT void JNICALL Java_com_winlator_XrActivity_init(JNIEnv *env, jobject obj, jint width, jint height,
+JNIEXPORT void JNICALL Java_com_winlator_xr_XrActivity_init(JNIEnv *env, jobject obj, jint width, jint height,
                                                               jint refresh, jint cpu, jint gpu) {
 
     // Do not allow second initialization
@@ -119,26 +119,26 @@ JNIEXPORT void JNICALL Java_com_winlator_XrActivity_init(JNIEnv *env, jobject ob
     ALOGV("Init called");
 }
 
-JNIEXPORT void JNICALL Java_com_winlator_XrActivity_bindFramebuffer(JNIEnv *env, jobject obj) {
+JNIEXPORT void JNICALL Java_com_winlator_xr_XrActivity_bindFramebuffer(JNIEnv *env, jobject obj) {
     if (xr_initialized) {
         XrRendererBindFramebuffer(&xr_module_renderer);
     }
 }
 
-JNIEXPORT jint JNICALL Java_com_winlator_XrActivity_getWidth(JNIEnv *env, jobject obj) {
+JNIEXPORT jint JNICALL Java_com_winlator_xr_XrActivity_getWidth(JNIEnv *env, jobject obj) {
     return xr_module_renderer.ConfigInt[CONFIG_VIEWPORT_WIDTH];
 }
-JNIEXPORT jint JNICALL Java_com_winlator_XrActivity_getHeight(JNIEnv *env, jobject obj) {
+JNIEXPORT jint JNICALL Java_com_winlator_xr_XrActivity_getHeight(JNIEnv *env, jobject obj) {
     return xr_module_renderer.ConfigInt[CONFIG_VIEWPORT_HEIGHT];
 }
 
-JNIEXPORT jboolean JNICALL Java_com_winlator_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean immersive, jboolean sbs, jboolean aer, jfloat distance) {
+JNIEXPORT jboolean JNICALL Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean immersive, jboolean sbs, jboolean aer, jfloat distance) {
     if (XrRendererInitFrame(&xr_module_engine, &xr_module_renderer)) {
         // Update controllers state
         XrInputUpdate(&xr_module_engine, &xr_module_input);
 
         // Set render canvas
-        xr_module_renderer.ConfigInt[CONFIG_VIEWPORT_CURVED] = xr_curvedScreen;
+        xr_module_renderer.ConfigInt[CONFIG_VIEWPORT_CURVED] = !immersive && xr_curvedScreen;
         xr_module_renderer.ConfigFloat[CONFIG_CANVAS_DISTANCE] = distance;
         xr_module_renderer.ConfigFloat[CONFIG_CANVAS_SIZE] = xr_aspect;
         xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOV_SCALE] = 1.1f;
@@ -149,7 +149,7 @@ JNIEXPORT jboolean JNICALL Java_com_winlator_XrActivity_initFrame(JNIEnv *env, j
         xr_module_renderer.ConfigInt[CONFIG_FRAMESYNC] = xr_vr;
         xr_module_renderer.ConfigInt[CONFIG_AER] = aer;
         xr_module_renderer.ConfigInt[CONFIG_SBS] = sbs;
-        xr_module_renderer.ConfigInt[CONFIG_VR] = immersive || xr_vr;
+        xr_module_renderer.ConfigInt[CONFIG_VR] = xr_vr;
 
         // Recenter on the first frame
         static bool first_frame = true;
@@ -166,17 +166,17 @@ JNIEXPORT jboolean JNICALL Java_com_winlator_XrActivity_initFrame(JNIEnv *env, j
     return false;
 }
 
-JNIEXPORT void JNICALL Java_com_winlator_XrActivity_bindFBO(JNIEnv *env, jobject obj, jint fboIndex) {
+JNIEXPORT void JNICALL Java_com_winlator_xr_XrActivity_bindFBO(JNIEnv *env, jobject obj, jint fboIndex) {
     XrRendererEndFrame(&xr_module_renderer);
     XrRendererBeginFrame(&xr_module_renderer, fboIndex);
 }
 
-JNIEXPORT void JNICALL Java_com_winlator_XrActivity_endFrame(JNIEnv *env, jobject obj) {
+JNIEXPORT void JNICALL Java_com_winlator_xr_XrActivity_endFrame(JNIEnv *env, jobject obj) {
     XrRendererEndFrame(&xr_module_renderer);
     XrRendererFinishFrame(&xr_module_engine, &xr_module_renderer);
 }
 
-JNIEXPORT jfloatArray JNICALL Java_com_winlator_XrActivity_getAxes(JNIEnv *env, jobject obj) {
+JNIEXPORT jfloatArray JNICALL Java_com_winlator_xr_XrActivity_getAxes(JNIEnv *env, jobject obj) {
     XrPosef lPose = XrInputGetPose(&xr_module_input, 0);
     XrPosef rPose = XrInputGetPose(&xr_module_input, 1);
     XrVector2f lThumbstick = XrInputGetJoystickState(&xr_module_input, 0);
@@ -234,7 +234,7 @@ JNIEXPORT jfloatArray JNICALL Java_com_winlator_XrActivity_getAxes(JNIEnv *env, 
     return output;
 }
 
-JNIEXPORT jbooleanArray JNICALL Java_com_winlator_XrActivity_getButtons(JNIEnv *env, jobject obj) {
+JNIEXPORT jbooleanArray JNICALL Java_com_winlator_xr_XrActivity_getButtons(JNIEnv *env, jobject obj) {
     uint32_t l = XrInputGetButtonState(&xr_module_input, 0);
     uint32_t r = XrInputGetButtonState(&xr_module_input, 1);
 
@@ -268,34 +268,34 @@ JNIEXPORT jbooleanArray JNICALL Java_com_winlator_XrActivity_getButtons(JNIEnv *
 }
 
 JNIEXPORT void JNICALL
-Java_com_winlator_XrActivity_nativeSetFoV(JNIEnv *env, jobject obj, jfloat x, jfloat y) {
+Java_com_winlator_xr_XrActivity_nativeSetFoV(JNIEnv *env, jobject obj, jfloat x, jfloat y) {
     xr_fovx = x;
     xr_fovy = y;
 }
 
 JNIEXPORT void JNICALL
-Java_com_winlator_XrActivity_nativeSetCurvedScreen(JNIEnv *env, jobject obj, jboolean enabled) {
+Java_com_winlator_xr_XrActivity_nativeSetCurvedScreen(JNIEnv *env, jobject obj, jboolean enabled) {
     xr_curvedScreen = enabled;
 }
 
 JNIEXPORT void JNICALL
-Java_com_winlator_XrActivity_nativeSetUsePT(JNIEnv *env, jobject obj, jboolean enabled) {
+Java_com_winlator_xr_XrActivity_nativeSetUsePT(JNIEnv *env, jobject obj, jboolean enabled) {
     xr_usePassthrough = enabled;
 }
 
 JNIEXPORT void JNICALL
-Java_com_winlator_XrActivity_nativeSetUseVR(JNIEnv *env, jobject obj, jboolean enabled) {
+Java_com_winlator_xr_XrActivity_nativeSetUseVR(JNIEnv *env, jobject obj, jboolean enabled) {
     xr_vr = enabled;
 }
 
 JNIEXPORT void JNICALL
-Java_com_winlator_XrActivity_nativeSetFramesync(JNIEnv *env, jobject obj, jint r, jint g, jint b, jint a) {
+Java_com_winlator_xr_XrActivity_nativeSetFramesync(JNIEnv *env, jobject obj, jint r, jint g, jint b, jint a) {
     xr_module_renderer.ConfigInt[CONFIG_FRAMESYNC_R] = r;
     xr_module_renderer.ConfigInt[CONFIG_FRAMESYNC_G] = g;
     xr_module_renderer.ConfigInt[CONFIG_FRAMESYNC_B] = b;
     xr_module_renderer.ConfigInt[CONFIG_FRAMESYNC_A] = a;
 }
 
-JNIEXPORT void JNICALL Java_com_winlator_XrActivity_vibrateController(JNIEnv *env, jobject obj, int duration, int chan, float intensity) {
+JNIEXPORT void JNICALL Java_com_winlator_xr_XrActivity_vibrateController(JNIEnv *env, jobject obj, int duration, int chan, float intensity) {
     XrInputVibrate(&xr_module_input, duration, chan, intensity);
 }
