@@ -17,8 +17,10 @@
     </string-array>
     <string-array name="wrapper_graphics_driver_version_entries">
         <item>System</item>
-        <item>v762</item>
-        <item>v805</item>
+        <item>Qualcomm_v849_Quest2_Piconeo3_Pico4</item>
+        <item>Qualcomm_v849_Quest3_Pico4Ultra</item>
+		<item>adrenotools-Turnip_v26.2.0_R4</item>
+		<item>adrenotools-Turnip_Gen8_V31</item>
         <item>turnip25.1.0</item>
         <item>turnip25.3.0_R3_Auto</item>
         <item>turnip25.3.0_R3_Gmem</item>

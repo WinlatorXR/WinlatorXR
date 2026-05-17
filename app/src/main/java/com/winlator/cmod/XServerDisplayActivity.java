@@ -2308,7 +2308,8 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             envVars.put("MESA_VK_WSI_DEBUG", "sw");
         }
 
-        if (currentWrapperVersion.toLowerCase().contains("turnip") && isAdrenotoolsTurnip.equals("0"))
+        boolean isAdrenoTools = adrenoToolsDriverId != "System";
+        if (currentWrapperVersion.toLowerCase().contains("turnip") && isAdrenotoolsTurnip.equals("0") && !isAdrenoTools)
             envVars.put("VK_ICD_FILENAMES", imageFs.getShareDir() + "/vulkan/icd.d/freedreno_icd.aarch64.json");
         else
             envVars.put("VK_ICD_FILENAMES", imageFs.getShareDir() + "/vulkan/icd.d/wrapper_icd.aarch64.json");
