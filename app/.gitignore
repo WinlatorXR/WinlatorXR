@@ -4,3 +4,4 @@
 /src/main/assets/proton-9.0-x86_64.txz
 /src/main/assets/proton-9.0-arm64ec.txz
 /src/main/assets/imagefs.txz
+/src/main/cpp/jniLibs/arm64-v8a/libevshim.so
