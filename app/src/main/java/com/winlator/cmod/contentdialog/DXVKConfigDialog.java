@@ -127,11 +127,12 @@ public class DXVKConfigDialog extends ContentDialog {
         }
 
         String framerate = config.get("framerate");
-        if (!framerate.isEmpty() && !framerate.equals("0")) {
-//            content += "dxgi.maxFrameRate = "+framerate+';';
-//            content += "d3d9.maxFrameRate = "+framerate+';';
-            envVars.put("DXVK_FRAME_RATE", framerate);
+        if (framerate.isEmpty() || framerate.equals("0")) {
+            framerate = "120";
         }
+        content += "dxgi.maxFrameRate = "+framerate+';';
+        content += "d3d9.maxFrameRate = "+framerate+';';
+        envVars.put("DXVK_FRAME_RATE", framerate);
 
         String async = config.get("async");
         if (!async.isEmpty() && !async.equals("0"))
