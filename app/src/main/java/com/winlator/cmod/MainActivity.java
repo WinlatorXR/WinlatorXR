@@ -113,7 +113,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
 
         // Get shared preferences
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         // Check if Big Picture Mode is enabled
         boolean isBigPictureModeEnabled = sharedPreferences.getBoolean("enable_big_picture_mode", false);
@@ -306,6 +306,19 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
      * The PreloaderDialog appears only when an install actually starts.
      */
     private void checkForAndInstallAssetContents(@Nullable Runnable onCompletion) {
+        String key = "content_update_version";
+        try {
+            String last = sharedPreferences.getString(key, "");
+            PackageInfo pkg = getPackageManager().getPackageInfo(getPackageName(), 0);
+            if (last.compareTo(pkg.versionName) == 0) {
+                runOnUiThread(() -> {
+                    if (onCompletion != null) onCompletion.run();
+                });
+                return;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         Executors.newSingleThreadExecutor().execute(() -> {
             PreloaderDialog spinner = new PreloaderDialog(this);
@@ -396,6 +409,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 }
 
                 if (toInstall.isEmpty()) {
+                    markContentInstalled(key);
                     if (onCompletion != null) runOnUiThread(onCompletion);
                     return;
                 }
@@ -443,6 +457,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             } catch (Exception e) {
                 Log.e("MainActivity", "Asset-content install error", e);
             } finally {
+                markContentInstalled(key);
                 final boolean shown = spinnerShown;        // effectively-final snapshot
                 runOnUiThread(() -> {
                     if (shown) spinner.close();
@@ -450,6 +465,17 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 });
             }
         });
+    }
+
+    private void markContentInstalled(String key) {
+        try {
+            PackageInfo pkg = getPackageManager().getPackageInfo(getPackageName(), 0);
+            SharedPreferences.Editor e = sharedPreferences.edit();
+            e.putString(key, pkg.versionName);
+            e.commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void showAllFilesAccessDialog() {
