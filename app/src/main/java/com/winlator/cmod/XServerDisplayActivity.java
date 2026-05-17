@@ -2308,7 +2308,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             envVars.put("MESA_VK_WSI_DEBUG", "sw");
         }
 
-        boolean isAdrenoTools = !adrenoToolsDriverId.equals(DefaultVersion.WRAPPER);
+        boolean isAdrenoTools = adrenoToolsDriverId != "System";
         if (currentWrapperVersion.toLowerCase().contains("turnip") && isAdrenotoolsTurnip.equals("0") && !isAdrenoTools)
             envVars.put("VK_ICD_FILENAMES", imageFs.getShareDir() + "/vulkan/icd.d/freedreno_icd.aarch64.json");
         else
@@ -2349,7 +2349,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             }
         }
 
-        if (!adrenoToolsDriverId.equals(DefaultVersion.WRAPPER)) {
+        if (adrenoToolsDriverId != "System") {
             AdrenotoolsManager adrenotoolsManager = new AdrenotoolsManager(this);
             adrenotoolsManager.setDriverById(envVars, imageFs, adrenoToolsDriverId);
         }
