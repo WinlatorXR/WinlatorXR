@@ -13,6 +13,9 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.CookieManager;
+import android.webkit.WebStorage;
+import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.GridLayout;
@@ -207,6 +210,18 @@ public class NavActivity extends AppCompatActivity {
         navigationView.inflateMenu(R.menu.main_menu);
         navigationView.setVisibility(View.GONE);
         root.addView(navigationView);
+    }
+
+    public static void clearWebView(WebView webView) {
+        webView.clearHistory();
+        webView.clearFormData();
+        webView.clearCache(true);
+
+        CookieManager cookieManager = CookieManager.getInstance();
+        cookieManager.removeAllCookies(null);
+        cookieManager.flush();
+        WebStorage.getInstance().deleteAllData();
+        webView.clearSslPreferences();
     }
 
     @Override

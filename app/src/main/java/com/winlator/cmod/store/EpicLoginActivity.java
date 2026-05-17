@@ -8,6 +8,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import com.winlator.cmod.NavActivity;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -41,6 +43,7 @@ public class EpicLoginActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         webView = new WebView(this);
+        NavActivity.clearWebView(webView);
         WebSettings ws = webView.getSettings();
         ws.setJavaScriptEnabled(true);
         ws.setDomStorageEnabled(true);
