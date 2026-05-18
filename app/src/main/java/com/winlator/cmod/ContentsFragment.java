@@ -18,6 +18,7 @@ import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -346,10 +347,26 @@ public class ContentsFragment extends Fragment {
             };
             holder.ivIcon.setBackground(getContext().getDrawable(iconId));
 
+            File runtimesDir = new File("/data/data/com.winlator.cmod/files/imagefs/", "runtimes");
+            if (!runtimesDir.exists()) {
+                runtimesDir.mkdir();
+            }
+            String runtimeName = profile.verName;
+            if (profile.remoteUrl.lastIndexOf('.') > 0) {
+                runtimeName = runtimeName + profile.remoteUrl.substring(profile.remoteUrl.lastIndexOf('.'));
+            }
+            File runtimeFile = new File(runtimesDir, runtimeName);
+
             holder.tvVersionName.setText(getContext().getString(R.string.version) + ": " + profile.verName);
             holder.tvVersionCode.setText(getContext().getString(R.string.version_code) + ": " + profile.verCode);
             holder.ibMenu.setVisibility(profile.remoteUrl == null ? View.VISIBLE : View.GONE);
             holder.ibMenu.setOnClickListener(v -> {
+                if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME) {
+                    runtimeFile.delete();
+                    loadContentList();
+                    return;
+                }
+
                 PopupMenu selectionMenu = new PopupMenu(getContext(), holder.ibMenu);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
                     selectionMenu.setForceShowIcon(true);
@@ -378,6 +395,18 @@ public class ContentsFragment extends Fragment {
                 selectionMenu.show();
             });
             holder.ibDownload.setVisibility((profile.remoteUrl != null) && (holder.progressBar.getVisibility() == View.GONE) ? View.VISIBLE : View.GONE);
+
+            if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME) {
+                holder.ibMenu.setImageResource(R.drawable.icon_remove);
+                if (runtimeFile.exists()) {
+                    holder.ibDownload.setVisibility(View.GONE);
+                    holder.ibMenu.setVisibility(View.VISIBLE);
+                } else {
+                    holder.ibDownload.setVisibility(View.VISIBLE);
+                    holder.ibMenu.setVisibility(View.GONE);
+                }
+            }
+
             holder.ibDownload.setOnClickListener(v -> {
                 holder.ibDownload.setVisibility(View.GONE);
                 holder.progressBar.setVisibility(View.VISIBLE);
@@ -387,7 +416,19 @@ public class ContentsFragment extends Fragment {
                 new Thread(() -> {
                     long timestamp = System.currentTimeMillis();
                     File output = new File(getContext().getCacheDir(), "temp_" + timestamp);
+
                     if (Downloader.downloadFile(profile.remoteUrl, output)) {
+                        if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME) {
+                            FileUtils.copy(output, runtimeFile);
+                            output.delete();
+
+                            getActivity().runOnUiThread(() -> {
+                                Toast.makeText(getContext(), R.string.runtime_toast, Toast.LENGTH_LONG).show();
+                                holder.progressBar.setVisibility(View.GONE);
+                                loadContentList();
+                            });
+                            return;
+                        }
                         intent.setData(Uri.parse(output.getAbsolutePath()));
                     }
                     getActivity().runOnUiThread(() -> {
