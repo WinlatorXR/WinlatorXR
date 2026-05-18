@@ -352,7 +352,7 @@ public class ContentsFragment extends Fragment {
                 runtimesDir.mkdir();
             }
             String runtimeName = profile.verName;
-            if (profile.remoteUrl.lastIndexOf('.') > 0) {
+            if ((profile.remoteUrl != null) && (profile.remoteUrl.lastIndexOf('.') > 0)) {
                 runtimeName = runtimeName + profile.remoteUrl.substring(profile.remoteUrl.lastIndexOf('.'));
             }
             File runtimeFile = new File(runtimesDir, runtimeName);
