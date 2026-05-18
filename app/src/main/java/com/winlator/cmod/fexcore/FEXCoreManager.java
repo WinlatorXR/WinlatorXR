@@ -214,9 +214,9 @@ public final class FEXCoreManager {
     }
     
    private static void setFromDefaults(Spinner tsoModeSpinner, Spinner x87modeSpinner, Spinner multiBlockSpinner) {
-       selectSpinnerItemByValue(tsoModeSpinner, tsoPresets, "Fast");
+       selectSpinnerItemByValue(tsoModeSpinner, tsoPresets, "Fastest");
        selectSpinnerItemByValue(x87modeSpinner, x87modePresets, "Fast");
-       selectSpinnerItemByValue(multiBlockSpinner, multiblockValues, "Disabled");
+       selectSpinnerItemByValue(multiBlockSpinner, multiblockValues, "Enabled");
    }
     
    private static void selectSpinnerItemByValue(Spinner spnr, List<String> values, String value) {
@@ -331,7 +331,7 @@ public final class FEXCoreManager {
             return String.format("TSOMode %s, x87Mode %s, MultiBlock %s", tsoPreset, x87mode, multiBlockValue);
         } catch (JSONException e) {
             // Return a default or error string if parsing fails
-            return "TSOMode Fast, x87Mode Fast, MultiBlock Disabled";
+            return "TSOMode Fastest, x87Mode Fast, MultiBlock Enabled";
         }
     }
 
