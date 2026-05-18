@@ -2299,7 +2299,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         File rootDir = imageFs.getRootDir();
 
         if (dxwrapper.equals("dxvk")) {
-            DXVKConfigDialog.setEnvVars(this, dxwrapperConfig, envVars);
+            DXVKConfigDialog.setEnvVars(this, dxwrapperConfig, envVars, container.getRefreshRate());
         }
         VKD3DConfigDialog.setEnvVars(this, dxwrapperConfig, envVars);
 

@@ -112,7 +112,7 @@ public class DXVKConfigDialog extends ContentDialog {
         return new KeyValueSet(data);
     }
 
-    public static void setEnvVars(Context context, KeyValueSet config, EnvVars envVars) {
+    public static void setEnvVars(Context context, KeyValueSet config, EnvVars envVars, int frameLimit) {
         envVars.put("DXVK_STATE_CACHE_PATH", context.getFilesDir() + "/imagefs/" + ImageFs.CACHE_PATH);
         envVars.put("DXVK_LOG_LEVEL", "none");
 
@@ -128,7 +128,7 @@ public class DXVKConfigDialog extends ContentDialog {
 
         String framerate = config.get("framerate");
         if (framerate.isEmpty() || framerate.equals("0")) {
-            framerate = "120";
+            framerate = "" + frameLimit;
         }
         content += "dxgi.maxFrameRate = "+framerate+';';
         content += "d3d9.maxFrameRate = "+framerate+';';
