@@ -98,6 +98,9 @@ public class ContentsFragment extends Fragment {
         sContentType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (position >= ContentProfile.ContentType.CONTENT_TYPE_PROTON.ordinal()) {
+                    position++;
+                }
                 currentContentType = ContentProfile.ContentType.values()[position];
                 loadContentList();
             }
@@ -141,8 +144,11 @@ public class ContentsFragment extends Fragment {
 
     private void updateContentTypeSpinner(Spinner spinner) {
         List<String> typeList = new ArrayList<>();
-        for (ContentProfile.ContentType type : ContentProfile.ContentType.values())
-            typeList.add(type.toString());
+        for (ContentProfile.ContentType type : ContentProfile.ContentType.values()) {
+            if (type != ContentProfile.ContentType.CONTENT_TYPE_PROTON) {
+                typeList.add(type.toString());
+            }
+        }
         spinner.setAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_dropdown_item, typeList));
 
         // Set the popup background based on the theme
