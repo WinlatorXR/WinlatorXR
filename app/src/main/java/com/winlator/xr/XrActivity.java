@@ -34,9 +34,6 @@ import com.winlator.cmod.R;
 import com.winlator.cmod.XServerDisplayActivity;
 import com.winlator.cmod.inputcontrols.ControllerManager;
 import com.winlator.xr.api.XrAPI;
-import com.winlator.xr.runtime.MetaQuest;
-import com.winlator.xr.runtime.Pico;
-import com.winlator.xr.runtime.PlayForDream;
 import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.cmod.xserver.Drawable;
 import com.winlator.cmod.xserver.XKeycode;
@@ -170,7 +167,7 @@ public class XrActivity extends XServerDisplayActivity {
     }
 
     public static boolean isSupported() {
-        return getRuntime() != null;
+        return Device.getRuntime() != null;
     }
 
     public void callMenuAction(int item) {
@@ -232,7 +229,7 @@ public class XrActivity extends XServerDisplayActivity {
 
     public static void openIntent(Activity context, int containerId, String path) {
         // Create the launch intent
-        Intent intent = new Intent(context, getRuntime());
+        Intent intent = new Intent(context, Device.getRuntime());
         intent.putExtra("container_id", containerId);
         if (path != null) {
             intent.putExtra("shortcut_path", path);
@@ -283,20 +280,6 @@ public class XrActivity extends XServerDisplayActivity {
             }
             xrController.updateMouseState(buttons);
             xrController.updateKeyboardButtons(buttons);
-        }
-    }
-
-    private static Class getRuntime() {
-        if (Build.MANUFACTURER.compareToIgnoreCase("PICO") == 0) {
-            return Pico.class;
-        } else if (Build.MANUFACTURER.compareToIgnoreCase("PLAY FOR DREAM") == 0) {
-            return PlayForDream.class;
-        } else if (Build.MANUFACTURER.compareToIgnoreCase("OCULUS") == 0) {
-            return MetaQuest.class;
-        } else if (Build.MANUFACTURER.compareToIgnoreCase("META") == 0) {
-            return MetaQuest.class;
-        } else {
-            return null;
         }
     }
 
