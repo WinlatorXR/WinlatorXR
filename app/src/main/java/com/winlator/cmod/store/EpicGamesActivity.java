@@ -49,7 +49,6 @@ import com.winlator.cmod.R;
 /**
  * Epic Games library screen — mirrors AmazonGamesActivity structure.
  *
- * View modes: LIST (collapsible cards) · GRID · POSTER
  * Install: manifest fetch → chunk download → file assembly → exe scan
  * Launch:  store pending_epic_exe → start LandscapeLauncherMainActivity
  *
@@ -57,14 +56,12 @@ import com.winlator.cmod.R;
  *   epic_exe_{appName}  — abs path to selected .exe
  *   epic_dir_{appName}  — abs path to install directory
  *   epic_cache          — JSON array of library cache
- *   epic_view_mode      — "list" / "grid" / "poster"
  */
 public class EpicGamesActivity extends NavActivity {
 
     private static final String TAG           = "BH_EPIC";
     private static final String PREFS_NAME    = "bh_epic_prefs";
     private static final String CACHE_KEY     = "epic_cache";
-    private static final String VIEW_MODE_KEY = "epic_view_mode";
 
     // Epic brand colours
     private static final int COLOR_ACCENT  = 0xFF0078F0;  // Epic blue — install btn / title
@@ -83,12 +80,10 @@ public class EpicGamesActivity extends NavActivity {
     private LinearLayout gameListLayout;
     private ScrollView   scrollView;
     private Button       refreshBtn;
-    private Button       viewToggleBtn;
     private EditText     searchBar;
     private List<EpicGame> allGames    = new ArrayList<>();
     private View         expandedSection = null;
     private TextView     expandedArrow   = null;
-    private String       viewMode;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -96,7 +91,6 @@ public class EpicGamesActivity extends NavActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         prefs    = getSharedPreferences(PREFS_NAME, 0);
-        viewMode = prefs.getString(VIEW_MODE_KEY, "list");
         buildUi();
         List<EpicGame> cached = loadCachedGames();
         if (cached != null && !cached.isEmpty()) {
@@ -143,31 +137,6 @@ public class EpicGamesActivity extends NavActivity {
         titleTV.setTypeface(null, Typeface.BOLD);
         titleTV.setPadding(dp(12), 0, 0, 0);
         header.addView(titleTV, new LinearLayout.LayoutParams(0, -2, 1f));
-
-        viewToggleBtn = new Button(this);
-        viewToggleBtn.setText(viewModeIcon(viewMode));
-        viewToggleBtn.setTextColor(0xFFFFFFFF);
-        GradientDrawable viewToggleBtnBg = new GradientDrawable();
-        viewToggleBtnBg.setColor(0xFF333333);
-        viewToggleBtnBg.setCornerRadius(dp(4));
-        viewToggleBtn.setBackground(viewToggleBtnBg);
-        viewToggleBtn.setTextSize(16f);
-        viewToggleBtn.setPadding(dp(12), 0, dp(12), 0);
-        viewToggleBtn.setOnFocusChangeListener((v, hasFocus) -> {
-            viewToggleBtnBg.setColor(hasFocus ? 0xFF555555 : 0xFF333333);
-            viewToggleBtnBg.setStroke(hasFocus ? dp(2) : 0, hasFocus ? 0xFFFFD700 : 0x00000000);
-        });
-        viewToggleBtn.setOnClickListener(v -> {
-            if ("list".equals(viewMode))       viewMode = "grid";
-            else if ("grid".equals(viewMode))  viewMode = "poster";
-            else                               viewMode = "list";
-            prefs.edit().putString(VIEW_MODE_KEY, viewMode).apply();
-            viewToggleBtn.setText(viewModeIcon(viewMode));
-            expandedSection = null;
-            expandedArrow   = null;
-            applyFilter(searchBar != null ? searchBar.getText().toString() : "");
-        });
-        header.addView(viewToggleBtn, new LinearLayout.LayoutParams(-2, dp(40)));
 
         refreshBtn = new Button(this);
         refreshBtn.setText("↺");
@@ -370,12 +339,6 @@ public class EpicGamesActivity extends NavActivity {
                 LinearLayout.LayoutParams emLp = new LinearLayout.LayoutParams(-1, -2);
                 emLp.topMargin = dp(32);
                 gameListLayout.addView(emptyTV, emLp);
-            } else if ("grid".equals(viewMode)) {
-                gameListLayout.setPadding(dp(4), dp(4), dp(4), dp(4));
-                addGamesAsGrid(result, 105, dp(3), dp(6));
-            } else if ("poster".equals(viewMode)) {
-                gameListLayout.setPadding(dp(4), dp(4), dp(4), dp(4));
-                addGamesAsGrid(result, 176, dp(10), dp(10));
             } else {
                 gameListLayout.setPadding(dp(8), dp(8), dp(8), dp(8));
                 for (EpicGame g : result) addGameCard(g);
@@ -704,266 +667,6 @@ public class EpicGamesActivity extends NavActivity {
         }
 
         gameListLayout.addView(card, cardLp);
-    }
-
-    // ── GRID / POSTER view ────────────────────────────────────────────────────
-
-    private void addGamesAsGrid(List<EpicGame> games, int artHeightDp,
-                                 int tileHMargin, int rowBottomMargin) {
-        int cols = 5;
-        int rows = (games.size() + cols - 1) / cols;
-        for (int row = 0; row < rows; row++) {
-            LinearLayout rowLayout = new LinearLayout(this);
-            rowLayout.setOrientation(LinearLayout.HORIZONTAL);
-            rowLayout.setWeightSum(cols);
-            LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, -2);
-            rowLp.bottomMargin = rowBottomMargin;
-            for (int col = 0; col < cols; col++) {
-                int idx = row * cols + col;
-                if (idx < games.size()) {
-                    rowLayout.addView(makeGridTile(games.get(idx), artHeightDp),
-                            makeGridTileLp(tileHMargin));
-                } else {
-                    rowLayout.addView(new View(this), makeGridTileLp(tileHMargin));
-                }
-            }
-            gameListLayout.addView(rowLayout, rowLp);
-        }
-    }
-
-    private View makeGridTile(EpicGame game, int artHeightDp) {
-        boolean isInstalled = prefs.getString("epic_exe_" + game.appName, null) != null;
-
-        LinearLayout tile = new LinearLayout(this);
-        tile.setOrientation(LinearLayout.VERTICAL);
-        GradientDrawable tileBg = new GradientDrawable();
-        tileBg.setColor(0xFF141820);
-        tileBg.setCornerRadius(dp(5));
-        tile.setBackground(tileBg);
-        tile.setClipToOutline(true);
-
-        // Wrapper handles focus border via foreground (drawn over tile, not hidden by it)
-        FrameLayout focusWrapper = new FrameLayout(this);
-        GradientDrawable focusBorder = new GradientDrawable();
-        focusBorder.setColor(0x00000000);
-        focusBorder.setCornerRadius(dp(5));
-        focusWrapper.setForeground(focusBorder);
-        focusWrapper.setFocusable(true);
-        focusWrapper.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
-        focusWrapper.setOnFocusChangeListener((v, hasFocus) -> {
-            tileBg.setColor(hasFocus ? 0xFF1E2330 : 0xFF141820);
-            focusBorder.setStroke(hasFocus ? dp(3) : 0, hasFocus ? 0xFFFFD700 : 0x00000000);
-        });
-        focusWrapper.setOnClickListener(v -> tile.performClick());
-        focusWrapper.setOnLongClickListener(v -> tile.performLongClick());
-
-        FrameLayout artFrame = new FrameLayout(this);
-
-        ImageView coverIV = new ImageView(this);
-        coverIV.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        coverIV.setBackgroundColor(0xFF0F1117);
-        artFrame.addView(coverIV, new FrameLayout.LayoutParams(-1, dp(artHeightDp)));
-        loadImage(game, coverIV);
-
-        // Title + ✓ bar pinned to bottom of art
-        LinearLayout titleBar = new LinearLayout(this);
-        titleBar.setOrientation(LinearLayout.HORIZONTAL);
-        titleBar.setGravity(Gravity.CENTER_VERTICAL);
-        titleBar.setPadding(dp(4), dp(3), dp(4), dp(3));
-        GradientDrawable titleBarBg = new GradientDrawable(
-                GradientDrawable.Orientation.BOTTOM_TOP,
-                new int[]{0xEE000000, 0x44000000});
-        titleBar.setBackground(titleBarBg);
-
-        TextView titleTV = new TextView(this);
-        titleTV.setText(game.title);
-        titleTV.setTextColor(0xFFFFFFFF);
-        titleTV.setTextSize(9f);
-        titleTV.setTypeface(null, Typeface.BOLD);
-        titleTV.setMaxLines(1);
-        titleTV.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        titleBar.addView(titleTV, new LinearLayout.LayoutParams(0, -2, 1f));
-
-        TextView checkTV = new TextView(this);
-        checkTV.setText(" ✓");
-        checkTV.setTextColor(0xFF66BB6A);
-        checkTV.setTextSize(10f);
-        checkTV.setTypeface(null, Typeface.BOLD);
-        checkTV.setVisibility(isInstalled ? View.VISIBLE : View.GONE);
-        titleBar.addView(checkTV, new LinearLayout.LayoutParams(-2, -2));
-
-        FrameLayout.LayoutParams titleBarLp = new FrameLayout.LayoutParams(-1, -2);
-        titleBarLp.gravity = Gravity.BOTTOM;
-        artFrame.addView(titleBar, titleBarLp);
-        tile.addView(artFrame, new LinearLayout.LayoutParams(-1, -2));
-
-        // Action row (shown on tap)
-        LinearLayout actionRow = new LinearLayout(this);
-        actionRow.setOrientation(LinearLayout.VERTICAL);
-        actionRow.setVisibility(View.GONE);
-        actionRow.setBackgroundColor(0xFF0F1117);
-        actionRow.setPadding(dp(4), dp(3), dp(4), dp(4));
-
-        ProgressBar progressBar = new ProgressBar(this, null,
-                android.R.attr.progressBarStyleHorizontal);
-        progressBar.setMax(100);
-        progressBar.setProgress(0);
-        progressBar.setVisibility(View.GONE);
-        actionRow.addView(progressBar, new LinearLayout.LayoutParams(-1, dp(3)));
-
-        Button actionBtn = new Button(this);
-        actionBtn.setText(isInstalled ? "Add to Launcher" : "Install");
-        actionBtn.setTextColor(0xFFFFFFFF);
-        actionBtn.setBackgroundColor(isInstalled ? COLOR_ADD : COLOR_ACCENT);
-        actionBtn.setTextSize(10f);
-        actionBtn.setPadding(0, 0, 0, 0);
-        LinearLayout.LayoutParams abLp = new LinearLayout.LayoutParams(-1, dp(30));
-        abLp.topMargin = dp(2);
-        actionRow.addView(actionBtn, abLp);
-        tile.addView(actionRow, new LinearLayout.LayoutParams(-1, -2));
-
-        final Runnable[] cancelRef = {null};
-        actionBtn.setOnClickListener(v -> {
-            String lbl = actionBtn.getText().toString();
-            if ("Cancel".equals(lbl)) {
-                if (cancelRef[0] != null) cancelRef[0].run();
-                return;
-            }
-            if ("Add to Launcher".equals(lbl) || "Add Game".equals(lbl)) {
-                String exe = prefs.getString("epic_exe_" + game.appName, null);
-                if (exe != null) pendingLaunchExe(game.title, exe);
-                return;
-            }
-            showInstallConfirm(game, () -> {
-                cancelRef[0] = null;
-                actionBtn.setEnabled(true);
-                actionBtn.setText("Cancel");
-                actionBtn.setBackgroundColor(COLOR_CANCEL);
-                progressBar.setVisibility(View.VISIBLE);
-
-                String dlKeyG = "epic-" + game.appName + "-grid";
-                StoreDownloadQueue.addListener(dlKeyG, new StoreDownloadQueue.DownloadListener() {
-                    @Override public void onProgress(String msg, int pct) {
-                        uiHandler.post(() -> progressBar.setProgress(pct));
-                    }
-                    @Override public void onComplete(String exePath) {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            progressBar.setProgress(100);
-                            progressBar.setVisibility(View.GONE);
-                            checkTV.setVisibility(View.VISIBLE);
-                            actionBtn.setText("Add to Launcher");
-                            actionBtn.setBackgroundColor(COLOR_ADD);
-                            actionBtn.setEnabled(true);
-                        });
-                    }
-                    @Override public void onError(String msg) {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            progressBar.setVisibility(View.GONE);
-                            actionBtn.setText("Install");
-                            actionBtn.setBackgroundColor(COLOR_ACCENT);
-                            actionBtn.setEnabled(true);
-                            Toast.makeText(EpicGamesActivity.this,
-                                    "Error: " + msg, Toast.LENGTH_LONG).show();
-                        });
-                    }
-                    @Override public void onCancelled() {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            progressBar.setProgress(0);
-                            progressBar.setVisibility(View.GONE);
-                            actionBtn.setText("Install");
-                            actionBtn.setBackgroundColor(COLOR_ACCENT);
-                            actionBtn.setEnabled(true);
-                        });
-                    }
-                });
-                StoreDownloadQueue.startEpic(this, game, dlKeyG);
-                cancelRef[0] = () ->
-                    StoreDownloadQueue.cancel(EpicGamesActivity.this, dlKeyG);
-            });
-        });
-
-        tile.setOnClickListener(v -> {
-            if (actionRow.getVisibility() == View.VISIBLE) {
-                actionRow.setVisibility(View.GONE);
-                expandedSection = null;
-            } else {
-                if (expandedSection != null) expandedSection.setVisibility(View.GONE);
-                actionRow.setVisibility(View.VISIBLE);
-                expandedSection = actionRow;
-                expandedArrow   = null;
-            }
-        });
-
-
-        // Restore in-progress UI if a download is already running for this game
-        {
-            StoreDownloadQueue.DownloadEntry _eRG = StoreDownloadQueue.findActiveEntry(
-                    "epic-" + game.appName + "-list",
-                    "epic-" + game.appName + "-grid",
-                    "epic_" + game.appName);
-            if (_eRG != null) {
-                final String _dlKeyRG = _eRG.dlKey;
-                actionRow.setVisibility(View.VISIBLE);
-                actionBtn.setText("Cancel");
-                actionBtn.setBackgroundColor(0xFFCC3333);
-                progressBar.setVisibility(View.VISIBLE);
-                progressBar.setProgress(_eRG.percent);
-                StoreDownloadQueue.addListener(_dlKeyRG, new StoreDownloadQueue.DownloadListener() {
-                    @Override public void onProgress(String msg, int pct) {
-                        uiHandler.post(() -> progressBar.setProgress(pct));
-                    }
-                    @Override public void onComplete(String exePath) {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            progressBar.setProgress(100);
-                            progressBar.setVisibility(View.GONE);
-                            checkTV.setVisibility(View.VISIBLE);
-                            actionBtn.setText("Add to Launcher");
-                            actionBtn.setBackgroundColor(COLOR_ADD);
-                            actionBtn.setEnabled(true);
-                        });
-                    }
-                    @Override public void onError(String msg) {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            progressBar.setVisibility(View.GONE);
-                            actionBtn.setText("Install");
-                            actionBtn.setBackgroundColor(COLOR_ACCENT);
-                            actionBtn.setEnabled(true);
-                        });
-                    }
-                    @Override public void onCancelled() {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            progressBar.setProgress(0);
-                            progressBar.setVisibility(View.GONE);
-                            actionBtn.setText("Install");
-                            actionBtn.setBackgroundColor(COLOR_ACCENT);
-                            actionBtn.setEnabled(true);
-                        });
-                    }
-                });
-                cancelRef[0] = () ->
-                    StoreDownloadQueue.cancel(EpicGamesActivity.this, _dlKeyRG);
-            }
-        }
-        tile.setOnLongClickListener(v -> {
-            openDetailScreen(game);
-            return true;
-        });
-
-        focusWrapper.addView(tile, new FrameLayout.LayoutParams(-1, -1));
-        return focusWrapper;
-    }
-
-    private LinearLayout.LayoutParams makeGridTileLp(int hMargin) {
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
-        lp.leftMargin  = hMargin;
-        lp.rightMargin = hMargin;
-        return lp;
     }
 
     // ── Download wrapper ──────────────────────────────────────────────────────
@@ -1338,12 +1041,6 @@ public class EpicGamesActivity extends NavActivity {
                 syncText.setTextColor(0xFFCCCCCC);
             }
         });
-    }
-
-    private static String viewModeIcon(String mode) {
-        if ("grid".equals(mode))   return "▦";
-        if ("poster".equals(mode)) return "☰";
-        return "⊞";
     }
 
     private static String formatBytes(long bytes) {
