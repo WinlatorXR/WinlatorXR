@@ -9,17 +9,22 @@
 package com.winlator.cmod.store;
 
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -42,6 +47,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import android.content.Intent;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.winlator.cmod.NavActivity;
 import com.winlator.cmod.R;
@@ -341,7 +350,53 @@ public class EpicGamesActivity extends NavActivity {
                 gameListLayout.addView(emptyTV, emLp);
             } else {
                 gameListLayout.setPadding(dp(8), dp(8), dp(8), dp(8));
-                for (EpicGame g : result) addGameCard(g);
+
+                RecyclerView recyclerView = new RecyclerView(this);
+                recyclerView.setLayoutManager(new LinearLayoutManager(this));
+                recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+                recyclerView.setPadding(0, 0, 0, dp(12));
+                recyclerView.setClipToPadding(false);
+
+                LinearLayout.LayoutParams rvLp =
+                        new LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
+                        );
+                recyclerView.setLayoutParams(rvLp);
+
+                EpicGamesAdapter adapter = new EpicGamesAdapter(
+                        this,
+                        result,
+                        prefs,
+                        COLOR_CARD_BG,
+                        COLOR_ACCENT,
+                        COLOR_ADD,
+                        COLOR_CANCEL,
+                        new EpicGamesAdapter.Callbacks() {
+
+                            @Override
+                            public void loadImage(EpicGame game, ImageView iv) {
+                                EpicGamesActivity.this.loadImage(game, iv);
+                            }
+
+                            @Override
+                            public void openDetailScreen(EpicGame game) {
+                                EpicGamesActivity.this.openDetailScreen(game);
+                            }
+
+                            @Override
+                            public void pendingLaunchExe(String title, String exe) {
+                                EpicGamesActivity.this.pendingLaunchExe(title, exe);
+                            }
+
+                            @Override
+                            public void showInstallConfirm(EpicGame game, Runnable ok) {
+                                EpicGamesActivity.this.showInstallConfirm(game, ok);
+                            }
+                        }
+                );
+                recyclerView.setAdapter(adapter);
+                gameListLayout.addView(recyclerView);
             }
             scrollView.setVisibility(View.VISIBLE);
         });
@@ -353,320 +408,695 @@ public class EpicGamesActivity extends NavActivity {
 
     // ── LIST view: collapsible game cards ─────────────────────────────────────
 
-    private void addGameCard(EpicGame game) {
-        boolean isInstalled = prefs.getString("epic_exe_" + game.appName, null) != null;
+    public class EpicGamesAdapter
+            extends RecyclerView.Adapter<EpicGamesAdapter.GameViewHolder> {
 
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(10), dp(10), dp(10), dp(10));
-        GradientDrawable cardBg = new GradientDrawable();
-        cardBg.setColor(COLOR_CARD_BG);
-        cardBg.setCornerRadius(dp(6));
-        card.setBackground(cardBg);
-        card.setFocusable(true);
-        card.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
-        card.setOnFocusChangeListener((v, hasFocus) -> {
-            cardBg.setColor(hasFocus ? 0xFF1B1F2A : COLOR_CARD_BG);
-            cardBg.setStroke(hasFocus ? dp(3) : 0, hasFocus ? 0xFFFFD700 : 0x00000000);
-        });
-        LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(-1, -2);
-        cardLp.bottomMargin = dp(8);
-
-        // ── Collapsed header row ───────────────────────────────────────────────
-        LinearLayout topRow = new LinearLayout(this);
-        topRow.setOrientation(LinearLayout.HORIZONTAL);
-        topRow.setGravity(Gravity.CENTER_VERTICAL);
-
-        ImageView coverIV = new ImageView(this);
-        coverIV.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        GradientDrawable coverBg = new GradientDrawable();
-        coverBg.setColor(0xFF141820);
-        coverBg.setCornerRadius(dp(4));
-        coverIV.setBackground(coverBg);
-        LinearLayout.LayoutParams coverLp = new LinearLayout.LayoutParams(dp(60), dp(60));
-        coverLp.rightMargin = dp(10);
-        topRow.addView(coverIV, coverLp);
-        loadImage(game, coverIV);
-
-        LinearLayout titleRow = new LinearLayout(this);
-        titleRow.setOrientation(LinearLayout.HORIZONTAL);
-        titleRow.setGravity(Gravity.CENTER_VERTICAL);
-
-        TextView titleTV = new TextView(this);
-        titleTV.setText(game.title);
-        titleTV.setTextColor(0xFFFFFFFF);
-        titleTV.setTextSize(15f);
-        titleTV.setTypeface(null, Typeface.BOLD);
-        titleTV.setMaxLines(1);
-        titleTV.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        titleRow.addView(titleTV, new LinearLayout.LayoutParams(-2, -2));
-
-        TextView collapsedCheckTV = new TextView(this);
-        collapsedCheckTV.setText(" ✓");
-        collapsedCheckTV.setTextColor(0xFF4CAF50);
-        collapsedCheckTV.setTextSize(14f);
-        collapsedCheckTV.setTypeface(null, Typeface.BOLD);
-        collapsedCheckTV.setVisibility(isInstalled ? View.VISIBLE : View.GONE);
-        titleRow.addView(collapsedCheckTV, new LinearLayout.LayoutParams(-2, -2));
-
-        titleRow.addView(new View(this), new LinearLayout.LayoutParams(0, 0, 1f));
-
-        // ── Subtitle (developer) shown while collapsed ─────────────────────────
-        LinearLayout infoCol = new LinearLayout(this);
-        infoCol.setOrientation(LinearLayout.VERTICAL);
-        infoCol.setGravity(Gravity.CENTER_VERTICAL);
-        infoCol.addView(titleRow, new LinearLayout.LayoutParams(-1, -2));
-        if (!game.developer.isEmpty()) {
-            TextView subTV = new TextView(this);
-            subTV.setText(game.developer);
-            subTV.setTextColor(0xFF888888);
-            subTV.setTextSize(11f);
-            subTV.setMaxLines(1);
-            subTV.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            infoCol.addView(subTV, new LinearLayout.LayoutParams(-1, -2));
-        }
-        topRow.addView(infoCol, new LinearLayout.LayoutParams(0, -2, 1f));
-
-        TextView arrowTV = new TextView(this);
-        arrowTV.setText("▼");
-        arrowTV.setTextColor(0xFF888888);
-        arrowTV.setTextSize(14f);
-        arrowTV.setPadding(dp(8), 0, 0, 0);
-        topRow.addView(arrowTV, new LinearLayout.LayoutParams(-2, -2));
-
-        card.addView(topRow, new LinearLayout.LayoutParams(-1, -2));
-
-        // ── Expandable section ─────────────────────────────────────────────────
-        LinearLayout expandSection = new LinearLayout(this);
-        expandSection.setOrientation(LinearLayout.VERTICAL);
-        expandSection.setVisibility(View.GONE);
-
-        if (!game.developer.isEmpty()) {
-            TextView metaTV = new TextView(this);
-            metaTV.setText(game.developer);
-            metaTV.setTextColor(0xFF888888);
-            metaTV.setTextSize(11f);
-            LinearLayout.LayoutParams metaLp = new LinearLayout.LayoutParams(-1, -2);
-            metaLp.topMargin = dp(6);
-            expandSection.addView(metaTV, metaLp);
+        public interface Callbacks {
+            void loadImage(EpicGame game, ImageView iv);
+            void openDetailScreen(EpicGame game);
+            void pendingLaunchExe(String title, String exe);
+            void showInstallConfirm(EpicGame game, Runnable ok);
         }
 
-        TextView checkmark = new TextView(this);
-        checkmark.setText("✓ Installed");
-        checkmark.setTextColor(0xFF4CAF50);
-        checkmark.setTextSize(10f);
-        checkmark.setVisibility(isInstalled ? View.VISIBLE : View.GONE);
-        LinearLayout.LayoutParams ckLp = new LinearLayout.LayoutParams(-1, -2);
-        ckLp.topMargin = dp(4);
-        expandSection.addView(checkmark, ckLp);
+        private final Context context;
+        private final List<EpicGame> games;
+        private final SharedPreferences prefs;
+        private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
-        ProgressBar progressBar = new ProgressBar(this, null,
-                android.R.attr.progressBarStyleHorizontal);
-        progressBar.setMax(100);
-        progressBar.setProgress(0);
-        progressBar.setVisibility(View.GONE);
-        progressBar.getProgressDrawable().setColorFilter(COLOR_ACCENT,
-                android.graphics.PorterDuff.Mode.SRC_IN);
-        LinearLayout.LayoutParams pbLp = new LinearLayout.LayoutParams(-1, dp(6));
-        pbLp.topMargin = dp(6);
-        expandSection.addView(progressBar, pbLp);
+        private final int COLOR_CARD_BG;
+        private final int COLOR_ACCENT;
+        private final int COLOR_ADD;
+        private final int COLOR_CANCEL;
 
-        TextView pctTV = new TextView(this);
-        pctTV.setTextColor(COLOR_ACCENT);
-        pctTV.setTextSize(12f);
-        pctTV.setTypeface(null, Typeface.BOLD);
-        pctTV.setVisibility(View.GONE);
-        expandSection.addView(pctTV, new LinearLayout.LayoutParams(-2, -2));
+        private final Callbacks callbacks;
 
-        TextView statusTV = new TextView(this);
-        statusTV.setTextColor(0xFFAAAAAA);
-        statusTV.setTextSize(11f);
-        statusTV.setVisibility(View.GONE);
-        LinearLayout.LayoutParams stLp = new LinearLayout.LayoutParams(-1, -2);
-        stLp.topMargin = dp(2);
-        expandSection.addView(statusTV, stLp);
+        private LinearLayout expandedSection;
+        private TextView expandedArrow;
 
-        Button actionBtn = new Button(this);
-        actionBtn.setText(isInstalled ? "Add to Launcher" : "Install");
-        actionBtn.setTextColor(0xFFFFFFFF);
-        actionBtn.setBackgroundColor(isInstalled ? COLOR_ADD : COLOR_ACCENT);
-        actionBtn.setTextSize(13f);
-        LinearLayout.LayoutParams abLp = new LinearLayout.LayoutParams(-1, dp(40));
-        abLp.topMargin = dp(8);
-        expandSection.addView(actionBtn, abLp);
+        public EpicGamesAdapter(
+                Context context,
+                List<EpicGame> games,
+                SharedPreferences prefs,
+                int cardBg,
+                int accent,
+                int add,
+                int cancel,
+                Callbacks callbacks
+        ) {
+            this.context = context;
+            this.games = games;
+            this.prefs = prefs;
 
-        card.addView(expandSection, new LinearLayout.LayoutParams(-1, -2));
+            this.COLOR_CARD_BG = cardBg;
+            this.COLOR_ACCENT = accent;
+            this.COLOR_ADD = add;
+            this.COLOR_CANCEL = cancel;
 
-        // ── Button click logic ─────────────────────────────────────────────────
-        final Runnable[] cancelRef = {null};
-        actionBtn.setOnClickListener(v -> {
-            String lbl = actionBtn.getText().toString();
-            if ("Cancel".equals(lbl)) {
-                if (cancelRef[0] != null) cancelRef[0].run();
-                return;
-            }
-            if ("Add to Launcher".equals(lbl) || "Add Game".equals(lbl)) {
-                String exe = prefs.getString("epic_exe_" + game.appName, null);
-                if (exe != null) pendingLaunchExe(game.title, exe);
-                return;
-            }
-            showInstallConfirm(game, () -> {
-                cancelRef[0] = null;
-                actionBtn.setEnabled(true);
-                actionBtn.setText("Cancel");
-                actionBtn.setBackgroundColor(COLOR_CANCEL);
-                progressBar.setVisibility(View.VISIBLE);
-                statusTV.setVisibility(View.VISIBLE);
-                pctTV.setText("0%");
-                pctTV.setVisibility(View.VISIBLE);
+            this.callbacks = callbacks;
+        }
 
-                String dlKeyL = "epic-" + game.appName + "-list";
-                StoreDownloadQueue.addListener(dlKeyL, new StoreDownloadQueue.DownloadListener() {
-                    @Override public void onProgress(String msg, int pct) {
-                        uiHandler.post(() -> {
-                            statusTV.setText(msg);
-                            progressBar.setProgress(pct);
-                            pctTV.setText(pct + "%");
-                        });
-                    }
-                    @Override public void onComplete(String exePath) {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            progressBar.setProgress(100);
-                            pctTV.setVisibility(View.GONE);
-                            checkmark.setVisibility(View.VISIBLE);
-                            collapsedCheckTV.setVisibility(View.VISIBLE);
-                            statusTV.setText("Installed");
-                            actionBtn.setText("Add to Launcher");
-                            actionBtn.setBackgroundColor(COLOR_ADD);
-                            actionBtn.setEnabled(true);
-                        });
-                    }
-                    @Override public void onError(String msg) {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            pctTV.setVisibility(View.GONE);
-                            statusTV.setText("Error: " + msg);
-                            actionBtn.setText("Install");
-                            actionBtn.setBackgroundColor(COLOR_ACCENT);
-                            actionBtn.setEnabled(true);
-                            Toast.makeText(EpicGamesActivity.this,
-                                    "Error: " + msg, Toast.LENGTH_LONG).show();
-                        });
-                    }
-                    @Override public void onCancelled() {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            progressBar.setProgress(0);
-                            progressBar.setVisibility(View.GONE);
-                            pctTV.setVisibility(View.GONE);
-                            statusTV.setText("");
-                            actionBtn.setText("Install");
-                            actionBtn.setBackgroundColor(COLOR_ACCENT);
-                            actionBtn.setEnabled(true);
-                        });
-                    }
-                });
-                StoreDownloadQueue.startEpic(this, game, dlKeyL);
-                cancelRef[0] = () ->
-                    StoreDownloadQueue.cancel(EpicGamesActivity.this, dlKeyL);
+        @NonNull
+        @Override
+        public GameViewHolder onCreateViewHolder(
+                @NonNull ViewGroup parent,
+                int viewType
+        ) {
+
+            LinearLayout card = new LinearLayout(context);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(dp(10), dp(10), dp(10), dp(10));
+
+            RecyclerView.LayoutParams lp =
+                    new RecyclerView.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                    );
+
+            lp.bottomMargin = dp(8);
+
+            card.setLayoutParams(lp);
+
+            GradientDrawable bg = new GradientDrawable();
+            bg.setColor(COLOR_CARD_BG);
+            bg.setCornerRadius(dp(6));
+
+            card.setBackground(bg);
+
+            card.setFocusable(true);
+
+            return new GameViewHolder(card, bg);
+        }
+
+        @Override
+        public void onBindViewHolder(
+                @NonNull GameViewHolder holder,
+                int position
+        ) {
+
+            EpicGame game = games.get(position);
+
+            boolean isInstalled =
+                    prefs.getString(
+                            "epic_exe_" + game.appName,
+                            null
+                    ) != null;
+
+            holder.card.removeAllViews();
+
+            holder.card.setOnFocusChangeListener((v, hasFocus) -> {
+
+                holder.bg.setColor(
+                        hasFocus
+                                ? 0xFF1B1F2A
+                                : COLOR_CARD_BG
+                );
+
+                holder.bg.setStroke(
+                        hasFocus ? dp(3) : 0,
+                        hasFocus
+                                ? 0xFFFFD700
+                                : 0x00000000
+                );
             });
-        });
 
-        arrowTV.setOnClickListener(v -> {
-            if (expandSection.getVisibility() == View.VISIBLE) {
-                expandSection.setVisibility(View.GONE);
-                arrowTV.setText("▼");
-                expandedSection = null;
-                expandedArrow   = null;
+            // =========================================================
+            // HEADER
+            // =========================================================
+
+            LinearLayout topRow = new LinearLayout(context);
+            topRow.setOrientation(LinearLayout.HORIZONTAL);
+            topRow.setGravity(Gravity.CENTER_VERTICAL);
+
+            ImageView coverIV = new ImageView(context);
+
+            coverIV.setScaleType(ImageView.ScaleType.CENTER_CROP);
+
+            GradientDrawable coverBg = new GradientDrawable();
+            coverBg.setColor(0xFF141820);
+            coverBg.setCornerRadius(dp(4));
+
+            coverIV.setBackground(coverBg);
+
+            LinearLayout.LayoutParams coverLp =
+                    new LinearLayout.LayoutParams(
+                            dp(60),
+                            dp(60)
+                    );
+
+            coverLp.rightMargin = dp(10);
+
+            topRow.addView(coverIV, coverLp);
+
+            callbacks.loadImage(game, coverIV);
+
+            LinearLayout infoCol = new LinearLayout(context);
+            infoCol.setOrientation(LinearLayout.VERTICAL);
+            infoCol.setGravity(Gravity.CENTER_VERTICAL);
+
+            LinearLayout titleRow = new LinearLayout(context);
+            titleRow.setOrientation(LinearLayout.HORIZONTAL);
+            titleRow.setGravity(Gravity.CENTER_VERTICAL);
+
+            TextView titleTV = new TextView(context);
+
+            titleTV.setText(game.title);
+            titleTV.setTextColor(Color.WHITE);
+            titleTV.setTextSize(15f);
+            titleTV.setTypeface(null, Typeface.BOLD);
+            titleTV.setMaxLines(1);
+            titleTV.setEllipsize(TextUtils.TruncateAt.END);
+
+            titleRow.addView(titleTV);
+
+            TextView collapsedCheckTV = new TextView(context);
+
+            collapsedCheckTV.setText(" ✓");
+            collapsedCheckTV.setTextColor(0xFF4CAF50);
+            collapsedCheckTV.setTextSize(14f);
+            collapsedCheckTV.setTypeface(null, Typeface.BOLD);
+
+            collapsedCheckTV.setVisibility(
+                    isInstalled
+                            ? View.VISIBLE
+                            : View.GONE
+            );
+
+            titleRow.addView(collapsedCheckTV);
+
+            titleRow.addView(
+                    new View(context),
+                    new LinearLayout.LayoutParams(
+                            0,
+                            0,
+                            1f
+                    )
+            );
+
+            infoCol.addView(
+                    titleRow,
+                    new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
+            );
+
+            if (!game.developer.isEmpty()) {
+
+                TextView subTV = new TextView(context);
+
+                subTV.setText(game.developer);
+                subTV.setTextColor(0xFF888888);
+                subTV.setTextSize(11f);
+                subTV.setMaxLines(1);
+                subTV.setEllipsize(TextUtils.TruncateAt.END);
+
+                infoCol.addView(subTV);
             }
-        });
 
-        card.setOnClickListener(v -> {
-            if (expandSection.getVisibility() == View.VISIBLE) {
-                openDetailScreen(game);
-            } else {
-                if (expandedSection != null) {
-                    expandedSection.setVisibility(View.GONE);
-                    if (expandedArrow != null) expandedArrow.setText("▼");
+            topRow.addView(
+                    infoCol,
+                    new LinearLayout.LayoutParams(
+                            0,
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            1f
+                    )
+            );
+
+            TextView arrowTV = new TextView(context);
+
+            arrowTV.setText("▼");
+            arrowTV.setTextColor(0xFF888888);
+            arrowTV.setTextSize(14f);
+
+            arrowTV.setPadding(
+                    dp(8),
+                    0,
+                    0,
+                    0
+            );
+
+            topRow.addView(arrowTV);
+
+            holder.card.addView(topRow);
+
+            // =========================================================
+            // EXPAND SECTION
+            // =========================================================
+
+            LinearLayout expandSection = new LinearLayout(context);
+
+            expandSection.setOrientation(LinearLayout.VERTICAL);
+            expandSection.setVisibility(View.GONE);
+
+            if (!game.developer.isEmpty()) {
+
+                TextView metaTV = new TextView(context);
+
+                metaTV.setText(game.developer);
+                metaTV.setTextColor(0xFF888888);
+                metaTV.setTextSize(11f);
+
+                LinearLayout.LayoutParams metaLp =
+                        new LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT
+                        );
+
+                metaLp.topMargin = dp(6);
+
+                expandSection.addView(metaTV, metaLp);
+            }
+
+            TextView checkmark = new TextView(context);
+
+            checkmark.setText("✓ Installed");
+            checkmark.setTextColor(0xFF4CAF50);
+            checkmark.setTextSize(10f);
+
+            checkmark.setVisibility(
+                    isInstalled
+                            ? View.VISIBLE
+                            : View.GONE
+            );
+
+            LinearLayout.LayoutParams ckLp =
+                    new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                    );
+
+            ckLp.topMargin = dp(4);
+
+            expandSection.addView(checkmark, ckLp);
+
+            ProgressBar progressBar = new ProgressBar(
+                    context,
+                    null,
+                    android.R.attr.progressBarStyleHorizontal
+            );
+
+            progressBar.setMax(100);
+            progressBar.setProgress(0);
+            progressBar.setVisibility(View.GONE);
+
+            progressBar.getProgressDrawable().setColorFilter(
+                    COLOR_ACCENT,
+                    PorterDuff.Mode.SRC_IN
+            );
+
+            LinearLayout.LayoutParams pbLp =
+                    new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            dp(6)
+                    );
+
+            pbLp.topMargin = dp(6);
+
+            expandSection.addView(progressBar, pbLp);
+
+            TextView pctTV = new TextView(context);
+
+            pctTV.setTextColor(COLOR_ACCENT);
+            pctTV.setTextSize(12f);
+            pctTV.setTypeface(null, Typeface.BOLD);
+            pctTV.setVisibility(View.GONE);
+
+            expandSection.addView(pctTV);
+
+            TextView statusTV = new TextView(context);
+
+            statusTV.setTextColor(0xFFAAAAAA);
+            statusTV.setTextSize(11f);
+            statusTV.setVisibility(View.GONE);
+
+            LinearLayout.LayoutParams stLp =
+                    new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                    );
+
+            stLp.topMargin = dp(2);
+
+            expandSection.addView(statusTV, stLp);
+
+            Button actionBtn = new Button(context);
+
+            actionBtn.setText(
+                    isInstalled
+                            ? "Add to Launcher"
+                            : "Install"
+            );
+
+            actionBtn.setTextColor(Color.WHITE);
+
+            actionBtn.setBackgroundColor(
+                    isInstalled
+                            ? COLOR_ADD
+                            : COLOR_ACCENT
+            );
+
+            actionBtn.setTextSize(13f);
+
+            LinearLayout.LayoutParams abLp =
+                    new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            dp(40)
+                    );
+
+            abLp.topMargin = dp(8);
+
+            expandSection.addView(actionBtn, abLp);
+
+            holder.card.addView(expandSection);
+
+            // =========================================================
+            // BUTTON LOGIC
+            // =========================================================
+
+            final Runnable[] cancelRef = {null};
+
+            actionBtn.setOnClickListener(v -> {
+
+                String lbl = actionBtn.getText().toString();
+
+                if ("Cancel".equals(lbl)) {
+
+                    if (cancelRef[0] != null) {
+                        cancelRef[0].run();
+                    }
+
+                    return;
                 }
-                expandSection.setVisibility(View.VISIBLE);
-                arrowTV.setText("▲");
-                expandedSection = expandSection;
-                expandedArrow   = arrowTV;
-            }
-        });
 
-        // Restore in-progress UI if a download is already running for this game
-        {
-            StoreDownloadQueue.DownloadEntry _eR = StoreDownloadQueue.findActiveEntry(
-                    "epic-" + game.appName + "-list",
-                    "epic-" + game.appName + "-grid",
-                    "epic_" + game.appName);
-            if (_eR != null) {
-                final String _dlKeyR = _eR.dlKey;
-                expandSection.setVisibility(View.VISIBLE);
-                arrowTV.setText("▲");
-                expandedSection = expandSection;
-                expandedArrow   = arrowTV;
-                actionBtn.setText("Cancel");
-                actionBtn.setBackgroundColor(0xFFCC3333);
-                progressBar.setVisibility(View.VISIBLE);
-                progressBar.setProgress(_eR.percent);
-                pctTV.setText(_eR.percent + "%");
-                pctTV.setVisibility(View.VISIBLE);
-                statusTV.setVisibility(View.VISIBLE);
-                statusTV.setText(_eR.status);
-                StoreDownloadQueue.addListener(_dlKeyR, new StoreDownloadQueue.DownloadListener() {
-                    @Override public void onProgress(String msg, int pct) {
-                        uiHandler.post(() -> {
-                            statusTV.setText(msg);
-                            progressBar.setProgress(pct);
-                            pctTV.setText(pct + "%");
-                        });
+                if ("Add to Launcher".equals(lbl)
+                        || "Add Game".equals(lbl)) {
+
+                    String exe = prefs.getString(
+                            "epic_exe_" + game.appName,
+                            null
+                    );
+
+                    if (exe != null) {
+                        callbacks.pendingLaunchExe(
+                                game.title,
+                                exe
+                        );
                     }
-                    @Override public void onComplete(String exePath) {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            progressBar.setProgress(100);
-                            pctTV.setVisibility(View.GONE);
-                            checkmark.setVisibility(View.VISIBLE);
-                            collapsedCheckTV.setVisibility(View.VISIBLE);
-                            statusTV.setText("Installed");
-                            actionBtn.setText("Add to Launcher");
-                            actionBtn.setBackgroundColor(COLOR_ADD);
-                            actionBtn.setEnabled(true);
-                        });
-                    }
-                    @Override public void onError(String msg) {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            pctTV.setVisibility(View.GONE);
-                            statusTV.setText("Error: " + msg);
-                            actionBtn.setText("Install");
-                            actionBtn.setBackgroundColor(COLOR_ACCENT);
-                            actionBtn.setEnabled(true);
-                        });
-                    }
-                    @Override public void onCancelled() {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            progressBar.setProgress(0);
-                            progressBar.setVisibility(View.GONE);
-                            pctTV.setVisibility(View.GONE);
-                            statusTV.setText("");
-                            actionBtn.setText("Install");
-                            actionBtn.setBackgroundColor(COLOR_ACCENT);
-                            actionBtn.setEnabled(true);
-                        });
-                    }
+
+                    return;
+                }
+
+                callbacks.showInstallConfirm(game, () -> {
+
+                    cancelRef[0] = null;
+
+                    actionBtn.setEnabled(true);
+
+                    actionBtn.setText("Cancel");
+
+                    actionBtn.setBackgroundColor(
+                            COLOR_CANCEL
+                    );
+
+                    progressBar.setVisibility(View.VISIBLE);
+
+                    statusTV.setVisibility(View.VISIBLE);
+
+                    pctTV.setText("0%");
+                    pctTV.setVisibility(View.VISIBLE);
+
+                    String dlKeyL =
+                            "epic-" + game.appName + "-list";
+
+                    StoreDownloadQueue.addListener(
+                            dlKeyL,
+                            new StoreDownloadQueue.DownloadListener() {
+
+                                @Override
+                                public void onProgress(
+                                        String msg,
+                                        int pct
+                                ) {
+
+                                    uiHandler.post(() -> {
+
+                                        statusTV.setText(msg);
+
+                                        progressBar.setProgress(pct);
+
+                                        pctTV.setText(
+                                                pct + "%"
+                                        );
+                                    });
+                                }
+
+                                @Override
+                                public void onComplete(
+                                        String exePath
+                                ) {
+
+                                    uiHandler.post(() -> {
+
+                                        cancelRef[0] = null;
+
+                                        progressBar.setProgress(100);
+
+                                        pctTV.setVisibility(
+                                                View.GONE
+                                        );
+
+                                        checkmark.setVisibility(
+                                                View.VISIBLE
+                                        );
+
+                                        collapsedCheckTV.setVisibility(
+                                                View.VISIBLE
+                                        );
+
+                                        statusTV.setText(
+                                                "Installed"
+                                        );
+
+                                        actionBtn.setText(
+                                                "Add to Launcher"
+                                        );
+
+                                        actionBtn.setBackgroundColor(
+                                                COLOR_ADD
+                                        );
+
+                                        actionBtn.setEnabled(true);
+                                    });
+                                }
+
+                                @Override
+                                public void onError(String msg) {
+
+                                    uiHandler.post(() -> {
+
+                                        cancelRef[0] = null;
+
+                                        pctTV.setVisibility(
+                                                View.GONE
+                                        );
+
+                                        statusTV.setText(
+                                                "Error: " + msg
+                                        );
+
+                                        actionBtn.setText(
+                                                "Install"
+                                        );
+
+                                        actionBtn.setBackgroundColor(
+                                                COLOR_ACCENT
+                                        );
+
+                                        actionBtn.setEnabled(true);
+
+                                        Toast.makeText(
+                                                context,
+                                                "Error: " + msg,
+                                                Toast.LENGTH_LONG
+                                        ).show();
+                                    });
+                                }
+
+                                @Override
+                                public void onCancelled() {
+
+                                    uiHandler.post(() -> {
+
+                                        cancelRef[0] = null;
+
+                                        progressBar.setProgress(0);
+
+                                        progressBar.setVisibility(
+                                                View.GONE
+                                        );
+
+                                        pctTV.setVisibility(
+                                                View.GONE
+                                        );
+
+                                        statusTV.setText("");
+
+                                        actionBtn.setText(
+                                                "Install"
+                                        );
+
+                                        actionBtn.setBackgroundColor(
+                                                COLOR_ACCENT
+                                        );
+
+                                        actionBtn.setEnabled(true);
+                                    });
+                                }
+                            });
+
+                    StoreDownloadQueue.startEpic(
+                            context,
+                            game,
+                            dlKeyL
+                    );
+
+                    cancelRef[0] = () ->
+                            StoreDownloadQueue.cancel(
+                                    context,
+                                    dlKeyL
+                            );
                 });
+            });
+
+            // =========================================================
+            // EXPAND / COLLAPSE
+            // =========================================================
+
+            arrowTV.setOnClickListener(v -> {
+
+                if (expandSection.getVisibility()
+                        == View.VISIBLE) {
+
+                    expandSection.setVisibility(
+                            View.GONE
+                    );
+
+                    arrowTV.setText("▼");
+
+                    expandedSection = null;
+                    expandedArrow = null;
+                }
+            });
+
+            holder.card.setOnClickListener(v -> {
+
+                if (expandSection.getVisibility()
+                        == View.VISIBLE) {
+
+                    callbacks.openDetailScreen(game);
+
+                } else {
+
+                    if (expandedSection != null) {
+
+                        expandedSection.setVisibility(
+                                View.GONE
+                        );
+
+                        if (expandedArrow != null) {
+                            expandedArrow.setText("▼");
+                        }
+                    }
+
+                    expandSection.setVisibility(
+                            View.VISIBLE
+                    );
+
+                    arrowTV.setText("▲");
+
+                    expandedSection = expandSection;
+                    expandedArrow = arrowTV;
+                }
+            });
+
+            // =========================================================
+            // RESTORE ACTIVE DOWNLOAD
+            // =========================================================
+
+            StoreDownloadQueue.DownloadEntry active =
+                    StoreDownloadQueue.findActiveEntry(
+                            "epic-" + game.appName + "-list",
+                            "epic-" + game.appName + "-grid",
+                            "epic_" + game.appName
+                    );
+
+            if (active != null) {
+
+                final String dlKeyR = active.dlKey;
+
+                expandSection.setVisibility(View.VISIBLE);
+
+                arrowTV.setText("▲");
+
+                expandedSection = expandSection;
+                expandedArrow = arrowTV;
+
+                actionBtn.setText("Cancel");
+
+                actionBtn.setBackgroundColor(
+                        COLOR_CANCEL
+                );
+
+                progressBar.setVisibility(View.VISIBLE);
+
+                progressBar.setProgress(active.percent);
+
+                pctTV.setText(active.percent + "%");
+
+                pctTV.setVisibility(View.VISIBLE);
+
+                statusTV.setVisibility(View.VISIBLE);
+
+                statusTV.setText(active.status);
+
                 cancelRef[0] = () ->
-                    StoreDownloadQueue.cancel(EpicGamesActivity.this, _dlKeyR);
+                        StoreDownloadQueue.cancel(
+                                context,
+                                dlKeyR
+                        );
             }
         }
 
-        gameListLayout.addView(card, cardLp);
+        @Override
+        public int getItemCount() {
+            return games.size();
+        }
+
+        static class GameViewHolder
+                extends RecyclerView.ViewHolder {
+
+            LinearLayout card;
+            GradientDrawable bg;
+
+            public GameViewHolder(
+                    @NonNull View itemView,
+                    GradientDrawable bg
+            ) {
+                super(itemView);
+
+                card = (LinearLayout) itemView;
+                this.bg = bg;
+            }
+        }
+
+        private int dp(int v) {
+
+            return (int) TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_DIP,
+                    v,
+                    context.getResources().getDisplayMetrics()
+            );
+        }
     }
 
     // ── Download wrapper ──────────────────────────────────────────────────────
