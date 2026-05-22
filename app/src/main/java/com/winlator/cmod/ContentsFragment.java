@@ -279,7 +279,10 @@ public class ContentsFragment extends Fragment {
     private void reload() {
         new Thread(() -> {
             ArrayList<String> zips = Downloader.getGithubZipLinks(AdrenotoolsManager.REMOTE_PROFILES);
-            getActivity().runOnUiThread(() -> {
+            Activity activity = getActivity();
+            if (activity == null)
+                return;
+            activity.runOnUiThread(() -> {
                 adrenotoolsManager.setRemoteProfiles(zips);
                 loadContentList();
             });
@@ -289,7 +292,10 @@ public class ContentsFragment extends Fragment {
             String json = Downloader.downloadString(ContentsManager.REMOTE_PROFILES);
             if (json == null)
                 return;
-            getActivity().runOnUiThread(() -> {
+            Activity activity = getActivity();
+            if (activity == null)
+                return;
+            activity.runOnUiThread(() -> {
                 manager.setRemoteProfiles(json);
                 loadContentList();
             });
