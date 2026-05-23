@@ -61,6 +61,10 @@ public class Device {
         }
     }
 
+    public static boolean isSupported() {
+        return Device.getRuntime() != null;
+    }
+
     private static Device.HmdModel getPicoDevice() {
         return switch (Build.PRODUCT) {
             case "Pico Neo 3", "Pico_Neo_3", "A7P10" -> HmdModel.PICO_NEO_3_LINK;
