@@ -163,11 +163,7 @@ public class XrActivity extends XServerDisplayActivity {
         if (context != null) {
             isEnabled = PreferenceManager.getDefaultSharedPreferences(context).getBoolean("use_xr", true);
         }
-        return isEnabled && isSupported();
-    }
-
-    public static boolean isSupported() {
-        return Device.getRuntime() != null;
+        return isEnabled && Device.isSupported();
     }
 
     public void callMenuAction(int item) {
