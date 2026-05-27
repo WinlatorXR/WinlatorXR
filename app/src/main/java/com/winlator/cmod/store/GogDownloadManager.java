@@ -365,15 +365,61 @@ public final class GogDownloadManager {
                         boolean ok = false;
                         try (FileOutputStream fos = new FileOutputStream(tmpFile)) {
                             ok = true;
+                            long downloadedBytes = 0;
+                            long totalFileBytes = 0;
+
+                            // estimate total size from compressed chunks
+                            for (DepotFile.ChunkRef chunk : df.chunks) {
+                                totalFileBytes += chunk.compressedSize > 0
+                                        ? chunk.compressedSize
+                                        : 0;
+                            }
+
                             for (DepotFile.ChunkRef chunk : df.chunks) {
                                 if (cancelled.get()) return null;
+
                                 String chunkUrl = fCdnBase + "/" + buildCdnPath(chunk.hash);
                                 byte[] chunkRaw = fetchBytes(chunkUrl, null);
-                                if (chunkRaw == null) { ok = false; break; }
+
+                                if (chunkRaw == null) {
+                                    ok = false;
+                                    break;
+                                }
+
+                                downloadedBytes += chunkRaw.length;
                                 fileBytes += chunkRaw.length;
+
                                 byte[] inflated = inflateZlib(chunkRaw);
                                 if (inflated == null) inflated = chunkRaw;
+
                                 fos.write(inflated);
+
+                                double doneMb = downloadedBytes / (1024.0 * 1024.0);
+                                double totalMb = totalFileBytes / (1024.0 * 1024.0);
+
+                                int overallDone = doneCount.get();
+
+                                int pct = 15 + (int)(
+                                        ((overallDone + (downloadedBytes / (double)Math.max(totalFileBytes, 1)))
+                                                / (double) total) * 80
+                                );
+
+                                String speedStr = formatSpeed(speedBps.get());
+
+                                String name = df.relativePath.contains("/")
+                                        ? df.relativePath.substring(df.relativePath.lastIndexOf('/') + 1)
+                                        : df.relativePath;
+
+                                cb.onProgress(
+                                        String.format(
+                                                "Downloading: %s  %.1f / %.1f MB - %s",
+                                                name,
+                                                doneMb,
+                                                totalMb,
+                                                speedStr.isEmpty() ? "" : "  " + speedStr
+                                        ),
+                                        pct
+                                );
                             }
                         } catch (Exception e) {
                             ok = false;
@@ -844,7 +890,14 @@ public final class GogDownloadManager {
                     JSONObject chunk = chunks.getJSONObject(c);
                     String md5 = chunk.optString("compressedMd5");
                     if (md5 == null || md5.isEmpty()) md5 = chunk.optString("md5");
-                    if (md5 != null && !md5.isEmpty()) df.chunks.add(new DepotFile.ChunkRef(md5));
+                    if (md5 != null && !md5.isEmpty()) {
+                        long compressedSize = chunk.optLong("compressedSize", 0);
+
+                        if (compressedSize == 0)
+                            compressedSize = chunk.optLong("compressed_size", 0);
+
+                        df.chunks.add(new DepotFile.ChunkRef(md5, compressedSize));
+                    }
                 }
                 if (!df.chunks.isEmpty()) out.add(df);
             }
@@ -1104,7 +1157,12 @@ public final class GogDownloadManager {
 
         static class ChunkRef {
             final String hash;
-            ChunkRef(String hash) { this.hash = hash; }
+            final long compressedSize;
+
+            ChunkRef(String hash, long compressedSize) {
+                this.hash = hash;
+                this.compressedSize = compressedSize;
+            }
         }
     }
 
