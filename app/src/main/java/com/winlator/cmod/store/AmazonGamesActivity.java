@@ -1,17 +1,22 @@
 package com.winlator.cmod.store;
 
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,7 +38,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
+
 import android.content.Intent;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.winlator.cmod.NavActivity;
 import com.winlator.cmod.R;
@@ -319,7 +330,28 @@ public class AmazonGamesActivity extends NavActivity {
                 gameListLayout.addView(emptyTV, emLp);
             } else {
                 gameListLayout.setPadding(dp(8), dp(8), dp(8), dp(8));
-                for (AmazonGame g : result) addGameCard(g);
+
+                RecyclerView recyclerView = new RecyclerView(this);
+                recyclerView.setLayoutManager(new LinearLayoutManager(this));
+                recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+                recyclerView.setPadding(0, 0, 0, dp(12));
+                recyclerView.setClipToPadding(false);
+
+                LinearLayout.LayoutParams rvLp =
+                        new LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
+                        );
+                recyclerView.setLayoutParams(rvLp);
+                recyclerView.setAdapter(
+                        new AmazonGamesAdapter(
+                                this,
+                                result,
+                                prefs,
+                                uiHandler
+                        )
+                );
+                gameListLayout.addView(recyclerView);
             }
             scrollView.setVisibility(View.VISIBLE);
         });
@@ -349,329 +381,746 @@ public class AmazonGamesActivity extends NavActivity {
 
     // ── LIST view: collapsible game cards ─────────────────────────────────────
 
-    private void addGameCard(AmazonGame game) {
-        boolean isInstalled = prefs.getString("amazon_exe_" + game.productId, null) != null;
+    public class AmazonGamesAdapter
+            extends RecyclerView.Adapter<AmazonGamesAdapter.GameViewHolder> {
 
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(10), dp(10), dp(10), dp(10));
-        GradientDrawable cardBg = new GradientDrawable();
-        cardBg.setColor(COLOR_CARD_BG);
-        cardBg.setCornerRadius(dp(6));
-        card.setBackground(cardBg);
-        card.setFocusable(true);
-        card.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
-        card.setOnFocusChangeListener((v, hasFocus) -> {
-            cardBg.setColor(hasFocus ? 0xFF2B251A : COLOR_CARD_BG);
-            cardBg.setStroke(hasFocus ? dp(3) : 0, hasFocus ? 0xFFFFD700 : 0x00000000);
-        });
-        LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(-1, -2);
-        cardLp.bottomMargin = dp(8);
+        private final AmazonGamesActivity activity;
+        private final List<AmazonGame> games;
+        private final SharedPreferences prefs;
+        private final Handler uiHandler;
 
-        // ── Collapsed header row ───────────────────────────────────────────────
-        LinearLayout topRow = new LinearLayout(this);
-        topRow.setOrientation(LinearLayout.HORIZONTAL);
-        topRow.setGravity(Gravity.CENTER_VERTICAL);
+        private int expandedPosition = RecyclerView.NO_POSITION;
 
-        ImageView coverIV = new ImageView(this);
-        coverIV.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        GradientDrawable coverBg = new GradientDrawable();
-        coverBg.setColor(0xFF221A10);
-        coverBg.setCornerRadius(dp(4));
-        coverIV.setBackground(coverBg);
-        LinearLayout.LayoutParams coverLp = new LinearLayout.LayoutParams(dp(60), dp(60));
-        coverLp.rightMargin = dp(10);
-        topRow.addView(coverIV, coverLp);
-        loadImage(game, coverIV);
+        public AmazonGamesAdapter(
+                AmazonGamesActivity activity,
+                List<AmazonGame> games,
+                SharedPreferences prefs,
+                Handler uiHandler
+        ) {
+            this.activity = activity;
+            this.games = games;
+            this.prefs = prefs;
+            this.uiHandler = uiHandler;
 
-        LinearLayout titleRow = new LinearLayout(this);
-        titleRow.setOrientation(LinearLayout.HORIZONTAL);
-        titleRow.setGravity(Gravity.CENTER_VERTICAL);
+            setHasStableIds(true);
+        }
 
-        TextView titleTV = new TextView(this);
-        titleTV.setText(game.title);
-        titleTV.setTextColor(0xFFFFFFFF);
-        titleTV.setTextSize(15f);
-        titleTV.setTypeface(null, Typeface.BOLD);
-        titleTV.setMaxLines(1);
-        titleTV.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        titleRow.addView(titleTV, new LinearLayout.LayoutParams(-2, -2));
+        @Override
+        public long getItemId(int position) {
+            return games.get(position).productId.hashCode();
+        }
 
-        TextView collapsedCheckTV = new TextView(this);
-        collapsedCheckTV.setText(" ✓");
-        collapsedCheckTV.setTextColor(0xFF4CAF50);
-        collapsedCheckTV.setTextSize(14f);
-        collapsedCheckTV.setTypeface(null, Typeface.BOLD);
-        collapsedCheckTV.setVisibility(isInstalled ? View.VISIBLE : View.GONE);
-        titleRow.addView(collapsedCheckTV, new LinearLayout.LayoutParams(-2, -2));
+        @NonNull
+        @Override
+        public GameViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
 
-        titleRow.addView(new View(this), new LinearLayout.LayoutParams(0, 0, 1f));
+            Context ctx = parent.getContext();
 
-        // ── Subtitle (developer · publisher) shown while collapsed ─────────────
-        LinearLayout infoCol = new LinearLayout(this);
-        infoCol.setOrientation(LinearLayout.VERTICAL);
-        infoCol.setGravity(Gravity.CENTER_VERTICAL);
-        infoCol.addView(titleRow, new LinearLayout.LayoutParams(-1, -2));
-        if (!game.developer.isEmpty() || !game.publisher.isEmpty()) {
-            String sub = game.developer.isEmpty() ? game.publisher
-                       : game.publisher.isEmpty()  ? game.developer
-                       : game.developer + "  ·  " + game.publisher;
-            TextView subTV = new TextView(this);
-            subTV.setText(sub);
+            LinearLayout card = new LinearLayout(ctx);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(dp(ctx, 10), dp(ctx, 10), dp(ctx, 10), dp(ctx, 10));
+
+            GradientDrawable cardBg = new GradientDrawable();
+            cardBg.setColor(activity.COLOR_CARD_BG);
+            cardBg.setCornerRadius(dp(ctx, 6));
+
+            card.setBackground(cardBg);
+            card.setFocusable(true);
+            card.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
+
+            RecyclerView.LayoutParams cardLp =
+                    new RecyclerView.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                    );
+
+            cardLp.bottomMargin = dp(ctx, 8);
+            card.setLayoutParams(cardLp);
+
+            // =========================================================
+            // HEADER
+            // =========================================================
+
+            LinearLayout topRow = new LinearLayout(ctx);
+            topRow.setOrientation(LinearLayout.HORIZONTAL);
+            topRow.setGravity(Gravity.CENTER_VERTICAL);
+
+            // cover
+            ImageView coverIV = new ImageView(ctx);
+            coverIV.setScaleType(ImageView.ScaleType.CENTER_CROP);
+
+            GradientDrawable coverBg = new GradientDrawable();
+            coverBg.setColor(0xFF221A10);
+            coverBg.setCornerRadius(dp(ctx, 4));
+
+            coverIV.setBackground(coverBg);
+
+            LinearLayout.LayoutParams coverLp =
+                    new LinearLayout.LayoutParams(dp(ctx, 60), dp(ctx, 60));
+
+            coverLp.rightMargin = dp(ctx, 10);
+
+            topRow.addView(coverIV, coverLp);
+
+            // info column
+            LinearLayout infoCol = new LinearLayout(ctx);
+            infoCol.setOrientation(LinearLayout.VERTICAL);
+            infoCol.setGravity(Gravity.CENTER_VERTICAL);
+
+            // title row
+            LinearLayout titleRow = new LinearLayout(ctx);
+            titleRow.setOrientation(LinearLayout.HORIZONTAL);
+            titleRow.setGravity(Gravity.CENTER_VERTICAL);
+
+            TextView titleTV = new TextView(ctx);
+            titleTV.setTextColor(Color.WHITE);
+            titleTV.setTextSize(15f);
+            titleTV.setTypeface(null, Typeface.BOLD);
+            titleTV.setMaxLines(1);
+            titleTV.setEllipsize(TextUtils.TruncateAt.END);
+
+            titleRow.addView(titleTV);
+
+            TextView collapsedCheckTV = new TextView(ctx);
+            collapsedCheckTV.setText(" ✓");
+            collapsedCheckTV.setTextColor(0xFF4CAF50);
+            collapsedCheckTV.setTextSize(14f);
+            collapsedCheckTV.setTypeface(null, Typeface.BOLD);
+
+            titleRow.addView(collapsedCheckTV);
+
+            titleRow.addView(
+                    new View(ctx),
+                    new LinearLayout.LayoutParams(0, 0, 1f)
+            );
+
+            infoCol.addView(
+                    titleRow,
+                    new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
+            );
+
+            TextView subTV = new TextView(ctx);
             subTV.setTextColor(0xFF888888);
             subTV.setTextSize(11f);
             subTV.setMaxLines(1);
-            subTV.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            infoCol.addView(subTV, new LinearLayout.LayoutParams(-1, -2));
-        }
-        topRow.addView(infoCol, new LinearLayout.LayoutParams(0, -2, 1f));
+            subTV.setEllipsize(TextUtils.TruncateAt.END);
 
-        TextView arrowTV = new TextView(this);
-        arrowTV.setText("▼");
-        arrowTV.setTextColor(0xFF888888);
-        arrowTV.setTextSize(14f);
-        arrowTV.setPadding(dp(8), 0, 0, 0);
-        topRow.addView(arrowTV, new LinearLayout.LayoutParams(-2, -2));
+            infoCol.addView(subTV);
 
-        card.addView(topRow, new LinearLayout.LayoutParams(-1, -2));
+            topRow.addView(
+                    infoCol,
+                    new LinearLayout.LayoutParams(
+                            0,
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            1f
+                    )
+            );
 
-        // ── Expandable section ─────────────────────────────────────────────────
-        LinearLayout expandSection = new LinearLayout(this);
-        expandSection.setOrientation(LinearLayout.VERTICAL);
-        expandSection.setVisibility(View.GONE);
+            // arrow
+            TextView arrowTV = new TextView(ctx);
+            arrowTV.setText("▼");
+            arrowTV.setTextColor(0xFF888888);
+            arrowTV.setTextSize(14f);
+            arrowTV.setPadding(dp(ctx, 8), 0, 0, 0);
 
-        if (!game.developer.isEmpty() || !game.publisher.isEmpty()) {
-            String meta = game.developer.isEmpty() ? game.publisher
-                        : game.publisher.isEmpty() ? game.developer
-                        : game.developer + " · " + game.publisher;
-            TextView metaTV = new TextView(this);
-            metaTV.setText(meta);
+            topRow.addView(arrowTV);
+
+            card.addView(topRow);
+
+            // =========================================================
+            // EXPAND SECTION
+            // =========================================================
+
+            LinearLayout expandSection = new LinearLayout(ctx);
+            expandSection.setOrientation(LinearLayout.VERTICAL);
+            expandSection.setVisibility(View.GONE);
+
+            TextView metaTV = new TextView(ctx);
             metaTV.setTextColor(0xFF888888);
             metaTV.setTextSize(11f);
-            LinearLayout.LayoutParams metaLp = new LinearLayout.LayoutParams(-1, -2);
-            metaLp.topMargin = dp(6);
+
+            LinearLayout.LayoutParams metaLp =
+                    new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                    );
+
+            metaLp.topMargin = dp(ctx, 6);
+
             expandSection.addView(metaTV, metaLp);
+
+            TextView checkmark = new TextView(ctx);
+            checkmark.setTextSize(10f);
+
+            LinearLayout.LayoutParams ckLp =
+                    new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                    );
+
+            ckLp.topMargin = dp(ctx, 4);
+
+            expandSection.addView(checkmark, ckLp);
+
+            ProgressBar progressBar =
+                    new ProgressBar(
+                            ctx,
+                            null,
+                            android.R.attr.progressBarStyleHorizontal
+                    );
+
+            progressBar.setMax(100);
+            progressBar.setVisibility(View.GONE);
+
+            progressBar.getProgressDrawable().setColorFilter(
+                    activity.COLOR_ACCENT,
+                    PorterDuff.Mode.SRC_IN
+            );
+
+            LinearLayout.LayoutParams pbLp =
+                    new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            dp(ctx, 6)
+                    );
+
+            pbLp.topMargin = dp(ctx, 6);
+
+            expandSection.addView(progressBar, pbLp);
+
+            TextView pctTV = new TextView(ctx);
+            pctTV.setTextColor(activity.COLOR_ACCENT);
+            pctTV.setTextSize(12f);
+            pctTV.setTypeface(null, Typeface.BOLD);
+            pctTV.setVisibility(View.GONE);
+
+            expandSection.addView(pctTV);
+
+            TextView statusTV = new TextView(ctx);
+            statusTV.setTextColor(0xFFAAAAAA);
+            statusTV.setTextSize(11f);
+            statusTV.setVisibility(View.GONE);
+
+            LinearLayout.LayoutParams stLp =
+                    new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                    );
+
+            stLp.topMargin = dp(ctx, 2);
+
+            expandSection.addView(statusTV, stLp);
+
+            Button actionBtn = new Button(ctx);
+            actionBtn.setTextColor(Color.WHITE);
+            actionBtn.setTextSize(13f);
+
+            LinearLayout.LayoutParams abLp =
+                    new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            dp(ctx, 40)
+                    );
+
+            abLp.topMargin = dp(ctx, 8);
+
+            expandSection.addView(actionBtn, abLp);
+
+            card.addView(expandSection);
+
+            return new GameViewHolder(
+                    card,
+                    cardBg,
+                    coverIV,
+                    titleTV,
+                    subTV,
+                    collapsedCheckTV,
+                    arrowTV,
+                    expandSection,
+                    metaTV,
+                    checkmark,
+                    progressBar,
+                    pctTV,
+                    statusTV,
+                    actionBtn
+            );
         }
 
-        boolean updateAvailable = isInstalled
-                && game.versionId != null && game.versionId.endsWith("_UPDATE_AVAILABLE");
-        TextView checkmark = new TextView(this);
-        checkmark.setText(updateAvailable ? "✓ Installed — Update Available" : "✓ Installed");
-        checkmark.setTextColor(updateAvailable ? 0xFFFFAA00 : 0xFF4CAF50);
-        checkmark.setTextSize(10f);
-        checkmark.setVisibility(isInstalled ? View.VISIBLE : View.GONE);
-        LinearLayout.LayoutParams ckLp = new LinearLayout.LayoutParams(-1, -2);
-        ckLp.topMargin = dp(4);
-        expandSection.addView(checkmark, ckLp);
+        @Override
+        public void onBindViewHolder(@NonNull GameViewHolder h, int position) {
 
-        ProgressBar progressBar = new ProgressBar(this, null,
-                android.R.attr.progressBarStyleHorizontal);
-        progressBar.setMax(100);
-        progressBar.setProgress(0);
-        progressBar.setVisibility(View.GONE);
-        progressBar.getProgressDrawable().setColorFilter(COLOR_ACCENT,
-                android.graphics.PorterDuff.Mode.SRC_IN);
-        LinearLayout.LayoutParams pbLp = new LinearLayout.LayoutParams(-1, dp(6));
-        pbLp.topMargin = dp(6);
-        expandSection.addView(progressBar, pbLp);
+            AmazonGame game = games.get(position);
 
-        TextView pctTV = new TextView(this);
-        pctTV.setTextColor(COLOR_ACCENT);
-        pctTV.setTextSize(12f);
-        pctTV.setTypeface(null, Typeface.BOLD);
-        pctTV.setVisibility(View.GONE);
-        expandSection.addView(pctTV, new LinearLayout.LayoutParams(-2, -2));
+            boolean isInstalled =
+                    prefs.getString("amazon_exe_" + game.productId, null) != null;
 
-        TextView statusTV = new TextView(this);
-        statusTV.setTextColor(0xFFAAAAAA);
-        statusTV.setTextSize(11f);
-        statusTV.setVisibility(View.GONE);
-        LinearLayout.LayoutParams stLp = new LinearLayout.LayoutParams(-1, -2);
-        stLp.topMargin = dp(2);
-        expandSection.addView(statusTV, stLp);
+            boolean expanded = position == expandedPosition;
 
-        Button actionBtn = new Button(this);
-        actionBtn.setText(isInstalled ? "Add to Launcher" : "Install");
-        actionBtn.setTextColor(0xFFFFFFFF);
-        actionBtn.setBackgroundColor(isInstalled ? COLOR_ADD : COLOR_ACCENT);
-        actionBtn.setTextSize(13f);
-        LinearLayout.LayoutParams abLp = new LinearLayout.LayoutParams(-1, dp(40));
-        abLp.topMargin = dp(8);
-        expandSection.addView(actionBtn, abLp);
+            // =========================================================
+            // BASIC
+            // =========================================================
 
-        card.addView(expandSection, new LinearLayout.LayoutParams(-1, -2));
+            h.titleTV.setText(game.title);
 
-        // ── Button click logic ─────────────────────────────────────────────────
-        final Runnable[] cancelRef = {null};
-        actionBtn.setOnClickListener(v -> {
-            String lbl = actionBtn.getText().toString();
+            activity.loadImage(game, h.coverIV);
 
-            if ("Cancel".equals(lbl)) {
-                if (cancelRef[0] != null) cancelRef[0].run();
-                return;
-            }
-            if ("Add to Launcher".equals(lbl) || "Add Game".equals(lbl)) {
-                String exe = prefs.getString("amazon_exe_" + game.productId, null);
-                if (exe != null) pendingLaunchExe(game.title, exe);
-                return;
+            String subtitle = "";
+
+            if (!game.developer.isEmpty() && !game.publisher.isEmpty()) {
+                subtitle = game.developer + "  ·  " + game.publisher;
+            } else if (!game.developer.isEmpty()) {
+                subtitle = game.developer;
+            } else if (!game.publisher.isEmpty()) {
+                subtitle = game.publisher;
             }
 
-            showInstallConfirm(game, () -> {
-                cancelRef[0] = null;
-                actionBtn.setEnabled(true);
-                actionBtn.setText("Cancel");
-                actionBtn.setBackgroundColor(COLOR_CANCEL);
-                progressBar.setVisibility(View.VISIBLE);
-                statusTV.setVisibility(View.VISIBLE);
-                pctTV.setText("0%");
-                pctTV.setVisibility(View.VISIBLE);
+            h.subTV.setText(subtitle);
+            h.subTV.setVisibility(
+                    subtitle.isEmpty() ? View.GONE : View.VISIBLE
+            );
 
-                cancelRef[0] = startAmazonDownload(game, new DownloadCallback() {
-                    @Override public void onProgress(String msg, int pct) {
-                        uiHandler.post(() -> {
-                            statusTV.setText(msg);
-                            progressBar.setProgress(pct);
-                            pctTV.setText(pct + "%");
-                        });
+            h.metaTV.setText(subtitle);
+            h.metaTV.setVisibility(
+                    subtitle.isEmpty() ? View.GONE : View.VISIBLE
+            );
+
+            // =========================================================
+            // INSTALLED
+            // =========================================================
+
+            boolean updateAvailable =
+                    isInstalled
+                            && game.versionId != null
+                            && game.versionId.endsWith("_UPDATE_AVAILABLE");
+
+            h.collapsedCheckTV.setVisibility(
+                    isInstalled ? View.VISIBLE : View.GONE
+            );
+
+            h.checkmark.setVisibility(
+                    isInstalled ? View.VISIBLE : View.GONE
+            );
+
+            h.checkmark.setText(
+                    updateAvailable
+                            ? "✓ Installed — Update Available"
+                            : "✓ Installed"
+            );
+
+            h.checkmark.setTextColor(
+                    updateAvailable
+                            ? 0xFFFFAA00
+                            : 0xFF4CAF50
+            );
+
+            // =========================================================
+            // EXPANSION
+            // =========================================================
+
+            h.expandSection.setVisibility(
+                    expanded ? View.VISIBLE : View.GONE
+            );
+
+            h.arrowTV.setText(expanded ? "▲" : "▼");
+
+            // =========================================================
+            // BUTTON
+            // =========================================================
+
+            h.actionBtn.setText(
+                    isInstalled ? "Add to Launcher" : "Install"
+            );
+
+            h.actionBtn.setBackgroundColor(
+                    isInstalled
+                            ? activity.COLOR_ADD
+                            : activity.COLOR_ACCENT
+            );
+
+            // =========================================================
+            // FOCUS
+            // =========================================================
+
+            h.itemView.setOnFocusChangeListener((v, hasFocus) -> {
+                h.cardBg.setColor(
+                        hasFocus
+                                ? 0xFF2B251A
+                                : activity.COLOR_CARD_BG
+                );
+
+                h.cardBg.setStroke(
+                        hasFocus ? dp(v.getContext(), 3) : 0,
+                        hasFocus ? 0xFFFFD700 : 0x00000000
+                );
+            });
+
+            // =========================================================
+            // CLICK
+            // =========================================================
+
+            h.itemView.setOnClickListener(v -> {
+
+                if (expanded) {
+                    activity.openDetailScreen(game);
+                    return;
+                }
+
+                int oldPos = expandedPosition;
+                expandedPosition = h.getBindingAdapterPosition();
+
+                if (oldPos != RecyclerView.NO_POSITION) {
+                    notifyItemChanged(oldPos);
+                }
+
+                notifyItemChanged(expandedPosition);
+            });
+
+            h.arrowTV.setOnClickListener(v -> {
+                if (expanded) {
+                    int old = expandedPosition;
+                    expandedPosition = RecyclerView.NO_POSITION;
+                    notifyItemChanged(old);
+                }
+            });
+
+            // =========================================================
+            // ACTION BUTTON
+            // =========================================================
+
+            final Runnable[] cancelRef = {null};
+
+            h.actionBtn.setOnClickListener(v -> {
+
+                String lbl = h.actionBtn.getText().toString();
+
+                if ("Cancel".equals(lbl)) {
+                    if (cancelRef[0] != null) {
+                        cancelRef[0].run();
                     }
-                    @Override public void onComplete(String exePath) {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            progressBar.setProgress(100);
-                            pctTV.setVisibility(View.GONE);
-                            checkmark.setVisibility(View.VISIBLE);
-                            collapsedCheckTV.setVisibility(View.VISIBLE);
-                            statusTV.setText("Installed");
-                            actionBtn.setText("Add to Launcher");
-                            actionBtn.setBackgroundColor(COLOR_ADD);
-                            actionBtn.setEnabled(true);
-                        });
+                    return;
+                }
+
+                if ("Add to Launcher".equals(lbl)
+                        || "Add Game".equals(lbl)) {
+
+                    String exe = prefs.getString(
+                            "amazon_exe_" + game.productId,
+                            null
+                    );
+
+                    if (exe != null) {
+                        activity.pendingLaunchExe(game.title, exe);
                     }
-                    @Override public void onError(String msg) {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            pctTV.setVisibility(View.GONE);
-                            statusTV.setText("Error: " + msg);
-                            actionBtn.setText("Install");
-                            actionBtn.setBackgroundColor(COLOR_ACCENT);
-                            actionBtn.setEnabled(true);
-                            Toast.makeText(AmazonGamesActivity.this, "Error: " + msg,
-                                    Toast.LENGTH_LONG).show();
-                        });
-                    }
-                    @Override public void onCancelled() {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            progressBar.setProgress(0);
-                            progressBar.setVisibility(View.GONE);
-                            pctTV.setVisibility(View.GONE);
-                            statusTV.setText("");
-                            actionBtn.setText("Install");
-                            actionBtn.setBackgroundColor(COLOR_ACCENT);
-                            actionBtn.setEnabled(true);
-                        });
-                    }
-                    @Override public void onSelectExe(List<String> candidates,
-                                                      java.util.function.Consumer<String> onSelected) {
-                        showExePicker(candidates, onSelected);
-                    }
+
+                    return;
+                }
+
+                activity.showInstallConfirm(game, () -> {
+
+                    h.actionBtn.setEnabled(true);
+                    h.actionBtn.setText("Cancel");
+                    h.actionBtn.setBackgroundColor(activity.COLOR_CANCEL);
+
+                    h.progressBar.setVisibility(View.VISIBLE);
+                    h.statusTV.setVisibility(View.VISIBLE);
+
+                    h.pctTV.setVisibility(View.VISIBLE);
+                    h.pctTV.setText("0%");
+
+                    cancelRef[0] =
+                            activity.startAmazonDownload(
+                                    game,
+                                    new DownloadCallback() {
+
+                                        @Override
+                                        public void onProgress(
+                                                String msg,
+                                                int pct
+                                        ) {
+                                            uiHandler.post(() -> {
+                                                h.statusTV.setText(msg);
+                                                h.progressBar.setProgress(pct);
+                                                h.pctTV.setText(pct + "%");
+                                            });
+                                        }
+
+                                        @Override
+                                        public void onComplete(
+                                                String exePath
+                                        ) {
+                                            uiHandler.post(() -> {
+
+                                                h.progressBar.setProgress(100);
+
+                                                h.pctTV.setVisibility(View.GONE);
+
+                                                h.checkmark.setVisibility(
+                                                        View.VISIBLE
+                                                );
+
+                                                h.collapsedCheckTV.setVisibility(
+                                                        View.VISIBLE
+                                                );
+
+                                                h.statusTV.setText("Installed");
+
+                                                h.actionBtn.setText(
+                                                        "Add to Launcher"
+                                                );
+
+                                                h.actionBtn.setBackgroundColor(
+                                                        activity.COLOR_ADD
+                                                );
+                                            });
+                                        }
+
+                                        @Override
+                                        public void onError(String msg) {
+                                            uiHandler.post(() -> {
+
+                                                h.pctTV.setVisibility(View.GONE);
+
+                                                h.statusTV.setText(
+                                                        "Error: " + msg
+                                                );
+
+                                                h.actionBtn.setText("Install");
+
+                                                h.actionBtn.setBackgroundColor(
+                                                        activity.COLOR_ACCENT
+                                                );
+                                            });
+                                        }
+
+                                        @Override
+                                        public void onCancelled() {
+                                            uiHandler.post(() -> {
+
+                                                h.progressBar.setProgress(0);
+
+                                                h.progressBar.setVisibility(
+                                                        View.GONE
+                                                );
+
+                                                h.pctTV.setVisibility(View.GONE);
+
+                                                h.statusTV.setText("");
+
+                                                h.actionBtn.setText("Install");
+
+                                                h.actionBtn.setBackgroundColor(
+                                                        activity.COLOR_ACCENT
+                                                );
+                                            });
+                                        }
+
+                                        @Override
+                                        public void onSelectExe(
+                                                List<String> candidates,
+                                                Consumer<String> onSelected
+                                        ) {
+                                            activity.showExePicker(
+                                                    candidates,
+                                                    onSelected
+                                            );
+                                        }
+                                    }
+                            );
                 });
             });
-        });
 
-        arrowTV.setOnClickListener(v -> {
-            if (expandSection.getVisibility() == View.VISIBLE) {
-                expandSection.setVisibility(View.GONE);
-                arrowTV.setText("▼");
-                expandedSection = null;
-                expandedArrow   = null;
-            }
-        });
+            // =========================================================
+            // RESTORE ACTIVE DOWNLOAD
+            // =========================================================
 
-        card.setOnClickListener(v -> {
-            if (expandSection.getVisibility() == View.VISIBLE) {
-                openDetailScreen(game);
-            } else {
-                if (expandedSection != null) {
-                    expandedSection.setVisibility(View.GONE);
-                    if (expandedArrow != null) expandedArrow.setText("▼");
-                }
-                expandSection.setVisibility(View.VISIBLE);
-                arrowTV.setText("▲");
-                expandedSection = expandSection;
-                expandedArrow   = arrowTV;
-            }
-        });
+            StoreDownloadQueue.DownloadEntry entry =
+                    StoreDownloadQueue.findActiveEntry(
+                            "amz-" + game.productId + "-list",
+                            "amz-" + game.productId + "-grid",
+                            "amazon_" + game.productId
+                    );
 
-        // Restore in-progress UI if a download is already running for this game
-        {
-            StoreDownloadQueue.DownloadEntry _eR = StoreDownloadQueue.findActiveEntry(
-                    "amz-" + game.productId + "-list",
-                    "amz-" + game.productId + "-grid",
-                    "amazon_" + game.productId);
-            if (_eR != null) {
-                final String _dlKeyR = _eR.dlKey;
-                expandSection.setVisibility(View.VISIBLE);
-                arrowTV.setText("▲");
-                expandedSection = expandSection;
-                expandedArrow   = arrowTV;
-                actionBtn.setText("Cancel");
-                actionBtn.setBackgroundColor(0xFFCC3333);
-                progressBar.setVisibility(View.VISIBLE);
-                progressBar.setProgress(_eR.percent);
-                pctTV.setText(_eR.percent + "%");
-                pctTV.setVisibility(View.VISIBLE);
-                statusTV.setVisibility(View.VISIBLE);
-                statusTV.setText(_eR.status);
-                StoreDownloadQueue.addListener(_dlKeyR, new StoreDownloadQueue.DownloadListener() {
-                    @Override public void onProgress(String msg, int pct) {
-                        uiHandler.post(() -> {
-                            statusTV.setText(msg);
-                            progressBar.setProgress(pct);
-                            pctTV.setText(pct + "%");
-                        });
-                    }
-                    @Override public void onComplete(String exePath) {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            progressBar.setProgress(100);
-                            pctTV.setVisibility(View.GONE);
-                            checkmark.setVisibility(View.VISIBLE);
-                            collapsedCheckTV.setVisibility(View.VISIBLE);
-                            statusTV.setText("Installed");
-                            actionBtn.setText("Add to Launcher");
-                            actionBtn.setBackgroundColor(COLOR_ADD);
-                            actionBtn.setEnabled(true);
-                        });
-                    }
-                    @Override public void onError(String msg) {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            pctTV.setVisibility(View.GONE);
-                            statusTV.setText("Error: " + msg);
-                            actionBtn.setText("Install");
-                            actionBtn.setBackgroundColor(COLOR_ACCENT);
-                            actionBtn.setEnabled(true);
-                        });
-                    }
-                    @Override public void onCancelled() {
-                        uiHandler.post(() -> {
-                            cancelRef[0] = null;
-                            progressBar.setProgress(0);
-                            progressBar.setVisibility(View.GONE);
-                            pctTV.setVisibility(View.GONE);
-                            statusTV.setText("");
-                            actionBtn.setText("Install");
-                            actionBtn.setBackgroundColor(COLOR_ACCENT);
-                            actionBtn.setEnabled(true);
-                        });
-                    }
-                });
-                cancelRef[0] = () -> StoreDownloadQueue.cancel(AmazonGamesActivity.this, _dlKeyR);
+            if (entry != null) {
+
+                expandedPosition = position;
+
+                h.expandSection.setVisibility(View.VISIBLE);
+                h.arrowTV.setText("▲");
+
+                h.actionBtn.setText("Cancel");
+                h.actionBtn.setBackgroundColor(0xFFCC3333);
+
+                h.progressBar.setVisibility(View.VISIBLE);
+                h.progressBar.setProgress(entry.percent);
+
+                h.pctTV.setVisibility(View.VISIBLE);
+                h.pctTV.setText(entry.percent + "%");
+
+                h.statusTV.setVisibility(View.VISIBLE);
+                h.statusTV.setText(entry.status);
+
+                String dlKey = entry.dlKey;
+
+                StoreDownloadQueue.addListener(
+                        dlKey,
+                        new StoreDownloadQueue.DownloadListener() {
+
+                            @Override
+                            public void onProgress(String msg, int pct) {
+                                uiHandler.post(() -> {
+                                    h.statusTV.setText(msg);
+                                    h.progressBar.setProgress(pct);
+                                    h.pctTV.setText(pct + "%");
+                                });
+                            }
+
+                            @Override
+                            public void onComplete(String exePath) {
+                                uiHandler.post(() -> {
+
+                                    h.progressBar.setProgress(100);
+
+                                    h.pctTV.setVisibility(View.GONE);
+
+                                    h.checkmark.setVisibility(View.VISIBLE);
+
+                                    h.collapsedCheckTV.setVisibility(
+                                            View.VISIBLE
+                                    );
+
+                                    h.statusTV.setText("Installed");
+
+                                    h.actionBtn.setText("Add to Launcher");
+
+                                    h.actionBtn.setBackgroundColor(
+                                            activity.COLOR_ADD
+                                    );
+                                });
+                            }
+
+                            @Override
+                            public void onError(String msg) {
+                                uiHandler.post(() -> {
+
+                                    h.pctTV.setVisibility(View.GONE);
+
+                                    h.statusTV.setText("Error: " + msg);
+
+                                    h.actionBtn.setText("Install");
+
+                                    h.actionBtn.setBackgroundColor(
+                                            activity.COLOR_ACCENT
+                                    );
+                                });
+                            }
+
+                            @Override
+                            public void onCancelled() {
+                                uiHandler.post(() -> {
+
+                                    h.progressBar.setProgress(0);
+
+                                    h.progressBar.setVisibility(View.GONE);
+
+                                    h.pctTV.setVisibility(View.GONE);
+
+                                    h.statusTV.setText("");
+
+                                    h.actionBtn.setText("Install");
+
+                                    h.actionBtn.setBackgroundColor(
+                                            activity.COLOR_ACCENT
+                                    );
+                                });
+                            }
+                        }
+                );
+
+                cancelRef[0] =
+                        () -> StoreDownloadQueue.cancel(activity, dlKey);
             }
         }
 
-        gameListLayout.addView(card, cardLp);
+        @Override
+        public int getItemCount() {
+            return games.size();
+        }
+
+        // =============================================================
+        // VIEW HOLDER
+        // =============================================================
+
+        static class GameViewHolder extends RecyclerView.ViewHolder {
+
+            GradientDrawable cardBg;
+
+            ImageView coverIV;
+
+            TextView titleTV;
+            TextView subTV;
+            TextView collapsedCheckTV;
+            TextView arrowTV;
+
+            LinearLayout expandSection;
+
+            TextView metaTV;
+            TextView checkmark;
+            ProgressBar progressBar;
+            TextView pctTV;
+            TextView statusTV;
+
+            Button actionBtn;
+
+            public GameViewHolder(
+                    @NonNull View itemView,
+                    GradientDrawable cardBg,
+                    ImageView coverIV,
+                    TextView titleTV,
+                    TextView subTV,
+                    TextView collapsedCheckTV,
+                    TextView arrowTV,
+                    LinearLayout expandSection,
+                    TextView metaTV,
+                    TextView checkmark,
+                    ProgressBar progressBar,
+                    TextView pctTV,
+                    TextView statusTV,
+                    Button actionBtn
+            ) {
+                super(itemView);
+
+                this.cardBg = cardBg;
+                this.coverIV = coverIV;
+
+                this.titleTV = titleTV;
+                this.subTV = subTV;
+                this.collapsedCheckTV = collapsedCheckTV;
+                this.arrowTV = arrowTV;
+
+                this.expandSection = expandSection;
+
+                this.metaTV = metaTV;
+                this.checkmark = checkmark;
+                this.progressBar = progressBar;
+                this.pctTV = pctTV;
+                this.statusTV = statusTV;
+
+                this.actionBtn = actionBtn;
+            }
+        }
+
+        // =============================================================
+        // UTIL
+        // =============================================================
+
+        private static int dp(Context ctx, int v) {
+            return (int) TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_DIP,
+                    v,
+                    ctx.getResources().getDisplayMetrics()
+            );
+        }
     }
 
     // ── Download wrapper ──────────────────────────────────────────────────────
