@@ -379,12 +379,23 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
             setBackgroundColor(getColor(R.color.colorPrimary))
         }
         val backBtn = Button(this).apply {
-            text = "← Back"
+            text = "←"
             setTextColor(Color.WHITE)
             setBackgroundColor(Color.TRANSPARENT)
             setOnClickListener { finish() }
         }
+        val row = SteamRepository.getInstance().database.getGame(appId)
+        if (row == null) { finish(); return scroll }
+        game = SteamGame.fromGameRow(row)
+        val title = TextView(this).apply {
+            text = game!!.name
+            textSize = 18f
+            setTextColor(Color.WHITE)
+            setPadding(dp(8), 0, 0, 0)
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
         header.addView(backBtn)
+        header.addView(title)
         root.addView(header)
 
         // Header image (16:7 aspect ratio approximation)

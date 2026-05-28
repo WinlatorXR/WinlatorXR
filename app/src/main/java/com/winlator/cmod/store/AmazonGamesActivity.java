@@ -116,22 +116,15 @@ public class AmazonGamesActivity extends NavActivity {
         Button backBtn = new Button(this);
         backBtn.setText("←");
         backBtn.setTextColor(0xFFFFFFFF);
-        GradientDrawable backBtnBg = new GradientDrawable();
-        backBtnBg.setColor(0xFF333333);
-        backBtnBg.setCornerRadius(dp(4));
-        backBtn.setBackground(backBtnBg);
+        backBtn.setBackgroundColor(Color.TRANSPARENT);
         backBtn.setTextSize(16f);
         backBtn.setPadding(dp(12), 0, dp(12), 0);
-        backBtn.setOnFocusChangeListener((v, hasFocus) -> {
-            backBtnBg.setColor(hasFocus ? 0xFF555555 : 0xFF333333);
-            backBtnBg.setStroke(hasFocus ? dp(2) : 0, hasFocus ? 0xFFFFD700 : 0x00000000);
-        });
         backBtn.setOnClickListener(v -> finish());
         header.addView(backBtn, new LinearLayout.LayoutParams(-2, dp(40)));
 
         TextView titleTV = new TextView(this);
         titleTV.setText("Amazon Games");
-        titleTV.setTextColor(COLOR_ACCENT);
+        titleTV.setTextColor(Color.WHITE);
         titleTV.setTextSize(18f);
         titleTV.setTypeface(null, Typeface.BOLD);
         titleTV.setPadding(dp(12), 0, 0, 0);
@@ -140,16 +133,9 @@ public class AmazonGamesActivity extends NavActivity {
         refreshBtn = new Button(this);
         refreshBtn.setText("↺");
         refreshBtn.setTextColor(0xFFFFFFFF);
-        GradientDrawable refreshBtnBg = new GradientDrawable();
-        refreshBtnBg.setColor(0xFF333333);
-        refreshBtnBg.setCornerRadius(dp(4));
-        refreshBtn.setBackground(refreshBtnBg);
+        refreshBtn.setBackgroundColor(Color.TRANSPARENT);
         refreshBtn.setTextSize(16f);
         refreshBtn.setPadding(dp(12), 0, dp(12), 0);
-        refreshBtn.setOnFocusChangeListener((v, hasFocus) -> {
-            refreshBtnBg.setColor(hasFocus ? 0xFF555555 : 0xFF333333);
-            refreshBtnBg.setStroke(hasFocus ? dp(2) : 0, hasFocus ? 0xFFFFD700 : 0x00000000);
-        });
         refreshBtn.setOnClickListener(v -> startSync(true));
         header.addView(refreshBtn, new LinearLayout.LayoutParams(-2, dp(40)));
 
@@ -157,16 +143,9 @@ public class AmazonGamesActivity extends NavActivity {
         Button dlBtn = new Button(this);
         dlBtn.setText("\u2b07");
         dlBtn.setTextColor(0xFFFFFFFF);
-        GradientDrawable dlBtnBg = new GradientDrawable();
-        dlBtnBg.setColor(0xFF333333);
-        dlBtnBg.setCornerRadius(dp(4));
-        dlBtn.setBackground(dlBtnBg);
+        dlBtn.setBackgroundColor(Color.TRANSPARENT);
         dlBtn.setTextSize(16f);
         dlBtn.setPadding(dp(12), 0, dp(12), 0);
-        dlBtn.setOnFocusChangeListener((v, hasFocus) -> {
-            dlBtnBg.setColor(hasFocus ? 0xFF555555 : 0xFF333333);
-            dlBtnBg.setStroke(hasFocus ? dp(2) : 0, hasFocus ? 0xFFFFD700 : 0x00000000);
-        });
         dlBtn.setOnClickListener(v -> startActivityForResult(
                 new Intent(this, DownloadsActivity.class), REQ_DOWNLOADS));
         header.addView(dlBtn, new LinearLayout.LayoutParams(-2, dp(40)));
