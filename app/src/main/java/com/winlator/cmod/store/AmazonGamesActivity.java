@@ -119,7 +119,7 @@ public class AmazonGamesActivity extends NavActivity {
         backBtn.setBackgroundColor(Color.TRANSPARENT);
         backBtn.setTextSize(16f);
         backBtn.setPadding(dp(12), 0, dp(12), 0);
-        backBtn.setOnClickListener(v -> finish());
+        backBtn.setOnClickListener(v -> goBack());
         header.addView(backBtn, new LinearLayout.LayoutParams(-2, dp(40)));
 
         TextView titleTV = new TextView(this);
@@ -131,24 +131,32 @@ public class AmazonGamesActivity extends NavActivity {
         header.addView(titleTV, new LinearLayout.LayoutParams(0, -2, 1f));
 
         refreshBtn = new Button(this);
-        refreshBtn.setText("↺");
-        refreshBtn.setTextColor(0xFFFFFFFF);
+        refreshBtn.setText("Refresh");
+        refreshBtn.setTextSize(13f);
+        refreshBtn.setTextColor(Color.WHITE);
         refreshBtn.setBackgroundColor(Color.TRANSPARENT);
-        refreshBtn.setTextSize(16f);
         refreshBtn.setPadding(dp(12), 0, dp(12), 0);
         refreshBtn.setOnClickListener(v -> startSync(true));
         header.addView(refreshBtn, new LinearLayout.LayoutParams(-2, dp(40)));
 
         root.addView(header, new LinearLayout.LayoutParams(-1, -2));
-        Button dlBtn = new Button(this);
-        dlBtn.setText("\u2b07");
-        dlBtn.setTextColor(0xFFFFFFFF);
-        dlBtn.setBackgroundColor(Color.TRANSPARENT);
-        dlBtn.setTextSize(16f);
-        dlBtn.setPadding(dp(12), 0, dp(12), 0);
-        dlBtn.setOnClickListener(v -> startActivityForResult(
-                new Intent(this, DownloadsActivity.class), REQ_DOWNLOADS));
-        header.addView(dlBtn, new LinearLayout.LayoutParams(-2, dp(40)));
+        Button logoutBtn = new Button(this);
+        logoutBtn.setText("Logout");
+        logoutBtn.setTextSize(13f);
+        logoutBtn.setTextColor(Color.WHITE);
+        logoutBtn.setBackgroundColor(Color.TRANSPARENT);
+        logoutBtn.setPadding(dp(12), 0, dp(12), 0);
+        logoutBtn.setOnClickListener(v -> {
+            new android.app.AlertDialog.Builder(AmazonGamesActivity.this)
+                    .setTitle("Sign out of Steam?")
+                    .setMessage("Your saved login will be removed. You will need to sign in again.")
+                    .setPositiveButton("Sign Out", (dialog, which) ->
+                            signOut()
+                    )
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        });
+        header.addView(logoutBtn, new LinearLayout.LayoutParams(-2, dp(40)));
 
         // Search bar
         searchBar = new EditText(this);
@@ -189,6 +197,16 @@ public class AmazonGamesActivity extends NavActivity {
 
         root.addView(scrollView, new LinearLayout.LayoutParams(-1, 0, 1f));
         setContentView(root, false);
+    }
+
+    private void signOut() {
+        AmazonCredentialStore.Credentials creds = AmazonCredentialStore.load(this);
+        if (creds != null && creds.accessToken != null) {
+            String token = creds.accessToken;
+            new Thread(() -> AmazonAuthClient.deregisterDevice(token)).start();
+        }
+        AmazonCredentialStore.clear(this);
+        finish();
     }
 
     // ── Library sync ──────────────────────────────────────────────────────────

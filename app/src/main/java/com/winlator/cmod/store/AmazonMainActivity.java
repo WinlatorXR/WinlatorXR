@@ -27,6 +27,7 @@ public class AmazonMainActivity extends NavActivity {
     private LinearLayout loginCard;
     private LinearLayout loggedInCard;
     private TextView     statusView;
+    private boolean processed;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,6 +66,9 @@ public class AmazonMainActivity extends NavActivity {
                 long minutesLeft = (creds.expiresAt - System.currentTimeMillis()) / 60000L;
                 statusView.setText("Signed in to Amazon Games\nToken expires in ~"
                         + minutesLeft + " min");
+                if (!isBackPressed() && !processed)
+                    startActivity(new Intent(this, AmazonGamesActivity.class));
+                processed = true;
             }
         }
     }

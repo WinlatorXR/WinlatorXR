@@ -24,6 +24,7 @@ public class EpicMainActivity extends NavActivity {
     private LinearLayout loginCard;
     private LinearLayout loggedInCard;
     private TextView     statusView;
+    private boolean processed;
 
     // Epic brand color
     private static final int COLOR_EPIC = 0xFF0078F0;
@@ -64,6 +65,9 @@ public class EpicMainActivity extends NavActivity {
                         ? creds.displayName : "Epic Account";
                 long minutesLeft = (creds.expiresAt - System.currentTimeMillis()) / 60000L;
                 statusView.setText("Signed in as " + name + "\nToken expires in ~" + minutesLeft + " min");
+                if (!isBackPressed() && !processed)
+                    startActivity(new Intent(this, EpicGamesActivity.class));
+                processed = true;
             }
         }
     }
