@@ -21,12 +21,14 @@ import com.winlator.cmod.store.DownloadsActivity;
 import com.winlator.cmod.store.EpicMainActivity;
 import com.winlator.cmod.store.GogMainActivity;
 import com.winlator.cmod.store.SteamMainActivity;
+import com.winlator.cmod.store.StoreDownloadQueue;
 
 public class StoreFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
+        StoreDownloadQueue.bindSteamRepository();
     }
 
     @Override

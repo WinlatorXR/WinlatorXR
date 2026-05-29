@@ -8,13 +8,13 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -70,6 +70,15 @@ public class StoreDownloadQueue {
     public static void cancel(Context ctx, String dlKey) {
         Runnable action = cancelActions.get(dlKey);
         if (action != null) action.run();
+
+        DownloadEntry e = entries.get(dlKey);
+        if (e != null) e.active = false;
+
+        if (dlKey.startsWith("steam:")) {
+            int appId = Integer.parseInt(dlKey.substring(6));
+            stopDownload(appId);
+            com.winlator.cmod.store.SteamRepository.getInstance().getDatabase().deleteDownload(appId);
+        }
     }
 
     public static void addListener(String dlKey, DownloadListener l) {
@@ -95,6 +104,136 @@ public class StoreDownloadQueue {
             if (e != null && e.active) return e;
         }
         return null;
+    }
+
+    // ── Steam ──────────────────────────────────────────────────────────────────
+
+    private static HashMap<Integer, SteamDepotDownloader.DownloadControl> downloadHandles = new HashMap<>();
+
+    public static void registerExternal(String dlKey, String store, String title) {
+        DownloadEntry entry = new DownloadEntry(dlKey, store, title);
+        entries.put(dlKey, entry);
+        entry.active = true;
+    }
+
+    public static void registerHandle(int appId, SteamDepotDownloader.DownloadControl handle) {
+        if (handle != null) {
+            downloadHandles.put(appId, handle);
+        }
+    }
+
+    public static boolean hasHandle(int appId) {
+        return downloadHandles.containsKey(appId);
+    }
+
+    public static boolean stopDownload(int appId) {
+        if (hasHandle(appId)) {
+            SteamDepotDownloader.DownloadControl handle = downloadHandles.get(appId);
+            downloadHandles.remove(handle);
+            handle.getCancel().run();
+            return true;
+        }
+        return false;
+    }
+
+    private static com.winlator.cmod.store.SteamRepository.SteamEventListener steamListener;
+
+    public static void bindSteamRepository() {
+
+        com.winlator.cmod.store.SteamRepository repo = com.winlator.cmod.store.SteamRepository.getInstance();
+
+        // Create ONLY once
+        if (steamListener == null) {
+            steamListener = StoreDownloadQueue::handleSteamEvent;
+        }
+
+        // HARD reset: safest approach (no dependency on removeListener correctness)
+        try {
+            repo.removeListener(steamListener);
+        } catch (Exception ignored) {}
+        repo.addListener(steamListener);
+    }
+
+    private static void handleSteamEvent(String event) {
+
+        if (event == null) return;
+
+        // ─────────────────────────────────────────────
+        // PROGRESS
+        // ─────────────────────────────────────────────
+        if (event.startsWith("DownloadProgress:")) {
+
+            String[] p = event.split(":");
+            if (p.length < 4) return;
+
+            int appId = Integer.parseInt(p[1]);
+
+            DownloadEntry e = findActiveEntry("steam:" + appId);
+            if (e == null) return;
+
+            long done = Long.parseLong(p[2]);
+            long total = Long.parseLong(p[3]);
+
+            int pct = total > 0 ? (int) (done * 100 / total) : 0;
+
+            e.percent = pct;
+            e.status = "Downloading…";
+
+            notifyProgress(e.dlKey, e.status, pct);
+            updateNotification(e.dlKey, e);
+        }
+
+        // ─────────────────────────────────────────────
+        // COMPLETE
+        // ─────────────────────────────────────────────
+        else if (event.startsWith("DownloadComplete:")) {
+
+            String[] p = event.split(":");
+            if (p.length < 2) return;
+
+            int appId = Integer.parseInt(p[1]);
+
+            DownloadEntry e = findActiveEntry("steam:" + appId);
+            if (e != null) {
+                finish(e.dlKey, e, false, false, null, null);
+            }
+        }
+
+        // ─────────────────────────────────────────────
+        // CANCELLED
+        // ─────────────────────────────────────────────
+        else if (event.startsWith("DownloadCancelled:")) {
+
+            String[] p = event.split(":");
+            if (p.length < 2) return;
+
+            int appId = Integer.parseInt(p[1]);
+
+            DownloadEntry e = findActiveEntry("steam:" + appId);
+            if (e != null) {
+                finish(e.dlKey, e, true, false, null, null);
+            }
+        }
+
+        // ─────────────────────────────────────────────
+        // FAILED
+        // ─────────────────────────────────────────────
+        else if (event.startsWith("DownloadFailed:")) {
+
+            String[] p = event.split(":");
+            if (p.length < 3) return;
+
+            int appId = Integer.parseInt(p[1]);
+
+            String reason = event.contains(":")
+                    ? event.substring(event.indexOf(":", event.indexOf(":") + 1) + 1)
+                    : "Unknown error";
+
+            DownloadEntry e = findActiveEntry("steam:" + appId);
+            if (e != null) {
+                finish(e.dlKey, e, false, true, reason, null);
+            }
+        }
     }
 
     // ── GOG ──────────────────────────────────────────────────────────────────

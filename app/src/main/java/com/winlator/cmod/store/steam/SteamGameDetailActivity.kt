@@ -71,6 +71,10 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
     override fun onEvent(event: String) {
         when {
             event.startsWith("DownloadProgress:") -> {
+                if (!StoreDownloadQueue.hasHandle(appId)) {
+                    return
+                }
+
                 val parts = event.split(":")
                 val id    = parts.getOrNull(1)?.toIntOrNull() ?: return
                 if (id != appId) return
@@ -165,6 +169,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
                     } else {
                         // Stale record (app was killed mid-download) — clean up
                         SteamRepository.getInstance().database.deleteDownload(appId)
+                        StoreDownloadQueue.stopDownload(appId)
                     }
                 }
             }
@@ -225,7 +230,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         if (dlRow != null) {
 
             // Try active runtime cancel first
-            downloadHandle?.cancel?.run()
+            StoreDownloadQueue.stopDownload(appId)
 
             // Remove DB row
             db.deleteDownload(appId)
@@ -336,6 +341,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
                 statusText.text = "Preparing download..."
                 statusText.setTextColor(Color.parseColor("#4CAF50"))
                 downloadHandle = SteamDepotDownloader.installApp(appId, applicationContext, lastThreadCount)
+                StoreDownloadQueue.registerHandle(appId, downloadHandle)
             }
             .setNegativeButton("Cancel", null)
             .show()
