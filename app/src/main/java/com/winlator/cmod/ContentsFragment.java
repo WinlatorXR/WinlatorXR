@@ -41,6 +41,7 @@ import com.winlator.cmod.contents.Downloader;
 import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.PreloaderDialog;
+import com.winlator.cmod.store.LudashiLaunchBridge;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -353,7 +354,7 @@ public class ContentsFragment extends Fragment {
             };
             holder.ivIcon.setBackground(getContext().getDrawable(iconId));
 
-            File runtimesDir = new File("/data/data/com.winlator.cmod/files/imagefs/", "runtimes");
+            File runtimesDir = new File("/data/user/0/com.winlator.cmod/files/imagefs/", "runtimes");
             if (!runtimesDir.exists()) {
                 runtimesDir.mkdir();
             }
@@ -367,15 +368,28 @@ public class ContentsFragment extends Fragment {
             holder.tvVersionCode.setText(getContext().getString(R.string.version_code) + ": " + profile.verCode);
             holder.ibMenu.setVisibility(profile.remoteUrl == null ? View.VISIBLE : View.GONE);
             holder.ibMenu.setOnClickListener(v -> {
-                if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME) {
-                    runtimeFile.delete();
-                    loadContentList();
-                    return;
-                }
-
                 PopupMenu selectionMenu = new PopupMenu(getContext(), holder.ibMenu);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
                     selectionMenu.setForceShowIcon(true);
+
+                if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME) {
+                    selectionMenu.inflate(R.menu.content_popup_runtime_menu);
+                    selectionMenu.setOnMenuItemClickListener(item -> {
+                        int itemId = item.getItemId();
+                        if (itemId == R.id.content_install) {
+                            LudashiLaunchBridge.addToLauncher(getActivity(), profile.verName, runtimeFile.getAbsolutePath());
+                        } else if (itemId == R.id.remove_content) {
+                            ContentDialog.confirm(getContext(), R.string.do_you_want_to_remove_this_content, () -> {
+                                runtimeFile.delete();
+                                loadContentList();
+                            });
+                        }
+                        return true;
+                    });
+                    selectionMenu.show();
+                    return;
+                }
+
                 selectionMenu.inflate(R.menu.content_popup_menu);
                 selectionMenu.setOnMenuItemClickListener(item -> {
                     int itemId = item.getItemId();
@@ -403,7 +417,6 @@ public class ContentsFragment extends Fragment {
             holder.ibDownload.setVisibility((profile.remoteUrl != null) && (holder.progressBar.getVisibility() == View.GONE) ? View.VISIBLE : View.GONE);
 
             if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME) {
-                holder.ibMenu.setImageResource(R.drawable.icon_remove);
                 if (runtimeFile.exists()) {
                     holder.ibDownload.setVisibility(View.GONE);
                     holder.ibMenu.setVisibility(View.VISIBLE);
