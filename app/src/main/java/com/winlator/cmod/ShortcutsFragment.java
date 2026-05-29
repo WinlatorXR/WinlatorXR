@@ -59,6 +59,8 @@ import java.util.List;
 import java.util.concurrent.Executors;
 
 public class ShortcutsFragment extends Fragment {
+    public static final String HIDDEN_SHORTCUT = "runtime-installer";
+
     private RecyclerView recyclerView;
     private TextView emptyTextView;
     private ContainerManager manager;
@@ -370,6 +372,10 @@ public class ShortcutsFragment extends Fragment {
         try {
             for (Container c : manager.getContainers()) {
                 for (File f : c.getDesktopDir().listFiles((dir, n) -> n.endsWith(".desktop"))) {
+                    if (f.getAbsolutePath().contains(HIDDEN_SHORTCUT)) {
+                        continue;
+                    }
+
                     try {
                         Shortcut s = new Shortcut(c, f);   // may throw
                         // very cheap logical sanity check

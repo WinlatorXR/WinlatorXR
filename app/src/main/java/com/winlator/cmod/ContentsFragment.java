@@ -377,7 +377,7 @@ public class ContentsFragment extends Fragment {
                     selectionMenu.setOnMenuItemClickListener(item -> {
                         int itemId = item.getItemId();
                         if (itemId == R.id.content_install) {
-                            LudashiLaunchBridge.addToLauncher(getActivity(), profile.verName, runtimeFile.getAbsolutePath());
+                            LudashiLaunchBridge.addToLauncher(getActivity(), ShortcutsFragment.HIDDEN_SHORTCUT, runtimeFile.getAbsolutePath());
                         } else if (itemId == R.id.remove_content) {
                             ContentDialog.confirm(getContext(), R.string.do_you_want_to_remove_this_content, () -> {
                                 runtimeFile.delete();
