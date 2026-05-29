@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -80,6 +81,18 @@ public class StoreDownloadQueue {
             stopDownload(dlKey);
             int appId = Integer.parseInt(dlKey.substring(6));
             com.winlator.cmod.store.SteamRepository.getInstance().getDatabase().deleteDownload(appId);
+        }
+    }
+
+    public static void clear() {
+        ArrayList<String> toDelete = new ArrayList<>();
+        for (String key : entries.keySet()) {
+            if (!Objects.requireNonNull(entries.get(key)).active) {
+                toDelete.add(key);
+            }
+        }
+        for (String key : toDelete) {
+            entries.remove(key);
         }
     }
 

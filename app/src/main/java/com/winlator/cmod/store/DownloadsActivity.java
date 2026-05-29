@@ -1,5 +1,6 @@
 package com.winlator.cmod.store;
 
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -70,7 +71,16 @@ public class DownloadsActivity extends NavActivity {
         titleTv.setTextColor(COLOR_TEXT);
         titleTv.setTextSize(20f);
         titleTv.setPadding(dp(8), 0, 0, 0);
-        header.addView(titleTv);
+        header.addView(titleTv, new LinearLayout.LayoutParams(0, -2, 1f));
+
+        Button clearBtn = new Button(this);
+        clearBtn.setText("Clear");
+        clearBtn.setTextSize(13f);
+        clearBtn.setTextColor(Color.WHITE);
+        clearBtn.setBackgroundColor(Color.TRANSPARENT);
+        clearBtn.setPadding(dp(12), 0, dp(12), 0);
+        clearBtn.setOnClickListener(v -> StoreDownloadQueue.clear());
+        header.addView(clearBtn, new LinearLayout.LayoutParams(-2, dp(40)));
 
         root.addView(header, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
