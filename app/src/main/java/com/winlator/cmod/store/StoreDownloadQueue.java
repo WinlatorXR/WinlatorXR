@@ -72,11 +72,15 @@ public class StoreDownloadQueue {
         if (action != null) action.run();
 
         DownloadEntry e = entries.get(dlKey);
-        if (e != null) e.active = false;
+        if (e != null) {
+            e.active = false;
+            e.percent = 0;
+            e.status = "Download canceled";
+        }
 
         if (dlKey.startsWith("steam:")) {
+            stopDownload(dlKey);
             int appId = Integer.parseInt(dlKey.substring(6));
-            stopDownload(appId);
             com.winlator.cmod.store.SteamRepository.getInstance().getDatabase().deleteDownload(appId);
         }
     }
@@ -126,11 +130,19 @@ public class StoreDownloadQueue {
         return downloadHandles.containsKey(appId);
     }
 
-    public static boolean stopDownload(int appId) {
+    public static boolean stopDownload(String dlKey) {
+        int appId = Integer.parseInt(dlKey.substring(6));
         if (hasHandle(appId)) {
             SteamDepotDownloader.DownloadControl handle = downloadHandles.get(appId);
             downloadHandles.remove(handle);
             handle.getCancel().run();
+
+            DownloadEntry e = entries.get(dlKey);
+            if (e != null) {
+                e.active = false;
+                e.percent = 0;
+                e.status = "Download canceled";
+            }
             return true;
         }
         return false;
@@ -176,8 +188,10 @@ public class StoreDownloadQueue {
 
             int pct = total > 0 ? (int) (done * 100 / total) : 0;
 
-            e.percent = pct;
-            e.status = "Downloading…";
+            if (e.active) {
+                e.percent = pct;
+                e.status = "Downloading…";
+            }
 
             notifyProgress(e.dlKey, e.status, pct);
             updateNotification(e.dlKey, e);
@@ -245,7 +259,9 @@ public class StoreDownloadQueue {
 
         Runnable cancelAction = GogDownloadManager.startDownload(ctx, game, new GogDownloadManager.Callback() {
             @Override public void onProgress(String msg, int pct) {
-                entry.status = msg; entry.percent = pct;
+                if (entry.active) {
+                    entry.status = msg; entry.percent = pct;
+                }
                 notifyProgress(dlKey, msg, pct);
                 updateNotification(dlKey, entry);
             }
@@ -304,7 +320,9 @@ public class StoreDownloadQueue {
                 boolean ok = EpicDownloadManager.install(ctx, manifestJson, finalToken,
                         installDir.getAbsolutePath(), (msg, pct) -> {
                             if (cancelled.get()) return;
-                            entry.status = msg; entry.percent = pct;
+                            if (entry.active) {
+                                entry.status = msg; entry.percent = pct;
+                            }
                             notifyProgress(dlKey, msg, pct);
                             updateNotification(dlKey, entry);
                         });
@@ -367,7 +385,9 @@ public class StoreDownloadQueue {
                             if (cancelled.get()) return;
                             int pct = (total > 0) ? (int) (dl * 100L / total) : 0;
                             String name = (file != null && !file.isEmpty()) ? file : "Downloading…";
-                            entry.status = name; entry.percent = pct;
+                            if (entry.active) {
+                                entry.status = name; entry.percent = pct;
+                            }
                             notifyProgress(dlKey, name, pct);
                             updateNotification(dlKey, entry);
                         },
