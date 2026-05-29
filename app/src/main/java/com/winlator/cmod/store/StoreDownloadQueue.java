@@ -9,8 +9,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
-import android.os.Handler;
-import android.os.Looper;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -139,9 +137,8 @@ public class StoreDownloadQueue {
 
             DownloadEntry e = entries.get(dlKey);
             if (e != null) {
-                e.active = false;
-                e.percent = 0;
-                e.status = "Download canceled";
+                finish(e.dlKey, e, true, false, null, null);
+                postFinalNotification(dlKey, e, true, false);
             }
             return true;
         }
@@ -447,6 +444,11 @@ public class StoreDownloadQueue {
         if (prev != null && prev == e.percent) return;
         lastPct.put(dlKey, e.percent);
 
+        if (e.percent >= 100) {
+            postFinalNotification(dlKey, e, false, false);
+            return;
+        }
+
         Intent cancelIntent = new Intent(ACTION_CANCEL).putExtra(EXTRA_DL_KEY, dlKey);
         PendingIntent cancelPi = PendingIntent.getBroadcast(ctx, notifId(dlKey),
                 cancelIntent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
@@ -564,7 +566,7 @@ public class StoreDownloadQueue {
             entry.percent = 100;
             if (l != null) l.onComplete(completePath);
         }
-        new Handler(Looper.getMainLooper()).postDelayed(() -> entries.remove(dlKey), 60_000L);
+        //new Handler(Looper.getMainLooper()).postDelayed(() -> entries.remove(dlKey), 60_000L);
     }
 
     private static void deleteDir(File dir) {
