@@ -13,7 +13,6 @@ public abstract class DefaultVersion {
     };
     public static final String DXVK = switch(Device.getDevice()) {
         case PICO_NEO_3_LINK, PICO_4 -> "1.12.-sarek-async-0";
-        case PICO_4_ULTRA, QUEST_3 -> "2.6.2-1-gplasync-1";
         default -> "1.10.1";
     };
     public static final String D8VK = "1.0";
