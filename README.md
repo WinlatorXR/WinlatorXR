@@ -1,17 +1,4 @@
-WinlatorXR is a port of Winlator for Meta Quest and Pico headsets. It uses 2D/VR hybrid app flow documented by [amwatson](https://github.com/amwatson/2DVrHybrid).
-
-# History of the project
-
-* Winlator is originally developed by [brunodev85](https://github.com/brunodev85/winlator) but as he does not opensource the latest versions then I am forced to use a custom fork for this project.
-* In 2024 WinlatorXR was based on Glibc fork by [longjunyu2](https://github.com/longjunyu2/winlator) but as he stopped communicating, the project was inactive for a long time and later it stopped working.
-* In 2025 [Pipetto-crypto](https://github.com/Pipetto-crypto/winlator) ported Winlator to Bionic/Proton which is a massive boost for Meta Quest integration.
-* His integration was enhanced by [coffincolors](https://github.com/coffincolors/winlator) in Winlator CMOD fork which is now base for WinlatorXR.
-* Pico support and XR enhancement were brought by [Tobbe85](https://github.com/tobbe85/winlator).
-* Play for Dream support was brought by [EasonZxp](https://github.com/EasonZxp/WinlatorXR).
-* Content is maintained by [StevenMXZ](https://github.com/StevenMXZ/Winlator-Contents) who maintains it for Winlator-Bionic.
-
-![WinlatorXR history](https://github.com/user-attachments/assets/947c4be7-fe9e-435e-92c9-9ca1d55bef79)
-
+WinlatorXR is a port of Winlator for Meta Quest and Pico headsets. All the information is on the [official website](https://winlatorxr.github.io/).
 
 # How to compile
 
