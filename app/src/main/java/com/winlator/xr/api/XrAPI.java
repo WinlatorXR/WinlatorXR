@@ -74,7 +74,7 @@ public class XrAPI implements XrInterface {
         info += Build.PRODUCT.toUpperCase() + "\n";
         info += Build.VERSION.RELEASE.toUpperCase() + "\n";
         info += Build.VERSION.SECURITY_PATCH.toUpperCase() + "\n";
-        info += XrActivity.getInstance().container.getScreenSize() + "\n";
+        info += XrActivity.getInstance().getScreenSize() + "\n";
         FileOutputStream fos = new FileOutputStream(new File(dir, SYSTEM_FILE));
         fos.write(info.getBytes(StandardCharsets.US_ASCII));
         fos.close();
