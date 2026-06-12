@@ -8,13 +8,11 @@
  */
 package com.winlator.cmod.store;
 
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.graphics.PorterDuff;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -33,7 +31,6 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -73,14 +70,9 @@ public class EpicGamesActivity extends NavActivity {
     private static final String CACHE_KEY     = "epic_cache";
 
     // Epic brand colours
-    private static final int COLOR_ACCENT  = 0xFF0078F0;  // Epic blue — install btn / title
-    private static final int COLOR_ADD     = 0xFF2E7D32;  // green  — Add to Launcher btn
-    private static final int COLOR_CANCEL  = 0xFFCC3333;  // red    — cancel btn
     private static final int COLOR_CARD_BG = 0xFF0F1117;  // dark card background
-    private static final int COLOR_HDR_BG  = 0xFF0F1117;
     private static final int COLOR_ROOT_BG = 0xFF0D0D0D;
     private static final int REQ_GAME_DETAIL  = 1001;
-    private static final int REQ_DOWNLOADS    = 1002;
 
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
@@ -91,8 +83,6 @@ public class EpicGamesActivity extends NavActivity {
     private Button       refreshBtn;
     private EditText     searchBar;
     private List<EpicGame> allGames    = new ArrayList<>();
-    private View         expandedSection = null;
-    private TextView     expandedArrow   = null;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -126,60 +116,47 @@ public class EpicGamesActivity extends NavActivity {
         Button backBtn = new Button(this);
         backBtn.setText("←");
         backBtn.setTextColor(0xFFFFFFFF);
-        GradientDrawable backBtnBg = new GradientDrawable();
-        backBtnBg.setColor(0xFF333333);
-        backBtnBg.setCornerRadius(dp(4));
-        backBtn.setBackground(backBtnBg);
+        backBtn.setBackgroundColor(Color.TRANSPARENT);
         backBtn.setTextSize(16f);
         backBtn.setPadding(dp(12), 0, dp(12), 0);
-        backBtn.setOnFocusChangeListener((v, hasFocus) -> {
-            backBtnBg.setColor(hasFocus ? 0xFF555555 : 0xFF333333);
-            backBtnBg.setStroke(hasFocus ? dp(2) : 0, hasFocus ? 0xFFFFD700 : 0x00000000);
-        });
-        backBtn.setOnClickListener(v -> finish());
+        backBtn.setOnClickListener(v -> goBack());
         header.addView(backBtn, new LinearLayout.LayoutParams(-2, dp(40)));
 
         TextView titleTV = new TextView(this);
         titleTV.setText("Epic Games");
-        titleTV.setTextColor(COLOR_ACCENT);
+        titleTV.setTextColor(Color.WHITE);
         titleTV.setTextSize(18f);
         titleTV.setTypeface(null, Typeface.BOLD);
         titleTV.setPadding(dp(12), 0, 0, 0);
         header.addView(titleTV, new LinearLayout.LayoutParams(0, -2, 1f));
 
         refreshBtn = new Button(this);
-        refreshBtn.setText("↺");
-        refreshBtn.setTextColor(0xFFFFFFFF);
-        GradientDrawable refreshBtnBg = new GradientDrawable();
-        refreshBtnBg.setColor(0xFF333333);
-        refreshBtnBg.setCornerRadius(dp(4));
-        refreshBtn.setBackground(refreshBtnBg);
-        refreshBtn.setTextSize(16f);
+        refreshBtn.setText("Refresh");
+        refreshBtn.setTextSize(13f);
+        refreshBtn.setTextColor(Color.WHITE);
+        refreshBtn.setBackgroundColor(Color.TRANSPARENT);
         refreshBtn.setPadding(dp(12), 0, dp(12), 0);
-        refreshBtn.setOnFocusChangeListener((v, hasFocus) -> {
-            refreshBtnBg.setColor(hasFocus ? 0xFF555555 : 0xFF333333);
-            refreshBtnBg.setStroke(hasFocus ? dp(2) : 0, hasFocus ? 0xFFFFD700 : 0x00000000);
-        });
         refreshBtn.setOnClickListener(v -> startSync(true));
         header.addView(refreshBtn, new LinearLayout.LayoutParams(-2, dp(40)));
 
         root.addView(header, new LinearLayout.LayoutParams(-1, -2));
-        Button dlBtn = new Button(this);
-        dlBtn.setText("\u2b07");
-        dlBtn.setTextColor(0xFFFFFFFF);
-        GradientDrawable dlBtnBg = new GradientDrawable();
-        dlBtnBg.setColor(0xFF333333);
-        dlBtnBg.setCornerRadius(dp(4));
-        dlBtn.setBackground(dlBtnBg);
-        dlBtn.setTextSize(16f);
-        dlBtn.setPadding(dp(12), 0, dp(12), 0);
-        dlBtn.setOnFocusChangeListener((v, hasFocus) -> {
-            dlBtnBg.setColor(hasFocus ? 0xFF555555 : 0xFF333333);
-            dlBtnBg.setStroke(hasFocus ? dp(2) : 0, hasFocus ? 0xFFFFD700 : 0x00000000);
+        Button logoutBtn = new Button(this);
+        logoutBtn.setText("Logout");
+        logoutBtn.setTextSize(13f);
+        logoutBtn.setTextColor(Color.WHITE);
+        logoutBtn.setBackgroundColor(Color.TRANSPARENT);
+        logoutBtn.setPadding(dp(12), 0, dp(12), 0);
+        logoutBtn.setOnClickListener(v -> {
+            new android.app.AlertDialog.Builder(EpicGamesActivity.this)
+                    .setTitle("Sign out of Steam?")
+                    .setMessage("Your saved login will be removed. You will need to sign in again.")
+                    .setPositiveButton("Sign Out", (dialog, which) ->
+                            signOut()
+                    )
+                    .setNegativeButton("Cancel", null)
+                    .show();
         });
-        dlBtn.setOnClickListener(v -> startActivityForResult(
-                new Intent(this, DownloadsActivity.class), REQ_DOWNLOADS));
-        header.addView(dlBtn, new LinearLayout.LayoutParams(-2, dp(40)));
+        header.addView(logoutBtn, new LinearLayout.LayoutParams(-2, dp(40)));
 
         // Search bar
         searchBar = new EditText(this);
@@ -220,6 +197,11 @@ public class EpicGamesActivity extends NavActivity {
 
         root.addView(scrollView, new LinearLayout.LayoutParams(-1, 0, 1f));
         setContentView(root);
+    }
+
+    private void signOut() {
+        EpicCredentialStore.clear(this);
+        finish();
     }
 
     // ── Library sync ──────────────────────────────────────────────────────────
@@ -369,9 +351,6 @@ public class EpicGamesActivity extends NavActivity {
                         result,
                         prefs,
                         COLOR_CARD_BG,
-                        COLOR_ACCENT,
-                        COLOR_ADD,
-                        COLOR_CANCEL,
                         new EpicGamesAdapter.Callbacks() {
 
                             @Override
@@ -382,16 +361,6 @@ public class EpicGamesActivity extends NavActivity {
                             @Override
                             public void openDetailScreen(EpicGame game) {
                                 EpicGamesActivity.this.openDetailScreen(game);
-                            }
-
-                            @Override
-                            public void pendingLaunchExe(String title, String exe) {
-                                EpicGamesActivity.this.pendingLaunchExe(title, exe);
-                            }
-
-                            @Override
-                            public void showInstallConfirm(EpicGame game, Runnable ok) {
-                                EpicGamesActivity.this.showInstallConfirm(game, ok);
                             }
                         }
                 );
@@ -414,33 +383,21 @@ public class EpicGamesActivity extends NavActivity {
         public interface Callbacks {
             void loadImage(EpicGame game, ImageView iv);
             void openDetailScreen(EpicGame game);
-            void pendingLaunchExe(String title, String exe);
-            void showInstallConfirm(EpicGame game, Runnable ok);
         }
 
         private final Context context;
         private final List<EpicGame> games;
         private final SharedPreferences prefs;
-        private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
         private final int COLOR_CARD_BG;
-        private final int COLOR_ACCENT;
-        private final int COLOR_ADD;
-        private final int COLOR_CANCEL;
 
         private final Callbacks callbacks;
-
-        private LinearLayout expandedSection;
-        private TextView expandedArrow;
 
         public EpicGamesAdapter(
                 Context context,
                 List<EpicGame> games,
                 SharedPreferences prefs,
                 int cardBg,
-                int accent,
-                int add,
-                int cancel,
                 Callbacks callbacks
         ) {
             this.context = context;
@@ -448,9 +405,6 @@ public class EpicGamesActivity extends NavActivity {
             this.prefs = prefs;
 
             this.COLOR_CARD_BG = cardBg;
-            this.COLOR_ACCENT = accent;
-            this.COLOR_ADD = add;
-            this.COLOR_CANCEL = cancel;
 
             this.callbacks = callbacks;
         }
@@ -463,7 +417,9 @@ public class EpicGamesActivity extends NavActivity {
         ) {
 
             LinearLayout card = new LinearLayout(context);
+
             card.setOrientation(LinearLayout.VERTICAL);
+
             card.setPadding(dp(10), dp(10), dp(10), dp(10));
 
             RecyclerView.LayoutParams lp =
@@ -477,7 +433,9 @@ public class EpicGamesActivity extends NavActivity {
             card.setLayoutParams(lp);
 
             GradientDrawable bg = new GradientDrawable();
+
             bg.setColor(COLOR_CARD_BG);
+
             bg.setCornerRadius(dp(6));
 
             card.setBackground(bg);
@@ -524,15 +482,20 @@ public class EpicGamesActivity extends NavActivity {
             // =========================================================
 
             LinearLayout topRow = new LinearLayout(context);
+
             topRow.setOrientation(LinearLayout.HORIZONTAL);
+
             topRow.setGravity(Gravity.CENTER_VERTICAL);
 
+            // COVER
             ImageView coverIV = new ImageView(context);
 
             coverIV.setScaleType(ImageView.ScaleType.CENTER_CROP);
 
             GradientDrawable coverBg = new GradientDrawable();
+
             coverBg.setColor(0xFF141820);
+
             coverBg.setCornerRadius(dp(4));
 
             coverIV.setBackground(coverBg);
@@ -549,21 +512,32 @@ public class EpicGamesActivity extends NavActivity {
 
             callbacks.loadImage(game, coverIV);
 
+            // INFO COLUMN
             LinearLayout infoCol = new LinearLayout(context);
+
             infoCol.setOrientation(LinearLayout.VERTICAL);
+
             infoCol.setGravity(Gravity.CENTER_VERTICAL);
 
+            // TITLE ROW
             LinearLayout titleRow = new LinearLayout(context);
+
             titleRow.setOrientation(LinearLayout.HORIZONTAL);
+
             titleRow.setGravity(Gravity.CENTER_VERTICAL);
 
             TextView titleTV = new TextView(context);
 
             titleTV.setText(game.title);
+
             titleTV.setTextColor(Color.WHITE);
+
             titleTV.setTextSize(15f);
+
             titleTV.setTypeface(null, Typeface.BOLD);
+
             titleTV.setMaxLines(1);
+
             titleTV.setEllipsize(TextUtils.TruncateAt.END);
 
             titleRow.addView(titleTV);
@@ -571,8 +545,11 @@ public class EpicGamesActivity extends NavActivity {
             TextView collapsedCheckTV = new TextView(context);
 
             collapsedCheckTV.setText(" ✓");
+
             collapsedCheckTV.setTextColor(0xFF4CAF50);
+
             collapsedCheckTV.setTextSize(14f);
+
             collapsedCheckTV.setTypeface(null, Typeface.BOLD);
 
             collapsedCheckTV.setVisibility(
@@ -600,61 +577,20 @@ public class EpicGamesActivity extends NavActivity {
                     )
             );
 
-            if (!game.developer.isEmpty()) {
-
-                TextView subTV = new TextView(context);
-
-                subTV.setText(game.developer);
-                subTV.setTextColor(0xFF888888);
-                subTV.setTextSize(11f);
-                subTV.setMaxLines(1);
-                subTV.setEllipsize(TextUtils.TruncateAt.END);
-
-                infoCol.addView(subTV);
-            }
-
-            topRow.addView(
-                    infoCol,
-                    new LinearLayout.LayoutParams(
-                            0,
-                            ViewGroup.LayoutParams.WRAP_CONTENT,
-                            1f
-                    )
-            );
-
-            TextView arrowTV = new TextView(context);
-
-            arrowTV.setText("▼");
-            arrowTV.setTextColor(0xFF888888);
-            arrowTV.setTextSize(14f);
-
-            arrowTV.setPadding(
-                    dp(8),
-                    0,
-                    0,
-                    0
-            );
-
-            topRow.addView(arrowTV);
-
-            holder.card.addView(topRow);
-
-            // =========================================================
-            // EXPAND SECTION
-            // =========================================================
-
-            LinearLayout expandSection = new LinearLayout(context);
-
-            expandSection.setOrientation(LinearLayout.VERTICAL);
-            expandSection.setVisibility(View.GONE);
-
+            // META
             if (!game.developer.isEmpty()) {
 
                 TextView metaTV = new TextView(context);
 
                 metaTV.setText(game.developer);
+
                 metaTV.setTextColor(0xFF888888);
+
                 metaTV.setTextSize(11f);
+
+                metaTV.setMaxLines(1);
+
+                metaTV.setEllipsize(TextUtils.TruncateAt.END);
 
                 LinearLayout.LayoutParams metaLp =
                         new LinearLayout.LayoutParams(
@@ -662,15 +598,18 @@ public class EpicGamesActivity extends NavActivity {
                                 ViewGroup.LayoutParams.WRAP_CONTENT
                         );
 
-                metaLp.topMargin = dp(6);
+                metaLp.topMargin = dp(4);
 
-                expandSection.addView(metaTV, metaLp);
+                infoCol.addView(metaTV, metaLp);
             }
 
+            // INSTALLED CHECKMARK
             TextView checkmark = new TextView(context);
 
             checkmark.setText("✓ Installed");
+
             checkmark.setTextColor(0xFF4CAF50);
+
             checkmark.setTextSize(10f);
 
             checkmark.setVisibility(
@@ -685,386 +624,28 @@ public class EpicGamesActivity extends NavActivity {
                             ViewGroup.LayoutParams.WRAP_CONTENT
                     );
 
-            ckLp.topMargin = dp(4);
+            ckLp.topMargin = dp(2);
 
-            expandSection.addView(checkmark, ckLp);
+            infoCol.addView(checkmark, ckLp);
 
-            ProgressBar progressBar = new ProgressBar(
-                    context,
-                    null,
-                    android.R.attr.progressBarStyleHorizontal
-            );
-
-            progressBar.setMax(100);
-            progressBar.setProgress(0);
-            progressBar.setVisibility(View.GONE);
-
-            progressBar.getProgressDrawable().setColorFilter(
-                    COLOR_ACCENT,
-                    PorterDuff.Mode.SRC_IN
-            );
-
-            LinearLayout.LayoutParams pbLp =
+            topRow.addView(
+                    infoCol,
                     new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            dp(6)
-                    );
-
-            pbLp.topMargin = dp(6);
-
-            expandSection.addView(progressBar, pbLp);
-
-            TextView pctTV = new TextView(context);
-
-            pctTV.setTextColor(COLOR_ACCENT);
-            pctTV.setTextSize(12f);
-            pctTV.setTypeface(null, Typeface.BOLD);
-            pctTV.setVisibility(View.GONE);
-
-            expandSection.addView(pctTV);
-
-            TextView statusTV = new TextView(context);
-
-            statusTV.setTextColor(0xFFAAAAAA);
-            statusTV.setTextSize(11f);
-            statusTV.setVisibility(View.GONE);
-
-            LinearLayout.LayoutParams stLp =
-                    new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                    );
-
-            stLp.topMargin = dp(2);
-
-            expandSection.addView(statusTV, stLp);
-
-            Button actionBtn = new Button(context);
-
-            actionBtn.setText(
-                    isInstalled
-                            ? "Add to Launcher"
-                            : "Install"
+                            0,
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            1f
+                    )
             );
 
-            actionBtn.setTextColor(Color.WHITE);
+            holder.card.addView(topRow);
 
-            actionBtn.setBackgroundColor(
-                    isInstalled
-                            ? COLOR_ADD
-                            : COLOR_ACCENT
+            // =========================================================
+            // OPEN DETAILS DIRECTLY
+            // =========================================================
+
+            holder.card.setOnClickListener(v ->
+                    callbacks.openDetailScreen(game)
             );
-
-            actionBtn.setTextSize(13f);
-
-            LinearLayout.LayoutParams abLp =
-                    new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            dp(40)
-                    );
-
-            abLp.topMargin = dp(8);
-
-            expandSection.addView(actionBtn, abLp);
-
-            holder.card.addView(expandSection);
-
-            // =========================================================
-            // BUTTON LOGIC
-            // =========================================================
-
-            final Runnable[] cancelRef = {null};
-
-            actionBtn.setOnClickListener(v -> {
-
-                String lbl = actionBtn.getText().toString();
-
-                if ("Cancel".equals(lbl)) {
-
-                    if (cancelRef[0] != null) {
-                        cancelRef[0].run();
-                    }
-
-                    return;
-                }
-
-                if ("Add to Launcher".equals(lbl)
-                        || "Add Game".equals(lbl)) {
-
-                    String exe = prefs.getString(
-                            "epic_exe_" + game.appName,
-                            null
-                    );
-
-                    if (exe != null) {
-                        callbacks.pendingLaunchExe(
-                                game.title,
-                                exe
-                        );
-                    }
-
-                    return;
-                }
-
-                callbacks.showInstallConfirm(game, () -> {
-
-                    cancelRef[0] = null;
-
-                    actionBtn.setEnabled(true);
-
-                    actionBtn.setText("Cancel");
-
-                    actionBtn.setBackgroundColor(
-                            COLOR_CANCEL
-                    );
-
-                    progressBar.setVisibility(View.VISIBLE);
-
-                    statusTV.setVisibility(View.VISIBLE);
-
-                    pctTV.setText("0%");
-                    pctTV.setVisibility(View.VISIBLE);
-
-                    String dlKeyL =
-                            "epic-" + game.appName + "-list";
-
-                    StoreDownloadQueue.addListener(
-                            dlKeyL,
-                            new StoreDownloadQueue.DownloadListener() {
-
-                                @Override
-                                public void onProgress(
-                                        String msg,
-                                        int pct
-                                ) {
-
-                                    uiHandler.post(() -> {
-
-                                        statusTV.setText(msg);
-
-                                        progressBar.setProgress(pct);
-
-                                        pctTV.setText(
-                                                pct + "%"
-                                        );
-                                    });
-                                }
-
-                                @Override
-                                public void onComplete(
-                                        String exePath
-                                ) {
-
-                                    uiHandler.post(() -> {
-
-                                        cancelRef[0] = null;
-
-                                        progressBar.setProgress(100);
-
-                                        pctTV.setVisibility(
-                                                View.GONE
-                                        );
-
-                                        checkmark.setVisibility(
-                                                View.VISIBLE
-                                        );
-
-                                        collapsedCheckTV.setVisibility(
-                                                View.VISIBLE
-                                        );
-
-                                        statusTV.setText(
-                                                "Installed"
-                                        );
-
-                                        actionBtn.setText(
-                                                "Add to Launcher"
-                                        );
-
-                                        actionBtn.setBackgroundColor(
-                                                COLOR_ADD
-                                        );
-
-                                        actionBtn.setEnabled(true);
-                                    });
-                                }
-
-                                @Override
-                                public void onError(String msg) {
-
-                                    uiHandler.post(() -> {
-
-                                        cancelRef[0] = null;
-
-                                        pctTV.setVisibility(
-                                                View.GONE
-                                        );
-
-                                        statusTV.setText(
-                                                "Error: " + msg
-                                        );
-
-                                        actionBtn.setText(
-                                                "Install"
-                                        );
-
-                                        actionBtn.setBackgroundColor(
-                                                COLOR_ACCENT
-                                        );
-
-                                        actionBtn.setEnabled(true);
-
-                                        Toast.makeText(
-                                                context,
-                                                "Error: " + msg,
-                                                Toast.LENGTH_LONG
-                                        ).show();
-                                    });
-                                }
-
-                                @Override
-                                public void onCancelled() {
-
-                                    uiHandler.post(() -> {
-
-                                        cancelRef[0] = null;
-
-                                        progressBar.setProgress(0);
-
-                                        progressBar.setVisibility(
-                                                View.GONE
-                                        );
-
-                                        pctTV.setVisibility(
-                                                View.GONE
-                                        );
-
-                                        statusTV.setText("");
-
-                                        actionBtn.setText(
-                                                "Install"
-                                        );
-
-                                        actionBtn.setBackgroundColor(
-                                                COLOR_ACCENT
-                                        );
-
-                                        actionBtn.setEnabled(true);
-                                    });
-                                }
-                            });
-
-                    StoreDownloadQueue.startEpic(
-                            context,
-                            game,
-                            dlKeyL
-                    );
-
-                    cancelRef[0] = () ->
-                            StoreDownloadQueue.cancel(
-                                    context,
-                                    dlKeyL
-                            );
-                });
-            });
-
-            // =========================================================
-            // EXPAND / COLLAPSE
-            // =========================================================
-
-            arrowTV.setOnClickListener(v -> {
-
-                if (expandSection.getVisibility()
-                        == View.VISIBLE) {
-
-                    expandSection.setVisibility(
-                            View.GONE
-                    );
-
-                    arrowTV.setText("▼");
-
-                    expandedSection = null;
-                    expandedArrow = null;
-                }
-            });
-
-            holder.card.setOnClickListener(v -> {
-
-                if (expandSection.getVisibility()
-                        == View.VISIBLE) {
-
-                    callbacks.openDetailScreen(game);
-
-                } else {
-
-                    if (expandedSection != null) {
-
-                        expandedSection.setVisibility(
-                                View.GONE
-                        );
-
-                        if (expandedArrow != null) {
-                            expandedArrow.setText("▼");
-                        }
-                    }
-
-                    expandSection.setVisibility(
-                            View.VISIBLE
-                    );
-
-                    arrowTV.setText("▲");
-
-                    expandedSection = expandSection;
-                    expandedArrow = arrowTV;
-                }
-            });
-
-            // =========================================================
-            // RESTORE ACTIVE DOWNLOAD
-            // =========================================================
-
-            StoreDownloadQueue.DownloadEntry active =
-                    StoreDownloadQueue.findActiveEntry(
-                            "epic-" + game.appName + "-list",
-                            "epic-" + game.appName + "-grid",
-                            "epic_" + game.appName
-                    );
-
-            if (active != null) {
-
-                final String dlKeyR = active.dlKey;
-
-                expandSection.setVisibility(View.VISIBLE);
-
-                arrowTV.setText("▲");
-
-                expandedSection = expandSection;
-                expandedArrow = arrowTV;
-
-                actionBtn.setText("Cancel");
-
-                actionBtn.setBackgroundColor(
-                        COLOR_CANCEL
-                );
-
-                progressBar.setVisibility(View.VISIBLE);
-
-                progressBar.setProgress(active.percent);
-
-                pctTV.setText(active.percent + "%");
-
-                pctTV.setVisibility(View.VISIBLE);
-
-                statusTV.setVisibility(View.VISIBLE);
-
-                statusTV.setText(active.status);
-
-                cancelRef[0] = () ->
-                        StoreDownloadQueue.cancel(
-                                context,
-                                dlKeyR
-                        );
-            }
         }
 
         @Override
@@ -1076,6 +657,7 @@ public class EpicGamesActivity extends NavActivity {
                 extends RecyclerView.ViewHolder {
 
             LinearLayout card;
+
             GradientDrawable bg;
 
             public GameViewHolder(
@@ -1085,6 +667,7 @@ public class EpicGamesActivity extends NavActivity {
                 super(itemView);
 
                 card = (LinearLayout) itemView;
+
                 this.bg = bg;
             }
         }
@@ -1190,194 +773,6 @@ public class EpicGamesActivity extends NavActivity {
         return () -> cancelled.set(true);
     }
 
-    // ── Dialogs ───────────────────────────────────────────────────────────────
-
-    private void showInstallConfirm(EpicGame game, Runnable onConfirm) {
-        long freeBytes = -1;
-        try {
-            File base   = new File(new File(getFilesDir(), "epic_games"), "_check");
-            File parent = base.getParentFile();
-            if (parent != null) parent.mkdirs();
-            android.os.StatFs sf = new android.os.StatFs(
-                    parent != null ? parent.getAbsolutePath()
-                            : getCacheDir().getAbsolutePath());
-            freeBytes = sf.getAvailableBlocksLong() * sf.getBlockSizeLong();
-        } catch (Exception ignored) {}
-
-        final long freeBytesF = freeBytes;
-
-        LinearLayout content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(20), dp(8), dp(20), dp(8));
-
-        TextView sizeTV = new TextView(this);
-        sizeTV.setText("Download size:  Fetching…");
-        sizeTV.setTextColor(0xFFCCCCCC);
-        sizeTV.setTextSize(14f);
-        content.addView(sizeTV);
-
-        TextView freeTV = new TextView(this);
-        freeTV.setText("Available storage:  " + formatBytes(freeBytesF));
-        freeTV.setTextColor(0xFF88CC88);
-        freeTV.setTextSize(14f);
-        content.addView(freeTV);
-
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Install " + game.title + "?")
-                .setView(content)
-                .setPositiveButton("Install", null)
-                .setNegativeButton("Cancel", null)
-                .create();
-        dialog.show();
-
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            dialog.dismiss();
-            onConfirm.run();
-        });
-
-        // Fetch download size in background
-        if (game.installSize > 0) {
-            sizeTV.setText("Download size:  " + formatBytes(game.installSize));
-        } else {
-            new Thread(() -> {
-                long size = 0;
-                try {
-                    String token = EpicCredentialStore.getValidAccessToken(this);
-                    if (token != null) {
-                        size = EpicApiClient.getInstallSize(token, game);
-                        game.installSize = size;
-                    }
-                } catch (Exception ignored) {}
-                final long finalSize = size;
-                uiHandler.post(() -> {
-                    if (dialog.isShowing()) {
-                        sizeTV.setText("Download size:  "
-                                + (finalSize > 0 ? formatBytes(finalSize) : "Unknown"));
-                    }
-                });
-            }, "epic-size-" + game.appName).start();
-        }
-    }
-
-    private void showDetailDialog(EpicGame game, View checkmark, Button actionBtn, Runnable onUninstalled) {
-        LinearLayout container = new LinearLayout(this);
-        container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(dp(20), dp(8), dp(20), dp(4));
-
-        StringBuilder msg = new StringBuilder();
-        if (!game.developer.isEmpty()) msg.append("Developer: ").append(game.developer).append("\n");
-        if (!game.description.isEmpty()) {
-            String desc = game.description.length() > 200
-                    ? game.description.substring(0, 200) + "…" : game.description;
-            msg.append("\n").append(desc);
-        }
-        msg.append("\nApp: ").append(game.appName);
-
-        TextView msgView = new TextView(this);
-        msgView.setText(msg.toString().trim());
-        msgView.setTextColor(0xFFCCCCCC);
-        container.addView(msgView);
-
-        String installedExe = prefs.getString("epic_exe_" + game.appName, null);
-        String installedDir = prefs.getString("epic_dir_" + game.appName, null);
-
-        if (installedExe != null) {
-            TextView exeView = new TextView(this);
-            exeView.setText("\n.exe: " + new File(installedExe).getName());
-            exeView.setTextColor(0xFF888888);
-            exeView.setTextSize(12f);
-            container.addView(exeView);
-
-            Button setExeBtn = new Button(this);
-            setExeBtn.setText("Set .exe…");
-            setExeBtn.setTextColor(0xFFFFFFFF);
-            setExeBtn.setBackgroundColor(0xFF444444);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
-            lp.topMargin = dp(10);
-            setExeBtn.setOnClickListener(v -> {
-                File dir = installedDir != null ? new File(installedDir) : null;
-                if (dir == null || !dir.isDirectory()) {
-                    Toast.makeText(this, "Install directory not found", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                new Thread(() -> {
-                    List<File> exeFiles = new ArrayList<>();
-                    AmazonLaunchHelper.collectExe(dir, exeFiles);
-                    if (exeFiles.isEmpty()) {
-                        uiHandler.post(() -> Toast.makeText(this,
-                                "No .exe files found", Toast.LENGTH_SHORT).show());
-                        return;
-                    }
-                    List<String> candidates = new ArrayList<>();
-                    for (File f : exeFiles) candidates.add(f.getAbsolutePath());
-                    showExePicker(candidates, selected -> {
-                        if (selected != null && !selected.isEmpty()) {
-                            prefs.edit().putString("epic_exe_" + game.appName, selected).apply();
-                            uiHandler.post(() -> {
-                                exeView.setText("\n.exe: " + new File(selected).getName());
-                                Toast.makeText(this,
-                                        "Exe set: " + new File(selected).getName(),
-                                        Toast.LENGTH_SHORT).show();
-                            });
-                        }
-                    });
-                }).start();
-            });
-            container.addView(setExeBtn, lp);
-        }
-
-        AlertDialog.Builder b = new AlertDialog.Builder(this)
-                .setTitle(game.title)
-                .setView(container)
-                .setPositiveButton("Close", null);
-
-        if (installedDir != null) {
-            b.setNegativeButton("Uninstall", (d, w) -> {
-                new Thread(() -> {
-                    deleteDir(new File(installedDir));
-                    prefs.edit()
-                            .remove("epic_exe_" + game.appName)
-                            .remove("epic_dir_" + game.appName)
-                            .apply();
-                    uiHandler.post(() -> {
-                        onUninstalled.run();
-                        actionBtn.setEnabled(true);
-                        Toast.makeText(this, game.title + " uninstalled",
-                                Toast.LENGTH_SHORT).show();
-                    });
-                }).start();
-            });
-        }
-
-        b.show();
-    }
-
-    private void showExePicker(List<String> candidates,
-                                java.util.function.Consumer<String> onSelected) {
-        String[] labels = new String[candidates.size()];
-        for (int i = 0; i < candidates.size(); i++) {
-            File f      = new File(candidates.get(i));
-            File parent = f.getParentFile();
-            labels[i]   = (parent != null)
-                    ? parent.getName() + "/" + f.getName()
-                    : f.getName();
-        }
-        uiHandler.post(() ->
-            new AlertDialog.Builder(this)
-                .setTitle("Select game executable")
-                .setItems(labels, (d, which) ->
-                    new Thread(() -> onSelected.accept(candidates.get(which))).start())
-                .setCancelable(false)
-                .show()
-        );
-    }
-
-    // ── Launch ────────────────────────────────────────────────────────────────
-
-    private void pendingLaunchExe(String gameName, String absPath) {
-        LudashiLaunchBridge.addToLauncher(this, gameName, absPath);
-    }
-
     // ── Cache ─────────────────────────────────────────────────────────────────
 
     private void saveCachedGames(List<EpicGame> games) {
@@ -1471,22 +866,6 @@ public class EpicGamesActivity extends NavActivity {
                 syncText.setTextColor(0xFFCCCCCC);
             }
         });
-    }
-
-    private static String formatBytes(long bytes) {
-        if (bytes < 0) return "Unknown";
-        if (bytes < 1024L)            return bytes + " B";
-        if (bytes < 1024L * 1024L)    return (bytes / 1024L) + " KB";
-        if (bytes < 1024L * 1024L * 1024L)
-            return String.format("%.1f MB", bytes / (1024.0 * 1024.0));
-        return String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
-    }
-
-    private static void deleteDir(File dir) {
-        if (dir == null || !dir.exists()) return;
-        File[] children = dir.listFiles();
-        if (children != null) for (File c : children) deleteDir(c);
-        dir.delete();
     }
 
     // ── Full-screen detail ────────────────────────────────────────────────────

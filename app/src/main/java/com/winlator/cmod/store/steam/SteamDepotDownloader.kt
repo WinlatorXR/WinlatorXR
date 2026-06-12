@@ -177,6 +177,12 @@ object SteamDepotDownloader {
             return
         }
         dlog("Game: name='${row.name}' type=${row.type} sizeBytes=${row.sizeBytes}")
+        val dlKey = "steam:${appId}"
+        StoreDownloadQueue.registerExternal(
+            dlKey,
+            "STEAM",
+            row.name
+        )
 
         // Sanitise game name for directory usage
         val safeName = row.name.replace(Regex("[/\\\\:*?\"<>|]"), "_").trim()

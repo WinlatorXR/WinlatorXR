@@ -38,6 +38,11 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
     @Volatile private var downloadHandle: SteamDepotDownloader.DownloadControl? = null
     private var lastThreadCount = 4
 
+    // auto retry state
+    private val retryCounts = mutableMapOf<Int, Int>()
+    private val maxAutoRetries = 3
+    private val retryBaseDelayMs = 3000L
+
     // views updated after load
     private lateinit var headerImage: ImageView
     private lateinit var nameText: TextView
@@ -65,27 +70,154 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
     }
 
     // -------------------------------------------------------------------------
+    // Auto retry handling
+    // -------------------------------------------------------------------------
+
+    private fun resetRetryState() {
+        retryCounts.remove(appId)
+    }
+
+    private fun scheduleRetry(reason: String) {
+        val currentRetry = retryCounts[appId] ?: 0
+
+        // -------------------------------------------------------------
+        // Retry limit reached
+        // -------------------------------------------------------------
+        if (currentRetry >= maxAutoRetries) {
+
+            val logPath = SteamDepotDownloader.debugLogPath
+
+            ui.post {
+                progressBar.isIndeterminate = false
+                progressBar.visibility = View.GONE
+
+                progressText.visibility = View.GONE
+
+                statusText.text =
+                    "Download failed after $maxAutoRetries retries:\n" +
+                            "$reason\n\n" +
+                            "Debug log:\n$logPath"
+
+                statusText.setTextColor(Color.parseColor("#FF5555"))
+
+                installBtn.isEnabled = true
+                installBtn.text = "Retry"
+                installBtn.setBackgroundColor(COLOR_INSTALL)
+            }
+
+            return
+        }
+
+        // -------------------------------------------------------------
+        // Schedule retry
+        // -------------------------------------------------------------
+        val nextRetry = currentRetry + 1
+        retryCounts[appId] = nextRetry
+
+        // Exponential-ish backoff
+        val delayMs = retryBaseDelayMs * nextRetry
+
+        ui.post {
+            statusText.text =
+                "Download failed.\n" +
+                        "Retrying automatically ($nextRetry/$maxAutoRetries) in ${delayMs / 1000}s…"
+
+            statusText.setTextColor(Color.parseColor("#FF9800"))
+
+            progressBar.visibility = View.VISIBLE
+            progressBar.isIndeterminate = true
+
+            progressText.visibility = View.VISIBLE
+            progressText.text = "Waiting before retry…"
+
+            installBtn.isEnabled = false
+            installBtn.text = "Retrying…"
+        }
+
+        ui.postDelayed({
+
+            // Activity already gone
+            if (isFinishing || isDestroyed) {
+                return@postDelayed
+            }
+
+            ui.post {
+                statusText.text = "Restarting download…"
+                statusText.setTextColor(Color.parseColor("#4CAF50"))
+
+                progressBar.isIndeterminate = false
+                progressBar.progress = 0
+
+                progressText.text = "Reconnecting…"
+            }
+
+            downloadHandle =
+                SteamDepotDownloader.installApp(
+                    appId,
+                    applicationContext,
+                    lastThreadCount
+                )
+
+            StoreDownloadQueue.registerHandle(appId, downloadHandle)
+
+        }, delayMs)
+    }
+
+    // -------------------------------------------------------------------------
     // SteamRepository.SteamEventListener
     // -------------------------------------------------------------------------
 
     override fun onEvent(event: String) {
+
         when {
+
+            // -----------------------------------------------------------------
+            // DOWNLOAD PROGRESS
+            // -----------------------------------------------------------------
             event.startsWith("DownloadProgress:") -> {
+
+                if (!StoreDownloadQueue.hasHandle(appId)) {
+                    return
+                }
+
                 val parts = event.split(":")
-                val id    = parts.getOrNull(1)?.toIntOrNull() ?: return
-                if (id != appId) return
-                val done  = parts.getOrNull(2)?.toLongOrNull() ?: 0L
-                val total = parts.getOrNull(3)?.toLongOrNull() ?: 1L
-                val pct   = if (total > 0) (done * 100 / total).toInt().coerceIn(0, 100) else 0
+
+                val id =
+                    parts.getOrNull(1)?.toIntOrNull()
+                        ?: return
+
+                if (id != appId) {
+                    return
+                }
+
+                val done =
+                    parts.getOrNull(2)?.toLongOrNull()
+                        ?: 0L
+
+                val total =
+                    parts.getOrNull(3)?.toLongOrNull()
+                        ?: 1L
+
+                val pct =
+                    if (total > 0) {
+                        (done * 100 / total)
+                            .toInt()
+                            .coerceIn(0, 100)
+                    } else {
+                        0
+                    }
+
                 ui.post {
+
                     statusText.text = "Downloading"
                     statusText.setTextColor(Color.parseColor("#4CAF50"))
 
-                    progressBar.visibility  = View.VISIBLE
-                    progressBar.progress    = pct
+                    progressBar.visibility = View.VISIBLE
+                    progressBar.isIndeterminate = false
+                    progressBar.progress = pct
 
                     progressText.visibility = View.VISIBLE
-                    progressText.text       =
+                    progressText.text =
                         "Downloading… $pct%  (${fmtSize(done)} / ${fmtSize(total)})"
 
                     installBtn.isEnabled = true
@@ -93,46 +225,91 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
                     installBtn.setBackgroundColor(COLOR_CANCEL)
                 }
             }
+
+            // -----------------------------------------------------------------
+            // DOWNLOAD COMPLETE
+            // -----------------------------------------------------------------
             event.startsWith("DownloadComplete:") -> {
-                val id = event.substringAfter("DownloadComplete:").toIntOrNull() ?: return
-                if (id != appId) return
+
+                val id =
+                    event.substringAfter("DownloadComplete:")
+                        .toIntOrNull()
+                        ?: return
+
+                if (id != appId) {
+                    return
+                }
+
                 downloadHandle = null
+
+                resetRetryState()
+
                 ui.post {
-                    progressBar.visibility  = View.GONE
+
+                    progressBar.isIndeterminate = false
+                    progressBar.visibility = View.GONE
+
                     progressText.visibility = View.GONE
+
                     loadGame()
                 }
             }
+
+            // -----------------------------------------------------------------
+            // DOWNLOAD CANCELLED
+            // -----------------------------------------------------------------
             event.startsWith("DownloadCancelled:") -> {
-                val id = event.substringAfter("DownloadCancelled:").toIntOrNull() ?: return
-                if (id != appId) return
+
+                val id =
+                    event.substringAfter("DownloadCancelled:")
+                        .toIntOrNull()
+                        ?: return
+
+                if (id != appId) {
+                    return
+                }
+
                 downloadHandle = null
+
+                resetRetryState()
+
                 ui.post {
-                    progressBar.visibility  = View.GONE
+
+                    progressBar.isIndeterminate = false
+                    progressBar.visibility = View.GONE
+
                     progressText.visibility = View.GONE
+
                     statusText.text = "Download cancelled"
                     statusText.setTextColor(Color.parseColor("#AAAAAA"))
+
                     installBtn.isEnabled = true
                     installBtn.text = "Install"
                     installBtn.setBackgroundColor(COLOR_INSTALL)
                 }
             }
+
+            // -----------------------------------------------------------------
+            // DOWNLOAD FAILED
+            // -----------------------------------------------------------------
             event.startsWith("DownloadFailed:") -> {
+
                 val parts = event.split(":")
-                val id = parts.getOrNull(1)?.toIntOrNull() ?: return
-                if (id != appId) return
-                val reason = parts.drop(2).joinToString(":")
-                val logPath = SteamDepotDownloader.debugLogPath
-                downloadHandle = null
-                ui.post {
-                    progressBar.visibility  = View.GONE
-                    progressText.visibility = View.GONE
-                    statusText.text = "Download failed: $reason\nDebug log: $logPath"
-                    statusText.setTextColor(Color.parseColor("#FF5555"))
-                    installBtn.isEnabled = true
-                    installBtn.text = "Retry"
-                    installBtn.setBackgroundColor(COLOR_INSTALL)
+
+                val id =
+                    parts.getOrNull(1)?.toIntOrNull()
+                        ?: return
+
+                if (id != appId) {
+                    return
                 }
+
+                val reason =
+                    parts.drop(2).joinToString(":")
+
+                downloadHandle = null
+
+                scheduleRetry(reason)
             }
         }
     }
@@ -164,7 +341,9 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
                         installBtn.setBackgroundColor(COLOR_CANCEL)
                     } else {
                         // Stale record (app was killed mid-download) — clean up
+                        val dlKey = "steam:${appId}"
                         SteamRepository.getInstance().database.deleteDownload(appId)
+                        StoreDownloadQueue.stopDownload(dlKey)
                     }
                 }
             }
@@ -225,7 +404,8 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         if (dlRow != null) {
 
             // Try active runtime cancel first
-            downloadHandle?.cancel?.run()
+            val dlKey = "steam:${appId}"
+            StoreDownloadQueue.stopDownload(dlKey)
 
             // Remove DB row
             db.deleteDownload(appId)
@@ -277,7 +457,20 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         // -------------------------------------------------------------
         // START DOWNLOAD
         // -------------------------------------------------------------
-        showDownloadSpeedPicker()
+        resetRetryState()
+        lastThreadCount = 4
+
+        installBtn.isEnabled = false
+        installBtn.text = "Starting…"
+        statusText.text = "Preparing download..."
+        statusText.setTextColor(Color.parseColor("#4CAF50"))
+        progressBar.visibility = View.VISIBLE
+        progressBar.isIndeterminate = true
+        progressText.visibility = View.VISIBLE
+        progressText.text = "Initializing download…"
+
+        downloadHandle = SteamDepotDownloader.installApp(appId, applicationContext, lastThreadCount)
+        StoreDownloadQueue.registerHandle(appId, downloadHandle)
     }
 
     private fun onLaunchClicked() {
@@ -315,30 +508,6 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
                 ui.post { LudashiLaunchBridge.addToLauncher(this, g.name, chosen) }
             }
         }.start()
-    }
-
-    private fun showDownloadSpeedPicker() {
-        val options = arrayOf(
-            "Safe (4 threads) — least RAM/CPU usage",
-            "Normal (8 threads) — balanced",
-            "Fast (16 threads) — maximum speed"
-        )
-        val threadCounts = intArrayOf(4, 8, 16)
-        var selected = 0  // default: Safe
-
-        AlertDialog.Builder(this)
-            .setTitle("Download speed")
-            .setSingleChoiceItems(options, selected) { _, which -> selected = which }
-            .setPositiveButton("Download") { _, _ ->
-                lastThreadCount = threadCounts[selected]
-                installBtn.isEnabled = false
-                installBtn.text = "Starting…"
-                statusText.text = "Preparing download..."
-                statusText.setTextColor(Color.parseColor("#4CAF50"))
-                downloadHandle = SteamDepotDownloader.installApp(appId, applicationContext, lastThreadCount)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
     }
 
     private fun showExePicker(candidates: List<String>, onSelected: (String) -> Unit) {
@@ -379,12 +548,23 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
             setBackgroundColor(getColor(R.color.colorPrimary))
         }
         val backBtn = Button(this).apply {
-            text = "← Back"
+            text = "←"
             setTextColor(Color.WHITE)
             setBackgroundColor(Color.TRANSPARENT)
             setOnClickListener { finish() }
         }
+        val row = SteamRepository.getInstance().database.getGame(appId)
+        if (row == null) { finish(); return scroll }
+        game = SteamGame.fromGameRow(row)
+        val title = TextView(this).apply {
+            text = game!!.name
+            textSize = 18f
+            setTextColor(Color.WHITE)
+            setPadding(dp(8), 0, 0, 0)
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
         header.addView(backBtn)
+        header.addView(title)
         root.addView(header)
 
         // Header image (16:7 aspect ratio approximation)

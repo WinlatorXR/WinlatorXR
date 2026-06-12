@@ -100,6 +100,11 @@ public class EpicDownloadManager {
         }
     }
 
+    private static class ChunkResult {
+        byte[] data;
+        int size;
+    }
+
     /** One file from FileManifestList. */
     public static class FileInfo {
         public String         filename = "";
@@ -317,6 +322,17 @@ public class EpicDownloadManager {
                             return false;
                         }
                         byte[] chunkData = readFile(cachedChunk);
+
+                        if (part.offset < 0 || part.offset + part.size > chunkData.length) {
+                            Log.e(TAG, "INVALID PART " + part.guidStr() +
+                                            " chunkLen=" + chunkData.length +
+                                            " offset=" + part.offset +
+                                            " size=" + part.size);
+                            if (cachedChunk.delete()) {
+                                Log.e(TAG, "Corrupted chunk deleted, try it again.");
+                            }
+                            return false;
+                        }
                         bos.write(chunkData, part.offset, part.size);
                     }
                 }
@@ -721,80 +737,56 @@ public class EpicDownloadManager {
 
     // ── Chunk download ────────────────────────────────────────────────────────
 
-    public static boolean downloadChunk(ChunkInfo chunk, String chunkDir,
-                                         List<CdnUrl> cdnUrls, File outFile) {
-        String chunkPath = chunk.getPath(chunkDir);
-        for (CdnUrl cdn : cdnUrls) {
-            // NO auth tokens on chunk URLs — Fastly/Akamai serve chunks publicly
-            String url = cdn.baseUrl + cdn.cloudDir + "/" + chunkPath;
-            try {
-                byte[] raw = downloadBytes(url, null);
-                if (raw == null) continue;
+    public static ChunkResult decodeChunk(byte[] raw) throws Exception {
 
-                byte[] data = decompressChunk(raw, chunk.windowSize);
-                if (data == null) {
-                    Log.w(TAG, "Decompress failed from " + cdn.baseUrl);
-                    continue;
-                }
+        ByteBuffer buf = ByteBuffer.wrap(raw).order(ByteOrder.LITTLE_ENDIAN);
 
-                try (FileOutputStream fos = new FileOutputStream(outFile)) {
-                    fos.write(data);
-                }
-                return true;
-
-            } catch (Exception e) {
-                Log.w(TAG, "CDN " + cdn.baseUrl + " failed for chunk " + chunk.guidStr()
-                        + ": " + e.getMessage());
-            }
-        }
-        Log.e(TAG, "All CDNs failed for chunk " + chunk.guidStr());
-        return false;
-    }
-
-    public static byte[] decompressChunk(byte[] raw, int expectedSize) {
-        try {
-            ByteBuffer buf = ByteBuffer.wrap(raw).order(ByteOrder.LITTLE_ENDIAN);
-            int magic = buf.getInt();
-            if (magic != 0xB1FE3AA2) {
-                Log.e(TAG, "Bad chunk magic: 0x" + Integer.toHexString(magic));
-                return null;
-            }
-            buf.getInt(); // headerVersion
-            int headerSize     = buf.getInt();
-            int compressedSize = buf.getInt();
-            buf.position(buf.position() + 16); // skip GUID
-            buf.position(buf.position() + 8);  // skip hash
-            int storedAs = buf.get() & 0xFF;
-
-            if (headerSize < 0 || headerSize >= raw.length) {
-                Log.e(TAG, "Bad chunk headerSize: " + headerSize);
-                return null;
-            }
-            byte[] data = new byte[compressedSize];
-            System.arraycopy(raw, headerSize, data, 0, compressedSize);
-
-            if ((storedAs & 1) != 0) {
-                Inflater inflater = new Inflater();
-                inflater.setInput(data);
-                ByteArrayOutputStream baos = new ByteArrayOutputStream(
-                        expectedSize > 0 ? expectedSize : 1048576);
-                byte[] ibuf = new byte[65536];
-                int n;
-                while ((n = inflater.inflate(ibuf)) > 0) baos.write(ibuf, 0, n);
-                inflater.end();
-                byte[] result = baos.toByteArray();
-                if (result.length == 0) {
-                    Log.e(TAG, "Chunk inflate produced 0 bytes");
-                    return null;
-                }
-                return result;
-            }
-            return data;
-
-        } catch (Exception e) {
-            Log.e(TAG, "decompressChunk error: " + e.getMessage());
+        int magic = buf.getInt();
+        if (magic != 0xB1FE3AA2) {
+            Log.e(TAG, "Invalid chunk magic");
             return null;
         }
+
+        buf.getInt(); // header version
+        int headerSize = buf.getInt();
+        int compressedSize = buf.getInt();
+
+        buf.position(buf.position() + 16); // GUID
+        buf.position(buf.position() + 8);  // hash
+
+        int storedAs = buf.get() & 0xFF;
+
+        byte[] payload = new byte[compressedSize];
+        System.arraycopy(raw, headerSize, payload, 0, compressedSize);
+
+        byte[] result;
+
+        if ((storedAs & 1) != 0) {
+            Inflater inflater = new Inflater();
+            inflater.setInput(payload);
+
+            ByteArrayOutputStream baos =
+                    new ByteArrayOutputStream();
+
+            byte[] buffer = new byte[65536];
+            int n;
+
+            while (!inflater.finished()) {
+                n = inflater.inflate(buffer);
+                if (n == 0 && inflater.needsInput()) break;
+                if (n > 0) baos.write(buffer, 0, n);
+            }
+
+            inflater.end();
+            result = baos.toByteArray();
+        } else {
+            result = payload;
+        }
+
+        ChunkResult cr = new ChunkResult();
+        cr.data = result;
+        cr.size = result.length;
+        return cr;
     }
 
     // ── HTTP ──────────────────────────────────────────────────────────────────
@@ -837,87 +829,44 @@ public class EpicDownloadManager {
      * compressed + decompressed data in memory simultaneously.
      * Reads HTTP stream → parses chunk header → inflates/copies payload → writes to file.
      */
-    private static boolean downloadChunkStreaming(ChunkInfo chunk, String chunkDir,
-                                                   List<CdnUrl> cdnUrls, File outFile) {
+    public static boolean downloadChunkStreaming(
+            ChunkInfo chunk,
+            String chunkDir,
+            List<CdnUrl> cdnUrls,
+            File outFile) {
+
         String chunkPath = chunk.getPath(chunkDir);
+
         for (CdnUrl cdn : cdnUrls) {
             String url = cdn.baseUrl + cdn.cloudDir + "/" + chunkPath;
-            HttpURLConnection conn = null;
+
             try {
-                conn = (HttpURLConnection) new URL(url).openConnection();
-                conn.setConnectTimeout(30000);
-                conn.setReadTimeout(60000);
-                conn.setRequestProperty("User-Agent", UA);
-                if (conn.getResponseCode() != 200) { conn.disconnect(); continue; }
+                byte[] raw = downloadBytes(url, null);
+                if (raw == null) continue;
 
-                try (InputStream in = conn.getInputStream();
-                     FileOutputStream fos = new FileOutputStream(outFile)) {
+                ChunkResult result = decodeChunk(raw);
+                if (result == null) continue;
 
-                    // Read first 41 bytes: magic(4)+headerVersion(4)+headerSize(4)+
-                    //   compressedSize(4)+GUID(16)+hash(8)+storedAs(1)
-                    byte[] hdrBuf = new byte[41];
-                    readFully(in, hdrBuf);
-                    ByteBuffer hdr = ByteBuffer.wrap(hdrBuf).order(ByteOrder.LITTLE_ENDIAN);
-                    int magic = hdr.getInt();
-                    if (magic != 0xB1FE3AA2) {
-                        Log.w(TAG, "Bad chunk magic (streaming): 0x" + Integer.toHexString(magic));
-                        continue;
-                    }
-                    hdr.getInt(); // headerVersion
-                    int headerSize     = hdr.getInt();
-                    int compressedSize = hdr.getInt();
-                    hdr.position(hdr.position() + 24); // skip GUID(16) + hash(8)
-                    int storedAs = hdr.get() & 0xFF;
-
-                    // Skip any extra header bytes beyond the 41 we already read
-                    if (headerSize > 41) skipFully(in, headerSize - 41);
-
-                    // Stream payload → file
-                    byte[] iobuf = new byte[131072];
-                    if ((storedAs & 1) != 0) {
-                        // zlib-compressed payload
-                        Inflater inflater = new Inflater();
-                        byte[] obuf = new byte[131072];
-                        int remaining = compressedSize;
-                        try {
-                            while (remaining > 0 && !inflater.finished()) {
-                                if (inflater.needsInput()) {
-                                    int toRead = Math.min(iobuf.length, remaining);
-                                    int n = in.read(iobuf, 0, toRead);
-                                    if (n <= 0) break;
-                                    remaining -= n;
-                                    inflater.setInput(iobuf, 0, n);
-                                }
-                                int out = inflater.inflate(obuf);
-                                if (out > 0) fos.write(obuf, 0, out);
-                            }
-                            // drain any remaining output
-                            int out;
-                            while ((out = inflater.inflate(obuf)) > 0) fos.write(obuf, 0, out);
-                        } finally {
-                            inflater.end();
-                        }
-                    } else {
-                        // stored as-is
-                        int remaining = compressedSize;
-                        while (remaining > 0) {
-                            int toRead = Math.min(iobuf.length, remaining);
-                            int n = in.read(iobuf, 0, toRead);
-                            if (n <= 0) break;
-                            fos.write(iobuf, 0, n);
-                            remaining -= n;
-                        }
-                    }
+                try (FileOutputStream fos = new FileOutputStream(outFile)) {
+                    fos.write(result.data);
                 }
-                conn.disconnect();
+
+                // IMPORTANT: validate correctness like GameNative
+                if (chunk.windowSize > 0 && result.data.length != chunk.windowSize) {
+                    Log.e(TAG, "Chunk size mismatch: " +
+                            chunk.guidStr() +
+                            " expected=" + chunk.windowSize +
+                            " actual=" + result.data.length);
+                    return false;
+                }
+
                 return true;
+
             } catch (Exception e) {
-                Log.w(TAG, "CDN " + cdn.baseUrl + " streaming failed for "
-                        + chunk.guidStr() + ": " + e.getMessage());
-                if (conn != null) conn.disconnect();
+                Log.w(TAG, "CDN failed: " + cdn.baseUrl + " chunk=" + chunk.guidStr());
             }
         }
-        Log.e(TAG, "All CDNs failed (streaming) for chunk " + chunk.guidStr());
+
         return false;
     }
 

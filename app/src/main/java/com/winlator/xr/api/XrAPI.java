@@ -23,6 +23,7 @@ import android.annotation.SuppressLint;
 import android.os.Build;
 
 import com.winlator.cmod.xserver.XServer;
+import com.winlator.xr.XrActivity;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -73,6 +74,7 @@ public class XrAPI implements XrInterface {
         info += Build.PRODUCT.toUpperCase() + "\n";
         info += Build.VERSION.RELEASE.toUpperCase() + "\n";
         info += Build.VERSION.SECURITY_PATCH.toUpperCase() + "\n";
+        info += XrActivity.getInstance().getScreenSize() + "\n";
         FileOutputStream fos = new FileOutputStream(new File(dir, SYSTEM_FILE));
         fos.write(info.getBytes(StandardCharsets.US_ASCII));
         fos.close();

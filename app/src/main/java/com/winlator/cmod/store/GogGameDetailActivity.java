@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -142,6 +143,7 @@ public class GogGameDetailActivity extends NavActivity {
         header.setPadding(dp(8), dp(8), dp(8), dp(8));
 
         Button backBtn = makeBtn("←", 0xFF333333);
+        backBtn.setBackgroundColor(Color.TRANSPARENT);
         backBtn.setOnClickListener(v -> finish());
         header.addView(backBtn, new LinearLayout.LayoutParams(-2, dp(36)));
 

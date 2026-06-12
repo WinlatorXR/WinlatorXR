@@ -8,8 +8,8 @@
         <!--item android:icon="@drawable/icon_input_controls" android:id="@+id/main_menu_input_controls" android:title="@string/input_controls" /!-->
         <item android:icon="@drawable/icon_save" android:id="@+id/main_menu_saves" android:title="@string/saves" />
         <item android:icon="@drawable/icon_open" android:id="@+id/main_menu_contents" android:title="@string/contents"/>
-        <item android:icon="@drawable/icon_duplicate" android:id="@+id/main_menu_store" android:title="@string/store"/>
         <item android:icon="@drawable/icon_settings" android:id="@+id/main_menu_settings" android:title="@string/settings" />
+        <item android:icon="@drawable/icon_duplicate" android:id="@+id/main_menu_store" android:title="@string/store"/>
         <item android:icon="@drawable/icon_about" android:id="@+id/main_menu_about" android:title="@string/more" />
     </group>
 </menu>

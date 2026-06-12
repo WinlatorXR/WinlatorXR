@@ -54,6 +54,7 @@ class SteamForegroundService : Service() {
         try {
             SteamRepository.getInstance().initialize(this)
             SteamRepository.getInstance().connect()
+            updateNotification("Connected to Stream");
         } catch (e: AssertionError) {
             e.printStackTrace()
         }
@@ -64,6 +65,7 @@ class SteamForegroundService : Service() {
     override fun onDestroy() {
         Log.i(TAG, "Service destroyed — disconnecting")
         SteamRepository.getInstance().disconnect()
+        updateNotification("Disconnected from Stream");
         super.onDestroy()
     }
 
@@ -89,16 +91,19 @@ class SteamForegroundService : Service() {
     }
 
     private fun buildNotification(text: String): Notification {
+
         val tapIntent = PendingIntent.getActivity(
             this, 0,
             Intent(this, SteamMainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE,
         )
+
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentTitle("Steam")
             .setContentText(text)
-            .setOngoing(true)
+            .setOngoing(false)
+            .setAutoCancel(false)
             .setContentIntent(tapIntent)
             .build()
     }

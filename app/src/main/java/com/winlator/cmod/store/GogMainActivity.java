@@ -25,6 +25,7 @@ public class GogMainActivity extends NavActivity {
     private LinearLayout loginCard;
     private LinearLayout loggedInCard;
     private TextView usernameView;
+    private boolean processed;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -70,6 +71,9 @@ public class GogMainActivity extends NavActivity {
             String user = getSharedPreferences("bh_gog_prefs", 0)
                     .getString("username", "Unknown");
             usernameView.setText("Signed in as: " + user);
+            if (!isBackPressed() && !processed)
+                startActivity(new Intent(this, GogGamesActivity.class));
+            processed = true;
         }
     }
 

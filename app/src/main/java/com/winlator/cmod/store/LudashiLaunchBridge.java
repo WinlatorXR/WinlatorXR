@@ -2,10 +2,16 @@ package com.winlator.cmod.store;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.Context;
+import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
 import android.widget.Toast;
+
+import com.winlator.cmod.XServerDisplayActivity;
+import com.winlator.cmod.container.Container;
+import com.winlator.cmod.container.ContainerManager;
+import com.winlator.cmod.container.Shortcut;
+import com.winlator.xr.XrActivity;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -35,10 +41,8 @@ public final class LudashiLaunchBridge {
         new Thread(() -> {
             Handler h = new Handler(Looper.getMainLooper());
             try {
-                Class<?> cmClass = Class.forName("com.winlator.cmod.container.ContainerManager");
-                Object manager = cmClass.getConstructor(Context.class).newInstance(activity);
-                Method getContainers = cmClass.getMethod("getContainers");
-                List<?> containers = (List<?>) getContainers.invoke(manager);
+                ContainerManager manager = new ContainerManager(activity);
+                List<Container> containers = manager.getContainers();
 
                 if (containers == null || containers.isEmpty()) {
                     h.post(() -> Toast.makeText(activity,
@@ -73,7 +77,22 @@ public final class LudashiLaunchBridge {
         }).start();
     }
 
-    private static void writeShortcut(Activity activity, Object container,
+
+    private static void runFromShortcut(Activity activity, Shortcut shortcut) {
+        if (!XrActivity.isEnabled(activity)) {
+            Intent intent = new Intent(activity, XServerDisplayActivity.class);
+            intent.putExtra("container_id", shortcut.container.id);
+            intent.putExtra("shortcut_path", shortcut.file.getPath());
+            intent.putExtra("shortcut_name", shortcut.name); // Add this line to pass the shortcut name
+            // Check if the shortcut has the disableXinput value; if not, default to false.
+            String disableXinputValue = shortcut.getExtra("disableXinput", "0"); // Get value from shortcut or use "0" (false) by default
+            intent.putExtra("disableXinput", disableXinputValue); // Use the actual value from the shortcut
+            activity.startActivity(intent);
+        }
+        else XrActivity.openIntent(activity, shortcut.container.id, shortcut.file.getPath());
+    }
+
+    private static void writeShortcut(Activity activity, Container container,
                                       String gameName, String exePath, Handler h) {
         new Thread(() -> {
             try {
@@ -122,6 +141,8 @@ public final class LudashiLaunchBridge {
                         "\"" + gameName + "\" added to Shortcuts.\n"
                                 + "Open the side menu → Shortcuts to launch and configure it.",
                         Toast.LENGTH_LONG).show());
+
+                runFromShortcut(activity, new Shortcut(container, shortcutFile));
 
             } catch (Exception e) {
                 h.post(() -> Toast.makeText(activity,

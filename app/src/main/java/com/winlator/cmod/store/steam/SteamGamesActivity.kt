@@ -335,7 +335,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             text = "Refresh"
             textSize = 13f
             setTextColor(Color.WHITE)
-            setBackgroundColor(BLUE)
+            setBackgroundColor(Color.TRANSPARENT)
             setPadding(dp(12), 0, dp(12), 0)
             setOnClickListener { SteamRepository.getInstance().syncLibrary() }
         }
@@ -343,7 +343,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             text = "Logout"
             textSize = 13f
             setTextColor(Color.WHITE)
-            setBackgroundColor(0xFFB71C1C.toInt())
+            setBackgroundColor(Color.TRANSPARENT)
             setPadding(dp(12), 0, dp(12), 0)
             setOnClickListener {
                 android.app.AlertDialog.Builder(this@SteamGamesActivity)

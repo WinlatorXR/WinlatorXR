@@ -239,8 +239,17 @@ public class NavActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (Math.abs(finishTimestamp - System.currentTimeMillis()) < 100) {
+        if (isBackPressed()) {
             finish();
         }
+    }
+
+    protected void goBack() {
+        finishTimestamp = System.currentTimeMillis();
+        finish();
+    }
+
+    protected boolean isBackPressed() {
+        return Math.abs(finishTimestamp - System.currentTimeMillis()) < 100;
     }
 }
