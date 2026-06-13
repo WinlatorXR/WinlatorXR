@@ -14,8 +14,26 @@
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/gamma" />
                     <com.winlator.cmod.widget.SeekBar
                         android:id="@+id/SBGamma" android:layout_width="fill_parent" android:layout_height="60dp" android:background="@drawable/xr_selector" app:maxValue="3.0" app:minValue="0.5" app:step="0.01" />
+
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8.0dip" android:text="@string/vkbasalt_sharpness_level" />
+                    <com.winlator.cmod.widget.SeekBar
+                        android:id="@+id/SBSharpnessLevel"
+                        android:layout_width="fill_parent"
+                        android:layout_height="60dp"
+                        android:background="@drawable/xr_selector"
+                        app:maxValue="100"
+                        app:minValue="0" />
+
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8.0dip" android:text="@string/vkbasalt_sharpness_denoise" />
+                    <com.winlator.cmod.widget.SeekBar
+                        android:id="@+id/SBSharpnessDenoise"
+                        android:layout_width="fill_parent"
+                        android:layout_height="60dp"
+                        android:background="@drawable/xr_selector"
+                        app:maxValue="100"
+                        app:minValue="0" />
                 </LinearLayout>
-                <TextView android:background="#ffffffff" android:text="@string/color_adjustment" style="@style/FieldSetLabel" android:id="@+id/LBLColorAdjustment" />/>
+                <TextView android:background="#ffffffff" android:text="@string/color_adjustment" style="@style/FieldSetLabel" android:id="@+id/LBLColorAdjustment" />
             </FrameLayout>
         </LinearLayout>
         <View style="@style/VerticalLine" />
@@ -34,6 +52,9 @@
             <CheckBox android:id="@+id/CBEnableCRTShader" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/xr_selector" android:text="@string/enable_crt_shader" />
             <CheckBox android:id="@+id/CBEnableToonShader" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/xr_selector" android:text="@string/enable_toon_shader" />
             <CheckBox android:id="@+id/CBEnableNTSCEffect" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/xr_selector" android:text="@string/enable_ntsc_effect" />
+
+            <CheckBox android:id="@+id/CBEnableCAS" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/xr_selector" android:text="@string/enable_cas" />
+            <CheckBox android:id="@+id/CBEnableDLS" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/xr_selector" android:text="@string/enable_dls" />
 
 
         </LinearLayout>

@@ -19,6 +19,7 @@ import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.KeyValueSet;
 import com.winlator.cmod.renderer.GLRenderer;
 import com.winlator.cmod.renderer.effects.BloomEffect;
+import com.winlator.cmod.renderer.effects.CASEffect;
 import com.winlator.cmod.renderer.effects.ColorEffect;
 import com.winlator.cmod.renderer.effects.CRTEffect;
 import com.winlator.cmod.renderer.effects.FXAAEffect;
@@ -40,11 +41,15 @@ public class ScreenEffectDialog extends ContentDialog {
     private final CheckBox cbEnableFXAA;
     private final CheckBox cbEnableToonShader;
     private final CheckBox cbEnableNTSCEffect;
+    private final CheckBox cbEnableCAS;
+    private final CheckBox cbEnableDLS;
     private final SharedPreferences preferences;
     private final Spinner sProfile;
     private final SeekBar sbBrightness;
     private final SeekBar sbContrast;
     private final SeekBar sbGamma;
+    private final SeekBar sbSharpnessLevel;
+    private final SeekBar sbSharpnessDenoise;
 
     private static final String TAG = "ScreenEffectDialog";
 
@@ -64,6 +69,8 @@ public class ScreenEffectDialog extends ContentDialog {
         sbBrightness = findViewById(R.id.SBBrightness);
         sbContrast = findViewById(R.id.SBContrast);
         sbGamma = findViewById(R.id.SBGamma);
+        sbSharpnessLevel = findViewById(R.id.SBSharpnessLevel);
+        sbSharpnessDenoise = findViewById(R.id.SBSharpnessDenoise);
         cbEnableBloom = findViewById(R.id.CBEnableBloom);
         cbEnableFakeReflections = findViewById(R.id.CBEnableFakeReflections);
         cbEnableFXAA = findViewById(R.id.CBEnableFXAA);
@@ -71,6 +78,8 @@ public class ScreenEffectDialog extends ContentDialog {
 
         cbEnableToonShader = findViewById(R.id.CBEnableToonShader);
         cbEnableNTSCEffect = findViewById(R.id.CBEnableNTSCEffect);
+        cbEnableCAS = findViewById(R.id.CBEnableCAS);
+        cbEnableDLS = findViewById(R.id.CBEnableDLS);
 
 
         GLRenderer renderer = activity.getXServerView().getRenderer();
@@ -86,6 +95,7 @@ public class ScreenEffectDialog extends ContentDialog {
         CRTEffect crtEffect = (CRTEffect) renderer.getEffectComposer().getEffect(CRTEffect.class);
         ToonEffect toonEffect = (ToonEffect) renderer.getEffectComposer().getEffect(ToonEffect.class);
         NTSCCombinedEffect ntscEffect = (NTSCCombinedEffect) renderer.getEffectComposer().getEffect(NTSCCombinedEffect.class);
+        CASEffect casEffect = (CASEffect) renderer.getEffectComposer().getEffect(CASEffect.class);
 
         Log.d(TAG, "ScreenEffectDialog initialized");
 
@@ -97,6 +107,12 @@ public class ScreenEffectDialog extends ContentDialog {
         } else {
             Log.d(TAG, "ColorEffect not found, resetting settings");
             resetSettings();
+        }
+
+        if (casEffect != null) {
+            cbEnableCAS.setChecked(true);
+            sbSharpnessLevel.setValue(casEffect.getSharpness() * 100);
+            sbSharpnessDenoise.setValue(casEffect.getDenoise() * 100);
         }
 
         cbEnableBloom.setChecked(bloomEffect != null);
@@ -135,14 +151,24 @@ public class ScreenEffectDialog extends ContentDialog {
         cbEnableCRTShader.setOnCheckedChangeListener((compoundButton, b) -> applyAll.run());
         cbEnableToonShader.setOnCheckedChangeListener((compoundButton, b) -> applyAll.run());
         cbEnableNTSCEffect.setOnCheckedChangeListener((compoundButton, b) -> applyAll.run());
+        cbEnableCAS.setOnCheckedChangeListener((compoundButton, b) -> {
+            if (b) cbEnableDLS.setChecked(false);
+            applyAll.run();
+        });
+        cbEnableDLS.setOnCheckedChangeListener((compoundButton, b) -> {
+            if (b) cbEnableCAS.setChecked(false);
+            applyAll.run();
+        });
         sbBrightness.setOnValueChangeListener((seekBar, value) -> applyAll.run());
         sbContrast.setOnValueChangeListener((seekBar, value) -> applyAll.run());
         sbGamma.setOnValueChangeListener((seekBar, value) -> applyAll.run());
+        sbSharpnessLevel.setOnValueChangeListener((seekBar, value) -> applyAll.run());
+        sbSharpnessDenoise.setOnValueChangeListener((seekBar, value) -> applyAll.run());
         findViewById(R.id.BTCancel).setVisibility(View.GONE);
 
         findViewById(R.id.BTConfirm).setOnClickListener(v -> {
             Log.d(TAG, "BTConfirm clicked. Preparing to save profile and apply effects.");
-            saveProfile(sProfile);
+            saveProfile();
             Log.d(TAG, "Profile saved.");
 
             // Directly calling applyEffects to ensure it's triggered
@@ -243,6 +269,10 @@ public class ScreenEffectDialog extends ContentDialog {
                 cbEnableCRTShader.setChecked(settings.getBoolean("crt_shader", false));
                 cbEnableToonShader.setChecked(settings.getBoolean("toon_shader", false));
                 cbEnableNTSCEffect.setChecked(settings.getBoolean("ntsc_effect", false));
+                cbEnableCAS.setChecked(settings.getBoolean("cas_enabled", false));
+                cbEnableDLS.setChecked(settings.getBoolean("dls_enabled", false));
+                sbSharpnessLevel.setValue(settings.getFloat("sharpness_level", 0));
+                sbSharpnessDenoise.setValue(settings.getFloat("sharpness_denoise", 0));
                 return;
             }
         }
@@ -266,9 +296,13 @@ public class ScreenEffectDialog extends ContentDialog {
         cbEnableCRTShader.setChecked(false);
         cbEnableToonShader.setChecked(false);
         cbEnableNTSCEffect.setChecked(false);
+        cbEnableCAS.setChecked(false);
+        cbEnableDLS.setChecked(false);
+        sbSharpnessLevel.setValue(0);
+        sbSharpnessDenoise.setValue(0);
     }
 
-    private void saveProfile(Spinner sProfile) {
+    private void saveProfile() {
         if (sProfile.getSelectedItemPosition() > 0) {
             String selectedProfile = sProfile.getSelectedItem().toString();
             Set<String> oldProfiles = new LinkedHashSet<>(preferences.getStringSet("screen_effect_profiles", new LinkedHashSet<>()));
@@ -283,6 +317,10 @@ public class ScreenEffectDialog extends ContentDialog {
             settings.put("crt_shader", cbEnableCRTShader.isChecked());
             settings.put("toon_shader", cbEnableToonShader.isChecked());
             settings.put("ntsc_effect", cbEnableNTSCEffect.isChecked());
+            settings.put("cas_enabled", cbEnableCAS.isChecked());
+            settings.put("dls_enabled", cbEnableDLS.isChecked());
+            settings.put("sharpness_level", sbSharpnessLevel.getValue());
+            settings.put("sharpness_denoise", sbSharpnessDenoise.getValue());
 
             for (String profile : oldProfiles) {
                 String[] parts = profile.split(":");
@@ -309,6 +347,10 @@ public class ScreenEffectDialog extends ContentDialog {
         boolean enableCRTShader = cbEnableCRTShader.isChecked();
         boolean enableToonShader = cbEnableToonShader.isChecked();
         boolean enableNTSCEffect = cbEnableNTSCEffect.isChecked();
+        boolean enableCAS = cbEnableCAS.isChecked();
+        boolean enableDLS = cbEnableDLS.isChecked();
+        float sharpnessLevel = sbSharpnessLevel.getValue();
+        float sharpnessDenoise = sbSharpnessDenoise.getValue();
 
         Log.d(TAG, "Settings - Brightness: " + brightness + ", Contrast: " + contrast + ", Gamma: " + gamma);
         Log.d(TAG, "FXAA Enabled: " + enableFXAA + ", CRT Shader Enabled: " + enableCRTShader);
@@ -387,7 +429,20 @@ public class ScreenEffectDialog extends ContentDialog {
             renderer.getEffectComposer().removeEffect(NTSCCombinedEffect.class);
         }
 
-        saveProfile(sProfile);
+        // Apply or remove CASEffect
+        if (enableCAS || enableDLS) {
+            CASEffect casEffect = renderer.getEffectComposer().getEffect(CASEffect.class);
+            if (casEffect == null) {
+                casEffect = new CASEffect();
+                renderer.getEffectComposer().addEffect(casEffect);
+            }
+            casEffect.setSharpness(sharpnessLevel / 100.0f);
+            casEffect.setDenoise(sharpnessDenoise / 100.0f);
+        } else {
+            renderer.getEffectComposer().removeEffect(CASEffect.class);
+        }
+
+        saveProfile();
         Log.d(TAG, "Profile saved after applying effects.");
     }
 

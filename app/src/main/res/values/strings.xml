@@ -720,6 +720,8 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="vkbasalt_sharpness_effects">Sharpness Effect</string>
     <string name="vkbasalt_sharpness_level">Sharpness Level</string>
     <string name="vkbasalt_sharpness_denoise">Sharpeness Denoise</string>
+    <string name="enable_cas">Enable CAS</string>
+    <string name="enable_dls">Enable DLS</string>
     <string name="enable_peb_logs">Log Windows PEB Data</string>
     <string name="enable_gstreamer_workaround">Enable GStreamer Video Decoder Workaround</string>
     <string name="enable_gstreamer_workaround_alert">Enabling this option will add environmental variables to this container\'s configuration that could impact your ability to launch games. Do not enable this unless you are certain the issue is specific to in-game video playback.</string>
