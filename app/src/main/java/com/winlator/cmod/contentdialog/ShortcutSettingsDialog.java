@@ -387,8 +387,8 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
         AppUtils.setSpinnerSelectionFromValue(sSharpnessEffect, shortcut.getExtra("sharpnessEffect", "None"));
 
-        sbSharpnessLevel.setProgress(Integer.parseInt(shortcut.getExtra("sharpnessLevel", "100")));
-        tvSharpnessLevel.setText(shortcut.getExtra("sharpnessLevel", "100") + "%");
+        sbSharpnessLevel.setProgress(Integer.parseInt(shortcut.getExtra("sharpnessLevel", "0")));
+        tvSharpnessLevel.setText(shortcut.getExtra("sharpnessLevel", "0") + "%");
         sbSharpnessLevel.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -405,8 +405,8 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
             }
         });
-        sbSharpnessDenoise.setProgress(Integer.parseInt(shortcut.getExtra("sharpnessDenoise", "100")));
-        tvSharpnessDenoise.setText(shortcut.getExtra("sharpnessDenoise", "100") + "%");
+        sbSharpnessDenoise.setProgress(Integer.parseInt(shortcut.getExtra("sharpnessDenoise", "0")));
+        tvSharpnessDenoise.setText(shortcut.getExtra("sharpnessDenoise", "0") + "%");
         sbSharpnessDenoise.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
