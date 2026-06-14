@@ -86,6 +86,7 @@ struct XrRenderer {
     XrView* Projections;
     XrPosef InvertedViewPose[2][XrMaxFrameSync + 1];
     XrVector3f HmdOrientation;
+    float HmdAltitude;
 };
 
 void XrRendererInit(struct XrEngine* engine, struct XrRenderer* renderer);

@@ -226,6 +226,7 @@ JNIEXPORT jfloatArray JNICALL Java_com_winlator_xr_XrActivity_getAxes(JNIEnv *en
     data[count++] = xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOVX]; //HMD_FOVX
     data[count++] = xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOVY]; //HMD_FOVY
     data[count++] = xr_module_renderer.FrameSync; //HMD_SYNC
+    data[count++] = xr_module_renderer.HmdAltitude; //HMD_ALTITUDE
 
     jfloat values[count];
     memcpy(values, data, count * sizeof(float));

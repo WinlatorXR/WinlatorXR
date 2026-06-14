@@ -8,6 +8,7 @@ import com.winlator.cmod.xserver.XKeycode;
 import com.winlator.cmod.xserver.XServer;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
 public class XrVersion05 extends XrVersion04 {
 
@@ -93,6 +94,12 @@ public class XrVersion05 extends XrVersion04 {
                 pendingInputs.add(message);
             }
         }
+    }
+
+    @Override
+    public String encode(@NonNull float[] axes, @NonNull boolean[] buttons, int clientIndex) {
+        return super.encode(axes, buttons, clientIndex) +
+                " " + String.format(Locale.US, "%d", (int)axes[ControllerAxis.HMD_ALTITUDE.ordinal()]);
     }
 
     @Override

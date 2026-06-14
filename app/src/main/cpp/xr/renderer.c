@@ -216,6 +216,11 @@ bool XrRendererInitFrame(struct XrEngine* engine, struct XrRenderer* renderer)
         fovy *= renderer->FovScale;
     }
 
+    XrSpaceLocation loc = {};
+    loc.type = XR_TYPE_SPACE_LOCATION;
+    OXR(xrLocateSpace(engine->HeadSpace, engine->StageSpace, engine->PredictedDisplayTime, &loc));
+    renderer->HmdAltitude = loc.pose.position.y;
+
     renderer->ConfigFloat[CONFIG_VIEWPORT_FOVX] = ToDegrees(fovx);
     renderer->ConfigFloat[CONFIG_VIEWPORT_FOVY] = ToDegrees(fovy);
     renderer->HmdOrientation = XrQuaternionfEulerAngles(renderer->InvertedViewPose[0][renderer->FrameSync].orientation);
@@ -518,11 +523,7 @@ void XrRendererRecenter(struct XrEngine* engine, struct XrRenderer* renderer)
     // supported, or calls to xrGetReferenceSpaceBoundsRect fail.
     space_info.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
     memset(&space_info.poseInReferenceSpace, 0, sizeof(XrPosef));
-    space_info.poseInReferenceSpace.orientation.w = 1.0;
-    if (engine->PlatformFlag[PLATFORM_TRACKING_FLOOR])
-    {
-        space_info.poseInReferenceSpace.position.y = -1.6750f;
-    }
+    space_info.poseInReferenceSpace.orientation.w = 1.0f;
     OXR(xrCreateReferenceSpace(engine->Session, &space_info, &engine->FakeSpace));
     ALOGV("Created fake stage space from local space with offset");
     engine->CurrentSpace = engine->FakeSpace;
@@ -534,10 +535,6 @@ void XrRendererRecenter(struct XrEngine* engine, struct XrRenderer* renderer)
         space_info.poseInReferenceSpace.orientation.w = 1.0;
         OXR(xrCreateReferenceSpace(engine->Session, &space_info, &engine->StageSpace));
         ALOGV("Created stage space");
-        if (engine->PlatformFlag[PLATFORM_TRACKING_FLOOR])
-        {
-            engine->CurrentSpace = engine->StageSpace;
-        }
     }
 
     // Update menu orientation
