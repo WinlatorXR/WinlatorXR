@@ -194,6 +194,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        ControllerAssignmentDialog.dismiss();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
 

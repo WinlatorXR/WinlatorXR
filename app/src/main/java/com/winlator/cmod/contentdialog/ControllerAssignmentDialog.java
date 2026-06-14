@@ -42,6 +42,7 @@ public class ControllerAssignmentDialog {
 
     private final TextView restartRequiredView;
     private final int initialPlayerCount;
+    private static ControllerAssignmentDialog instance = null;
 
     // ---------- Public entry points -----------------------------------------
 
@@ -54,7 +55,15 @@ public class ControllerAssignmentDialog {
     public static void show(Context context, WinHandler winHandler) {
         int initialPlayerCount = ControllerManager.getInstance().getEnabledPlayerCount();
         Activity act = (Activity) context; // all current callers pass an Activity
-        new ControllerAssignmentDialog(act, initialPlayerCount, winHandler).showContentDialog();
+        instance = new ControllerAssignmentDialog(act, initialPlayerCount, winHandler);
+        instance.showContentDialog();
+    }
+
+    public static void dismiss() {
+        try {
+            instance.dialog.dismiss();
+        } catch (Exception e) {
+        }
     }
 
     private static WinHandler extractWinHandler(Context ctx) {
