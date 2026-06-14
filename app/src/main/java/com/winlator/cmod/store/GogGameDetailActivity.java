@@ -331,7 +331,20 @@ public class GogGameDetailActivity extends NavActivity {
         launchBtn = makeBtn("Launch", 0xFF2E7D32);
         launchBtn.setOnClickListener(v -> {
             String exe = prefs.getString("gog_exe_" + gameId, null);
-            if (exe != null) GogLaunchHelper.addToLauncher(this, title, exe);
+            if (exe != null) {
+                GogLaunchHelper.addToLauncher(this, title, exe);
+            } else {
+                String dir = prefs.getString("gog_dir_" + gameId, null);
+                File installPath = GogInstallPath.getInstallDir(this, dir);
+                List<String> candidates = GogDownloadManager.collectExeCandidates(installPath);
+
+                showExePicker(candidates, selected -> {
+                    if (selected != null && !selected.isEmpty()) {
+                        prefs.edit().putString("gog_exe_" + gameId, selected).apply();
+                        uiHandler.post(() -> GogLaunchHelper.addToLauncher(this, title, selected));
+                    }
+                });
+            }
         });
         card.addView(launchBtn, btnLp());
 
@@ -424,12 +437,8 @@ public class GogGameDetailActivity extends NavActivity {
             }
             @Override public void onComplete(String installDir) {
                 cancelDownload = null;
-                uiHandler.post(() -> {
-                    progressBar.setVisibility(View.GONE);
-                    progressLabel.setVisibility(View.GONE);
-                    setResult(RESULT_REFRESH);
-                    refreshActionState();
-                });
+                activeDlKey = null;
+                runOnUiThread(GogGameDetailActivity.this::recreate);
             }
             @Override public void onError(String msg) {
                 cancelDownload = null;
