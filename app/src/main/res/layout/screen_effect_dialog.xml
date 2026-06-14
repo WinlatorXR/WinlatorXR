@@ -21,8 +21,8 @@
                         android:layout_width="fill_parent"
                         android:layout_height="60dp"
                         android:background="@drawable/xr_selector"
-                        app:maxValue="100"
-                        app:minValue="0" />
+                        app:sbMaxValue="100"
+                        app:sbMinValue="0" />
 
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8.0dip" android:text="@string/vkbasalt_sharpness_denoise" />
                     <com.winlator.cmod.widget.SeekBar
@@ -30,8 +30,8 @@
                         android:layout_width="fill_parent"
                         android:layout_height="60dp"
                         android:background="@drawable/xr_selector"
-                        app:maxValue="100"
-                        app:minValue="0" />
+                        app:sbMaxValue="100"
+                        app:sbMinValue="0" />
                 </LinearLayout>
                 <TextView android:background="#ffffffff" android:text="@string/color_adjustment" style="@style/FieldSetLabel" android:id="@+id/LBLColorAdjustment" />
             </FrameLayout>

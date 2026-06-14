@@ -10,7 +10,7 @@ public abstract class Mathf {
     }
 
     public static float roundTo(float x, float step) {
-        return (float)(Math.floor(x / step) * step);
+        return (float)(Math.round(x / step) * step);
     }
 
     public static int roundPoint(float x) {
