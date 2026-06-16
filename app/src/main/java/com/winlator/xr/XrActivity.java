@@ -50,6 +50,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 
 public class XrActivity extends XServerDisplayActivity {
+    private static final String KEY_FRAMESYNC_MAPPING = "KEY_FRAMESYNC_MAPPING";
+
     private static XrActivity instance;
 
     // Configuration flags
@@ -92,6 +94,13 @@ public class XrActivity extends XServerDisplayActivity {
         mouseLeftHanded = prefs.getBoolean("use_xr_leftHanded", false);
         mouseLightgun = prefs.getBoolean("use_xr_lightgun", false);
         wheelEmulation = prefs.getBoolean("use_xr_wheel", false);
+
+        if (framesyncMapping.isEmpty()) {
+            int size = prefs.getInt(KEY_FRAMESYNC_MAPPING, 0);
+            for (int i = 0; i < size; i++) {
+                framesyncMapping.add(prefs.getInt(KEY_FRAMESYNC_MAPPING + i, 0));
+            }
+        }
 
         ControllerManager controllerManager = ControllerManager.getInstance();
         controllerManager.scanForDevices();
@@ -206,6 +215,14 @@ public class XrActivity extends XServerDisplayActivity {
             if (!framesyncMapping.contains(r)) {
                 framesyncMapping.add(r);
                 framesyncMapping.sort(Comparator.comparingInt(i -> i));
+            }
+            if (framesyncMapping.size() == expectedLength) {
+                SharedPreferences.Editor e = PreferenceManager.getDefaultSharedPreferences(this).edit();
+                e.putInt(KEY_FRAMESYNC_MAPPING, framesyncMapping.size());
+                for (int i = 0; i < framesyncMapping.size(); i++) {
+                    e.putInt(KEY_FRAMESYNC_MAPPING + i, framesyncMapping.get(i));
+                }
+                e.commit();
             }
             return new Pair<>(false, b);
         } else if (framesyncMapping.size() == expectedLength) {
