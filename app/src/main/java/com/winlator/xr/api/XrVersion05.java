@@ -99,7 +99,15 @@ public class XrVersion05 extends XrVersion04 {
     @Override
     public String encode(@NonNull float[] axes, @NonNull boolean[] buttons, int clientIndex) {
         return super.encode(axes, buttons, clientIndex) +
-                " " + String.format(Locale.US, "%d", (int)axes[ControllerAxis.HMD_ALTITUDE.ordinal()]);
+                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_ALTITUDE.ordinal()]) +
+                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.LG_QX.ordinal()]) +
+                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.LG_QY.ordinal()]) +
+                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.LG_QZ.ordinal()]) +
+                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.LG_QW.ordinal()]) +
+                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.RG_QX.ordinal()]) +
+                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.RG_QY.ordinal()]) +
+                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.RG_QZ.ordinal()]) +
+                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.RG_QW.ordinal()]);
     }
 
     @Override

@@ -179,6 +179,8 @@ JNIEXPORT void JNICALL Java_com_winlator_xr_XrActivity_endFrame(JNIEnv *env, job
 JNIEXPORT jfloatArray JNICALL Java_com_winlator_xr_XrActivity_getAxes(JNIEnv *env, jobject obj) {
     XrPosef lPose = XrInputGetPose(&xr_module_input, 0);
     XrPosef rPose = XrInputGetPose(&xr_module_input, 1);
+    XrPosef lgPose = XrInputGetPose(&xr_module_input, 2);
+    XrPosef rgPose = XrInputGetPose(&xr_module_input, 3);
     XrVector2f lThumbstick = XrInputGetJoystickState(&xr_module_input, 0);
     XrVector2f rThumbstick = XrInputGetJoystickState(&xr_module_input, 1);
     XrQuaternionf quat = xr_module_renderer.Projections[0].pose.orientation;
@@ -227,6 +229,14 @@ JNIEXPORT jfloatArray JNICALL Java_com_winlator_xr_XrActivity_getAxes(JNIEnv *en
     data[count++] = xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOVY]; //HMD_FOVY
     data[count++] = xr_module_renderer.FrameSync; //HMD_SYNC
     data[count++] = xr_module_renderer.HmdAltitude; //HMD_ALTITUDE
+    data[count++] = lgPose.orientation.x; //LG_QX
+    data[count++] = lgPose.orientation.y; //LG_QY
+    data[count++] = lgPose.orientation.z; //LG_QZ
+    data[count++] = lgPose.orientation.w; //LG_QW
+    data[count++] = rgPose.orientation.x; //RG_QX
+    data[count++] = rgPose.orientation.y; //RG_QY
+    data[count++] = rgPose.orientation.z; //RG_QZ
+    data[count++] = rgPose.orientation.w; //RG_QW
 
     jfloat values[count];
     memcpy(values, data, count * sizeof(float));

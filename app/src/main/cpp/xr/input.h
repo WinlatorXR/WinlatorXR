@@ -51,6 +51,8 @@ struct XrInput {
     XrActionSet ActionSet;
     XrPath LeftHandPath;
     XrPath RightHandPath;
+    XrAction HandGripLeft;
+    XrAction HandGripRight;
     XrAction HandPoseLeft;
     XrAction HandPoseRight;
     XrAction IndexLeft;
@@ -68,13 +70,15 @@ struct XrInput {
     XrAction ThumbRight;
     XrAction VibrateLeftFeedback;
     XrAction VibrateRightFeedback;
-    XrSpace LeftControllerSpace;
-    XrSpace RightControllerSpace;
+    XrSpace LeftControllerAimSpace;
+    XrSpace RightControllerAimSpace;
+    XrSpace LeftControllerGripSpace;
+    XrSpace RightControllerGripSpace;
 
     // Controller state
     uint32_t ButtonsLeft;
     uint32_t ButtonsRight;
-    XrSpaceLocation ControllerPose[2];
+    XrSpaceLocation ControllerPose[4];
     XrActionStateVector2f JoystickState[2];
     float VibrationChannelDuration[2];
     float VibrationChannelIntensity[2];

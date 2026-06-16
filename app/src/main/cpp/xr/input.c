@@ -51,6 +51,8 @@ void XrInputInit(struct XrEngine* engine, struct XrInput* input)
     OXR(xrStringToPath(engine->Instance, "/user/hand/right", &input->RightHandPath));
     input->HandPoseLeft = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_POSE_INPUT, "hand_pose_left", NULL,1, &input->LeftHandPath);
     input->HandPoseRight = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_POSE_INPUT, "hand_pose_right", NULL,1, &input->RightHandPath);
+    input->HandGripLeft = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_POSE_INPUT, "hand_grip_left", NULL,1, &input->LeftHandPath);
+    input->HandGripRight = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_POSE_INPUT, "hand_grip_right", NULL,1, &input->RightHandPath);
 
     XrPath interactionProfilePath = XR_NULL_PATH;
     if (engine->PlatformFlag[PLATFORM_CONTROLLER_QUEST])
@@ -95,6 +97,8 @@ void XrInputInit(struct XrEngine* engine, struct XrInput* input)
     bindings[curr++] = XrInputGetBinding(instance, input->VibrateRightFeedback, "/user/hand/right/output/haptic");
     bindings[curr++] = XrInputGetBinding(instance, input->HandPoseLeft, "/user/hand/left/input/aim/pose");
     bindings[curr++] = XrInputGetBinding(instance, input->HandPoseRight, "/user/hand/right/input/aim/pose");
+    bindings[curr++] = XrInputGetBinding(instance, input->HandGripLeft, "/user/hand/left/input/grip/pose");
+    bindings[curr++] = XrInputGetBinding(instance, input->HandGripRight, "/user/hand/right/input/grip/pose");
 
     XrInteractionProfileSuggestedBinding suggested_bindings = {};
     suggested_bindings.type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING;
@@ -131,7 +135,9 @@ void XrInputInit(struct XrEngine* engine, struct XrInput* input)
                                        input->VibrateLeftFeedback,
                                        input->VibrateRightFeedback,
                                        input->HandPoseLeft,
-                                       input->HandPoseRight};
+                                       input->HandPoseRight,
+                                       input->HandGripLeft,
+                                       input->HandGripRight};
     for (int i = 0; i < sizeof(actions_to_enumerate) / sizeof(XrAction); i++)
     {
         XrBoundSourcesForActionEnumerateInfo e = {};
@@ -221,13 +227,17 @@ void XrInputUpdate(struct XrEngine* engine, struct XrInput* input)
     XrSession session = engine->Session;
     XrInputProcessHaptics(input, session);
 
-    if (input->LeftControllerSpace == XR_NULL_HANDLE)
-    {
-        input->LeftControllerSpace = XrInputCreateActionSpace(session, input->HandPoseLeft, input->LeftHandPath);
+    if (input->LeftControllerAimSpace == XR_NULL_HANDLE) {
+        input->LeftControllerAimSpace = XrInputCreateActionSpace(session, input->HandPoseLeft, input->LeftHandPath);
     }
-    if (input->RightControllerSpace == XR_NULL_HANDLE)
-    {
-        input->RightControllerSpace = XrInputCreateActionSpace(session, input->HandPoseRight, input->RightHandPath);
+    if (input->RightControllerAimSpace == XR_NULL_HANDLE) {
+        input->RightControllerAimSpace = XrInputCreateActionSpace(session, input->HandPoseRight, input->RightHandPath);
+    }
+    if (input->LeftControllerGripSpace == XR_NULL_HANDLE) {
+        input->LeftControllerGripSpace = XrInputCreateActionSpace(session, input->HandGripLeft, input->LeftHandPath);
+    }
+    if (input->RightControllerGripSpace == XR_NULL_HANDLE) {
+        input->RightControllerGripSpace = XrInputCreateActionSpace(session, input->HandGripRight, input->RightHandPath);
     }
 
     // button mapping
@@ -278,12 +288,17 @@ void XrInputUpdate(struct XrEngine* engine, struct XrInput* input)
         input->ButtonsRight |= (int)Down;
 
     // pose
-    for (int i = 0; i < 2; i++)
+    XrSpace spaces[] = {
+            input->LeftControllerAimSpace,
+            input->RightControllerAimSpace,
+            input->LeftControllerGripSpace,
+            input->RightControllerGripSpace
+    };
+    for (int i = 0; i < 4; i++)
     {
         memset(&input->ControllerPose[i], 0, sizeof(input->ControllerPose[i]));
         input->ControllerPose[i].type = XR_TYPE_SPACE_LOCATION;
-        XrSpace aim_space[] = {input->LeftControllerSpace, input->RightControllerSpace};
-        xrLocateSpace(aim_space[i], engine->CurrentSpace,
+        xrLocateSpace(spaces[i], engine->CurrentSpace,
                       (XrTime)(engine->PredictedDisplayTime), &input->ControllerPose[i]);
     }
 }
