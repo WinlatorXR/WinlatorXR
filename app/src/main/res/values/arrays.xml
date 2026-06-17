@@ -7,9 +7,7 @@
         <item>1280x720 (16:9)</item>
         <item>1600x900 (16:9)</item>
         <item>1920x1080 (16:9)</item>
-        <item>1440x1440 (1:1)</item>
-        <item>1600x1600 (1:1)</item>
-        <item>2160x2160 (1:1)</item>
+        <item>2560x1280 (2:1)</item>
     </string-array>
     <string-array name="graphics_driver_entries">
         <item>Wrapper</item>
