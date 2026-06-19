@@ -94,6 +94,7 @@ public class ContainerDetailFragment extends Fragment {
     private View saveButton;
 
     private boolean autosave;
+    private static boolean isArm64;
     private static boolean isDarkMode;
 
     private ImageFs imageFs;
@@ -968,7 +969,7 @@ public class ContainerDetailFragment extends Fragment {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String dxwrapper = StringUtils.parseIdentifier(sDXWrapper.getSelectedItem());
                 if (dxwrapper.equals("dxvk")) {
-                    vDXWrapperConfig.setOnClickListener((v) -> (new DXVKConfigDialog(vDXWrapperConfig)).show());
+                    vDXWrapperConfig.setOnClickListener((v) -> (new DXVKConfigDialog(vDXWrapperConfig, isArm64)).show());
                     vDXWrapperConfig.setVisibility(View.VISIBLE);
                 }
                 else vDXWrapperConfig.setVisibility(View.GONE);
@@ -989,6 +990,9 @@ public class ContainerDetailFragment extends Fragment {
         AppUtils.setSpinnerSelectionFromIdentifier(sDDrawspinner, selectedDDrawrapper);
     }
 
+    public static void updateArchitecture(WineInfo wineInfo) {
+        isArm64 = wineInfo.isArm64EC();
+    }
 
     public static String getWinComponents(View view) {
         ViewGroup parent = view.findViewById(R.id.LLTabWinComponents);
@@ -1187,6 +1191,7 @@ public class ContainerDetailFragment extends Fragment {
                 }
                 loadBox64VersionSpinner(context, container, contentsManager, sBox64Version, wineInfo.isArm64EC());
                 cbWoW64Mode.setEnabled(true); // Always allow user to toggle WoW64 mode
+                updateArchitecture(wineInfo);
             }
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
@@ -1208,6 +1213,7 @@ public class ContainerDetailFragment extends Fragment {
                     sEmulator64.setSelection(1);
                 }
                 loadBox64VersionSpinner(context, container, contentsManager, sBox64Version, wineInfo.isArm64EC());
+                updateArchitecture(wineInfo);
             }
         });
 
@@ -1222,6 +1228,10 @@ public class ContainerDetailFragment extends Fragment {
             wineVersions.add(ContentsManager.getEntryName(profile));
         sWineVersion.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, wineVersions));
         if (isEditMode()) AppUtils.setSpinnerSelectionFromValue(sWineVersion, container.getWineVersion());
+
+        String wineVersion = sWineVersion.getSelectedItem().toString();
+        WineInfo wineInfo = WineInfo.fromIdentifier(context, contentsManager, wineVersion);
+        updateArchitecture(wineInfo);
     }
 
     public String getControllerMapping(View view) {

@@ -35,7 +35,7 @@ public class DXVKConfigDialog extends ContentDialog {
     private final Context context;
     private List<String> dxvkVersions;
 
-    public DXVKConfigDialog(View anchor) {
+    public DXVKConfigDialog(View anchor, boolean isArm64) {
         super(anchor.getContext(), R.layout.dxvk_config_dialog);
         context = anchor.getContext();
         setIcon(R.drawable.icon_settings);
@@ -51,7 +51,7 @@ public class DXVKConfigDialog extends ContentDialog {
 
         ContentsManager contentsManager = new ContentsManager(context);
         contentsManager.syncContents();
-        loadDxvkVersionSpinner(contentsManager,sVersion);
+        loadDxvkVersionSpinner(contentsManager, sVersion, isArm64);
 
         KeyValueSet config = parseConfig(anchor.getTag());
         AppUtils.setSpinnerSelectionFromIdentifier(sVersion, config.get("version"));
@@ -153,8 +153,9 @@ public class DXVKConfigDialog extends ContentDialog {
         envVars.put("DXVK_CONFIG", content);
     }
 
-    private void loadDxvkVersionSpinner(ContentsManager manager, Spinner spinner) {
-        String[] originalItems = context.getResources().getStringArray(R.array.dxvk_version_entries);
+    private void loadDxvkVersionSpinner(ContentsManager manager, Spinner spinner, boolean isArm64) {
+        int originalItemsResource = isArm64 ? R.array.dxvk_version_entries_arm64 : R.array.dxvk_version_entries_x64;
+        String[] originalItems = context.getResources().getStringArray(originalItemsResource);
         List<String> itemList = new ArrayList<>(Arrays.asList(originalItems));
 
         for (ContentProfile profile : manager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_DXVK)) {

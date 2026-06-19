@@ -144,6 +144,10 @@ public class ShortcutSettingsDialog extends ContentDialog {
         vDX12WrapperConfig.setOnClickListener((v) -> (new VKD3DConfigDialog(vDXWrapperConfig)).show());
         vDX12WrapperConfig.setVisibility(View.VISIBLE);
 
+        String wineVersion = shortcut.container.getWineVersion();
+        WineInfo wineInfo = WineInfo.fromIdentifier(context, contentsManager, wineVersion);
+        ContainerDetailFragment.updateArchitecture(wineInfo);
+
         ContainerDetailFragment.setupDXWrapperSpinner(sDXWrapper, vDXWrapperConfig);
         ContainerDetailFragment.setupDDrawSpinner(sDDrawrapper, shortcut.getExtra("ddrawrapper", shortcut.container.getDDrawWrapper()));
         loadGraphicsDriverSpinner(sGraphicsDriver, sDXWrapper, vGraphicsDriverConfig, shortcut.getExtra("graphicsDriver", shortcut.container.getGraphicsDriver()),
@@ -162,8 +166,6 @@ public class ShortcutSettingsDialog extends ContentDialog {
         AppUtils.setSpinnerSelectionFromValue(sMIDISoundFont, shortcut.getExtra("midiSoundFont", shortcut.container.getMIDISoundFont()));
 
         FrameLayout fexcoreFL = findViewById(R.id.fexcoreFrame);
-        String wineVersion = shortcut.container.getWineVersion();
-        WineInfo wineInfo = WineInfo.fromIdentifier(context, contentsManager, wineVersion);
         if (wineInfo.isArm64EC()) {
             fexcoreFL.setVisibility(View.VISIBLE);
             sEmulator.setEnabled(true);

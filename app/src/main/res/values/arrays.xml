@@ -44,10 +44,7 @@
         <item>Dd7To9-v1.7</item>
         <item>WineD3D</item>
     </string-array>
-    <string-array name="dxvk_version_entries">
-<!--        <item>0.40.1</item>-->
-<!--        <item>0.96</item>-->
-<!--        <item>1.5.5</item>-->
+    <string-array name="dxvk_version_entries_arm64">
         <item>1.7.1</item>
         <item>1.10.1</item>
         <item>1.10.3</item>
@@ -55,7 +52,18 @@
         <item>2.2.116</item>
         <item>2.3.1</item>
         <item>2.3.1-arm64ec-gplasync</item>
-<!--        <item>2.4</item>-->
+        <item>2.4-gplasync</item>
+        <item>2.4-24-gplasync</item>
+        <item>2.4.1</item>
+        <item>2.4.1-gplasync</item>
+    </string-array>
+    <string-array name="dxvk_version_entries_x64">
+        <item>1.7.1</item>
+        <item>1.10.1</item>
+        <item>1.10.3</item>
+        <item>async-1.10.3</item>
+        <item>2.2.116</item>
+        <item>2.3.1</item>
         <item>2.4-gplasync</item>
         <item>2.4-24-gplasync</item>
         <item>2.4.1</item>
