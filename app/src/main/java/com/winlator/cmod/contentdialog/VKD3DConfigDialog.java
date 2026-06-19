@@ -23,7 +23,7 @@ public class VKD3DConfigDialog extends ContentDialog {
     public static final String[] VKD3D_FEATURE_LEVEL = {"12_0", "12_1", "12_2", "11_1", "11_0", "10_1", "10_0", "9_3", "9_2", "9_1"};
     private final Context context;
 
-    public VKD3DConfigDialog(View anchor) {
+    public VKD3DConfigDialog(View anchor, boolean isArm64) {
         super(anchor.getContext(), R.layout.vkd3d_config_dialog);
         context = anchor.getContext();
         setIcon(R.drawable.icon_settings);
@@ -34,7 +34,7 @@ public class VKD3DConfigDialog extends ContentDialog {
 
         ContentsManager contentsManager = new ContentsManager(context);
         contentsManager.syncContents();
-        loadVkd3dVersionSpinner(contentsManager, sVersion);
+        loadVkd3dVersionSpinner(contentsManager, sVersion, isArm64);
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, VKD3D_FEATURE_LEVEL);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -64,11 +64,12 @@ public class VKD3DConfigDialog extends ContentDialog {
     }
 
     // Method to load versions into the VKD3D version spinner
-    private void loadVkd3dVersionSpinner(ContentsManager manager, Spinner spinner) {
+    private void loadVkd3dVersionSpinner(ContentsManager manager, Spinner spinner, boolean isArm64) {
         List<VKD3DVersionItem> itemList = new ArrayList<>();
 
         // Add predefined versions
-        String[] originalItems = context.getResources().getStringArray(R.array.vkd3d_version_entries);
+        int originalItemsResource = isArm64 ? R.array.vkd3d_version_entries_arm64 : R.array.vkd3d_version_entries_x64;
+        String[] originalItems = context.getResources().getStringArray(originalItemsResource);
         for (String version : originalItems) {
             itemList.add(new VKD3DVersionItem(version, 0)); // For predefined versions, use 0 as verCode
         }

@@ -17,7 +17,6 @@
             style="@style/ComboBox"
             android:layout_width="match_parent"
             android:id="@+id/SVersion"
-            android:entries="@array/vkd3d_version_entries"
             android:spinnerMode="dialog" />
 
         <TextView

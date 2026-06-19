@@ -139,14 +139,14 @@ public class ShortcutSettingsDialog extends ContentDialog {
         final View vDXWrapperConfig = findViewById(R.id.BTDXWrapperConfig);
         vDXWrapperConfig.setTag(shortcut.getExtra("dxwrapperConfig", shortcut.container.getDXWrapperConfig()));
 
-        final View vDX12WrapperConfig = findViewById(R.id.BTDX12WrapperConfig);
-        vDX12WrapperConfig.setTag(shortcut.getExtra("dxwrapperConfig", shortcut.container.getDXWrapperConfig()));
-        vDX12WrapperConfig.setOnClickListener((v) -> (new VKD3DConfigDialog(vDXWrapperConfig)).show());
-        vDX12WrapperConfig.setVisibility(View.VISIBLE);
-
         String wineVersion = shortcut.container.getWineVersion();
         WineInfo wineInfo = WineInfo.fromIdentifier(context, contentsManager, wineVersion);
         ContainerDetailFragment.updateArchitecture(wineInfo);
+
+        final View vDX12WrapperConfig = findViewById(R.id.BTDX12WrapperConfig);
+        vDX12WrapperConfig.setTag(shortcut.getExtra("dxwrapperConfig", shortcut.container.getDXWrapperConfig()));
+        vDX12WrapperConfig.setOnClickListener((v) -> (new VKD3DConfigDialog(vDXWrapperConfig, wineInfo.isArm64EC())).show());
+        vDX12WrapperConfig.setVisibility(View.VISIBLE);
 
         ContainerDetailFragment.setupDXWrapperSpinner(sDXWrapper, vDXWrapperConfig);
         ContainerDetailFragment.setupDDrawSpinner(sDDrawrapper, shortcut.getExtra("ddrawrapper", shortcut.container.getDDrawWrapper()));
