@@ -371,9 +371,17 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         }
         setPadding(dp(6), dp(6), dp(6), dp(8))
 
-        // child 0: cover art — FIT_CENTER shows the whole image, never cropped.
-        // Corners are clipped to a rounded outline so the thumbnail matches the card.
-        val artView = ImageView(this@SteamGamesActivity).apply {
+        // child 0: cover art — a 2:3 portrait box. Most covers are portrait, so they
+        // fill it edge-to-edge; the occasional landscape image is letterboxed inside.
+        // FIT_CENTER guarantees the whole image shows, never cropped; corners are
+        // clipped to a rounded outline so the thumbnail matches the card.
+        val artView = object : ImageView(this@SteamGamesActivity) {
+            override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+                val w = measuredWidth
+                if (w > 0) setMeasuredDimension(w, w * 3 / 2)  // lock to 2:3 portrait
+            }
+        }.apply {
             scaleType = ImageView.ScaleType.FIT_CENTER
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#15171C"))
@@ -387,7 +395,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             }
         }
         addView(artView, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(150)))
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         // child 1: game name — single line keeps every cell the same height
         val nameView = TextView(this@SteamGamesActivity).apply {
