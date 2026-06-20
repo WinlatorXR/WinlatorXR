@@ -428,10 +428,10 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         // Game grid — 4 columns of uniform cells
         gridView = GridView(this).apply {
             setBackgroundColor(BG)
-            numColumns = 4
+            numColumns = 6
             stretchMode = GridView.STRETCH_COLUMN_WIDTH
-            horizontalSpacing = dp(8)
-            verticalSpacing = dp(12)
+            horizontalSpacing = dp(6)
+            verticalSpacing = dp(10)
             setPadding(dp(8), dp(8), dp(8), dp(8))
             clipToPadding = false
             isVerticalScrollBarEnabled = false
@@ -449,10 +449,10 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         // Rounded card with a faint top-edge highlight for a sleeker, less flat look
         background = GradientDrawable().apply {
             setColor(CARD_BG)
-            cornerRadius = dp(12).toFloat()
+            cornerRadius = dp(10).toFloat()
             setStroke(dp(1), 0x14FFFFFF)
         }
-        setPadding(dp(6), dp(6), dp(6), dp(8))
+        setPadding(dp(5), dp(5), dp(5), dp(6))
 
         // child 0: cover art — a 2:3 portrait box. Most covers are portrait, so they
         // fill it edge-to-edge; the occasional landscape image is letterboxed inside.
@@ -468,12 +468,12 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             scaleType = ImageView.ScaleType.FIT_CENTER
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#15171C"))
-                cornerRadius = dp(8).toFloat()
+                cornerRadius = dp(6).toFloat()
             }
             clipToOutline = true
             outlineProvider = object : android.view.ViewOutlineProvider() {
                 override fun getOutline(view: View, outline: android.graphics.Outline) {
-                    outline.setRoundRect(0, 0, view.width, view.height, dp(8).toFloat())
+                    outline.setRoundRect(0, 0, view.width, view.height, dp(6).toFloat())
                 }
             }
         }
@@ -482,13 +482,13 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
 
         // child 1: game name — single line keeps every cell the same height
         val nameView = TextView(this@SteamGamesActivity).apply {
-            textSize = 12f
+            textSize = 11f
             setTextColor(0xFFE6E6EA.toInt())
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
             gravity = Gravity.CENTER_HORIZONTAL
             letterSpacing = 0.01f
-            setPadding(0, dp(7), 0, dp(1))
+            setPadding(0, dp(6), 0, dp(1))
         }
         addView(nameView, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
@@ -502,13 +502,13 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         }
         val launchBtn    = iconButton(R.drawable.ic_game_launch,    0xFF4CAF50.toInt())  // green
         val uninstallBtn = iconButton(R.drawable.ic_game_uninstall, 0xFFE53935.toInt())  // red
-        btnRow.addView(launchBtn, LinearLayout.LayoutParams(dp(40), dp(40)).apply {
-            marginEnd = dp(16)
+        btnRow.addView(launchBtn, LinearLayout.LayoutParams(dp(30), dp(30)).apply {
+            marginEnd = dp(10)
         })
-        btnRow.addView(uninstallBtn, LinearLayout.LayoutParams(dp(40), dp(40)))
+        btnRow.addView(uninstallBtn, LinearLayout.LayoutParams(dp(30), dp(30)))
         addView(btnRow, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(6)
+            topMargin = dp(4)
         })
     }
 
@@ -534,7 +534,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             setImageResource(resId)
             setColorFilter(tint)
             scaleType = ImageView.ScaleType.FIT_CENTER
-            setPadding(dp(8), dp(8), dp(8), dp(8))
+            setPadding(dp(6), dp(6), dp(6), dp(6))
             isClickable = true
             isFocusable = false
         }
