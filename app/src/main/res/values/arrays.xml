@@ -8,9 +8,12 @@
         <item>1600x900 (16:9)</item>
         <item>1920x1080 (16:9)</item>
     </string-array>
-    <string-array name="graphics_driver_entries">
+    <string-array name="graphics_driver_entries_arm64">
         <item>Wrapper</item>
         <item>Wrapper-v2</item>
+    </string-array>
+    <string-array name="graphics_driver_entries_x64">
+        <item>Wrapper</item>
     </string-array>
     <string-array name="wrapper_graphics_driver_version_entries">
         <item>System</item>
