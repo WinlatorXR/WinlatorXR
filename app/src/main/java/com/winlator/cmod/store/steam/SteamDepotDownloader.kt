@@ -158,10 +158,23 @@ object SteamDepotDownloader {
         val steamClient = repo.steamClient
         if (steamClient == null) {
             dlog("FAIL: SteamClient is null — not connected to Steam")
+            activeDownloads.remove(appId)
             emitFailed(appId, "Not connected to Steam")
             return
         }
         dlog("SteamClient: connected=${repo.isConnected}, loggedIn=${repo.isLoggedIn}")
+
+        if (!repo.isConnected || !repo.isLoggedIn) {
+            dlog("Not ready — waiting up to 30s for Steam reconnect/login…")
+            val ready = repo.ensureReadyForDownload(30_000L)
+            if (!ready) {
+                dlog("FAIL: Steam still not connected/logged in after wait")
+                activeDownloads.remove(appId)
+                emitFailed(appId, "Could not reconnect to Steam — check your connection and reopen the Steam library")
+                return
+            }
+            dlog("Reconnected: connected=${repo.isConnected}, loggedIn=${repo.isLoggedIn}")
+        }
 
         val licenses = repo.getLicenses()
         dlog("Licenses: ${licenses.size} entries")
@@ -173,6 +186,7 @@ object SteamDepotDownloader {
         val row = db.getGame(appId)
         if (row == null) {
             dlog("FAIL: appId=$appId not found in database")
+            activeDownloads.remove(appId)
             emitFailed(appId, "Game not found in database")
             return
         }
@@ -226,6 +240,7 @@ object SteamDepotDownloader {
         } catch (e: Exception) {
             dlog("FAIL: DepotDownloader constructor threw")
             dlogError("DepotDownloader()", e)
+            activeDownloads.remove(appId)
             emitFailed(appId, "DepotDownloader init failed: ${e.message}")
             return
         }
@@ -323,6 +338,7 @@ object SteamDepotDownloader {
         } catch (e: Exception) {
             dlog("FAIL: startDownloading() threw")
             dlogError("startDownloading", e)
+            activeDownloads.remove(appId)
             emitFailed(appId, "startDownloading failed: ${e.message}")
             try { downloader.close() } catch (_: Exception) {}
             return
