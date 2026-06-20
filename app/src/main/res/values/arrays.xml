@@ -45,29 +45,18 @@
         <item>WineD3D</item>
     </string-array>
     <string-array name="dxvk_version_entries_arm64">
-        <item>1.7.1</item>
         <item>1.10.1</item>
-        <item>1.10.3</item>
-        <item>async-1.10.3</item>
-        <item>2.2.116</item>
-        <item>2.3.1</item>
+        <item>dxvk-1.10.3-arm64ec-async-1</item>
+        <item>sarek-dyasync-arm64ec-1.12.0</item>
         <item>2.3.1-arm64ec-gplasync</item>
-        <item>2.4-gplasync</item>
-        <item>2.4-24-gplasync</item>
-        <item>2.4.1</item>
-        <item>2.4.1-gplasync</item>
+        <item>2.7.1-1-gplasync-arm64ec-0</item>
     </string-array>
     <string-array name="dxvk_version_entries_x64">
-        <item>1.7.1</item>
         <item>1.10.1</item>
         <item>1.10.3</item>
-        <item>async-1.10.3</item>
-        <item>2.2.116</item>
-        <item>2.3.1</item>
-        <item>2.4-gplasync</item>
+        <item>1.12.-sarek-async-0</item>
         <item>2.4-24-gplasync</item>
-        <item>2.4.1</item>
-        <item>2.4.1-gplasync</item>
+        <item>2.6.2-gplasync-1</item>
     </string-array>
     <string-array name="dxvk_max_device_memory_entries">
         <item>0 (Default)</item>
@@ -136,8 +125,7 @@
         <item>0.4.2</item>
     </string-array>
     <string-array name="fexcore_version_entries">
-        <item>2505</item>
-        <item>2507</item>
+        <item>2605</item>
     </string-array>
     <string-array name="dinput_mapper_type_entries">
         <item>@string/dinput_legacy</item>
@@ -160,12 +148,15 @@
         <item>2.12</item>
         <item>2.13</item>
         <item>2.14.1</item>
+        <item>proton-arm64ec-3.0.1</item>
+        <item>vkd3d-2.14.1-arm64ec</item>
     </string-array>
     <string-array name="vkd3d_version_entries_x64">
         <item>2.8</item>
         <item>2.12</item>
         <item>2.13</item>
         <item>2.14.1</item>
+        <item>proton-3.0.1</item>
     </string-array>
     <string-array name="some_lc_all">
         <item>ar_EG</item>
