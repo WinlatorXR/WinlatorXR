@@ -34,6 +34,12 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
     private lateinit var emptyText: TextView
     private var games: List<SteamGame> = emptyList()
     private var searchQuery: String = ""
+    private var installFilter = InstallFilter.ALL
+    private var sortKey = SortKey.TITLE
+    private var sortAsc = true
+
+    private enum class InstallFilter { ALL, INSTALLED, NOT_INSTALLED }
+    private enum class SortKey { TITLE, SIZE }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -147,9 +153,21 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
     }
 
     private fun refreshList() {
-        val filtered = if (searchQuery.isEmpty()) games
-            else games.filter { it.name.contains(searchQuery, ignoreCase = true) }
-        if (searchQuery.isNotEmpty()) {
+        var seq = games.asSequence()
+        if (searchQuery.isNotEmpty())
+            seq = seq.filter { it.name.contains(searchQuery, ignoreCase = true) }
+        seq = when (installFilter) {
+            InstallFilter.INSTALLED     -> seq.filter { it.isInstalled }
+            InstallFilter.NOT_INSTALLED -> seq.filter { !it.isInstalled }
+            InstallFilter.ALL           -> seq
+        }
+        val cmp: Comparator<SteamGame> = when (sortKey) {
+            SortKey.TITLE -> compareBy { it.name.lowercase() }
+            SortKey.SIZE  -> compareBy { it.sizeBytes }
+        }
+        val filtered = seq.sortedWith(if (sortAsc) cmp else cmp.reversed()).toList()
+
+        if (filtered.size != games.size) {
             statusText.text = "${filtered.size} of ${games.size} games"
         } else if (games.isNotEmpty()) {
             statusText.text = "${games.size} games in library"
@@ -194,8 +212,11 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             }
         }
         gridView.adapter = adapter
-        emptyText.text       = if (searchQuery.isNotEmpty() && filtered.isEmpty())
-            "No games match \"$searchQuery\"." else "No games found.\nIf sync just finished, tap Refresh."
+        emptyText.text = when {
+            searchQuery.isNotEmpty()           -> "No games match \"$searchQuery\"."
+            installFilter != InstallFilter.ALL -> "No games match the current filter."
+            else -> "No games found.\nIf sync just finished, tap Refresh."
+        }
         emptyText.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
         gridView.visibility  = if (filtered.isEmpty()) View.GONE   else View.VISIBLE
     }
@@ -330,6 +351,68 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         root.addView(searchBar, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(44)))
 
+        // Filter + sort controls
+        val controls = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(BG)
+            setPadding(dp(8), dp(8), dp(8), dp(4))
+        }
+        val filterBtn = pillButton("Filter: All")
+        val sortBtn   = pillButton("Sort: Title")
+        val dirBtn    = pillButton("↑")
+        filterBtn.setOnClickListener {
+            PopupMenu(this, filterBtn).apply {
+                menu.add(0, 0, 0, "All")
+                menu.add(0, 1, 1, "Installed")
+                menu.add(0, 2, 2, "Not installed")
+                menu.setGroupCheckable(0, true, true)
+                menu.getItem(installFilter.ordinal).isChecked = true
+                setOnMenuItemClickListener { item ->
+                    installFilter = InstallFilter.values()[item.itemId]
+                    filterBtn.text = "Filter: " + when (installFilter) {
+                        InstallFilter.ALL           -> "All"
+                        InstallFilter.INSTALLED     -> "Installed"
+                        InstallFilter.NOT_INSTALLED -> "Not installed"
+                    }
+                    refreshList()
+                    true
+                }
+            }.show()
+        }
+        sortBtn.setOnClickListener {
+            PopupMenu(this, sortBtn).apply {
+                menu.add(0, 0, 0, "Title")
+                menu.add(0, 1, 1, "Size")
+                menu.setGroupCheckable(0, true, true)
+                menu.getItem(sortKey.ordinal).isChecked = true
+                setOnMenuItemClickListener { item ->
+                    sortKey = SortKey.values()[item.itemId]
+                    sortBtn.text = "Sort: " + when (sortKey) {
+                        SortKey.TITLE -> "Title"
+                        SortKey.SIZE  -> "Size"
+                    }
+                    refreshList()
+                    true
+                }
+            }.show()
+        }
+        dirBtn.setOnClickListener {
+            sortAsc = !sortAsc
+            dirBtn.text = if (sortAsc) "↑" else "↓"
+            refreshList()
+        }
+        controls.addView(filterBtn, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            .apply { marginEnd = dp(8) })
+        controls.addView(sortBtn, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            .apply { marginEnd = dp(8) })
+        controls.addView(dirBtn, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        root.addView(controls, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
         // Empty state
         emptyText = TextView(this).apply {
             text = "No games found.\nIf sync just finished, tap Refresh."
@@ -428,6 +511,22 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             topMargin = dp(6)
         })
     }
+
+    /** A compact rounded pill used for the filter / sort controls. */
+    private fun pillButton(label: String): TextView =
+        TextView(this).apply {
+            text = label
+            textSize = 12f
+            setTextColor(0xFFE6E6EA.toInt())
+            gravity = Gravity.CENTER
+            setPadding(dp(14), dp(7), dp(14), dp(7))
+            background = GradientDrawable().apply {
+                setColor(CARD_BG)
+                cornerRadius = dp(16).toFloat()
+                setStroke(dp(1), 0x14FFFFFF)
+            }
+            isClickable = true
+        }
 
     /** A flat, tappable icon backed by a vector drawable with a colour tint. */
     private fun iconButton(resId: Int, tint: Int): ImageView =
