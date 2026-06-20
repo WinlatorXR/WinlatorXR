@@ -4,6 +4,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -362,13 +363,28 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
     private fun buildCell(): LinearLayout = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_HORIZONTAL
-        setBackgroundColor(CARD_BG)
-        setPadding(dp(6), dp(6), dp(6), dp(6))
+        // Rounded card with a faint top-edge highlight for a sleeker, less flat look
+        background = GradientDrawable().apply {
+            setColor(CARD_BG)
+            cornerRadius = dp(12).toFloat()
+            setStroke(dp(1), 0x14FFFFFF)
+        }
+        setPadding(dp(6), dp(6), dp(6), dp(8))
 
-        // child 0: cover art — FIT_CENTER shows the whole image, never cropped
+        // child 0: cover art — FIT_CENTER shows the whole image, never cropped.
+        // Corners are clipped to a rounded outline so the thumbnail matches the card.
         val artView = ImageView(this@SteamGamesActivity).apply {
             scaleType = ImageView.ScaleType.FIT_CENTER
-            setBackgroundColor(Color.parseColor("#2A2A2A"))
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#15171C"))
+                cornerRadius = dp(8).toFloat()
+            }
+            clipToOutline = true
+            outlineProvider = object : android.view.ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: android.graphics.Outline) {
+                    outline.setRoundRect(0, 0, view.width, view.height, dp(8).toFloat())
+                }
+            }
         }
         addView(artView, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(150)))
@@ -376,11 +392,12 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         // child 1: game name — single line keeps every cell the same height
         val nameView = TextView(this@SteamGamesActivity).apply {
             textSize = 12f
-            setTextColor(Color.WHITE)
+            setTextColor(0xFFE6E6EA.toInt())
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(0, dp(6), 0, 0)
+            letterSpacing = 0.01f
+            setPadding(0, dp(7), 0, dp(1))
         }
         addView(nameView, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
@@ -455,7 +472,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
 
     companion object {
         private val BG      = Color.parseColor("#1B1B1B")
-        private val CARD_BG = Color.parseColor("#252525")
+        private val CARD_BG = Color.parseColor("#23262E")
         private val GRAY    = Color.parseColor("#AAAAAA")
         private val BLUE    = Color.parseColor("#4FC3F7")
 
