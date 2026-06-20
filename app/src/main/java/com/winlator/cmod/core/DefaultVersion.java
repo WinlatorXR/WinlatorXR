@@ -15,6 +15,6 @@ public abstract class DefaultVersion {
         case PICO_NEO_3_LINK, PICO_4 -> "1.12.-sarek-async-0";
         default -> "1.10.1";
     };
-    public static final String D8VK = "1.10.1";
+    public static final String D8VK = "1.0";
     public static final String VKD3D = "2.12-0";
 }
