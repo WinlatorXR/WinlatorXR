@@ -119,14 +119,8 @@ public class EpicGamesActivity extends NavActivity {
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(8), dp(8), dp(8), dp(8));
 
-        Button backBtn = new Button(this);
-        backBtn.setText("←");
-        backBtn.setTextColor(0xFFFFFFFF);
-        backBtn.setBackgroundColor(Color.TRANSPARENT);
-        backBtn.setTextSize(16f);
-        backBtn.setPadding(dp(12), 0, dp(12), 0);
-        backBtn.setOnClickListener(v -> goBack());
-        header.addView(backBtn, new LinearLayout.LayoutParams(-2, dp(40)));
+        header.addView(StoreGridUi.backButton(this, v -> goBack()),
+                new LinearLayout.LayoutParams(dp(40), dp(40)));
 
         TextView titleTV = new TextView(this);
         titleTV.setText("Epic Games");

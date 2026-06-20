@@ -547,12 +547,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
             setPadding(dp(8), dp(8), dp(8), dp(8))
             setBackgroundColor(getColor(R.color.colorPrimary))
         }
-        val backBtn = Button(this).apply {
-            text = "←"
-            setTextColor(Color.WHITE)
-            setBackgroundColor(Color.TRANSPARENT)
-            setOnClickListener { finish() }
-        }
+        val backBtn = StoreGridUi.backButton(this) { finish() }
         val row = SteamRepository.getInstance().database.getGame(appId)
         if (row == null) { finish(); return scroll }
         game = SteamGame.fromGameRow(row)
@@ -563,7 +558,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
             setPadding(dp(8), 0, 0, 0)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
-        header.addView(backBtn)
+        header.addView(backBtn, LinearLayout.LayoutParams(dp(40), dp(40)))
         header.addView(title)
         root.addView(header)
 

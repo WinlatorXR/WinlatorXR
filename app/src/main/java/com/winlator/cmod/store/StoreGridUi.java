@@ -151,6 +151,26 @@ public final class StoreGridUi {
         return iv;
     }
 
+    /** A larger, modern back arrow for store headers (white icon + circular ripple). */
+    public static ImageView backButton(Context ctx, View.OnClickListener onClick) {
+        ImageView b = new ImageView(ctx);
+        b.setImageResource(R.drawable.ic_arrow_back);
+        b.setColorFilter(0xFFFFFFFF);
+        b.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        int pad = dp(ctx, 8);
+        b.setPadding(pad, pad, pad, pad);
+        TypedValue tv = new TypedValue();
+        if (ctx.getTheme().resolveAttribute(
+                android.R.attr.selectableItemBackgroundBorderless, tv, true)) {
+            b.setBackgroundResource(tv.resourceId);
+        }
+        b.setClickable(true);
+        b.setFocusable(true);
+        b.setContentDescription("Back");
+        b.setOnClickListener(onClick);
+        return b;
+    }
+
     /** A compact rounded pill used for the filter / sort controls. */
     public static TextView pillButton(Context ctx, String label) {
         TextView t = new TextView(ctx);

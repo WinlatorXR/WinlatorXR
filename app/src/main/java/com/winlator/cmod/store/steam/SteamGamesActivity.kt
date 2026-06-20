@@ -271,12 +271,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             setBackgroundColor(getColor(R.color.colorPrimary))
             gravity = Gravity.CENTER_VERTICAL
         }
-        val backBtn = Button(this).apply {
-            text = "←"
-            setTextColor(Color.WHITE)
-            setBackgroundColor(Color.TRANSPARENT)
-            setOnClickListener { finish() }
-        }
+        val backBtn = StoreGridUi.backButton(this) { finish() }
         val title = TextView(this).apply {
             text = "Steam Library"
             textSize = 18f
@@ -309,7 +304,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
                     .show()
             }
         }
-        header.addView(backBtn)
+        header.addView(backBtn, LinearLayout.LayoutParams(dp(40), dp(40)))
         header.addView(title)
         header.addView(refreshBtn, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)).apply { marginEnd = dp(6) })
