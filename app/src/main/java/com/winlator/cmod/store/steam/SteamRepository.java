@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -345,6 +347,62 @@ public final class SteamRepository {
         stopPump();
         connected = false;
         loggedIn  = false;
+    }
+
+    public boolean ensureReadyForDownload(long timeoutMs) {
+        if (connected && loggedIn) return true;
+        if (steamClient == null) {
+            Log.e(TAG, "ensureReadyForDownload: client not initialised");
+            return false;
+        }
+        if (!isLoggedInPrefs()) {
+            Log.w(TAG, "ensureReadyForDownload: no stored credentials to log in with");
+            return false;
+        }
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicBoolean success = new AtomicBoolean(false);
+
+        SteamEventListener waiter = event -> {
+            if (event.startsWith("LoggedIn:")) {
+                success.set(true);
+                latch.countDown();
+            } else if (event.startsWith("LoginFailed:")) {
+                success.set(false);
+                latch.countDown();
+            }
+        };
+        addListener(waiter);
+        try {
+            if (connected && loggedIn) return true;
+
+            if (!connected) {
+                reconnectAttempts = 0;
+                Log.i(TAG, "ensureReadyForDownload: not connected — triggering connect()");
+                if (pumping.get() && pumpHandler != null) {
+                    pumpHandler.post(() -> {
+                        try { steamClient.connect(); }
+                        catch (Throwable t) { Log.e(TAG, "ensureReady connect()", t); }
+                    });
+                } else {
+                    connect();
+                }
+            } else {
+                Log.i(TAG, "ensureReadyForDownload: connected but not logged in — re-login");
+                loginWithToken(pGet("username", ""), pGet("refresh_token", ""));
+            }
+
+            boolean signalled = latch.await(timeoutMs, TimeUnit.MILLISECONDS);
+            boolean ready = signalled && success.get() && connected && loggedIn;
+            Log.i(TAG, "ensureReadyForDownload: ready=" + ready + " (signalled=" + signalled
+                    + ", connected=" + connected + ", loggedIn=" + loggedIn + ")");
+            return ready;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        } finally {
+            removeListener(waiter);
+        }
     }
 
     private void startPump() {

@@ -359,12 +359,10 @@ public class ContainerDetailFragment extends Fragment {
         }
 
         final Spinner sBox64Version = view.findViewById(R.id.SBox64Version);
-
-        loadWineVersionSpinner(view, sWineVersion, sBox64Version);
-
-        loadScreenSizeSpinner(view, isEditMode() ? container.getScreenSize() : Container.DEFAULT_SCREEN_SIZE);
-
         final Spinner sGraphicsDriver = view.findViewById(R.id.SGraphicsDriver);
+
+        loadWineVersionSpinner(view, sWineVersion, sBox64Version, sGraphicsDriver);
+        loadScreenSizeSpinner(view, isEditMode() ? container.getScreenSize() : Container.DEFAULT_SCREEN_SIZE);
         
         final Spinner sDXWrapper = view.findViewById(R.id.SDXWrapper);
         final Spinner sDDrawrapper = view.findViewById(R.id.SDDrawrapper);
@@ -516,7 +514,8 @@ public class ContainerDetailFragment extends Fragment {
         FEXCoreManager.loadFEXCoreSettings(context, container, sFEXCoreTSOPreset, sFEXCoreMultiBlock, sFEXCoreX87ReducedPrecision);
 
         String selectedDriver = sGraphicsDriver.getSelectedItem().toString();
-        List<String> sGraphicsItemsList = new ArrayList<>(Arrays.asList(context.getResources().getStringArray(R.array.graphics_driver_entries)));
+        int originalItemsResource = isArm64 ? R.array.graphics_driver_entries_arm64 : R.array.graphics_driver_entries_x64;
+        List<String> sGraphicsItemsList = new ArrayList<>(Arrays.asList(context.getResources().getStringArray(originalItemsResource)));
         sGraphicsDriver.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, sGraphicsItemsList));
         AppUtils.setSpinnerSelectionFromValue(sGraphicsDriver, selectedDriver);
 
@@ -1163,7 +1162,7 @@ public class ContainerDetailFragment extends Fragment {
 
     }
 
-    private void loadWineVersionSpinner(final View view, Spinner sWineVersion, Spinner sBox64Version) {
+    private void loadWineVersionSpinner(final View view, Spinner sWineVersion, Spinner sBox64Version, Spinner sGraphicsDriver) {
         final Context context = getContext();
         sWineVersion.setEnabled(!isEditMode());
 //
@@ -1192,6 +1191,7 @@ public class ContainerDetailFragment extends Fragment {
                 loadBox64VersionSpinner(context, container, contentsManager, sBox64Version, wineInfo.isArm64EC());
                 cbWoW64Mode.setEnabled(true); // Always allow user to toggle WoW64 mode
                 updateArchitecture(wineInfo);
+                updateGraphicsDriverSpinner(context, sGraphicsDriver);
             }
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
@@ -1214,6 +1214,7 @@ public class ContainerDetailFragment extends Fragment {
                 }
                 loadBox64VersionSpinner(context, container, contentsManager, sBox64Version, wineInfo.isArm64EC());
                 updateArchitecture(wineInfo);
+                updateGraphicsDriverSpinner(context, sGraphicsDriver);
             }
         });
 
@@ -1271,7 +1272,8 @@ public class ContainerDetailFragment extends Fragment {
     }
 
     public static void updateGraphicsDriverSpinner(Context context, Spinner spinner) {
-        String[] originalItems = context.getResources().getStringArray(R.array.graphics_driver_entries);
+        int originalItemsResource = isArm64 ? R.array.graphics_driver_entries_arm64 : R.array.graphics_driver_entries_x64;
+        String[] originalItems = context.getResources().getStringArray(originalItemsResource);
         List<String> itemList = new ArrayList<>(Arrays.asList(originalItems));
         
         // Set the adapter with the combined list

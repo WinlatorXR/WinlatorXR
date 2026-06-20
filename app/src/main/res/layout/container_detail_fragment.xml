@@ -143,8 +143,7 @@
                     style="@style/ComboBox"
                     android:layout_width="0dp"
                     android:layout_weight="1"
-                    android:id="@+id/SGraphicsDriver"
-                    android:entries="@array/graphics_driver_entries" />
+                    android:id="@+id/SGraphicsDriver" />
 
                 <ImageButton
                     style="@style/ListMenuButton"

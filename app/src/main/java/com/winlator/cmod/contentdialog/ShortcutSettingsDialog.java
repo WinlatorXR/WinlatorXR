@@ -374,7 +374,8 @@ public class ShortcutSettingsDialog extends ContentDialog {
         });
 
         String selectedDriver = sGraphicsDriver.getSelectedItem().toString();
-        List<String> sGraphicsItemsList = new ArrayList<>(Arrays.asList(context.getResources().getStringArray(R.array.graphics_driver_entries)));
+        int originalItemsResource = wineInfo.isArm64EC() ? R.array.graphics_driver_entries_arm64 : R.array.graphics_driver_entries_x64;
+        List<String> sGraphicsItemsList = new ArrayList<>(Arrays.asList(context.getResources().getStringArray(originalItemsResource)));
         sGraphicsDriver.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, sGraphicsItemsList));
         AppUtils.setSpinnerSelectionFromValue(sGraphicsDriver, selectedDriver);
 

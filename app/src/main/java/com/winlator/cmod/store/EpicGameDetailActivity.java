@@ -265,7 +265,28 @@ public class EpicGameDetailActivity extends NavActivity {
         launchBtn = makeBtn("Launch", 0xFF2E7D32);
         launchBtn.setOnClickListener(v -> {
             String exe = prefs.getString("epic_exe_" + appName, null);
-            if (exe != null) pendingLaunchExe(exe);
+            if (exe != null) {
+                pendingLaunchExe(exe);
+            } else {
+                String dir = prefs.getString("epic_dir_" + appName, null);
+                if (dir == null) return;
+                new Thread(() -> {
+                    List<File> exeFiles = new ArrayList<>();
+                    AmazonLaunchHelper.collectExe(new File(dir), exeFiles);
+                    if (exeFiles.isEmpty()) {
+                        uiHandler.post(() -> Toast.makeText(this, "No .exe files found", Toast.LENGTH_SHORT).show());
+                        return;
+                    }
+                    List<String> candidates = new ArrayList<>();
+                    for (File f : exeFiles) candidates.add(f.getAbsolutePath());
+                    showExePicker(candidates, selected -> {
+                        if (selected != null && !selected.isEmpty()) {
+                            prefs.edit().putString("epic_exe_" + appName, selected).apply();
+                            pendingLaunchExe(selected);
+                        }
+                    });
+                }).start();
+            }
         });
         card.addView(launchBtn, btnLp());
 
@@ -394,12 +415,8 @@ public class EpicGameDetailActivity extends NavActivity {
 
     private void onInstallComplete() {
         cancelDownload = null;
-        uiHandler.post(() -> {
-            progressBar.setVisibility(View.GONE);
-            progressLabel.setVisibility(View.GONE);
-            setResult(RESULT_REFRESH);
-            refreshActionState();
-        });
+        activeDlKey = null;
+        runOnUiThread(EpicGameDetailActivity.this::recreate);
     }
 
     private void onInstallError(String msg) {
