@@ -354,7 +354,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         // Filter + sort controls
         val controls = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+            gravity = Gravity.END or Gravity.CENTER_VERTICAL
             setBackgroundColor(BG)
             setPadding(dp(8), dp(8), dp(8), dp(4))
         }
