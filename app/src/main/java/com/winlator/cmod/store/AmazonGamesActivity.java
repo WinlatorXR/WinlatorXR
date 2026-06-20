@@ -23,6 +23,7 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -30,6 +31,7 @@ import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -37,7 +39,7 @@ import java.util.List;
 import android.content.Intent;
 
 import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.winlator.cmod.NavActivity;
@@ -57,7 +59,6 @@ public class AmazonGamesActivity extends NavActivity {
     private static final String CACHE_KEY    = "amazon_library_cache";
 
     // Amazon brand colours
-    private static final int COLOR_CARD_BG  = 0xFF1A1410;   // dark brownish card background
     private static final int COLOR_ROOT_BG  = 0xFF0D0D0D;
     private static final int REQ_GAME_DETAIL  = 1001;
 
@@ -70,6 +71,12 @@ public class AmazonGamesActivity extends NavActivity {
     private Button      refreshBtn;
     private EditText    searchBar;
     private List<AmazonGame> allGames = new ArrayList<>();
+
+    private enum Filter { ALL, INSTALLED, NOT_INSTALLED }
+    private enum Sort { TITLE, SIZE }
+    private Filter filter = Filter.ALL;
+    private Sort sort = Sort.TITLE;
+    private boolean sortAsc = true;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -171,6 +178,31 @@ public class AmazonGamesActivity extends NavActivity {
         syncText.setPadding(dp(12), dp(6), dp(12), dp(6));
         syncText.setBackgroundColor(0xFF111111);
         root.addView(syncText, new LinearLayout.LayoutParams(-1, -2));
+
+        // Filter + sort controls (right-aligned)
+        LinearLayout controls = new LinearLayout(this);
+        controls.setOrientation(LinearLayout.HORIZONTAL);
+        controls.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        controls.setBackgroundColor(COLOR_ROOT_BG);
+        controls.setPadding(dp(8), dp(8), dp(8), dp(4));
+        TextView filterBtn = StoreGridUi.pillButton(this, "Filter: All");
+        TextView sortBtn = StoreGridUi.pillButton(this, "Sort: Title");
+        TextView dirBtn = StoreGridUi.pillButton(this, "↑");
+        filterBtn.setOnClickListener(v -> showFilterMenu(filterBtn));
+        sortBtn.setOnClickListener(v -> showSortMenu(sortBtn));
+        dirBtn.setOnClickListener(v -> {
+            sortAsc = !sortAsc;
+            dirBtn.setText(sortAsc ? "↑" : "↓");
+            applyFilter(currentQuery());
+        });
+        LinearLayout.LayoutParams p1 = new LinearLayout.LayoutParams(-2, -2);
+        p1.rightMargin = dp(8);
+        controls.addView(filterBtn, p1);
+        LinearLayout.LayoutParams p2 = new LinearLayout.LayoutParams(-2, -2);
+        p2.rightMargin = dp(8);
+        controls.addView(sortBtn, p2);
+        controls.addView(dirBtn, new LinearLayout.LayoutParams(-2, -2));
+        root.addView(controls, new LinearLayout.LayoutParams(-1, -2));
 
         // Scrollable game list
         scrollView = new ScrollView(this);
@@ -288,15 +320,27 @@ public class AmazonGamesActivity extends NavActivity {
     }
 
     private void applyFilter(String query) {
-        List<AmazonGame> filtered;
+        List<AmazonGame> base;
         if (query == null || query.trim().isEmpty()) {
-            filtered = allGames;
+            base = allGames;
         } else {
             String q = query.trim().toLowerCase();
-            filtered = new ArrayList<>();
+            base = new ArrayList<>();
             for (AmazonGame g : allGames)
-                if (g.title.toLowerCase().contains(q)) filtered.add(g);
+                if (g.title.toLowerCase().contains(q)) base.add(g);
         }
+        List<AmazonGame> filtered = new ArrayList<>();
+        for (AmazonGame g : base) {
+            boolean inst = isInstalled(g);
+            if (filter == Filter.INSTALLED && !inst) continue;
+            if (filter == Filter.NOT_INSTALLED && inst) continue;
+            filtered.add(g);
+        }
+        Collections.sort(filtered, (a, b) -> sort == Sort.SIZE
+                ? Long.compare(a.installSize, b.installSize)
+                : a.title.compareToIgnoreCase(b.title));
+        if (!sortAsc) Collections.reverse(filtered);
+
         final List<AmazonGame> result = filtered;
         uiHandler.post(() -> {
             gameListLayout.removeAllViews();
@@ -304,8 +348,9 @@ public class AmazonGamesActivity extends NavActivity {
                 gameListLayout.setPadding(dp(8), dp(8), dp(8), dp(8));
                 TextView emptyTV = new TextView(AmazonGamesActivity.this);
                 String q2 = query == null ? "" : query.trim();
-                emptyTV.setText(q2.isEmpty() ? "Your Amazon library is empty"
-                                             : "No results for \u201c" + q2 + "\u201d");
+                emptyTV.setText(!q2.isEmpty() ? "No results for \u201c" + q2 + "\u201d"
+                        : filter != Filter.ALL ? "No games match the current filter."
+                        : "Your Amazon library is empty");
                 emptyTV.setTextColor(0xFF666666);
                 emptyTV.setTextSize(14f);
                 emptyTV.setGravity(Gravity.CENTER);
@@ -316,7 +361,7 @@ public class AmazonGamesActivity extends NavActivity {
                 gameListLayout.setPadding(dp(8), dp(8), dp(8), dp(8));
 
                 RecyclerView recyclerView = new RecyclerView(this);
-                recyclerView.setLayoutManager(new LinearLayoutManager(this));
+                recyclerView.setLayoutManager(new GridLayoutManager(this, StoreGridUi.COLUMNS));
                 recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
                 recyclerView.setPadding(0, 0, 0, dp(12));
                 recyclerView.setClipToPadding(false);
@@ -327,14 +372,7 @@ public class AmazonGamesActivity extends NavActivity {
                                 ViewGroup.LayoutParams.MATCH_PARENT
                         );
                 recyclerView.setLayoutParams(rvLp);
-                recyclerView.setAdapter(
-                        new AmazonGamesAdapter(
-                                this,
-                                result,
-                                prefs,
-                                uiHandler
-                        )
-                );
+                recyclerView.setAdapter(new AmazonGamesAdapter(result));
                 gameListLayout.addView(recyclerView);
             }
             scrollView.setVisibility(View.VISIBLE);
@@ -363,27 +401,81 @@ public class AmazonGamesActivity extends NavActivity {
         uiHandler.post(() -> { if (refreshBtn != null) refreshBtn.setEnabled(true); });
     }
 
-    // ── LIST view: collapsible game cards ─────────────────────────────────────
+    // ── GRID view: shared store cells + per-store actions ─────────────────────
 
-    public class AmazonGamesAdapter
-            extends RecyclerView.Adapter<AmazonGamesAdapter.GameViewHolder> {
+    private boolean isInstalled(AmazonGame g) {
+        return prefs.getString("amazon_exe_" + g.productId, null) != null;
+    }
 
-        private final AmazonGamesActivity activity;
+    private String currentQuery() {
+        return searchBar != null ? searchBar.getText().toString() : "";
+    }
+
+    private void launchAmazon(AmazonGame g) {
+        String exe = prefs.getString("amazon_exe_" + g.productId, null);
+        if (exe == null) { openDetailScreen(g); return; }
+        LudashiLaunchBridge.addToLauncher(this, g.title, exe);
+    }
+
+    private void uninstallAmazon(AmazonGame g) {
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Uninstall " + g.title + "?")
+                .setMessage("This will delete all installed game files.")
+                .setPositiveButton("Uninstall", (d, w) -> {
+                    String dir = prefs.getString("amazon_dir_" + g.productId, null);
+                    new Thread(() -> {
+                        if (dir != null) StoreGridUi.deleteDir(new File(dir));
+                        prefs.edit()
+                                .remove("amazon_exe_" + g.productId)
+                                .remove("amazon_dir_" + g.productId)
+                                .apply();
+                        uiHandler.post(() -> {
+                            Toast.makeText(this, g.title + " uninstalled", Toast.LENGTH_SHORT).show();
+                            applyFilter(currentQuery());
+                        });
+                    }).start();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showFilterMenu(TextView anchor) {
+        PopupMenu pm = new PopupMenu(this, anchor);
+        pm.getMenu().add(0, 0, 0, "All");
+        pm.getMenu().add(0, 1, 1, "Installed");
+        pm.getMenu().add(0, 2, 2, "Not installed");
+        pm.getMenu().setGroupCheckable(0, true, true);
+        pm.getMenu().getItem(filter.ordinal()).setChecked(true);
+        pm.setOnMenuItemClickListener(item -> {
+            filter = Filter.values()[item.getItemId()];
+            anchor.setText("Filter: " + (filter == Filter.ALL ? "All"
+                    : filter == Filter.INSTALLED ? "Installed" : "Not installed"));
+            applyFilter(currentQuery());
+            return true;
+        });
+        pm.show();
+    }
+
+    private void showSortMenu(TextView anchor) {
+        PopupMenu pm = new PopupMenu(this, anchor);
+        pm.getMenu().add(0, 0, 0, "Title");
+        pm.getMenu().add(0, 1, 1, "Size");
+        pm.getMenu().setGroupCheckable(0, true, true);
+        pm.getMenu().getItem(sort.ordinal()).setChecked(true);
+        pm.setOnMenuItemClickListener(item -> {
+            sort = Sort.values()[item.getItemId()];
+            anchor.setText("Sort: " + (sort == Sort.SIZE ? "Size" : "Title"));
+            applyFilter(currentQuery());
+            return true;
+        });
+        pm.show();
+    }
+
+    public class AmazonGamesAdapter extends RecyclerView.Adapter<AmazonGamesAdapter.VH> {
         private final List<AmazonGame> games;
-        private final SharedPreferences prefs;
-        private final Handler uiHandler;
 
-        public AmazonGamesAdapter(
-                AmazonGamesActivity activity,
-                List<AmazonGame> games,
-                SharedPreferences prefs,
-                Handler uiHandler
-        ) {
-            this.activity = activity;
+        AmazonGamesAdapter(List<AmazonGame> games) {
             this.games = games;
-            this.prefs = prefs;
-            this.uiHandler = uiHandler;
-
             setHasStableIds(true);
         }
 
@@ -392,371 +484,41 @@ public class AmazonGamesActivity extends NavActivity {
             return games.get(position).productId.hashCode();
         }
 
+        class VH extends RecyclerView.ViewHolder {
+            final StoreGridUi.Cell cell;
+            VH(StoreGridUi.Cell cell) { super(cell.root); this.cell = cell; }
+        }
+
         @NonNull
         @Override
-        public GameViewHolder onCreateViewHolder(
-                @NonNull ViewGroup parent,
-                int viewType
-        ) {
-
-            Context ctx = parent.getContext();
-
-            LinearLayout card = new LinearLayout(ctx);
-
-            card.setOrientation(LinearLayout.VERTICAL);
-
-            card.setPadding(
-                    dp(ctx, 10),
-                    dp(ctx, 10),
-                    dp(ctx, 10),
-                    dp(ctx, 10)
-            );
-
-            GradientDrawable cardBg = new GradientDrawable();
-
-            cardBg.setColor(activity.COLOR_CARD_BG);
-
-            cardBg.setCornerRadius(dp(ctx, 6));
-
-            card.setBackground(cardBg);
-
-            card.setFocusable(true);
-
-            card.setDescendantFocusability(
-                    ViewGroup.FOCUS_BLOCK_DESCENDANTS
-            );
-
-            RecyclerView.LayoutParams cardLp =
-                    new RecyclerView.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                    );
-
-            cardLp.bottomMargin = dp(ctx, 8);
-
-            card.setLayoutParams(cardLp);
-
-            // =========================================================
-            // HEADER
-            // =========================================================
-
-            LinearLayout topRow = new LinearLayout(ctx);
-
-            topRow.setOrientation(LinearLayout.HORIZONTAL);
-
-            topRow.setGravity(Gravity.CENTER_VERTICAL);
-
-            // COVER
-            ImageView coverIV = new ImageView(ctx);
-
-            coverIV.setScaleType(ImageView.ScaleType.CENTER_CROP);
-
-            GradientDrawable coverBg = new GradientDrawable();
-
-            coverBg.setColor(0xFF221A10);
-
-            coverBg.setCornerRadius(dp(ctx, 4));
-
-            coverIV.setBackground(coverBg);
-
-            LinearLayout.LayoutParams coverLp =
-                    new LinearLayout.LayoutParams(
-                            dp(ctx, 60),
-                            dp(ctx, 60)
-                    );
-
-            coverLp.rightMargin = dp(ctx, 10);
-
-            topRow.addView(coverIV, coverLp);
-
-            // INFO COLUMN
-            LinearLayout infoCol = new LinearLayout(ctx);
-
-            infoCol.setOrientation(LinearLayout.VERTICAL);
-
-            infoCol.setGravity(Gravity.CENTER_VERTICAL);
-
-            // TITLE ROW
-            LinearLayout titleRow = new LinearLayout(ctx);
-
-            titleRow.setOrientation(LinearLayout.HORIZONTAL);
-
-            titleRow.setGravity(Gravity.CENTER_VERTICAL);
-
-            TextView titleTV = new TextView(ctx);
-
-            titleTV.setTextColor(Color.WHITE);
-
-            titleTV.setTextSize(15f);
-
-            titleTV.setTypeface(null, Typeface.BOLD);
-
-            titleTV.setMaxLines(1);
-
-            titleTV.setEllipsize(TextUtils.TruncateAt.END);
-
-            titleRow.addView(titleTV);
-
-            TextView collapsedCheckTV = new TextView(ctx);
-
-            collapsedCheckTV.setText(" ✓");
-
-            collapsedCheckTV.setTextColor(0xFF4CAF50);
-
-            collapsedCheckTV.setTextSize(14f);
-
-            collapsedCheckTV.setTypeface(null, Typeface.BOLD);
-
-            titleRow.addView(collapsedCheckTV);
-
-            titleRow.addView(
-                    new View(ctx),
-                    new LinearLayout.LayoutParams(0, 0, 1f)
-            );
-
-            infoCol.addView(
-                    titleRow,
-                    new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
-            );
-
-            // SUBTITLE
-            TextView subTV = new TextView(ctx);
-
-            subTV.setTextColor(0xFF888888);
-
-            subTV.setTextSize(11f);
-
-            subTV.setMaxLines(1);
-
-            subTV.setEllipsize(TextUtils.TruncateAt.END);
-
-            LinearLayout.LayoutParams subLp =
-                    new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                    );
-
-            subLp.topMargin = dp(ctx, 4);
-
-            infoCol.addView(subTV, subLp);
-
-            // INSTALLED CHECKMARK
-            TextView checkmark = new TextView(ctx);
-
-            checkmark.setTextSize(10f);
-
-            LinearLayout.LayoutParams ckLp =
-                    new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                    );
-
-            ckLp.topMargin = dp(ctx, 2);
-
-            infoCol.addView(checkmark, ckLp);
-
-            topRow.addView(
-                    infoCol,
-                    new LinearLayout.LayoutParams(
-                            0,
-                            ViewGroup.LayoutParams.WRAP_CONTENT,
-                            1f
-                    )
-            );
-
-            card.addView(topRow);
-
-            return new GameViewHolder(
-                    card,
-                    cardBg,
-                    coverIV,
-                    titleTV,
-                    subTV,
-                    collapsedCheckTV,
-                    checkmark
-            );
+        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            StoreGridUi.Cell cell = StoreGridUi.buildCell(AmazonGamesActivity.this);
+            cell.root.setLayoutParams(new RecyclerView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            return new VH(cell);
         }
 
         @Override
-        public void onBindViewHolder(
-                @NonNull GameViewHolder h,
-                int position
-        ) {
-
+        public void onBindViewHolder(@NonNull VH h, int position) {
             AmazonGame game = games.get(position);
+            h.cell.name.setText(game.title);
+            h.cell.art.setImageDrawable(null);
+            loadImage(game, h.cell.art);
 
-            boolean isInstalled =
-                    prefs.getString(
-                            "amazon_exe_" + game.productId,
-                            null
-                    ) != null;
-
-            // =========================================================
-            // BASIC
-            // =========================================================
-
-            h.titleTV.setText(game.title);
-
-            activity.loadImage(game, h.coverIV);
-
-            String subtitle = "";
-
-            if (!game.developer.isEmpty()
-                    && !game.publisher.isEmpty()) {
-
-                subtitle =
-                        game.developer
-                                + "  ·  "
-                                + game.publisher;
-
-            } else if (!game.developer.isEmpty()) {
-
-                subtitle = game.developer;
-
-            } else if (!game.publisher.isEmpty()) {
-
-                subtitle = game.publisher;
+            boolean installed = isInstalled(game);
+            StoreGridUi.setInstalled(h.cell, installed);
+            if (installed) {
+                h.cell.launch.setOnClickListener(v -> launchAmazon(game));
+                h.cell.uninstall.setOnClickListener(v -> uninstallAmazon(game));
+            } else {
+                h.cell.launch.setOnClickListener(null);
+                h.cell.uninstall.setOnClickListener(null);
             }
-
-            h.subTV.setText(subtitle);
-
-            h.subTV.setVisibility(
-                    subtitle.isEmpty()
-                            ? View.GONE
-                            : View.VISIBLE
-            );
-
-            // =========================================================
-            // INSTALLED
-            // =========================================================
-
-            boolean updateAvailable =
-                    isInstalled
-                            && game.versionId != null
-                            && game.versionId.endsWith(
-                            "_UPDATE_AVAILABLE"
-                    );
-
-            h.collapsedCheckTV.setVisibility(
-                    isInstalled
-                            ? View.VISIBLE
-                            : View.GONE
-            );
-
-            h.checkmark.setVisibility(
-                    isInstalled
-                            ? View.VISIBLE
-                            : View.GONE
-            );
-
-            h.checkmark.setText(
-                    updateAvailable
-                            ? "✓ Installed — Update Available"
-                            : "✓ Installed"
-            );
-
-            h.checkmark.setTextColor(
-                    updateAvailable
-                            ? 0xFFFFAA00
-                            : 0xFF4CAF50
-            );
-
-            // =========================================================
-            // FOCUS
-            // =========================================================
-
-            h.itemView.setOnFocusChangeListener(
-                    (v, hasFocus) -> {
-
-                        h.cardBg.setColor(
-                                hasFocus
-                                        ? 0xFF2B251A
-                                        : activity.COLOR_CARD_BG
-                        );
-
-                        h.cardBg.setStroke(
-                                hasFocus
-                                        ? dp(v.getContext(), 3)
-                                        : 0,
-                                hasFocus
-                                        ? 0xFFFFD700
-                                        : 0x00000000
-                        );
-                    });
-
-            // =========================================================
-            // CLICK
-            // =========================================================
-
-            h.itemView.setOnClickListener(v ->
-                    activity.openDetailScreen(game)
-            );
+            h.cell.root.setOnClickListener(v -> openDetailScreen(game));
         }
 
         @Override
-        public int getItemCount() {
-            return games.size();
-        }
-
-        // =============================================================
-        // VIEW HOLDER
-        // =============================================================
-
-        static class GameViewHolder
-                extends RecyclerView.ViewHolder {
-
-            GradientDrawable cardBg;
-
-            ImageView coverIV;
-
-            TextView titleTV;
-
-            TextView subTV;
-
-            TextView collapsedCheckTV;
-
-            TextView checkmark;
-
-            public GameViewHolder(
-                    @NonNull View itemView,
-                    GradientDrawable cardBg,
-                    ImageView coverIV,
-                    TextView titleTV,
-                    TextView subTV,
-                    TextView collapsedCheckTV,
-                    TextView checkmark
-            ) {
-                super(itemView);
-
-                this.cardBg = cardBg;
-
-                this.coverIV = coverIV;
-
-                this.titleTV = titleTV;
-
-                this.subTV = subTV;
-
-                this.collapsedCheckTV = collapsedCheckTV;
-
-                this.checkmark = checkmark;
-            }
-        }
-
-        // =============================================================
-        // UTIL
-        // =============================================================
-
-        private static int dp(Context ctx, int v) {
-
-            return (int) TypedValue.applyDimension(
-                    TypedValue.COMPLEX_UNIT_DIP,
-                    v,
-                    ctx.getResources().getDisplayMetrics()
-            );
-        }
+        public int getItemCount() { return games.size(); }
     }
 
     // ── Cache ─────────────────────────────────────────────────────────────────

@@ -31,6 +31,7 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -46,7 +47,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import android.content.Intent;
 
 import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.winlator.cmod.NavActivity;
@@ -70,7 +71,6 @@ public class EpicGamesActivity extends NavActivity {
     private static final String CACHE_KEY     = "epic_cache";
 
     // Epic brand colours
-    private static final int COLOR_CARD_BG = 0xFF0F1117;  // dark card background
     private static final int COLOR_ROOT_BG = 0xFF0D0D0D;
     private static final int REQ_GAME_DETAIL  = 1001;
 
@@ -83,6 +83,12 @@ public class EpicGamesActivity extends NavActivity {
     private Button       refreshBtn;
     private EditText     searchBar;
     private List<EpicGame> allGames    = new ArrayList<>();
+
+    private enum Filter { ALL, INSTALLED, NOT_INSTALLED }
+    private enum Sort { TITLE, SIZE }
+    private Filter filter = Filter.ALL;
+    private Sort sort = Sort.TITLE;
+    private boolean sortAsc = true;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -184,6 +190,31 @@ public class EpicGamesActivity extends NavActivity {
         syncText.setPadding(dp(12), dp(6), dp(12), dp(6));
         syncText.setBackgroundColor(0xFF111111);
         root.addView(syncText, new LinearLayout.LayoutParams(-1, -2));
+
+        // Filter + sort controls (right-aligned)
+        LinearLayout controls = new LinearLayout(this);
+        controls.setOrientation(LinearLayout.HORIZONTAL);
+        controls.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        controls.setBackgroundColor(COLOR_ROOT_BG);
+        controls.setPadding(dp(8), dp(8), dp(8), dp(4));
+        TextView filterBtn = StoreGridUi.pillButton(this, "Filter: All");
+        TextView sortBtn = StoreGridUi.pillButton(this, "Sort: Title");
+        TextView dirBtn = StoreGridUi.pillButton(this, "↑");
+        filterBtn.setOnClickListener(v -> showFilterMenu(filterBtn));
+        sortBtn.setOnClickListener(v -> showSortMenu(sortBtn));
+        dirBtn.setOnClickListener(v -> {
+            sortAsc = !sortAsc;
+            dirBtn.setText(sortAsc ? "↑" : "↓");
+            applyFilter(currentQuery());
+        });
+        LinearLayout.LayoutParams p1 = new LinearLayout.LayoutParams(-2, -2);
+        p1.rightMargin = dp(8);
+        controls.addView(filterBtn, p1);
+        LinearLayout.LayoutParams p2 = new LinearLayout.LayoutParams(-2, -2);
+        p2.rightMargin = dp(8);
+        controls.addView(sortBtn, p2);
+        controls.addView(dirBtn, new LinearLayout.LayoutParams(-2, -2));
+        root.addView(controls, new LinearLayout.LayoutParams(-1, -2));
 
         // Scrollable game list
         scrollView = new ScrollView(this);
@@ -306,15 +337,27 @@ public class EpicGamesActivity extends NavActivity {
     }
 
     private void applyFilter(String query) {
-        List<EpicGame> filtered;
+        List<EpicGame> base;
         if (query == null || query.trim().isEmpty()) {
-            filtered = allGames;
+            base = allGames;
         } else {
             String q = query.trim().toLowerCase();
-            filtered = new ArrayList<>();
+            base = new ArrayList<>();
             for (EpicGame g : allGames)
-                if (g.title.toLowerCase().contains(q)) filtered.add(g);
+                if (g.title.toLowerCase().contains(q)) base.add(g);
         }
+        List<EpicGame> filtered = new ArrayList<>();
+        for (EpicGame g : base) {
+            boolean inst = isInstalled(g);
+            if (filter == Filter.INSTALLED && !inst) continue;
+            if (filter == Filter.NOT_INSTALLED && inst) continue;
+            filtered.add(g);
+        }
+        Collections.sort(filtered, (a, b) -> sort == Sort.SIZE
+                ? Long.compare(a.installSize, b.installSize)
+                : a.title.compareToIgnoreCase(b.title));
+        if (!sortAsc) Collections.reverse(filtered);
+
         final List<EpicGame> result = filtered;
         uiHandler.post(() -> {
             gameListLayout.removeAllViews();
@@ -322,8 +365,9 @@ public class EpicGamesActivity extends NavActivity {
                 gameListLayout.setPadding(dp(8), dp(8), dp(8), dp(8));
                 TextView emptyTV = new TextView(EpicGamesActivity.this);
                 String q2 = query == null ? "" : query.trim();
-                emptyTV.setText(q2.isEmpty() ? "Your Epic library is empty"
-                                             : "No results for \u201c" + q2 + "\u201d");
+                emptyTV.setText(!q2.isEmpty() ? "No results for \u201c" + q2 + "\u201d"
+                        : filter != Filter.ALL ? "No games match the current filter."
+                        : "Your Epic library is empty");
                 emptyTV.setTextColor(0xFF666666);
                 emptyTV.setTextSize(14f);
                 emptyTV.setGravity(Gravity.CENTER);
@@ -334,7 +378,7 @@ public class EpicGamesActivity extends NavActivity {
                 gameListLayout.setPadding(dp(8), dp(8), dp(8), dp(8));
 
                 RecyclerView recyclerView = new RecyclerView(this);
-                recyclerView.setLayoutManager(new LinearLayoutManager(this));
+                recyclerView.setLayoutManager(new GridLayoutManager(this, StoreGridUi.COLUMNS));
                 recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
                 recyclerView.setPadding(0, 0, 0, dp(12));
                 recyclerView.setClipToPadding(false);
@@ -345,26 +389,7 @@ public class EpicGamesActivity extends NavActivity {
                                 ViewGroup.LayoutParams.MATCH_PARENT
                         );
                 recyclerView.setLayoutParams(rvLp);
-
-                EpicGamesAdapter adapter = new EpicGamesAdapter(
-                        this,
-                        result,
-                        prefs,
-                        COLOR_CARD_BG,
-                        new EpicGamesAdapter.Callbacks() {
-
-                            @Override
-                            public void loadImage(EpicGame game, ImageView iv) {
-                                EpicGamesActivity.this.loadImage(game, iv);
-                            }
-
-                            @Override
-                            public void openDetailScreen(EpicGame game) {
-                                EpicGamesActivity.this.openDetailScreen(game);
-                            }
-                        }
-                );
-                recyclerView.setAdapter(adapter);
+                recyclerView.setAdapter(new EpicGamesAdapter(result));
                 gameListLayout.addView(recyclerView);
             }
             scrollView.setVisibility(View.VISIBLE);
@@ -375,311 +400,116 @@ public class EpicGamesActivity extends NavActivity {
         uiHandler.post(() -> { if (refreshBtn != null) refreshBtn.setEnabled(true); });
     }
 
-    // ── LIST view: collapsible game cards ─────────────────────────────────────
+    // ── GRID view: shared store cells + per-store actions ─────────────────────
 
-    public class EpicGamesAdapter
-            extends RecyclerView.Adapter<EpicGamesAdapter.GameViewHolder> {
+    private boolean isInstalled(EpicGame g) {
+        return prefs.getString("epic_exe_" + g.appName, null) != null;
+    }
 
-        public interface Callbacks {
-            void loadImage(EpicGame game, ImageView iv);
-            void openDetailScreen(EpicGame game);
-        }
+    private String currentQuery() {
+        return searchBar != null ? searchBar.getText().toString() : "";
+    }
 
-        private final Context context;
+    private void launchEpic(EpicGame g) {
+        String exe = prefs.getString("epic_exe_" + g.appName, null);
+        if (exe == null) { openDetailScreen(g); return; }
+        LudashiLaunchBridge.addToLauncher(this, g.title, exe);
+    }
+
+    private void uninstallEpic(EpicGame g) {
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Uninstall " + g.title + "?")
+                .setMessage("This will delete all installed game files.")
+                .setPositiveButton("Uninstall", (d, w) -> {
+                    String dir = prefs.getString("epic_dir_" + g.appName, null);
+                    new Thread(() -> {
+                        if (dir != null) StoreGridUi.deleteDir(new File(dir));
+                        prefs.edit()
+                                .remove("epic_exe_" + g.appName)
+                                .remove("epic_dir_" + g.appName)
+                                .apply();
+                        uiHandler.post(() -> {
+                            Toast.makeText(this, g.title + " uninstalled", Toast.LENGTH_SHORT).show();
+                            applyFilter(currentQuery());
+                        });
+                    }).start();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showFilterMenu(TextView anchor) {
+        PopupMenu pm = new PopupMenu(this, anchor);
+        pm.getMenu().add(0, 0, 0, "All");
+        pm.getMenu().add(0, 1, 1, "Installed");
+        pm.getMenu().add(0, 2, 2, "Not installed");
+        pm.getMenu().setGroupCheckable(0, true, true);
+        pm.getMenu().getItem(filter.ordinal()).setChecked(true);
+        pm.setOnMenuItemClickListener(item -> {
+            filter = Filter.values()[item.getItemId()];
+            anchor.setText("Filter: " + (filter == Filter.ALL ? "All"
+                    : filter == Filter.INSTALLED ? "Installed" : "Not installed"));
+            applyFilter(currentQuery());
+            return true;
+        });
+        pm.show();
+    }
+
+    private void showSortMenu(TextView anchor) {
+        PopupMenu pm = new PopupMenu(this, anchor);
+        pm.getMenu().add(0, 0, 0, "Title");
+        pm.getMenu().add(0, 1, 1, "Size");
+        pm.getMenu().setGroupCheckable(0, true, true);
+        pm.getMenu().getItem(sort.ordinal()).setChecked(true);
+        pm.setOnMenuItemClickListener(item -> {
+            sort = Sort.values()[item.getItemId()];
+            anchor.setText("Sort: " + (sort == Sort.SIZE ? "Size" : "Title"));
+            applyFilter(currentQuery());
+            return true;
+        });
+        pm.show();
+    }
+
+    public class EpicGamesAdapter extends RecyclerView.Adapter<EpicGamesAdapter.VH> {
         private final List<EpicGame> games;
-        private final SharedPreferences prefs;
 
-        private final int COLOR_CARD_BG;
+        EpicGamesAdapter(List<EpicGame> games) { this.games = games; }
 
-        private final Callbacks callbacks;
-
-        public EpicGamesAdapter(
-                Context context,
-                List<EpicGame> games,
-                SharedPreferences prefs,
-                int cardBg,
-                Callbacks callbacks
-        ) {
-            this.context = context;
-            this.games = games;
-            this.prefs = prefs;
-
-            this.COLOR_CARD_BG = cardBg;
-
-            this.callbacks = callbacks;
+        class VH extends RecyclerView.ViewHolder {
+            final StoreGridUi.Cell cell;
+            VH(StoreGridUi.Cell cell) { super(cell.root); this.cell = cell; }
         }
 
         @NonNull
         @Override
-        public GameViewHolder onCreateViewHolder(
-                @NonNull ViewGroup parent,
-                int viewType
-        ) {
-
-            LinearLayout card = new LinearLayout(context);
-
-            card.setOrientation(LinearLayout.VERTICAL);
-
-            card.setPadding(dp(10), dp(10), dp(10), dp(10));
-
-            RecyclerView.LayoutParams lp =
-                    new RecyclerView.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                    );
-
-            lp.bottomMargin = dp(8);
-
-            card.setLayoutParams(lp);
-
-            GradientDrawable bg = new GradientDrawable();
-
-            bg.setColor(COLOR_CARD_BG);
-
-            bg.setCornerRadius(dp(6));
-
-            card.setBackground(bg);
-
-            card.setFocusable(true);
-
-            return new GameViewHolder(card, bg);
+        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            StoreGridUi.Cell cell = StoreGridUi.buildCell(EpicGamesActivity.this);
+            cell.root.setLayoutParams(new RecyclerView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            return new VH(cell);
         }
 
         @Override
-        public void onBindViewHolder(
-                @NonNull GameViewHolder holder,
-                int position
-        ) {
-
+        public void onBindViewHolder(@NonNull VH h, int position) {
             EpicGame game = games.get(position);
+            h.cell.name.setText(game.title);
+            h.cell.art.setImageDrawable(null);
+            loadImage(game, h.cell.art);
 
-            boolean isInstalled =
-                    prefs.getString(
-                            "epic_exe_" + game.appName,
-                            null
-                    ) != null;
-
-            holder.card.removeAllViews();
-
-            holder.card.setOnFocusChangeListener((v, hasFocus) -> {
-
-                holder.bg.setColor(
-                        hasFocus
-                                ? 0xFF1B1F2A
-                                : COLOR_CARD_BG
-                );
-
-                holder.bg.setStroke(
-                        hasFocus ? dp(3) : 0,
-                        hasFocus
-                                ? 0xFFFFD700
-                                : 0x00000000
-                );
-            });
-
-            // =========================================================
-            // HEADER
-            // =========================================================
-
-            LinearLayout topRow = new LinearLayout(context);
-
-            topRow.setOrientation(LinearLayout.HORIZONTAL);
-
-            topRow.setGravity(Gravity.CENTER_VERTICAL);
-
-            // COVER
-            ImageView coverIV = new ImageView(context);
-
-            coverIV.setScaleType(ImageView.ScaleType.CENTER_CROP);
-
-            GradientDrawable coverBg = new GradientDrawable();
-
-            coverBg.setColor(0xFF141820);
-
-            coverBg.setCornerRadius(dp(4));
-
-            coverIV.setBackground(coverBg);
-
-            LinearLayout.LayoutParams coverLp =
-                    new LinearLayout.LayoutParams(
-                            dp(60),
-                            dp(60)
-                    );
-
-            coverLp.rightMargin = dp(10);
-
-            topRow.addView(coverIV, coverLp);
-
-            callbacks.loadImage(game, coverIV);
-
-            // INFO COLUMN
-            LinearLayout infoCol = new LinearLayout(context);
-
-            infoCol.setOrientation(LinearLayout.VERTICAL);
-
-            infoCol.setGravity(Gravity.CENTER_VERTICAL);
-
-            // TITLE ROW
-            LinearLayout titleRow = new LinearLayout(context);
-
-            titleRow.setOrientation(LinearLayout.HORIZONTAL);
-
-            titleRow.setGravity(Gravity.CENTER_VERTICAL);
-
-            TextView titleTV = new TextView(context);
-
-            titleTV.setText(game.title);
-
-            titleTV.setTextColor(Color.WHITE);
-
-            titleTV.setTextSize(15f);
-
-            titleTV.setTypeface(null, Typeface.BOLD);
-
-            titleTV.setMaxLines(1);
-
-            titleTV.setEllipsize(TextUtils.TruncateAt.END);
-
-            titleRow.addView(titleTV);
-
-            TextView collapsedCheckTV = new TextView(context);
-
-            collapsedCheckTV.setText(" ✓");
-
-            collapsedCheckTV.setTextColor(0xFF4CAF50);
-
-            collapsedCheckTV.setTextSize(14f);
-
-            collapsedCheckTV.setTypeface(null, Typeface.BOLD);
-
-            collapsedCheckTV.setVisibility(
-                    isInstalled
-                            ? View.VISIBLE
-                            : View.GONE
-            );
-
-            titleRow.addView(collapsedCheckTV);
-
-            titleRow.addView(
-                    new View(context),
-                    new LinearLayout.LayoutParams(
-                            0,
-                            0,
-                            1f
-                    )
-            );
-
-            infoCol.addView(
-                    titleRow,
-                    new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
-            );
-
-            // META
-            if (!game.developer.isEmpty()) {
-
-                TextView metaTV = new TextView(context);
-
-                metaTV.setText(game.developer);
-
-                metaTV.setTextColor(0xFF888888);
-
-                metaTV.setTextSize(11f);
-
-                metaTV.setMaxLines(1);
-
-                metaTV.setEllipsize(TextUtils.TruncateAt.END);
-
-                LinearLayout.LayoutParams metaLp =
-                        new LinearLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.WRAP_CONTENT
-                        );
-
-                metaLp.topMargin = dp(4);
-
-                infoCol.addView(metaTV, metaLp);
+            boolean installed = isInstalled(game);
+            StoreGridUi.setInstalled(h.cell, installed);
+            if (installed) {
+                h.cell.launch.setOnClickListener(v -> launchEpic(game));
+                h.cell.uninstall.setOnClickListener(v -> uninstallEpic(game));
+            } else {
+                h.cell.launch.setOnClickListener(null);
+                h.cell.uninstall.setOnClickListener(null);
             }
-
-            // INSTALLED CHECKMARK
-            TextView checkmark = new TextView(context);
-
-            checkmark.setText("✓ Installed");
-
-            checkmark.setTextColor(0xFF4CAF50);
-
-            checkmark.setTextSize(10f);
-
-            checkmark.setVisibility(
-                    isInstalled
-                            ? View.VISIBLE
-                            : View.GONE
-            );
-
-            LinearLayout.LayoutParams ckLp =
-                    new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                    );
-
-            ckLp.topMargin = dp(2);
-
-            infoCol.addView(checkmark, ckLp);
-
-            topRow.addView(
-                    infoCol,
-                    new LinearLayout.LayoutParams(
-                            0,
-                            ViewGroup.LayoutParams.WRAP_CONTENT,
-                            1f
-                    )
-            );
-
-            holder.card.addView(topRow);
-
-            // =========================================================
-            // OPEN DETAILS DIRECTLY
-            // =========================================================
-
-            holder.card.setOnClickListener(v ->
-                    callbacks.openDetailScreen(game)
-            );
+            h.cell.root.setOnClickListener(v -> openDetailScreen(game));
         }
 
         @Override
-        public int getItemCount() {
-            return games.size();
-        }
-
-        static class GameViewHolder
-                extends RecyclerView.ViewHolder {
-
-            LinearLayout card;
-
-            GradientDrawable bg;
-
-            public GameViewHolder(
-                    @NonNull View itemView,
-                    GradientDrawable bg
-            ) {
-                super(itemView);
-
-                card = (LinearLayout) itemView;
-
-                this.bg = bg;
-            }
-        }
-
-        private int dp(int v) {
-
-            return (int) TypedValue.applyDimension(
-                    TypedValue.COMPLEX_UNIT_DIP,
-                    v,
-                    context.getResources().getDisplayMetrics()
-            );
-        }
+        public int getItemCount() { return games.size(); }
     }
 
     // ── Download wrapper ──────────────────────────────────────────────────────

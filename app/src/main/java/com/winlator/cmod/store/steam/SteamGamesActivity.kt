@@ -4,7 +4,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -175,7 +174,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         val adapter = object : ArrayAdapter<SteamGame>(this, 0, filtered) {
             override fun getView(pos: Int, convertView: View?, parent: ViewGroup): View {
                 val game = getItem(pos)!!
-                val cell = (convertView as? LinearLayout) ?: buildCell()
+                val cell = (convertView as? LinearLayout) ?: StoreGridUi.buildCell(this@SteamGamesActivity).root
                 // Tag the cell with appId so the async image loader can detect recycling
                 cell.tag = game.appId
 
@@ -358,9 +357,9 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             setBackgroundColor(BG)
             setPadding(dp(8), dp(8), dp(8), dp(4))
         }
-        val filterBtn = pillButton("Filter: All")
-        val sortBtn   = pillButton("Sort: Title")
-        val dirBtn    = pillButton("↑")
+        val filterBtn = StoreGridUi.pillButton(this, "Filter: All")
+        val sortBtn   = StoreGridUi.pillButton(this, "Sort: Title")
+        val dirBtn    = StoreGridUi.pillButton(this, "↑")
         filterBtn.setOnClickListener {
             PopupMenu(this, filterBtn).apply {
                 menu.add(0, 0, 0, "All")
@@ -425,119 +424,16 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         root.addView(emptyText, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
-        // Game grid — 4 columns of uniform cells
+        // Game grid — shared 6-column store grid styling
         gridView = GridView(this).apply {
             setBackgroundColor(BG)
-            numColumns = 6
-            stretchMode = GridView.STRETCH_COLUMN_WIDTH
-            horizontalSpacing = dp(6)
-            verticalSpacing = dp(10)
-            setPadding(dp(8), dp(8), dp(8), dp(8))
-            clipToPadding = false
-            isVerticalScrollBarEnabled = false
+            StoreGridUi.styleGrid(this)
         }
         root.addView(gridView, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         return root
     }
-
-    /** Build a grid cell: cover art on top, name, then Launch / Uninstall icons. */
-    private fun buildCell(): LinearLayout = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER_HORIZONTAL
-        // Rounded card with a faint top-edge highlight for a sleeker, less flat look
-        background = GradientDrawable().apply {
-            setColor(CARD_BG)
-            cornerRadius = dp(10).toFloat()
-            setStroke(dp(1), 0x14FFFFFF)
-        }
-        setPadding(dp(5), dp(5), dp(5), dp(6))
-
-        // child 0: cover art — a 2:3 portrait box. Most covers are portrait, so they
-        // fill it edge-to-edge; the occasional landscape image is letterboxed inside.
-        // FIT_CENTER guarantees the whole image shows, never cropped; corners are
-        // clipped to a rounded outline so the thumbnail matches the card.
-        val artView = object : ImageView(this@SteamGamesActivity) {
-            override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-                super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-                val w = measuredWidth
-                if (w > 0) setMeasuredDimension(w, w * 3 / 2)  // lock to 2:3 portrait
-            }
-        }.apply {
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#15171C"))
-                cornerRadius = dp(6).toFloat()
-            }
-            clipToOutline = true
-            outlineProvider = object : android.view.ViewOutlineProvider() {
-                override fun getOutline(view: View, outline: android.graphics.Outline) {
-                    outline.setRoundRect(0, 0, view.width, view.height, dp(6).toFloat())
-                }
-            }
-        }
-        addView(artView, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-
-        // child 1: game name — single line keeps every cell the same height
-        val nameView = TextView(this@SteamGamesActivity).apply {
-            textSize = 11f
-            setTextColor(0xFFE6E6EA.toInt())
-            maxLines = 1
-            ellipsize = android.text.TextUtils.TruncateAt.END
-            gravity = Gravity.CENTER_HORIZONTAL
-            letterSpacing = 0.01f
-            setPadding(0, dp(6), 0, dp(1))
-        }
-        addView(nameView, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-
-        // child 2: Launch + Uninstall icon row (INVISIBLE until the game is installed).
-        // Icons have isFocusable=false so they don't block the cell tap that opens detail.
-        val btnRow = LinearLayout(this@SteamGamesActivity).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            visibility = View.INVISIBLE
-        }
-        val launchBtn    = iconButton(R.drawable.ic_game_launch,    0xFF4CAF50.toInt())  // green
-        val uninstallBtn = iconButton(R.drawable.ic_game_uninstall, 0xFFE53935.toInt())  // red
-        btnRow.addView(launchBtn, LinearLayout.LayoutParams(dp(30), dp(30)).apply {
-            marginEnd = dp(10)
-        })
-        btnRow.addView(uninstallBtn, LinearLayout.LayoutParams(dp(30), dp(30)))
-        addView(btnRow, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(4)
-        })
-    }
-
-    /** A compact rounded pill used for the filter / sort controls. */
-    private fun pillButton(label: String): TextView =
-        TextView(this).apply {
-            text = label
-            textSize = 12f
-            setTextColor(0xFFE6E6EA.toInt())
-            gravity = Gravity.CENTER
-            setPadding(dp(14), dp(7), dp(14), dp(7))
-            background = GradientDrawable().apply {
-                setColor(CARD_BG)
-                cornerRadius = dp(16).toFloat()
-                setStroke(dp(1), 0x14FFFFFF)
-            }
-            isClickable = true
-        }
-
-    /** A flat, tappable icon backed by a vector drawable with a colour tint. */
-    private fun iconButton(resId: Int, tint: Int): ImageView =
-        ImageView(this).apply {
-            setImageResource(resId)
-            setColorFilter(tint)
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            setPadding(dp(6), dp(6), dp(6), dp(6))
-            isClickable = true
-            isFocusable = false
-        }
 
     /** Resolve the best .exe in the install dir and hand it to the launcher. */
     private fun launchGame(game: SteamGame) {
@@ -579,9 +475,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
 
     companion object {
         private val BG      = Color.parseColor("#1B1B1B")
-        private val CARD_BG = Color.parseColor("#23262E")
         private val GRAY    = Color.parseColor("#AAAAAA")
-        private val BLUE    = Color.parseColor("#4FC3F7")
 
         // Shared LRU image cache (4 MB cap) and fixed thread pool across instances
         private val imageCache = LruCache<Int, Bitmap>(4 * 1024 * 1024)
