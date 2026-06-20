@@ -1,8 +1,6 @@
 package com.winlator.cmod.store;
 
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -552,7 +550,6 @@ public class GogGamesActivity extends NavActivity {
         public void onBindViewHolder(VH h, int position) {
             GogGame game = games.get(position);
             h.cell.name.setText(game.title);
-            h.cell.art.setImageDrawable(null);
             loadImage(game, h.cell.art);
 
             boolean installed = isInstalled(game);
@@ -574,22 +571,9 @@ public class GogGamesActivity extends NavActivity {
     // ── Shared helpers ────────────────────────────────────────────────────────
 
     private void loadImage(GogGame game, ImageView iv) {
-        if (game.imageUrl == null || game.imageUrl.isEmpty()) return;
-        String url = game.imageUrl.startsWith("//") ? "https:" + game.imageUrl : game.imageUrl;
-        new Thread(() -> {
-            try {
-                java.net.HttpURLConnection conn =
-                        (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
-                conn.setConnectTimeout(10000);
-                conn.setReadTimeout(10000);
-                conn.setRequestProperty("User-Agent", "GOG Galaxy");
-                if (conn.getResponseCode() == 200) {
-                    Bitmap bmp = BitmapFactory.decodeStream(conn.getInputStream());
-                    if (bmp != null) uiHandler.post(() -> iv.setImageBitmap(bmp));
-                }
-                conn.disconnect();
-            } catch (Exception ignored) {}
-        }, "gog-cover-" + game.gameId).start();
+        String url = game.imageUrl;
+        if (url != null && url.startsWith("//")) url = "https:" + url;
+        StoreImageLoader.load(iv, url, "GOG Galaxy");
     }
 
     // ── Utilities ─────────────────────────────────────────────────────────────

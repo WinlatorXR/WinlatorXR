@@ -10,8 +10,6 @@ package com.winlator.cmod.store;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -487,7 +485,6 @@ public class EpicGamesActivity extends NavActivity {
         public void onBindViewHolder(@NonNull VH h, int position) {
             EpicGame game = games.get(position);
             h.cell.name.setText(game.title);
-            h.cell.art.setImageDrawable(null);
             loadImage(game, h.cell.art);
 
             boolean installed = isInstalled(game);
@@ -658,21 +655,7 @@ public class EpicGamesActivity extends NavActivity {
     private void loadImage(EpicGame game, ImageView iv) {
         String url = game.artCover;
         if (url == null || url.isEmpty()) url = game.artSquare;
-        if (url == null || url.isEmpty()) return;
-        final String finalUrl = url;
-        new Thread(() -> {
-            try {
-                java.net.HttpURLConnection conn =
-                        (java.net.HttpURLConnection) new java.net.URL(finalUrl).openConnection();
-                conn.setConnectTimeout(10000);
-                conn.setReadTimeout(10000);
-                if (conn.getResponseCode() == 200) {
-                    Bitmap bmp = BitmapFactory.decodeStream(conn.getInputStream());
-                    if (bmp != null) uiHandler.post(() -> iv.setImageBitmap(bmp));
-                }
-                conn.disconnect();
-            } catch (Exception ignored) {}
-        }, "epic-cover-" + game.appName).start();
+        StoreImageLoader.load(iv, url);
     }
 
     // ── Utilities ─────────────────────────────────────────────────────────────

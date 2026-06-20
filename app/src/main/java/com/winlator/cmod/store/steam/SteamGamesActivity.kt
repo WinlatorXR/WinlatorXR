@@ -2,7 +2,6 @@ package com.winlator.cmod.store
 
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
@@ -14,8 +13,6 @@ import android.view.ViewGroup
 import android.widget.*
 import com.winlator.cmod.NavActivity
 import com.winlator.cmod.R
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.concurrent.Executors
 
 /**
@@ -244,15 +241,12 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         }
     }
 
-    private fun tryBitmap(url: String): Bitmap? = try {
-        val conn = URL(url).openConnection() as HttpURLConnection
-        conn.connectTimeout = 6_000
-        conn.readTimeout    = 10_000
-        conn.connect()
-        if (conn.responseCode == 200)
-            BitmapFactory.decodeStream(conn.inputStream)
-        else null
-    } catch (_: Exception) { null }
+    private fun tryBitmap(url: String): Bitmap? {
+        val data = StoreImageLoader.fetch(url, null) ?: return null
+        // Downsample to the on-screen cell width (RGB_565) so big libraries stay light on RAM.
+        val target = resources.displayMetrics.widthPixels / StoreGridUi.COLUMNS
+        return StoreImageLoader.decodeSampled(data, target)
+    }
 
     // -------------------------------------------------------------------------
     // UI construction
@@ -472,8 +466,15 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         private val BG      = Color.parseColor("#1B1B1B")
         private val GRAY    = Color.parseColor("#AAAAAA")
 
-        // Shared LRU image cache (4 MB cap) and fixed thread pool across instances
-        private val imageCache = LruCache<Int, Bitmap>(4 * 1024 * 1024)
+        // Byte-bounded LRU image cache (≈1/8 of the heap) and fixed thread pool across
+        // instances. sizeOf() must report bytes, or the cap counts entries and the cache
+        // grows unbounded — an OOM risk on Quest/Pico with thousand-game libraries.
+        private val imageCache = object : LruCache<Int, Bitmap>(
+            (Runtime.getRuntime().maxMemory() / 1024 / 8).toInt()  // cap in KB
+        ) {
+            override fun sizeOf(key: Int, value: Bitmap): Int =
+                (value.allocationByteCount / 1024).coerceAtLeast(1)  // size in KB
+        }
         private val imageExecutor = Executors.newFixedThreadPool(4)
     }
 }
