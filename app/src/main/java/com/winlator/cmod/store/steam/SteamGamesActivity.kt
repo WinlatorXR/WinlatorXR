@@ -29,7 +29,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
     private val ui = Handler(Looper.getMainLooper())
     private lateinit var statusText: TextView
     private lateinit var searchBar: EditText
-    private lateinit var listView: ListView
+    private lateinit var gridView: GridView
     private lateinit var emptyText: TextView
     private var games: List<SteamGame> = emptyList()
     private var searchQuery: String = ""
@@ -156,115 +156,47 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         val adapter = object : ArrayAdapter<SteamGame>(this, 0, filtered) {
             override fun getView(pos: Int, convertView: View?, parent: ViewGroup): View {
                 val game = getItem(pos)!!
-                val row = (convertView as? LinearLayout) ?: buildRow()
-                // Tag the row with appId so the async image loader can detect recycling
-                row.tag = game.appId
+                val cell = (convertView as? LinearLayout) ?: buildCell()
+                // Tag the cell with appId so the async image loader can detect recycling
+                cell.tag = game.appId
 
-                val artView       = row.getChildAt(0) as ImageView
-                val infoView      = row.getChildAt(1) as LinearLayout
-                val nameView      = infoView.getChildAt(0) as TextView
-                val developerView = infoView.getChildAt(1) as TextView
-                val genresView    = infoView.getChildAt(2) as TextView
-                val sizeView      = infoView.getChildAt(3) as TextView
-                val metaView      = infoView.getChildAt(4) as TextView
-                val installedLabel = infoView.getChildAt(5) as TextView
-                val btnRow        = infoView.getChildAt(6) as LinearLayout
-                val launchBtn     = btnRow.getChildAt(0) as Button
-                val uninstallBtn  = btnRow.getChildAt(1) as Button
+                val artView      = cell.getChildAt(0) as ImageView
+                val nameView     = cell.getChildAt(1) as TextView
+                val btnRow       = cell.getChildAt(2) as LinearLayout
+                val launchBtn    = btnRow.getChildAt(0) as ImageView
+                val uninstallBtn = btnRow.getChildAt(1) as ImageView
 
                 nameView.text = game.name.ifEmpty { "App ${game.appId}" }
 
-                developerView.text = game.developer
-                developerView.visibility = if (game.developer.isNotEmpty()) View.VISIBLE else View.GONE
-
-                genresView.text = game.genres
-                genresView.visibility = if (game.genres.isNotEmpty()) View.VISIBLE else View.GONE
-
-                val sizeLabel = fmtSize(game.sizeBytes)
-                sizeView.text = sizeLabel
-                sizeView.visibility = if (game.sizeBytes > 0) View.VISIBLE else View.GONE
-
-                if (game.metacriticScore > 0) {
-                    metaView.text = "Metacritic: ${game.metacriticScore}"
-                    metaView.setTextColor(when {
-                        game.metacriticScore >= 75 -> 0xFF4CAF50.toInt()  // green
-                        game.metacriticScore >= 50 -> 0xFFFFC107.toInt()  // amber
-                        else                       -> 0xFFF44336.toInt()  // red
-                    })
-                    metaView.visibility = View.VISIBLE
-                } else {
-                    metaView.visibility = View.GONE
-                }
-
-                // Installed indicator + Launch / Uninstall buttons
+                // Launch / Uninstall icons — shown only for installed games.
+                // INVISIBLE (not GONE) reserves the space so every cell stays the same height.
                 if (game.isInstalled) {
-                    installedLabel.visibility = View.VISIBLE
-                    btnRow.visibility         = View.VISIBLE
-                    launchBtn.setOnClickListener {
-                        if (game.installDir.isEmpty()) {
-                            Toast.makeText(this@SteamGamesActivity,
-                                "Install directory not found", Toast.LENGTH_SHORT).show()
-                            return@setOnClickListener
-                        }
-                        val installDir = java.io.File(game.installDir)
-                        val exeFiles   = mutableListOf<java.io.File>()
-                        AmazonLaunchHelper.collectExe(installDir, exeFiles)
-                        if (exeFiles.isEmpty()) {
-                            Toast.makeText(this@SteamGamesActivity,
-                                "No .exe found in install directory", Toast.LENGTH_SHORT).show()
-                            return@setOnClickListener
-                        }
-                        val lowerTitle = game.name.lowercase()
-                        exeFiles.sortWith(compareByDescending {
-                            AmazonLaunchHelper.scoreExe(it, lowerTitle)
-                        })
-                        if (exeFiles.size == 1) {
-                            LudashiLaunchBridge.addToLauncher(
-                                this@SteamGamesActivity, game.name,
-                                exeFiles[0].absolutePath)
-                        } else {
-                            val labels = exeFiles.map { it.name }.toTypedArray()
-                            android.app.AlertDialog.Builder(this@SteamGamesActivity)
-                                .setTitle("Choose executable")
-                                .setItems(labels) { _, which ->
-                                    LudashiLaunchBridge.addToLauncher(
-                                        this@SteamGamesActivity, game.name,
-                                        exeFiles[which].absolutePath)
-                                }
-                                .show()
-                        }
-                    }
-                    uninstallBtn.setOnClickListener {
-                        val db = SteamRepository.getInstance().database
-                        db.markUninstalled(game.appId)
-                        if (game.installDir.isNotEmpty()) {
-                            Thread { java.io.File(game.installDir).deleteRecursively() }.start()
-                        }
-                        loadGames()
-                    }
+                    btnRow.visibility = View.VISIBLE
+                    launchBtn.setOnClickListener { launchGame(game) }
+                    uninstallBtn.setOnClickListener { uninstallGame(game) }
                 } else {
-                    installedLabel.visibility = View.GONE
-                    btnRow.visibility         = View.GONE
+                    btnRow.visibility = View.INVISIBLE
                     launchBtn.setOnClickListener(null)
                     uninstallBtn.setOnClickListener(null)
                 }
 
-                row.setOnClickListener {
+                cell.setOnClickListener {
                     startActivity(Intent(this@SteamGamesActivity, SteamGameDetailActivity::class.java)
                         .putExtra(SteamGameDetailActivity.EXTRA_APP_ID, game.appId))
                 }
 
-                // Reset art to placeholder then kick off async load
-                artView.setImageResource(android.R.color.darker_gray)
+                // Clear any recycled bitmap (the card background shows as the placeholder)
+                // then kick off the async cover load.
+                artView.setImageDrawable(null)
                 loadCoverArt(artView, game.appId)
-                return row
+                return cell
             }
         }
-        listView.adapter = adapter
+        gridView.adapter = adapter
         emptyText.text       = if (searchQuery.isNotEmpty() && filtered.isEmpty())
             "No games match \"$searchQuery\"." else "No games found.\nIf sync just finished, tap Refresh."
         emptyText.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
-        listView.visibility  = if (filtered.isEmpty()) View.GONE   else View.VISIBLE
+        gridView.visibility  = if (filtered.isEmpty()) View.GONE   else View.VISIBLE
     }
 
     // -------------------------------------------------------------------------
@@ -409,129 +341,116 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         root.addView(emptyText, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
-        // Game list
-        listView = ListView(this).apply {
+        // Game grid — 4 columns of uniform cells
+        gridView = GridView(this).apply {
             setBackgroundColor(BG)
-            divider = null
-            dividerHeight = dp(1)
+            numColumns = 4
+            stretchMode = GridView.STRETCH_COLUMN_WIDTH
+            horizontalSpacing = dp(8)
+            verticalSpacing = dp(12)
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            clipToPadding = false
+            isVerticalScrollBarEnabled = false
         }
-        root.addView(listView, LinearLayout.LayoutParams(
+        root.addView(gridView, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         return root
     }
 
-    /** Build a card row: [portrait art | name / developer / genres / size / metacritic] */
-    private fun buildRow(): LinearLayout = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
+    /** Build a grid cell: cover art on top, name, then Launch / Uninstall icons. */
+    private fun buildCell(): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER_HORIZONTAL
         setBackgroundColor(CARD_BG)
-        setPadding(0, 0, 0, 0)
+        setPadding(dp(6), dp(6), dp(6), dp(6))
 
-        // Portrait art thumbnail (approx 2:3 ratio)
-        val artWidth  = dp(80)
-        val artHeight = dp(140)
+        // child 0: cover art — FIT_CENTER shows the whole image, never cropped
         val artView = ImageView(this@SteamGamesActivity).apply {
-            scaleType = ImageView.ScaleType.CENTER_CROP
+            scaleType = ImageView.ScaleType.FIT_CENTER
             setBackgroundColor(Color.parseColor("#2A2A2A"))
         }
-        addView(artView, LinearLayout.LayoutParams(artWidth, artHeight))
+        addView(artView, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(150)))
 
-        // Right side: name + metadata stack
-        val infoLayout = LinearLayout(this@SteamGamesActivity).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(12), dp(8), dp(8), dp(8))
-        }
-
-        fun smallText() = TextView(this@SteamGamesActivity).apply {
-            textSize = 11f
-            setTextColor(GRAY)
+        // child 1: game name — single line keeps every cell the same height
+        val nameView = TextView(this@SteamGamesActivity).apply {
+            textSize = 12f
+            setTextColor(Color.WHITE)
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(0, dp(2), 0, 0)
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(0, dp(6), 0, 0)
         }
+        addView(nameView, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
-        // child 0: game name
-        val nameView = TextView(this@SteamGamesActivity).apply {
-            textSize = 14f
-            setTextColor(Color.WHITE)
-            maxLines = 2
-            ellipsize = android.text.TextUtils.TruncateAt.END
-        }
-        // child 1: developer
-        val developerView = smallText()
-        // child 2: genres
-        val genresView = smallText()
-        // child 3: install size
-        val sizeView = smallText()
-        // child 4: metacritic score (color set dynamically)
-        val metaView = smallText()
-
-        // child 5: installed indicator
-        val installedLabel = TextView(this@SteamGamesActivity).apply {
-            text = "● Installed"
-            textSize = 11f
-            setTextColor(0xFF4CAF50.toInt())  // green
-            setPadding(0, dp(3), 0, 0)
-            visibility = View.GONE
-        }
-
-        // child 6: horizontal button row (Launch + Uninstall side by side)
-        // Both buttons have isFocusable=false so they don't block ListView item clicks —
-        // that lets the row tap still open SteamGameDetailActivity.
+        // child 2: Launch + Uninstall icon row (INVISIBLE until the game is installed).
+        // Icons have isFocusable=false so they don't block the cell tap that opens detail.
         val btnRow = LinearLayout(this@SteamGamesActivity).apply {
             orientation = LinearLayout.HORIZONTAL
-            visibility  = View.GONE
+            gravity = Gravity.CENTER
+            visibility = View.INVISIBLE
         }
-        val launchBtn = Button(this@SteamGamesActivity).apply {
-            text     = "Launch"
-            textSize = 11f
-            setTextColor(Color.WHITE)
-            setBackgroundColor(0xFF1565C0.toInt())
-            setPadding(dp(8), dp(2), dp(8), dp(2))
-            isFocusable = false
-        }
-        val uninstallBtn = Button(this@SteamGamesActivity).apply {
-            text     = "Uninstall"
-            textSize = 11f
-            setTextColor(Color.WHITE)
-            setBackgroundColor(0xFFB71C1C.toInt())
-            setPadding(dp(8), dp(2), dp(8), dp(2))
-            isFocusable = false
-        }
-        val btnLp = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, dp(30)).apply { marginEnd = dp(6) }
-        btnRow.addView(launchBtn,    btnLp)
-        btnRow.addView(uninstallBtn, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, dp(30)))
-
-        val wrapLp = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        val btnRowLp = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(3)
-        }
-        infoLayout.addView(nameView,       wrapLp)
-        infoLayout.addView(developerView,  wrapLp)
-        infoLayout.addView(genresView,     wrapLp)
-        infoLayout.addView(sizeView,       wrapLp)
-        infoLayout.addView(metaView,       wrapLp)
-        infoLayout.addView(installedLabel, wrapLp)
-        infoLayout.addView(btnRow,         btnRowLp)
-
-        addView(infoLayout, LinearLayout.LayoutParams(0, artHeight, 1f))
-
-        // Row bottom margin (acts as divider)
-        layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        ).also { it.bottomMargin = dp(2) }
+        val launchBtn    = iconButton(R.drawable.ic_game_launch,    0xFF4CAF50.toInt())  // green
+        val uninstallBtn = iconButton(R.drawable.ic_game_uninstall, 0xFFE53935.toInt())  // red
+        btnRow.addView(launchBtn, LinearLayout.LayoutParams(dp(40), dp(40)).apply {
+            marginEnd = dp(16)
+        })
+        btnRow.addView(uninstallBtn, LinearLayout.LayoutParams(dp(40), dp(40)))
+        addView(btnRow, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(6)
+        })
     }
 
-    private fun fmtSize(bytes: Long): String = when {
-        bytes >= 1_073_741_824L -> "%.1f GB".format(bytes / 1_073_741_824.0)
-        bytes >= 1_048_576L     -> "%.1f MB".format(bytes / 1_048_576.0)
-        else                    -> "%.0f KB".format(bytes / 1024.0)
+    /** A flat, tappable icon backed by a vector drawable with a colour tint. */
+    private fun iconButton(resId: Int, tint: Int): ImageView =
+        ImageView(this).apply {
+            setImageResource(resId)
+            setColorFilter(tint)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            isClickable = true
+            isFocusable = false
+        }
+
+    /** Resolve the best .exe in the install dir and hand it to the launcher. */
+    private fun launchGame(game: SteamGame) {
+        if (game.installDir.isEmpty()) {
+            Toast.makeText(this, "Install directory not found", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val installDir = java.io.File(game.installDir)
+        val exeFiles   = mutableListOf<java.io.File>()
+        AmazonLaunchHelper.collectExe(installDir, exeFiles)
+        if (exeFiles.isEmpty()) {
+            Toast.makeText(this, "No .exe found in install directory", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val lowerTitle = game.name.lowercase()
+        exeFiles.sortWith(compareByDescending { AmazonLaunchHelper.scoreExe(it, lowerTitle) })
+        if (exeFiles.size == 1) {
+            LudashiLaunchBridge.addToLauncher(this, game.name, exeFiles[0].absolutePath)
+        } else {
+            val labels = exeFiles.map { it.name }.toTypedArray()
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Choose executable")
+                .setItems(labels) { _, which ->
+                    LudashiLaunchBridge.addToLauncher(this, game.name, exeFiles[which].absolutePath)
+                }
+                .show()
+        }
+    }
+
+    /** Mark the game uninstalled in the DB and delete its install directory off-thread. */
+    private fun uninstallGame(game: SteamGame) {
+        val db = SteamRepository.getInstance().database
+        db.markUninstalled(game.appId)
+        if (game.installDir.isNotEmpty()) {
+            Thread { java.io.File(game.installDir).deleteRecursively() }.start()
+        }
+        loadGames()
     }
 
     companion object {
