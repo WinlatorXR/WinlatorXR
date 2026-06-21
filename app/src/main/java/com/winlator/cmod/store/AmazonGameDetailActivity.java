@@ -127,10 +127,8 @@ public class AmazonGameDetailActivity extends NavActivity {
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(8), dp(8), dp(8), dp(8));
 
-        Button backBtn = makeBtn("←", 0xFF2A2000);
-        backBtn.setBackgroundColor(Color.TRANSPARENT);
-        backBtn.setOnClickListener(v -> finish());
-        header.addView(backBtn, new LinearLayout.LayoutParams(-2, dp(36)));
+        header.addView(StoreGridUi.backButton(this, v -> finish()),
+                new LinearLayout.LayoutParams(dp(40), dp(40)));
 
         TextView titleTV = new TextView(this);
         titleTV.setText(title != null ? title : "");

@@ -1,8 +1,6 @@
 package com.winlator.cmod.store;
 
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -21,13 +19,16 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -39,7 +40,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import android.content.Intent;
 
-import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.winlator.cmod.NavActivity;
@@ -70,6 +71,10 @@ public class GogGamesActivity extends NavActivity {
     private EditText searchBar;
     private List<GogGame> allGames = new ArrayList<>();
 
+    private enum Filter { ALL, INSTALLED, NOT_INSTALLED }
+    private Filter filter = Filter.ALL;
+    private boolean sortAsc = true;  // Title A→Z / Z→A (GOG model has no size to sort on)
+
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     @Override
@@ -99,14 +104,8 @@ public class GogGamesActivity extends NavActivity {
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(8), dp(8), dp(8), dp(8));
 
-        Button backBtn = new Button(this);
-        backBtn.setText("←");
-        backBtn.setTextColor(0xFFFFFFFF);
-        backBtn.setBackgroundColor(Color.TRANSPARENT);
-        backBtn.setTextSize(16f);
-        backBtn.setPadding(dp(12), 0, dp(12), 0);
-        backBtn.setOnClickListener(v -> goBack());
-        header.addView(backBtn, new LinearLayout.LayoutParams(-2, dp(40)));
+        header.addView(StoreGridUi.backButton(this, v -> goBack()),
+                new LinearLayout.LayoutParams(dp(40), dp(40)));
 
         TextView titleTV = new TextView(this);
         titleTV.setText("GOG Library");
@@ -170,6 +169,26 @@ public class GogGamesActivity extends NavActivity {
         syncText.setPadding(dp(12), dp(6), dp(12), dp(6));
         syncText.setBackgroundColor(0xFF111111);
         root.addView(syncText, new LinearLayout.LayoutParams(-1, -2));
+
+        // Filter + sort controls (right-aligned, mirrors the other stores)
+        LinearLayout controls = new LinearLayout(this);
+        controls.setOrientation(LinearLayout.HORIZONTAL);
+        controls.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        controls.setBackgroundColor(0xFF0D0D0D);
+        controls.setPadding(dp(8), dp(8), dp(8), dp(4));
+        TextView filterBtn = StoreGridUi.pillButton(this, "Filter: All");
+        TextView dirBtn = StoreGridUi.pillButton(this, "Title ↑");
+        filterBtn.setOnClickListener(v -> showFilterMenu(filterBtn));
+        dirBtn.setOnClickListener(v -> {
+            sortAsc = !sortAsc;
+            dirBtn.setText(sortAsc ? "Title ↑" : "Title ↓");
+            applyFilter(currentQuery());
+        });
+        LinearLayout.LayoutParams fLp = new LinearLayout.LayoutParams(-2, -2);
+        fLp.rightMargin = dp(8);
+        controls.addView(filterBtn, fLp);
+        controls.addView(dirBtn, new LinearLayout.LayoutParams(-2, -2));
+        root.addView(controls, new LinearLayout.LayoutParams(-1, -2));
 
         // Scrollable game list
         scrollView = new ScrollView(this);
@@ -352,16 +371,26 @@ public class GogGamesActivity extends NavActivity {
     }
 
     private void applyFilter(String query) {
-        List<GogGame> filtered;
+        List<GogGame> base;
         if (query == null || query.trim().isEmpty()) {
-            filtered = allGames;
+            base = allGames;
         } else {
             String q = query.trim().toLowerCase();
-            filtered = new ArrayList<>();
+            base = new ArrayList<>();
             for (GogGame g : allGames) {
-                if (g.title.toLowerCase().contains(q)) filtered.add(g);
+                if (g.title.toLowerCase().contains(q)) base.add(g);
             }
         }
+        List<GogGame> filtered = new ArrayList<>();
+        for (GogGame g : base) {
+            boolean inst = isInstalled(g);
+            if (filter == Filter.INSTALLED && !inst) continue;
+            if (filter == Filter.NOT_INSTALLED && inst) continue;
+            filtered.add(g);
+        }
+        Collections.sort(filtered, (a, b) -> a.title.compareToIgnoreCase(b.title));
+        if (!sortAsc) Collections.reverse(filtered);
+
         final List<GogGame> result = filtered;
         uiHandler.post(() -> {
             gameListLayout.removeAllViews();
@@ -369,8 +398,9 @@ public class GogGamesActivity extends NavActivity {
                 gameListLayout.setPadding(dp(8), dp(8), dp(8), dp(8));
                 TextView emptyTV = new TextView(GogGamesActivity.this);
                 String q2 = query == null ? "" : query.trim();
-                emptyTV.setText(q2.isEmpty() ? "Your GOG library is empty"
-                                             : "No results for \u201c" + q2 + "\u201d");
+                emptyTV.setText(!q2.isEmpty() ? "No results for \u201c" + q2 + "\u201d"
+                        : filter != Filter.ALL ? "No games match the current filter."
+                        : "Your GOG library is empty");
                 emptyTV.setTextColor(0xFF666666);
                 emptyTV.setTextSize(14f);
                 emptyTV.setGravity(Gravity.CENTER);
@@ -381,7 +411,7 @@ public class GogGamesActivity extends NavActivity {
                 gameListLayout.setPadding(dp(8), dp(8), dp(8), dp(8));
 
                 RecyclerView recyclerView = new RecyclerView(this);
-                recyclerView.setLayoutManager(new LinearLayoutManager(this));
+                recyclerView.setLayoutManager(new GridLayoutManager(this, StoreGridUi.COLUMNS));
                 recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
                 recyclerView.setPadding(0, 0, 0, dp(12));
                 recyclerView.setClipToPadding(false);
@@ -442,310 +472,108 @@ public class GogGamesActivity extends NavActivity {
         } catch (Exception ignored) {}
     }
 
-    // ── LIST view: collapsible game cards (v0.3.4 style) ─────────────────────
+    // ── GRID view: shared store cells + per-store actions ─────────────────────
 
-    private class GogGameAdapter
-            extends RecyclerView.Adapter<GogGameAdapter.ViewHolder> {
+    private boolean isInstalled(GogGame g) {
+        return prefs.getString("gog_exe_" + g.gameId, null) != null;
+    }
 
+    private String currentQuery() {
+        return searchBar != null ? searchBar.getText().toString() : "";
+    }
+
+    private void launchGog(GogGame g) {
+        String exe = prefs.getString("gog_exe_" + g.gameId, null);
+        if (exe == null) { openDetailScreen(g); return; }
+        GogLaunchHelper.addToLauncher(this, g.title, exe);
+    }
+
+    private void uninstallGog(GogGame g) {
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Uninstall " + g.title + "?")
+                .setMessage("This will delete all installed game files.")
+                .setPositiveButton("Uninstall", (d, w) -> {
+                    String dir = prefs.getString("gog_dir_" + g.gameId, null);
+                    new Thread(() -> {
+                        if (dir != null) StoreGridUi.deleteDir(new File(dir));
+                        prefs.edit()
+                                .remove("gog_dir_" + g.gameId)
+                                .remove("gog_exe_" + g.gameId)
+                                .remove("gog_cover_" + g.gameId)
+                                .apply();
+                        uiHandler.post(() -> {
+                            Toast.makeText(this, g.title + " uninstalled", Toast.LENGTH_SHORT).show();
+                            applyFilter(currentQuery());
+                        });
+                    }).start();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showFilterMenu(TextView anchor) {
+        PopupMenu pm = new PopupMenu(this, anchor);
+        pm.getMenu().add(0, 0, 0, "All");
+        pm.getMenu().add(0, 1, 1, "Installed");
+        pm.getMenu().add(0, 2, 2, "Not installed");
+        pm.getMenu().setGroupCheckable(0, true, true);
+        pm.getMenu().getItem(filter.ordinal()).setChecked(true);
+        pm.setOnMenuItemClickListener(item -> {
+            filter = Filter.values()[item.getItemId()];
+            anchor.setText("Filter: " + (filter == Filter.ALL ? "All"
+                    : filter == Filter.INSTALLED ? "Installed" : "Not installed"));
+            applyFilter(currentQuery());
+            return true;
+        });
+        pm.show();
+    }
+
+    private class GogGameAdapter extends RecyclerView.Adapter<GogGameAdapter.VH> {
         private final List<GogGame> games;
 
-        GogGameAdapter(List<GogGame> games) {
-            this.games = games;
-        }
+        GogGameAdapter(List<GogGame> games) { this.games = games; }
 
-        class ViewHolder extends RecyclerView.ViewHolder {
-
-            LinearLayout card;
-
-            ImageView coverIV;
-
-            TextView titleTV;
-            TextView collapsedCheckTV;
-            TextView metaTV;
-            TextView checkmark;
-
-            public ViewHolder(View itemView) {
-                super(itemView);
-            }
+        class VH extends RecyclerView.ViewHolder {
+            final StoreGridUi.Cell cell;
+            VH(StoreGridUi.Cell cell) { super(cell.root); this.cell = cell; }
         }
 
         @Override
-        public int getItemCount() {
-            return games.size();
+        public VH onCreateViewHolder(ViewGroup parent, int viewType) {
+            StoreGridUi.Cell cell = StoreGridUi.buildCell(GogGamesActivity.this);
+            cell.root.setLayoutParams(new RecyclerView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            return new VH(cell);
         }
 
         @Override
-        public ViewHolder onCreateViewHolder(
-                ViewGroup parent,
-                int viewType
-        ) {
-
-            // ROOT CARD
-            LinearLayout card = new LinearLayout(GogGamesActivity.this);
-
-            card.setOrientation(LinearLayout.VERTICAL);
-
-            card.setPadding(dp(10), dp(10), dp(10), dp(10));
-
-            GradientDrawable cardBg = new GradientDrawable();
-
-            cardBg.setColor(0xFF1A1A2E);
-
-            cardBg.setCornerRadius(dp(6));
-
-            card.setBackground(cardBg);
-
-            card.setFocusable(true);
-
-            card.setDescendantFocusability(
-                    ViewGroup.FOCUS_BLOCK_DESCENDANTS
-            );
-
-            card.setOnFocusChangeListener((v, hasFocus) -> {
-
-                cardBg.setColor(
-                        hasFocus
-                                ? 0xFF2A2A4E
-                                : 0xFF1A1A2E
-                );
-
-                cardBg.setStroke(
-                        hasFocus ? dp(3) : 0,
-                        hasFocus
-                                ? 0xFFFFD700
-                                : 0x00000000
-                );
-            });
-
-            RecyclerView.LayoutParams cardLp =
-                    new RecyclerView.LayoutParams(-1, -2);
-
-            cardLp.bottomMargin = dp(8);
-
-            card.setLayoutParams(cardLp);
-
-            ViewHolder h = new ViewHolder(card);
-
-            h.card = card;
-
-            // TOP ROW
-            LinearLayout topRow = new LinearLayout(
-                    GogGamesActivity.this
-            );
-
-            topRow.setOrientation(LinearLayout.HORIZONTAL);
-
-            topRow.setGravity(Gravity.CENTER_VERTICAL);
-
-            // COVER
-            h.coverIV = new ImageView(GogGamesActivity.this);
-
-            h.coverIV.setScaleType(
-                    ImageView.ScaleType.CENTER_CROP
-            );
-
-            GradientDrawable coverBg = new GradientDrawable();
-
-            coverBg.setColor(0xFF111122);
-
-            coverBg.setCornerRadius(dp(4));
-
-            h.coverIV.setBackground(coverBg);
-
-            LinearLayout.LayoutParams coverLp =
-                    new LinearLayout.LayoutParams(
-                            dp(60),
-                            dp(60)
-                    );
-
-            coverLp.rightMargin = dp(10);
-
-            topRow.addView(h.coverIV, coverLp);
-
-            // INFO COLUMN
-            LinearLayout infoCol = new LinearLayout(
-                    GogGamesActivity.this
-            );
-
-            infoCol.setOrientation(LinearLayout.VERTICAL);
-
-            infoCol.setGravity(Gravity.CENTER_VERTICAL);
-
-            // TITLE ROW
-            LinearLayout titleRow = new LinearLayout(
-                    GogGamesActivity.this
-            );
-
-            titleRow.setOrientation(LinearLayout.HORIZONTAL);
-
-            titleRow.setGravity(Gravity.CENTER_VERTICAL);
-
-            h.titleTV = new TextView(GogGamesActivity.this);
-
-            h.titleTV.setTextColor(0xFFFFFFFF);
-
-            h.titleTV.setTextSize(15f);
-
-            h.titleTV.setTypeface(null, Typeface.BOLD);
-
-            h.titleTV.setMaxLines(1);
-
-            h.titleTV.setEllipsize(TextUtils.TruncateAt.END);
-
-            titleRow.addView(
-                    h.titleTV,
-                    new LinearLayout.LayoutParams(-2, -2)
-            );
-
-            h.collapsedCheckTV = new TextView(
-                    GogGamesActivity.this
-            );
-
-            h.collapsedCheckTV.setText(" ✓");
-
-            h.collapsedCheckTV.setTextColor(0xFF4CAF50);
-
-            h.collapsedCheckTV.setTextSize(14f);
-
-            h.collapsedCheckTV.setTypeface(null, Typeface.BOLD);
-
-            titleRow.addView(
-                    h.collapsedCheckTV,
-                    new LinearLayout.LayoutParams(-2, -2)
-            );
-
-            View spacer = new View(GogGamesActivity.this);
-
-            titleRow.addView(
-                    spacer,
-                    new LinearLayout.LayoutParams(0, 0, 1f)
-            );
-
-            infoCol.addView(
-                    titleRow,
-                    new LinearLayout.LayoutParams(-1, -2)
-            );
-
-            // META
-            h.metaTV = new TextView(GogGamesActivity.this);
-
-            h.metaTV.setTextColor(0xFF888888);
-
-            h.metaTV.setTextSize(11f);
-
-            LinearLayout.LayoutParams metaLp =
-                    new LinearLayout.LayoutParams(-1, -2);
-
-            metaLp.topMargin = dp(4);
-
-            infoCol.addView(h.metaTV, metaLp);
-
-            // CHECKMARK
-            h.checkmark = new TextView(
-                    GogGamesActivity.this
-            );
-
-            h.checkmark.setText("✓ Installed");
-
-            h.checkmark.setTextColor(0xFF4CAF50);
-
-            h.checkmark.setTextSize(10f);
-
-            LinearLayout.LayoutParams ckLp =
-                    new LinearLayout.LayoutParams(-1, -2);
-
-            ckLp.topMargin = dp(2);
-
-            infoCol.addView(h.checkmark, ckLp);
-
-            topRow.addView(
-                    infoCol,
-                    new LinearLayout.LayoutParams(0, -2, 1f)
-            );
-
-            card.addView(
-                    topRow,
-                    new LinearLayout.LayoutParams(-1, -2)
-            );
-
-            return h;
-        }
-
-        @Override
-        public void onBindViewHolder(
-                ViewHolder h,
-                int position
-        ) {
-
+        public void onBindViewHolder(VH h, int position) {
             GogGame game = games.get(position);
+            h.cell.name.setText(game.title);
+            loadImage(game, h.cell.art);
 
-            boolean isInstalled =
-                    prefs.getString(
-                            "gog_exe_" + game.gameId,
-                            null
-                    ) != null;
-
-            h.titleTV.setText(game.title);
-
-            h.collapsedCheckTV.setVisibility(
-                    isInstalled
-                            ? View.VISIBLE
-                            : View.GONE
-            );
-
-            h.checkmark.setVisibility(
-                    isInstalled
-                            ? View.VISIBLE
-                            : View.GONE
-            );
-
-            if (!game.category.isEmpty()
-                    || !game.developer.isEmpty()) {
-
-                String meta = game.category.isEmpty()
-                        ? game.developer
-                        : game.developer.isEmpty()
-                        ? game.category
-                        : game.category
-                        + " · "
-                        + game.developer;
-
-                h.metaTV.setText(meta);
-
-                h.metaTV.setVisibility(View.VISIBLE);
-
+            boolean installed = isInstalled(game);
+            StoreGridUi.setInstalled(h.cell, installed);
+            if (installed) {
+                h.cell.launch.setOnClickListener(v -> launchGog(game));
+                h.cell.uninstall.setOnClickListener(v -> uninstallGog(game));
             } else {
-
-                h.metaTV.setVisibility(View.GONE);
+                h.cell.launch.setOnClickListener(null);
+                h.cell.uninstall.setOnClickListener(null);
             }
-
-            loadImage(game, h.coverIV);
-
-            h.card.setOnClickListener(v ->
-                    openDetailScreen(game)
-            );
+            h.cell.root.setOnClickListener(v -> openDetailScreen(game));
         }
+
+        @Override
+        public int getItemCount() { return games.size(); }
     }
 
     // ── Shared helpers ────────────────────────────────────────────────────────
 
     private void loadImage(GogGame game, ImageView iv) {
-        if (game.imageUrl == null || game.imageUrl.isEmpty()) return;
-        String url = game.imageUrl.startsWith("//") ? "https:" + game.imageUrl : game.imageUrl;
-        new Thread(() -> {
-            try {
-                java.net.HttpURLConnection conn =
-                        (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
-                conn.setConnectTimeout(10000);
-                conn.setReadTimeout(10000);
-                conn.setRequestProperty("User-Agent", "GOG Galaxy");
-                if (conn.getResponseCode() == 200) {
-                    Bitmap bmp = BitmapFactory.decodeStream(conn.getInputStream());
-                    if (bmp != null) uiHandler.post(() -> iv.setImageBitmap(bmp));
-                }
-                conn.disconnect();
-            } catch (Exception ignored) {}
-        }, "gog-cover-" + game.gameId).start();
+        String url = game.imageUrl;
+        if (url != null && url.startsWith("//")) url = "https:" + url;
+        StoreImageLoader.load(iv, url, "GOG Galaxy");
     }
 
     // ── Utilities ─────────────────────────────────────────────────────────────
