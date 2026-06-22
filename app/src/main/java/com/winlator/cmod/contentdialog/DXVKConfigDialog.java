@@ -3,8 +3,11 @@ package com.winlator.cmod.contentdialog;
 import android.content.Context;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.ToggleButton;
 
@@ -49,6 +52,13 @@ public class DXVKConfigDialog extends ContentDialog {
         llAsync = findViewById(R.id.LLAsync);
         llAsyncCache = findViewById(R.id.LLAsyncCache);
 
+        ImageView guide = findViewById(R.id.guide);
+        guide.setImageResource(isArm64 ? R.drawable.dxvk_guide_arm64 : R.drawable.dxvk_guide_x64);
+
+        FrameLayout root = contentView.findViewById(R.id.FrameLayout);
+        ViewGroup.LayoutParams params = root.getLayoutParams();
+        params.width = ViewGroup.LayoutParams.MATCH_PARENT;
+
         ContentsManager contentsManager = new ContentsManager(context);
         contentsManager.syncContents();
         loadDxvkVersionSpinner(contentsManager, sVersion, isArm64);
@@ -82,6 +92,15 @@ public class DXVKConfigDialog extends ContentDialog {
             config.put("asyncCache", ((swAsyncCache.isChecked())&&(llAsyncCache.getVisibility()==View.VISIBLE))?"1":"0");
             anchor.setTag(config.toString());
         });
+    }
+
+    @Override
+    public void show() {
+        super.show();
+
+        if (getWindow() != null) {
+            getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        }
     }
 
     private void updateConfigVisibility(int dxvkType) {
