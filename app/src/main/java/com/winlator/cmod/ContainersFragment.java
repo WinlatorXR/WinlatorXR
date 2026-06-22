@@ -67,8 +67,9 @@ import java.util.List;
 
 public class ContainersFragment extends Fragment {
     private static final int REQUEST_CODE_IMPORT_CONTAINER = 1070;
+    private static final int REQUEST_CODE_IMPORT_CONTAINER_ARCHIVE = 1071;
     private RecyclerView recyclerView;
-    private TextView emptyTextView;
+    private View emptyStateView;
     private ContainerManager manager;
     private PreloaderDialog preloaderDialog;
 
@@ -99,7 +100,8 @@ public class ContainersFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         FrameLayout frameLayout = (FrameLayout) inflater.inflate(R.layout.containers_fragment, container, false);
         recyclerView = frameLayout.findViewById(R.id.RecyclerView);
-        emptyTextView = frameLayout.findViewById(R.id.TVEmptyText);
+        emptyStateView = frameLayout.findViewById(R.id.LLEmptyState);
+        frameLayout.findViewById(R.id.BTRecommendedSetup).setOnClickListener(v -> confirmRecommendedSetup());
         recyclerView.setLayoutManager(new LinearLayoutManager(recyclerView.getContext()));
         recyclerView.addItemDecoration(new DividerItemDecoration(recyclerView.getContext(), DividerItemDecoration.VERTICAL));
         return frameLayout;
@@ -108,7 +110,42 @@ public class ContainersFragment extends Fragment {
     private void loadContainersList() {
         ArrayList<Container> containers = manager.getContainers();
         recyclerView.setAdapter(new ContainersAdapter(containers));
-        if (containers.isEmpty()) emptyTextView.setVisibility(View.VISIBLE);
+        emptyStateView.setVisibility(containers.isEmpty() ? View.VISIBLE : View.GONE);
+    }
+
+    // Prompt before kicking off the (large) recommended-container download.
+    private void confirmRecommendedSetup() {
+        if (!ImageFs.find(getContext()).isValid()) {
+            AppUtils.showToast(getContext(), getString(R.string.recommended_setup_not_ready));
+            return;
+        }
+        new AlertDialog.Builder(getContext())
+                .setTitle(R.string.recommended_setup)
+                .setMessage(R.string.recommended_setup_message)
+                .setPositiveButton(R.string.recommended_setup_start, (dialog, which) -> runRecommendedSetup())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void runRecommendedSetup() {
+        preloaderDialog.show(R.string.recommended_setup_in_progress);
+        manager.setupRecommendedContainersAsync(new ContainerManager.RecommendedSetupCallback() {
+            @Override
+            public void onProgress(String imageName) {
+                // Single-message preloader; per-image progress is logged but not surfaced here.
+            }
+
+            @Override
+            public void onFinished(int imported, int skipped, int failed, boolean manifestError) {
+                preloaderDialog.close();
+                loadContainersList();
+                if (manifestError) {
+                    AppUtils.showToast(getContext(), getString(R.string.recommended_setup_failed_manifest));
+                } else {
+                    AppUtils.showToast(getContext(), getString(R.string.recommended_setup_result, imported, skipped, failed));
+                }
+            }
+        });
     }
 
 
@@ -179,12 +216,7 @@ public class ContainersFragment extends Fragment {
         switch (menuItem.getItemId()) {
             case R.id.containers_menu_add:
                 if (!ImageFs.find(getContext()).isValid()) return false;
-                FragmentManager fragmentManager = getParentFragmentManager();
-                fragmentManager.beginTransaction()
-                        .setCustomAnimations(R.anim.slide_in_up, R.anim.slide_out_down, R.anim.slide_in_down, R.anim.slide_out_up)
-                        .addToBackStack(null)
-                        .replace(R.id.FLFragmentContainer, new ContainerDetailFragment())
-                        .commit();
+                showAddContainerOptions();
                 return true;
 
 //            case R.id.containers_menu_import:
@@ -319,6 +351,75 @@ public class ContainersFragment extends Fragment {
     }
 
 
+    // The + action offers either creating a fresh container or importing an exported image.
+    private void showAddContainerOptions() {
+        CharSequence[] options = {
+                getString(R.string.create_new_container),
+                getString(R.string.import_container)
+        };
+        new AlertDialog.Builder(getContext())
+                .setTitle(R.string.add_container)
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) openCreateContainer();
+                    else openImportContainerArchive();
+                })
+                .show();
+    }
+
+    private void openCreateContainer() {
+        getParentFragmentManager().beginTransaction()
+                .setCustomAnimations(R.anim.slide_in_up, R.anim.slide_out_down, R.anim.slide_in_down, R.anim.slide_out_up)
+                .addToBackStack(null)
+                .replace(R.id.FLFragmentContainer, new ContainerDetailFragment())
+                .commit();
+    }
+
+    // Pick a single exported container image (.tzst/.txz) to import.
+    private void openImportContainerArchive() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivityForResult(intent, REQUEST_CODE_IMPORT_CONTAINER_ARCHIVE);
+    }
+
+    private void importContainerArchive(Uri uri) {
+        if (uri == null) return;
+        preloaderDialog.show(R.string.importing_container);
+
+        new Thread(() -> {
+            // Resolves to the real file when possible, otherwise a temp copy in the cache dir.
+            File archive = FileUtils.getFileFromUri(getContext(), uri);
+            if (archive == null || !archive.isFile()) {
+                runOnUiThreadSafe(() -> {
+                    preloaderDialog.close();
+                    AppUtils.showToast(getContext(), getString(R.string.import_container_invalid));
+                });
+                return;
+            }
+
+            manager.importContainerFromArchive(archive, (Boolean success) -> {
+                // Delivered on the UI thread by the manager.
+                preloaderDialog.close();
+                if (success != null && success) {
+                    loadContainersList();
+                    AppUtils.showToast(getContext(), getString(R.string.import_container_success));
+                } else {
+                    AppUtils.showToast(getContext(), getString(R.string.import_container_failed));
+                }
+                // Remove the temp copy if getFileFromUri created one in the cache dir.
+                if (getContext() != null
+                        && archive.getAbsolutePath().startsWith(getContext().getCacheDir().getAbsolutePath())) {
+                    FileUtils.delete(archive);
+                }
+            });
+        }).start();
+    }
+
+    private void runOnUiThreadSafe(Runnable action) {
+        if (getActivity() != null) getActivity().runOnUiThread(action);
+    }
+
     // Show dialog to inform user about the import process
     private void showImportInfoDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
@@ -348,6 +449,10 @@ public class ContainersFragment extends Fragment {
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_CODE_IMPORT_CONTAINER_ARCHIVE && resultCode == Activity.RESULT_OK) {
+            if (data != null && data.getData() != null) importContainerArchive(data.getData());
+            return;
+        }
         if (requestCode == REQUEST_CODE_IMPORT_CONTAINER && resultCode == Activity.RESULT_OK) {
             if (data != null) {
                 Uri uri = data.getData();
@@ -587,6 +692,9 @@ public class ContainersFragment extends Fragment {
                     case R.id.container_export:
                         exportContainer(container);
                         break;
+                    case R.id.container_export_image:
+                        exportContainerImage(container);
+                        break;
                 }
                 return true;
             });
@@ -600,6 +708,19 @@ public class ContainersFragment extends Fragment {
             manager.exportContainer(container, () -> {
                 preloaderDialog.close(); // Ensure the dialog is closed after operation
                 showToast("Container exported successfully to " + backupDir.getPath());
+            });
+        }
+
+        // Export a container as a single compressed .tzst image (the golden-image artifact).
+        private void exportContainerImage(Container container) {
+            preloaderDialog.show(R.string.exporting_container_image);
+            manager.exportContainerAsImage(container, imageFile -> {
+                preloaderDialog.close();
+                if (imageFile != null) {
+                    showToast(getString(R.string.export_container_image_success, imageFile.getPath()));
+                } else {
+                    showToast(getString(R.string.export_container_image_failed));
+                }
             });
         }
 

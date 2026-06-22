@@ -309,6 +309,8 @@ public final class FEXCoreManager {
         String[] programsName = {"winhandler.exe"};
         for (String programName : programsName) {
             File configFile = new File(ctx.getFilesDir(), "imagefs/home/xuser/.fex-emu/AppConfig/" + programName + ".json");
+            File parentDir = configFile.getParentFile();
+            if (parentDir != null && !parentDir.exists()) parentDir.mkdirs();
             if (!configFile.exists()) {
                 switch (programName) {
                     case "winhandler.exe":
