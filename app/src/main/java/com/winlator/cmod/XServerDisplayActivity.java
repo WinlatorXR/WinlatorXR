@@ -518,27 +518,9 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         String wineVersion = container.getWineVersion();
         wineInfo = WineInfo.fromIdentifier(this, contentsManager, wineVersion);
 
-        // DEBUG - TO BE REMOVED
-        {
-            File rd = container.getRootDir();
-            Log.d("LaunchDebug", "launch id=" + container.id + " name=" + container.getName()
-                    + " wineVersion=" + wineVersion + " firstTimeBoot=" + firstTimeBoot
-                    + " rootDir=" + (rd != null ? rd.getPath() : "null"));
-            // DEBUG - TO BE REMOVED
-            Log.d("LaunchDebug", "  prefix: .container=" + new File(rd, ".container").isFile()
-                    + " .wine=" + new File(rd, ".wine").isDirectory()
-                    + " system.reg=" + new File(rd, ".wine/system.reg").isFile()
-                    + " user.reg=" + new File(rd, ".wine/user.reg").isFile()
-                    + " system32=" + new File(rd, ".wine/drive_c/windows/system32").isDirectory()
-                    + " fex-emu(exists=" + new File(rd, ".fex-emu").exists()
-                    + ",symlink=" + FileUtils.isSymlink(new File(rd, ".fex-emu")) + ")");
-        }
-
         imageFs.setWinePath(wineInfo.path);
 
         ProcessHelper.removeAllDebugCallbacks();
-        // DEBUG - TO BE REMOVED: mirror all guest process (box64/wine/pulseaudio) output to logcat
-        ProcessHelper.addDebugCallback(line -> Log.d("WineBox64Out", line));
         if (enableLogs) {
             LogView.setFilename(getExecutable());
             ProcessHelper.addDebugCallback(debugDialog = new DebugDialog(this));
@@ -1667,8 +1649,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 ? "+" + wineDebugChannels.replace(",", ",+")
                 : "-all"
         );
-        // DEBUG - TO BE REMOVED: surface wine errors/exceptions/module loads to diagnose the import hang
-        envVars.put("WINEDEBUG", "+err,+seh,+module");
 
         // Clear any temporary directory
         String rootPath = imageFs.getRootDir().getPath();

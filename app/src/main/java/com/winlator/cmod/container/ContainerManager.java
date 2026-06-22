@@ -11,11 +11,8 @@ import com.winlator.cmod.MainActivity;
 import com.winlator.cmod.R;
 import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
-import com.winlator.cmod.contents.Downloader;
 import com.winlator.cmod.core.Callback;
-import com.winlator.cmod.core.DefaultVersion;
 import com.winlator.cmod.core.FileUtils;
-import com.winlator.cmod.core.KeyValueSet;
 import com.winlator.cmod.core.OnExtractFileListener;
 import com.winlator.cmod.core.TarCompressorUtils;
 import com.winlator.cmod.core.WineInfo;
@@ -34,7 +31,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
 import java.util.concurrent.Executors;
 
 public class ContainerManager {
@@ -243,12 +239,6 @@ public class ContainerManager {
         return null;
     }
 
-    public Container getContainerByName(String name) {
-        if (name == null) return null;
-        for (Container container : containers) if (name.equals(container.getName())) return container;
-        return null;
-    }
-
     private void extractCommonDlls(WineInfo wineInfo, String srcName, String dstName, File containerDir, OnExtractFileListener onExtractFileListener) throws JSONException {
         File srcDir = new File(wineInfo.path + "/lib/wine/" + srcName);
 
@@ -307,7 +297,7 @@ public class ContainerManager {
 
     public void importContainer(File importDir, Runnable callback) {
         Executors.newSingleThreadExecutor().execute(() -> {
-            doImportContainerDir(importDir, false);
+            doImportContainerDir(importDir);
             if (callback != null) callback.run();
         });
     }
@@ -315,12 +305,8 @@ public class ContainerManager {
     /**
      * Synchronously imports a container from an exported container directory, preserving its saved
      * configuration. Returns true on success. Runs on the calling thread (callers handle threading).
-     *
-     * @param retuneToDevice when true, rewrites the graphics-driver and DXVK version fields to this
-     *                       headset's defaults (used for shared "recommended" images captured on a
-     *                       different device). Normal user imports pass false to keep settings as-is.
      */
-    private boolean doImportContainerDir(File importDir, boolean retuneToDevice) {
+    private boolean doImportContainerDir(File importDir) {
         try {
             if (importDir == null || !importDir.exists() || !importDir.isDirectory()) {
                 Log.e("ContainerManager", "Invalid container directory for import: " + (importDir != null ? importDir.getPath() : "null"));
@@ -351,7 +337,7 @@ public class ContainerManager {
                 return false;
             }
 
-            boolean ok = registerImportedContainer(newContainerId, newContainerDir, importDir.getName(), retuneToDevice);
+            boolean ok = registerImportedContainer(newContainerId, newContainerDir, importDir.getName());
             if (ok) Log.d("ContainerManager", "Container imported successfully to: " + newContainerDir.getPath());
             return ok;
         } catch (Exception e) {
@@ -362,9 +348,9 @@ public class ContainerManager {
 
     /**
      * Registers an already-placed container directory (home/xuser-&lt;newId&gt;) as a Container,
-     * restoring its saved configuration and optionally retuning device-specific graphics.
+     * restoring its saved configuration.
      */
-    private boolean registerImportedContainer(int newId, File containerDir, String fallbackName, boolean retuneToDevice) {
+    private boolean registerImportedContainer(int newId, File containerDir, String fallbackName) {
         Container newContainer = new Container(newId, this);
         newContainer.setRootDir(containerDir);
 
@@ -379,15 +365,9 @@ public class ContainerManager {
         // loadData only restores the settings.
         boolean configRestored = false;
         File configFile = newContainer.getConfigFile();
-        // DEBUG - TO BE REMOVED
-        Log.d("ImportDebug", "register id=" + newId + " dir=" + containerDir.getPath()
-                + " .container exists=" + configFile.isFile()
-                + " dirListing=" + java.util.Arrays.toString(containerDir.list()));
         if (configFile.isFile()) {
             try {
                 String configStr = FileUtils.readString(configFile);
-                // DEBUG - TO BE REMOVED
-                Log.d("ImportDebug", "config content=" + configStr);
                 if (configStr != null && !configStr.isEmpty()) {
                     newContainer.loadData(new JSONObject(configStr));
                     configRestored = true;
@@ -398,15 +378,11 @@ public class ContainerManager {
         }
         if (!configRestored) newContainer.setName(fallbackName);
 
-        // Shared recommended images are captured on one headset; align device-specific graphics
-        // settings to this device so a single image works everywhere.
-        if (retuneToDevice) retuneGraphicsForDevice(newContainer);
-
         // An imported prefix was set up on another install/device. Clear the "already applied"
         // environment markers so the first launch re-runs first-boot setup (graphics wrapper +
         // extra libs, DXVK, ddraw, wincomponents) for THIS device — exactly like a freshly created
         // container. This is additive: it does not touch the installed Windows-side content (the
-        // registry, Program Files, ajay prefix, etc.), only the Winlator-managed environment.
+        // registry, Program Files, etc.), only the Winlator-managed environment.
         newContainer.putExtra("appVersion", null);            // -> firstTimeBoot == true on next launch
         newContainer.putExtra("dxwrapper", null);             // -> re-extract DXVK DLLs
         newContainer.putExtra("ddrawrapper", null);           // -> re-extract ddraw wrapper
@@ -414,10 +390,6 @@ public class ContainerManager {
         newContainer.putExtra("wincomponents", null);         // -> reinstall win components
 
         newContainer.saveData();
-        // DEBUG - TO BE REMOVED
-        Log.d("ImportDebug", "registered configRestored=" + configRestored
-                + " name=" + newContainer.getName() + " wineVersion=" + newContainer.getWineVersion()
-                + " (cleared env markers to force first-boot setup)");
         containers.add(newContainer);
         maxContainerId++;
         return true;
@@ -425,33 +397,21 @@ public class ContainerManager {
 
     /**
      * Imports a container from a single compressed archive (a .tzst/zstd or .txz/xz tarball of an
-     * exported container directory). The archive is extracted to a temporary directory and then
-     * imported like a regular directory, preserving the container's saved configuration.
-     *
-     * Intended for prebuilt "recommended" container images that are downloaded and provisioned in
-     * one tap, but works for any archive produced by exporting + compressing a container directory.
+     * exported container directory), extracting it and preserving the container's saved
+     * configuration. The callback reports success/failure on the UI thread.
      */
-    public void importContainerFromArchive(File archiveFile, Runnable callback) {
-        Executors.newSingleThreadExecutor().execute(() -> {
-            doImportContainerArchive(archiveFile, false);
-            if (callback != null) runOnUiThread(callback);
-        });
-    }
-
-    /** Archive import that reports success/failure on the UI thread. */
     public void importContainerFromArchive(File archiveFile, Callback<Boolean> callback) {
         Executors.newSingleThreadExecutor().execute(() -> {
-            boolean ok = doImportContainerArchive(archiveFile, false);
+            boolean ok = doImportContainerArchive(archiveFile);
             if (callback != null) runOnUiThread(() -> callback.call(ok));
         });
     }
 
     /**
      * Synchronously extracts a container archive to a scratch directory and imports it. Returns true
-     * on success. Runs on the calling thread (callers handle threading). See
-     * {@link #doImportContainerDir(File, boolean)} for {@code retuneToDevice}.
+     * on success. Runs on the calling thread (callers handle threading).
      */
-    private boolean doImportContainerArchive(File archiveFile, boolean retuneToDevice) {
+    private boolean doImportContainerArchive(File archiveFile) {
         File extractDir = null;
         try {
             if (archiveFile == null || !archiveFile.isFile()) {
@@ -498,7 +458,7 @@ public class ContainerManager {
                 }
             }
 
-            boolean ok = registerImportedContainer(newContainerId, newContainerDir, sourceDir.getName(), retuneToDevice);
+            boolean ok = registerImportedContainer(newContainerId, newContainerDir, sourceDir.getName());
             if (ok) Log.d("ContainerManager", "Container imported from archive to: " + newContainerDir.getPath());
             return ok;
         } catch (Exception e) {
@@ -534,102 +494,6 @@ public class ContainerManager {
         // Fall back to the extraction root.
         return extractDir;
     }
-
-    /**
-     * Rewrites the device-specific graphics fields of a container to the current headset's defaults.
-     * Only the graphics-driver wrapper version and the DXVK version differ per device; the actual
-     * driver is selected at launch from this config, and DXVK DLLs are re-extracted when the version
-     * changes, so a shared image just needs these version strings corrected for the target device.
-     */
-    private void retuneGraphicsForDevice(Container container) {
-        container.setGraphicsDriverConfig(setSemicolonVersion(container.getGraphicsDriverConfig(), DefaultVersion.WRAPPER));
-
-        if ("dxvk".equals(container.getDXWrapper())) {
-            String dxConfig = container.getDXWrapperConfig();
-            if (dxConfig == null || dxConfig.isEmpty()) dxConfig = Container.DEFAULT_DXWRAPPERCONFIG;
-            KeyValueSet kv = new KeyValueSet(dxConfig);
-            kv.put("version", DefaultVersion.DXVK);
-            container.setDXWrapperConfig(kv.toString());
-        }
-    }
-
-    /** Replaces (or inserts) the {@code version=...} entry in a ';'-separated config string. */
-    private static String setSemicolonVersion(String config, String version) {
-        if (config == null || config.isEmpty()) return "version=" + version;
-        String[] parts = config.split(";");
-        for (int i = 0; i < parts.length; i++) {
-            if (parts[i].startsWith("version=")) {
-                parts[i] = "version=" + version;
-                return String.join(";", parts);
-            }
-        }
-        return "version=" + version + ";" + config;
-    }
-
-    /** Reports progress and the final result of a recommended-setup run. Called on the UI thread. */
-    public interface RecommendedSetupCallback {
-        /** Invoked before each image is downloaded/installed, with its display name. */
-        void onProgress(String imageName);
-
-        /**
-         * @param imported      number of recommended containers newly added
-         * @param skipped       number already present (matched by name) and left untouched
-         * @param failed        number that failed to download/extract/import
-         * @param manifestError true if the manifest itself couldn't be fetched/parsed (nothing ran)
-         */
-        void onFinished(int imported, int skipped, int failed, boolean manifestError);
-    }
-
-    /**
-     * Downloads and provisions the recommended prebuilt containers from the remote manifest, one tap.
-     * Already-present containers (matched by name) are skipped, so this is safe to run repeatedly.
-     * Work happens on a background thread; the callback is delivered on the UI thread.
-     */
-    public void setupRecommendedContainersAsync(RecommendedSetupCallback callback) {
-        Executors.newSingleThreadExecutor().execute(() -> {
-            List<RecommendedContainers.Image> images = RecommendedContainers.fetchManifest();
-            if (images == null) {
-                if (callback != null) runOnUiThread(() -> callback.onFinished(0, 0, 0, true));
-                return;
-            }
-
-            String deviceKey = RecommendedContainers.deviceKey();
-            int imported = 0, skipped = 0, failed = 0;
-            for (RecommendedContainers.Image image : images) {
-                // Only provision images meant for this headset (device-less images apply to all).
-                if (!image.appliesToDevice(deviceKey)) continue;
-                if (getContainerByName(image.name) != null) {
-                    skipped++;
-                    continue;
-                }
-                if (callback != null) runOnUiThread(() -> callback.onProgress(image.name));
-
-                File archive = new File(context.getCacheDir(), "recommended_" + System.currentTimeMillis());
-                try {
-                    if (!Downloader.downloadFile(image.url, archive)) {
-                        Log.e("ContainerManager", "Failed to download recommended image: " + image.url);
-                        failed++;
-                        continue;
-                    }
-                    if (!image.matchesDownload(archive)) {
-                        Log.e("ContainerManager", "Downloaded recommended image failed verification: " + image.name);
-                        failed++;
-                        continue;
-                    }
-                    // Recommended images are device-agnostic; retune graphics to this headset.
-                    if (doImportContainerArchive(archive, true)) imported++;
-                    else failed++;
-                } finally {
-                    FileUtils.delete(archive);
-                }
-            }
-
-            final int fi = imported, fs = skipped, ff = failed;
-            if (callback != null) runOnUiThread(() -> callback.onFinished(fi, fs, ff, false));
-        });
-    }
-
-
 
     public void exportContainer(Container container, Runnable callback) {
         Executors.newSingleThreadExecutor().execute(() -> {

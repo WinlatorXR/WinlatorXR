@@ -499,14 +499,6 @@
     <string name="import_container_success">Container imported.</string>
     <string name="import_container_failed">Failed to import. Make sure you selected a valid exported container image.</string>
 
-    <string name="recommended_setup">Recommended Setup</string>
-    <string name="recommended_setup_start">Download</string>
-    <string name="recommended_setup_message">This downloads and installs the recommended pre-configured containers so you can start gaming without manual setup. It is a large download — connect to Wi‑Fi and make sure you have enough free space.</string>
-    <string name="recommended_setup_in_progress">Setting up recommended containers…</string>
-    <string name="recommended_setup_failed_manifest">Couldn\'t fetch the recommended setup list. Check your connection and try again.</string>
-    <string name="recommended_setup_result">Recommended setup complete: %1$d added, %2$d skipped, %3$d failed.</string>
-    <string name="recommended_setup_not_ready">Finish the first-time install before running setup.</string>
-
     <string name="brightness">Brightness</string>
     <string name="contrast">Contrast</string>
     <string name="gamma">Gamma</string>

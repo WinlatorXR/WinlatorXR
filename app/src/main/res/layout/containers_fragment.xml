@@ -11,28 +11,12 @@
         android:scrollbars="vertical"
         app:layoutManager="LinearLayoutManager" />
 
-    <LinearLayout
-        android:id="@+id/LLEmptyState"
+    <TextView
+        android:id="@+id/TVEmptyText"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
         android:gravity="center"
-        android:padding="24dp"
-        android:visibility="gone">
-
-        <TextView
-            android:id="@+id/TVEmptyText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="@string/no_items_to_display_containers"
-            android:textSize="24sp" />
-
-        <Button
-            android:id="@+id/BTRecommendedSetup"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="@string/recommended_setup" />
-    </LinearLayout>
+        android:text="@string/no_items_to_display_containers"
+        android:textSize="24sp"
+        android:visibility="gone" />
 </FrameLayout>
