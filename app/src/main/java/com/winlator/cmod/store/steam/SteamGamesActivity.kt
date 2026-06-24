@@ -203,7 +203,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
                 // Clear any recycled bitmap (the card background shows as the placeholder)
                 // then kick off the async cover load.
                 artView.setImageDrawable(null)
-                loadCoverArt(artView, game.appId)
+                loadCoverArt(artView, game)
                 return cell
             }
         }
@@ -221,7 +221,8 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
     // Cover art loading
     // -------------------------------------------------------------------------
 
-    private fun loadCoverArt(view: ImageView, appId: Int) {
+    private fun loadCoverArt(view: ImageView, game: SteamGame) {
+        val appId = game.appId
         imageCache.get(appId)?.let { cached ->
             view.setImageBitmap(cached)
             return
@@ -229,7 +230,10 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         imageExecutor.submit {
             // Try portrait art first (600x900), fall back to wide header
             val bmp = tryBitmap("https://shared.steamstatic.com/store_item_assets/steam/apps/$appId/library_600x900.jpg")
+                   ?: tryBitmap("https://steamcdn-a.akamaihd.net/steam/apps/$appId/library_600x900.jpg")
+                   ?: tryBitmap("https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/$appId/${game.iconHash}.jpg")
                    ?: tryBitmap("https://shared.steamstatic.com/store_item_assets/steam/apps/$appId/header.jpg")
+                   ?: tryBitmap("https://shared.steamstatic.com/store_item_assets/steam/apps/$appId/capsule_616x353.jpg")
             if (bmp != null) {
                 imageCache.put(appId, bmp)
                 ui.post {

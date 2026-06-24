@@ -378,13 +378,25 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         }
     }
 
+    private fun tryBitmap(url: String): Bitmap? {
+        return try {
+            BitmapFactory.decodeStream(URL(url).openStream())
+        } catch (_ : Exception) {
+            null
+        }
+    }
+
     private fun loadHeaderImage() {
-        val url = game?.headerUrl ?: return
         Thread {
-            try {
-                val bmp: Bitmap = BitmapFactory.decodeStream(URL(url).openStream())
-                ui.post { headerImage.setImageBitmap(bmp) }
-            } catch (_: Exception) {}
+            val bmp = tryBitmap("https://shared.steamstatic.com/store_item_assets/steam/apps/$appId/header.jpg")
+                ?: tryBitmap("https://shared.steamstatic.com/store_item_assets/steam/apps/$appId/capsule_616x353.jpg")
+                ?: tryBitmap("https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/$appId/${game?.iconHash}.jpg")
+
+            if (bmp != null) {
+                ui.post {
+                    ui.post { headerImage.setImageBitmap(bmp) }
+                }
+            }
         }.start()
     }
 
