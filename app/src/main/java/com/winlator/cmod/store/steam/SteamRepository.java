@@ -782,7 +782,11 @@ public final class SteamRepository {
     // -------------------------------------------------------------------------
 
     public void logout() {
-        if (steamUser != null) steamUser.logOff();
+        new Thread(() -> {
+            if (steamUser != null) {
+                steamUser.logOff();
+            }
+        }).start();
         if (prefs != null) {
             prefs.edit()
                 .remove("username").remove("refresh_token")
