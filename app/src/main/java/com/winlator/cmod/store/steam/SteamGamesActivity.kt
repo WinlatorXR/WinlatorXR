@@ -231,9 +231,9 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             // Try portrait art first (600x900), fall back to wide header
             val bmp = tryBitmap("https://shared.steamstatic.com/store_item_assets/steam/apps/$appId/library_600x900.jpg")
                    ?: tryBitmap("https://steamcdn-a.akamaihd.net/steam/apps/$appId/library_600x900.jpg")
-                   ?: tryBitmap("https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/$appId/${game.iconHash}.jpg")
                    ?: tryBitmap("https://shared.steamstatic.com/store_item_assets/steam/apps/$appId/header.jpg")
                    ?: tryBitmap("https://shared.steamstatic.com/store_item_assets/steam/apps/$appId/capsule_616x353.jpg")
+                   ?: tryBitmap("https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/$appId/${game.iconHash}.jpg")
             if (bmp != null) {
                 imageCache.put(appId, bmp)
                 ui.post {
