@@ -464,6 +464,7 @@
     <string name="thumbstick_up">Thumbstick up</string>
     <string name="thumbstick_down">Thumbstick down</string>
     <string name="xr_mods">OpenXR mods</string>
+    <string name="autoclose">Automatically close the container when all windows are closed</string>
     <string name="use_reshade">Inject Reshade SuperDepth3D (supported only in DirectX 9 and higher)</string>
     <string name="force_dxgi">Inject Reshade with forced DXGI (that could resolve compatibility issues)</string>
     <string name="use_trackir">Inject TrackIR emulation (camera tracking for racing/simulator games)</string>

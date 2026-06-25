@@ -299,6 +299,12 @@
             android:text="@string/xr_mods" />
 
         <CheckBox
+            android:id="@+id/CBAutoclose"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/autoclose" />
+
+        <CheckBox
             android:id="@+id/CBUseReshade"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

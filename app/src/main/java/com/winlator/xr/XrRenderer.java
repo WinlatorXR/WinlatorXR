@@ -51,6 +51,8 @@ public class XrRenderer extends GLRenderer {
     private boolean xrFrameReady = false;
     private boolean xrFrameStarted = false;
 
+    public static boolean autoclose = true;
+
     public XrRenderer(XServerView xServerView, XServer xServer) {
         super(xServerView, xServer);
     }
@@ -158,7 +160,7 @@ public class XrRenderer extends GLRenderer {
         if (!renderableWindows.isEmpty()) {
             timestampHadWindow = System.currentTimeMillis();
         }  else if ((System.currentTimeMillis() - timestampHadWindow > 1000)) {
-            if (XrActivity.isEnabled(null)) {
+            if (autoclose && XrActivity.isEnabled(null)) {
                 XrActivity.getInstance().runOnUiThread(() -> XrActivity.getInstance().closeSession());
             }
         }

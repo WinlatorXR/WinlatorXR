@@ -221,6 +221,11 @@ public class ShortcutSettingsDialog extends ContentDialog {
             llSecondaryExecOptions.setVisibility(isChecked ? View.VISIBLE : View.GONE);
         });
 
+        // Autoclose option
+        boolean autoclose = shortcut.getExtra("autoclose", "1").equals("1");
+        final CheckBox cbAutoclose = findViewById(R.id.CBAutoclose);
+        cbAutoclose.setChecked(autoclose);
+
         // Reshade integration
         boolean useReshade = shortcut.getExtra("useReshade", "0").equals("1");
         final CheckBox cbUseReshade = findViewById(R.id.CBUseReshade);
@@ -231,7 +236,7 @@ public class ShortcutSettingsDialog extends ContentDialog {
         cbForceDXGI.setChecked(forceDXGI);
         cbUseReshade.setOnCheckedChangeListener((compoundButton, checked) -> cbForceDXGI.setEnabled(checked));
 
-        // TrackIR intergration
+        // TrackIR integration
         boolean useTrackIR = shortcut.getExtra("useTrackIR", "0").equals("1");
         final CheckBox cbUseTrackIR = findViewById(R.id.CBUseTrackIR);
         cbUseTrackIR.setChecked(useTrackIR);
@@ -499,6 +504,7 @@ public class ShortcutSettingsDialog extends ContentDialog {
                     shortcut.putExtra("execDelay", null);
                 }
 
+                shortcut.putExtra("autoclose", cbAutoclose.isChecked() ? "1" : "0");
                 shortcut.putExtra("useReshade", cbUseReshade.isChecked() ? "1" : null);
                 shortcut.putExtra("forceDXGI", cbForceDXGI.isChecked() ? "1" : null);
                 shortcut.putExtra("useTrackIR", cbUseTrackIR.isChecked() ? "1" : null);

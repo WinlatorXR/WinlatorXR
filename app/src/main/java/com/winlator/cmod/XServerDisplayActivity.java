@@ -127,6 +127,7 @@ import com.winlator.cmod.xenvironment.components.PulseAudioComponent;
 import com.winlator.cmod.xenvironment.components.SysVSharedMemoryComponent;
 import com.winlator.cmod.xenvironment.components.XServerComponent;
 import com.winlator.xr.ModdingUtils;
+import com.winlator.xr.XrRenderer;
 import com.winlator.xr.ui.XrDialog;
 import com.winlator.cmod.xserver.Pointer;
 import com.winlator.cmod.xserver.Property;
@@ -550,6 +551,11 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+
+        // Setup autoclose
+        if (XrActivity.isEnabled(this)) {
+            XrRenderer.autoclose = shortcut == null || shortcut.getExtra("autoclose", "1").equals("1");
         }
 
         graphicsDriver = container.getGraphicsDriver();
