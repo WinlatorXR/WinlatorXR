@@ -148,8 +148,8 @@
         <item>2.8</item>
         <item>2.12</item>
         <item>2.13</item>
-        <item>proton-arm64ec-3.0.1</item>
-        <item>vkd3d-2.14.1-arm64ec</item>
+        <item>arm64ec-3.0.1</item>
+        <item>2.14.1-arm64ec</item>
     </string-array>
     <string-array name="vkd3d_version_entries_x64">
         <item>2.8</item>
