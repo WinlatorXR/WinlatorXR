@@ -602,7 +602,10 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         }
 
         this.graphicsDriverConfig = GraphicsDriverConfigDialog.parseGraphicsDriverConfig(graphicsDriverConfig);
-        this.dxwrapperConfig = DXVKConfigDialog.parseConfig(dxwrapperConfig);
+
+        if (dxwrapper.equals("dxvk") || dxwrapper.equals("vkd3d")) {
+            this.dxwrapperConfig = DXVKConfigDialog.parseConfig(dxwrapperConfig);
+        }
 
 
 
@@ -1590,6 +1593,8 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         String dxwrapper = this.dxwrapper;
         if (dxwrapper.equals("dxvk"))
             dxwrapper = "dxvk-"+dxwrapperConfig.get("version");
+        else if (dxwrapper.equals("vkd3d"))
+            dxwrapper = "vkd3d-"+dxwrapperConfig.get("vkd3dVersion");
 
         if (!dxwrapper.equals(container.getExtra("dxwrapper"))) {
             extractDXWrapperFiles(dxwrapper);
@@ -2306,8 +2311,11 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         if (dxwrapper.equals("dxvk")) {
             DXVKConfigDialog.setEnvVars(this, dxwrapperConfig, envVars, container.getRefreshRate());
+        } else if (dxwrapper.equals("vkd3d")) {
+            VKD3DConfigDialog.setEnvVars(this, dxwrapperConfig, envVars);
         }
-        VKD3DConfigDialog.setEnvVars(this, dxwrapperConfig, envVars);
+
+
 
         boolean useDRI3 = preferences.getBoolean("use_dri3", true);
         if (!useDRI3) {
@@ -2554,11 +2562,19 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         File rootDir = imageFs.getRootDir();
         File windowsDir = new File(rootDir, ImageFs.WINEPREFIX + "/drive_c/windows");
 
-        String vkd3d = "vkd3d-" + dxwrapperConfig.get("vkd3dVersion");
-        Log.d(TAG, "Extracting fallback VKD3D .tzst archive: " + vkd3d);
-        TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "dxwrapper/" + vkd3d + ".tzst", windowsDir, onExtractFileListener);
-
-        if (dxwrapper.contains("dxvk")) {
+        if (dxwrapper.contains("vkd3d")) {
+            ContentProfile profile = contentsManager.getProfileByEntryName(dxwrapper);
+            Log.d(TAG, "Extracting DXVK 2.4.1");
+            TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "dxwrapper/dxvk-2.4.1" + ".tzst", windowsDir, onExtractFileListener);
+            if (profile != null) {
+                Log.d(TAG, "Applying user-defined VKD3D content profile: " + dxwrapper);
+                contentsManager.applyContent(profile);
+            } else {
+                Log.d(TAG, "Extracting fallback VKD3D .tzst archive: " + dxwrapper);
+                TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "dxwrapper/" + dxwrapper + ".tzst", windowsDir, onExtractFileListener);
+            }
+            Log.d(TAG, "Finished VKD3D extraction for " + dxwrapper);
+        } else if (dxwrapper.contains("dxvk")) {
             Log.d(TAG, "Extracting DXVK wrapper files, version: " + dxwrapper);
 
             ContentProfile profile = contentsManager.getProfileByEntryName(dxwrapper);

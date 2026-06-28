@@ -370,11 +370,6 @@ public class ContainerDetailFragment extends Fragment {
         final View vDXWrapperConfig = view.findViewById(R.id.BTDXWrapperConfig);
         vDXWrapperConfig.setTag(isEditMode() ? container.getDXWrapperConfig() : Container.DEFAULT_DXWRAPPERCONFIG);
 
-        final View vDX12WrapperConfig = view.findViewById(R.id.BTDX12WrapperConfig);
-        vDX12WrapperConfig.setTag(isEditMode() ? container.getDXWrapperConfig() : Container.DEFAULT_DXWRAPPERCONFIG);
-        vDX12WrapperConfig.setOnClickListener((v) -> (new VKD3DConfigDialog(vDX12WrapperConfig, isArm64)).show());
-        vDX12WrapperConfig.setVisibility(View.VISIBLE);
-
         final View vGraphicsDriverConfig = view.findViewById(R.id.BTGraphicsDriverConfig);
         vGraphicsDriverConfig.setTag(isEditMode() ? container.getGraphicsDriverConfig() : Container.DEFAULT_GRAPHICSDRIVERCONFIG);
 
@@ -971,7 +966,10 @@ public class ContainerDetailFragment extends Fragment {
                     vDXWrapperConfig.setOnClickListener((v) -> (new DXVKConfigDialog(vDXWrapperConfig, isArm64)).show());
                     vDXWrapperConfig.setVisibility(View.VISIBLE);
                 }
-                else vDXWrapperConfig.setVisibility(View.GONE);
+                else if (dxwrapper.equals("vkd3d")) {
+                    vDXWrapperConfig.setOnClickListener((v) -> (new VKD3DConfigDialog(vDXWrapperConfig, isArm64)).show());
+                    vDXWrapperConfig.setVisibility(View.VISIBLE);
+                } else vDXWrapperConfig.setVisibility(View.GONE);
             }
 
             @Override
