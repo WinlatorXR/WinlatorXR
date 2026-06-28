@@ -2549,7 +2549,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     private static final String TAG = "DXWrapperExtraction";
 
     private void extractDXWrapperFiles(String dxwrapper) {
-        final String[] dlls = {"d3d10.dll", "d3d10_1.dll", "d3d10core.dll", "d3d11.dll", "d3d8.dll", "d3d9.dll", "dxgi.dll"};
+        final String[] dlls = {"d3d10.dll", "d3d10_1.dll", "d3d10core.dll", "d3d11.dll", "d3d12.dll", "d3d12core.dll", "d3d8.dll", "d3d9.dll", "dxgi.dll"};
 
         File rootDir = imageFs.getRootDir();
         File windowsDir = new File(rootDir, ImageFs.WINEPREFIX + "/drive_c/windows");
