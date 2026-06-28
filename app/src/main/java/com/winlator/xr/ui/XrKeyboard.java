@@ -146,9 +146,10 @@ public class XrKeyboard extends ContentDialog {
 
     private void applyLetters(ArrayList<Button> keys) {
         String[] letters = {
+                "1","2","3","4","5","6","7","8","9","0",
                 "q","w","e","r","t","y","u","i","o","p",
                 "a","s","d","f","g","h","j","k","l",
-                "z","x","c","v","b","n","m",",","."
+                "⇧","z","x","c","v","b","n","m",",","."
         };
 
         int index = 0;
@@ -168,9 +169,10 @@ public class XrKeyboard extends ContentDialog {
 
     private void applySymbols(ArrayList<Button> keys) {
         String[] symbols = {
-                "1","2","3","4","5","6","7","8","9","0",
-                "!","@","#","%","&","*","-","+","/","(",
-                ")","?","\"","'",";",":","<",">"
+                "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10",
+                "`","!","@","#","$","%","&","(",")","=",
+                "+","-","*","/","_","[","]","{","}",
+                "|","?","\"","'",";",":","<",">"
         };
 
         int index = 0;
@@ -198,6 +200,36 @@ public class XrKeyboard extends ContentDialog {
                 switch (text) {
                     case "⌫":
                         sendKey(XKeycode.KEY_BKSP);
+                        break;
+                    case "F1":
+                        sendKey(XKeycode.KEY_F1);
+                        break;
+                    case "F2":
+                        sendKey(XKeycode.KEY_F2);
+                        break;
+                    case "F3":
+                        sendKey(XKeycode.KEY_F3);
+                        break;
+                    case "F4":
+                        sendKey(XKeycode.KEY_F4);
+                        break;
+                    case "F5":
+                        sendKey(XKeycode.KEY_F5);
+                        break;
+                    case "F6":
+                        sendKey(XKeycode.KEY_F6);
+                        break;
+                    case "F7":
+                        sendKey(XKeycode.KEY_F7);
+                        break;
+                    case "F8":
+                        sendKey(XKeycode.KEY_F8);
+                        break;
+                    case "F9":
+                        sendKey(XKeycode.KEY_F9);
+                        break;
+                    case "F10":
+                        sendKey(XKeycode.KEY_F10);
                         break;
                     case "Space":
                         sendKey(XKeycode.KEY_SPACE);
@@ -278,8 +310,7 @@ public class XrKeyboard extends ContentDialog {
     }
 
     private boolean isSpecialKey(String text) {
-        return text.equals("⇧") ||
-                text.equals("⌫") ||
+        return  text.equals("⌫") ||
                 text.equals("Space") ||
                 text.equals("Enter") ||
                 text.equals("?123") ||

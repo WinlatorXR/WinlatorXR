@@ -6,6 +6,24 @@
     android:orientation="vertical"
     android:padding="4dp">
 
+    <!-- Row 0 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:weightSum="10">
+
+        <Button style="@style/KeyButton" android:text="1"/>
+        <Button style="@style/KeyButton" android:text="2"/>
+        <Button style="@style/KeyButton" android:text="3"/>
+        <Button style="@style/KeyButton" android:text="4"/>
+        <Button style="@style/KeyButton" android:text="5"/>
+        <Button style="@style/KeyButton" android:text="6"/>
+        <Button style="@style/KeyButton" android:text="7"/>
+        <Button style="@style/KeyButton" android:text="8"/>
+        <Button style="@style/KeyButton" android:text="9"/>
+        <Button style="@style/KeyButton" android:text="0"/>
+    </LinearLayout>
+
     <!-- Row 1 -->
     <LinearLayout
         android:layout_width="match_parent"
