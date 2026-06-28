@@ -60,8 +60,8 @@ public class VKD3DConfigDialog extends ContentDialog {
     }
 
     public static void setEnvVars(Context context, KeyValueSet config, EnvVars envVars, int frameLimit) {
-        DXVKConfigDialog.setEnvVars(context, config, envVars, frameLimit);
         envVars.put("VKD3D_FEATURE_LEVEL", config.get("vkd3dLevel"));
+        envVars.put("VKD3D_FRAME_RATE", "" + frameLimit);
     }
 
     // Method to load versions into the VKD3D version spinner
