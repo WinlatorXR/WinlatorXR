@@ -372,7 +372,7 @@ public class ContainerDetailFragment extends Fragment {
 
         final View vDX12WrapperConfig = view.findViewById(R.id.BTDX12WrapperConfig);
         vDX12WrapperConfig.setTag(isEditMode() ? container.getDXWrapperConfig() : Container.DEFAULT_DXWRAPPERCONFIG);
-        vDX12WrapperConfig.setOnClickListener((v) -> (new VKD3DConfigDialog(vDXWrapperConfig, isArm64)).show());
+        vDX12WrapperConfig.setOnClickListener((v) -> (new VKD3DConfigDialog(vDX12WrapperConfig, isArm64)).show());
         vDX12WrapperConfig.setVisibility(View.VISIBLE);
 
         final View vGraphicsDriverConfig = view.findViewById(R.id.BTGraphicsDriverConfig);

@@ -145,7 +145,7 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
         final View vDX12WrapperConfig = findViewById(R.id.BTDX12WrapperConfig);
         vDX12WrapperConfig.setTag(shortcut.getExtra("dxwrapperConfig", shortcut.container.getDXWrapperConfig()));
-        vDX12WrapperConfig.setOnClickListener((v) -> (new VKD3DConfigDialog(vDXWrapperConfig, wineInfo.isArm64EC())).show());
+        vDX12WrapperConfig.setOnClickListener((v) -> (new VKD3DConfigDialog(vDX12WrapperConfig, wineInfo.isArm64EC())).show());
         vDX12WrapperConfig.setVisibility(View.VISIBLE);
 
         ContainerDetailFragment.setupDXWrapperSpinner(sDXWrapper, vDXWrapperConfig);
