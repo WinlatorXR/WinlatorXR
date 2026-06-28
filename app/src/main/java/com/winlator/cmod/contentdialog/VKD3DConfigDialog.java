@@ -59,7 +59,8 @@ public class VKD3DConfigDialog extends ContentDialog {
         return new KeyValueSet(data);
     }
 
-    public static void setEnvVars(Context context, KeyValueSet config, EnvVars envVars) {
+    public static void setEnvVars(Context context, KeyValueSet config, EnvVars envVars, int frameLimit) {
+        DXVKConfigDialog.setEnvVars(context, config, envVars, frameLimit);
         envVars.put("VKD3D_FEATURE_LEVEL", config.get("vkd3dLevel"));
     }
 

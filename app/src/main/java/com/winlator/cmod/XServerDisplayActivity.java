@@ -2312,7 +2312,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         if (dxwrapper.equals("dxvk")) {
             DXVKConfigDialog.setEnvVars(this, dxwrapperConfig, envVars, container.getRefreshRate());
         } else if (dxwrapper.equals("vkd3d")) {
-            VKD3DConfigDialog.setEnvVars(this, dxwrapperConfig, envVars);
+            VKD3DConfigDialog.setEnvVars(this, dxwrapperConfig, envVars, container.getRefreshRate());
         }
 
 
