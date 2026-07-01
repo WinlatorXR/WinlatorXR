@@ -7,6 +7,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import com.winlator.cmod.MainActivity;
 import com.winlator.cmod.R;
 import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
@@ -296,54 +297,203 @@ public class ContainerManager {
 
     public void importContainer(File importDir, Runnable callback) {
         Executors.newSingleThreadExecutor().execute(() -> {
-            try {
-                if (!importDir.exists() || !importDir.isDirectory()) {
-                    Log.e("ContainerManager", "Invalid container directory for import: " + importDir.getPath());
-                    return;
-                }
-
-                // Get the next container ID and set the new container name
-                int newContainerId = getNextContainerId();
-                String newContainerName = ImageFs.USER + "-" + newContainerId;
-                File newContainerDir = new File(homeDir, newContainerName);
-
-                if (newContainerDir.exists()) {
-                    Log.e("ContainerManager", "Container directory already exists: " + newContainerDir.getPath());
-                    return;
-                }
-
-                if (!newContainerDir.mkdirs()) {
-                    Log.e("ContainerManager", "Failed to create directory: " + newContainerDir.getPath());
-                    return;
-                }
-
-                // Copy the files from the import directory to the new container directory
-                if (!FileUtils.copy(importDir, newContainerDir, file -> FileUtils.chmod(file, 0771))) {
-                    FileUtils.delete(newContainerDir);
-                    Log.e("ContainerManager", "Failed to copy container files to: " + newContainerDir.getPath());
-                    return;
-                }
-
-                // Create the new container object and save its data
-                Container newContainer = new Container(newContainerId, this);
-                newContainer.setRootDir(newContainerDir);
-                newContainer.setName(importDir.getName());
-                newContainer.saveData();
-                containers.add(newContainer);
-                maxContainerId++;
-
-                Log.d("ContainerManager", "Container imported successfully to: " + newContainerDir.getPath());
-                // Make sure to run the callback after successful import
-                if (callback != null) {
-                    callback.run();
-                }
-            } catch (Exception e) {
-                Log.e("ContainerManager", "Failed to import container from: " + importDir.getPath(), e);
-            }
+            doImportContainerDir(importDir);
+            if (callback != null) callback.run();
         });
     }
 
+    /**
+     * Synchronously imports a container from an exported container directory, preserving its saved
+     * configuration. Returns true on success. Runs on the calling thread (callers handle threading).
+     */
+    private boolean doImportContainerDir(File importDir) {
+        try {
+            if (importDir == null || !importDir.exists() || !importDir.isDirectory()) {
+                Log.e("ContainerManager", "Invalid container directory for import: " + (importDir != null ? importDir.getPath() : "null"));
+                return false;
+            }
 
+            // Get the next container ID and target directory.
+            int newContainerId = getNextContainerId();
+            String newContainerName = ImageFs.USER + "-" + newContainerId;
+            File newContainerDir = new File(homeDir, newContainerName);
+
+            if (newContainerDir.exists()) {
+                Log.e("ContainerManager", "Container directory already exists: " + newContainerDir.getPath());
+                return false;
+            }
+
+            if (!newContainerDir.mkdirs()) {
+                Log.e("ContainerManager", "Failed to create directory: " + newContainerDir.getPath());
+                return false;
+            }
+
+            // Copy the files from the import directory to the new container directory.
+            // Note: this drops symlinks (FileUtils.copy skips them); fine for plain folder backups,
+            // since per-launch setup rebuilds dosdevices. Archive imports use move() to keep symlinks.
+            if (!FileUtils.copy(importDir, newContainerDir, file -> FileUtils.chmod(file, 0771))) {
+                FileUtils.delete(newContainerDir);
+                Log.e("ContainerManager", "Failed to copy container files to: " + newContainerDir.getPath());
+                return false;
+            }
+
+            boolean ok = registerImportedContainer(newContainerId, newContainerDir, importDir.getName());
+            if (ok) Log.d("ContainerManager", "Container imported successfully to: " + newContainerDir.getPath());
+            return ok;
+        } catch (Exception e) {
+            Log.e("ContainerManager", "Failed to import container from: " + (importDir != null ? importDir.getPath() : "null"), e);
+            return false;
+        }
+    }
+
+    /**
+     * Registers an already-placed container directory (home/xuser-&lt;newId&gt;) as a Container,
+     * restoring its saved configuration.
+     */
+    private boolean registerImportedContainer(int newId, File containerDir, String fallbackName) {
+        Container newContainer = new Container(newId, this);
+        newContainer.setRootDir(containerDir);
+
+        // The import chmods every file to 0771, which makes the captured wineserver runtime dir
+        // group/other-accessible. wineserver then refuses to start ("must not be accessible by other
+        // users") and the container hangs. It's a throwaway runtime dir, so delete it — wineserver
+        // recreates it with the correct 0700 perms on launch.
+        FileUtils.delete(new File(containerDir, ".wine/.wineserver"));
+
+        // Preserve the imported container's configuration (name, wine version, drivers, env vars,
+        // etc.) from its .container file. The container id is final and stays fixed at newId, so
+        // loadData only restores the settings.
+        boolean configRestored = false;
+        File configFile = newContainer.getConfigFile();
+        if (configFile.isFile()) {
+            try {
+                String configStr = FileUtils.readString(configFile);
+                if (configStr != null && !configStr.isEmpty()) {
+                    newContainer.loadData(new JSONObject(configStr));
+                    configRestored = true;
+                }
+            } catch (JSONException e) {
+                Log.w("ContainerManager", "Imported container has an invalid .container config; using defaults", e);
+            }
+        }
+        if (!configRestored) newContainer.setName(fallbackName);
+
+        // An imported prefix was set up on another install/device. Clear the "already applied"
+        // environment markers so the first launch re-runs first-boot setup (graphics wrapper +
+        // extra libs, DXVK, ddraw, wincomponents) for THIS device — exactly like a freshly created
+        // container. This is additive: it does not touch the installed Windows-side content (the
+        // registry, Program Files, etc.), only the Winlator-managed environment.
+        newContainer.putExtra("appVersion", null);            // -> firstTimeBoot == true on next launch
+        newContainer.putExtra("dxwrapper", null);             // -> re-extract DXVK DLLs
+        newContainer.putExtra("ddrawrapper", null);           // -> re-extract ddraw wrapper
+        newContainer.putExtra("lastInstalledMainWrapper", null); // -> re-extract graphics wrapper
+        newContainer.putExtra("wincomponents", null);         // -> reinstall win components
+
+        newContainer.saveData();
+        containers.add(newContainer);
+        maxContainerId++;
+        return true;
+    }
+
+    /**
+     * Imports a container from a single compressed archive (a .tzst/zstd or .txz/xz tarball of an
+     * exported container directory), extracting it and preserving the container's saved
+     * configuration. The callback reports success/failure on the UI thread.
+     */
+    public void importContainerFromArchive(File archiveFile, Callback<Boolean> callback) {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            boolean ok = doImportContainerArchive(archiveFile);
+            if (callback != null) runOnUiThread(() -> callback.call(ok));
+        });
+    }
+
+    /**
+     * Synchronously extracts a container archive to a scratch directory and imports it. Returns true
+     * on success. Runs on the calling thread (callers handle threading).
+     */
+    private boolean doImportContainerArchive(File archiveFile) {
+        File extractDir = null;
+        try {
+            if (archiveFile == null || !archiveFile.isFile()) {
+                Log.e("ContainerManager", "Invalid container archive: " + (archiveFile != null ? archiveFile.getPath() : "null"));
+                return false;
+            }
+
+            // Extract to a scratch directory in the cache. Try zstd first, then xz.
+            extractDir = new File(context.getCacheDir(), "container_import_" + System.currentTimeMillis());
+            if (!extractDir.mkdirs()) {
+                Log.e("ContainerManager", "Failed to create temp extract dir: " + extractDir.getPath());
+                return false;
+            }
+
+            boolean extracted = TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, archiveFile, extractDir);
+            if (!extracted) extracted = TarCompressorUtils.extract(TarCompressorUtils.Type.XZ, archiveFile, extractDir);
+            if (!extracted) {
+                Log.e("ContainerManager", "Failed to extract container archive: " + archiveFile.getPath());
+                return false;
+            }
+
+            // The archive may wrap the container in a single top-level folder (e.g. xuser-N/).
+            File sourceDir = resolveImportedContainerDir(extractDir);
+            if (!new File(sourceDir, ".container").isFile())
+                Log.w("ContainerManager", "Imported archive has no .container at " + sourceDir.getPath() + " — image may be incomplete");
+
+            int newContainerId = getNextContainerId();
+            File newContainerDir = new File(homeDir, ImageFs.USER + "-" + newContainerId);
+            if (newContainerDir.exists()) {
+                Log.e("ContainerManager", "Container directory already exists: " + newContainerDir.getPath());
+                return false;
+            }
+
+            // Move the extracted tree into place. A rename preserves symlinks (FileUtils.copy drops
+            // them) and avoids a second full copy of the prefix. Cache and files share /data, so the
+            // rename stays on one filesystem; fall back to copy only if that ever fails.
+            if (!sourceDir.renameTo(newContainerDir)) {
+                Log.w("ContainerManager", "Move failed; falling back to copy for: " + newContainerDir.getPath());
+                if (!newContainerDir.mkdirs()
+                        || !FileUtils.copy(sourceDir, newContainerDir, file -> FileUtils.chmod(file, 0771))) {
+                    FileUtils.delete(newContainerDir);
+                    Log.e("ContainerManager", "Failed to place imported container at: " + newContainerDir.getPath());
+                    return false;
+                }
+            }
+
+            boolean ok = registerImportedContainer(newContainerId, newContainerDir, sourceDir.getName());
+            if (ok) Log.d("ContainerManager", "Container imported from archive to: " + newContainerDir.getPath());
+            return ok;
+        } catch (Exception e) {
+            Log.e("ContainerManager", "Failed to import container from archive: " + (archiveFile != null ? archiveFile.getPath() : "null"), e);
+            return false;
+        } finally {
+            if (extractDir != null) FileUtils.delete(extractDir);
+        }
+    }
+
+    /**
+     * Resolves the actual container directory inside a freshly extracted archive. Handles archives
+     * that wrap everything in a single top-level folder as well as archives extracted flat.
+     */
+    private File resolveImportedContainerDir(File extractDir) {
+        // The extraction root is itself a container.
+        if (new File(extractDir, ".container").isFile()) return extractDir;
+
+        // Otherwise look for a single wrapping directory (the common case for compressed exports).
+        File[] entries = extractDir.listFiles();
+        if (entries != null) {
+            File onlyDir = null;
+            int dirCount = 0;
+            for (File entry : entries) {
+                if (entry.isDirectory()) {
+                    onlyDir = entry;
+                    dirCount++;
+                }
+            }
+            if (dirCount == 1 && onlyDir != null) return onlyDir;
+        }
+
+        // Fall back to the extraction root.
+        return extractDir;
+    }
 
     public void exportContainer(Container container, Runnable callback) {
         Executors.newSingleThreadExecutor().execute(() -> {
@@ -383,6 +533,46 @@ public class ContainerManager {
             } finally {
                 runOnUiThread(callback); // Ensure the callback runs and preloader dialog closes
             }
+        });
+    }
+
+    /**
+     * Exports a container as a single compressed .tzst image (the same format consumed by
+     * {@link #importContainerFromArchive}). This is the artifact used to produce the prebuilt
+     * "golden" images: set a container up, export it here, then host the resulting file.
+     *
+     * The image is written to Downloads/Winlator/Backups/Containers/&lt;name&gt;.tzst. The callback is
+     * delivered on the UI thread with the produced file, or null on failure.
+     */
+    public void exportContainerAsImage(Container container, Callback<File> callback) {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            File result = null;
+            try {
+                File exportDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Winlator/Backups/Containers");
+                if (!exportDir.exists() && !exportDir.mkdirs()) {
+                    Log.e("ContainerManager", "Failed to create export directory: " + exportDir.getPath());
+                } else {
+                    String safeName = container.getName().replaceAll("[^a-zA-Z0-9._-]", "_");
+                    File imageFile = new File(exportDir, safeName + ".tzst");
+                    if (imageFile.exists()) FileUtils.delete(imageFile);
+
+                    // Compresses the whole container directory (config + prefix), so the .container
+                    // settings travel with the image and are restored on import.
+                    TarCompressorUtils.compress(TarCompressorUtils.Type.ZSTD, container.getRootDir(), imageFile,
+                            MainActivity.CONTAINER_PATTERN_COMPRESSION_LEVEL);
+
+                    if (imageFile.isFile() && imageFile.length() > 0) {
+                        result = imageFile;
+                        Log.d("ContainerManager", "Container image exported to: " + imageFile.getPath());
+                    } else {
+                        Log.e("ContainerManager", "Container image export produced no file: " + imageFile.getPath());
+                    }
+                }
+            } catch (Exception e) {
+                Log.e("ContainerManager", "Failed to export container image: " + container.getName(), e);
+            }
+            final File finalResult = result;
+            runOnUiThread(() -> callback.call(finalResult));
         });
     }
 

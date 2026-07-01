@@ -7,4 +7,5 @@
     <item android:id="@+id/container_info" android:title="@string/storage_info" android:icon="@drawable/icon_popup_menu_info" android:iconTint="@color/colorAccent" />
     <item android:id="@+id/container_reconfigure" android:title="@string/reconfigure" android:icon="@drawable/icon_popup_menu_settings" android:iconTint="@color/colorAccent" />
     <item android:id="@+id/container_export" android:title="@string/export_container" android:icon="@drawable/icon_export" android:iconTint="@color/colorAccent" />
+    <item android:id="@+id/container_export_image" android:title="@string/export_container_image" android:icon="@drawable/icon_export" android:iconTint="@color/colorAccent" />
 </menu>

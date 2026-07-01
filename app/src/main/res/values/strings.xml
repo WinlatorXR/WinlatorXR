@@ -486,8 +486,18 @@
     <string name="disable_xinput_for_shortcut">Disable Xinput (For Exclusive M/KB Control)</string>
     <string name="fullscreen_stretched">Ignore Aspect Ratio (Fullscreen Stretched)</string>
     <string name="export_container">Backup Container</string>
+    <string name="export_container_image">Export as Image</string>
     <string name="exporting_container">Exporting Container...</string>
+    <string name="exporting_container_image">Exporting container image…</string>
+    <string name="export_container_image_success">Image exported to %1$s</string>
+    <string name="export_container_image_failed">Failed to export container image. Check storage space and try again.</string>
     <string name="importing_container">Importing Container...</string>
+    <string name="add_container">Add Container</string>
+    <string name="create_new_container">Create new container</string>
+    <string name="import_container">Import container</string>
+    <string name="import_container_invalid">Invalid container image.</string>
+    <string name="import_container_success">Container imported.</string>
+    <string name="import_container_failed">Failed to import. Make sure you selected a valid exported container image.</string>
 
     <string name="brightness">Brightness</string>
     <string name="contrast">Contrast</string>
