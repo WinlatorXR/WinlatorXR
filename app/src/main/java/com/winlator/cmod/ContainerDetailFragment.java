@@ -283,6 +283,9 @@ public class ContainerDetailFragment extends Fragment {
         TextView registryKeysLabel = view.findViewById(R.id.TVRegistryKeys);
         applyFieldSetLabelStyle(registryKeysLabel, isDarkMode);  // Apply the dark or light mode styles
 
+        TextView drivesLabel = view.findViewById(R.id.TVDrives);
+        applyFieldSetLabelStyle(drivesLabel, isDarkMode);  // Apply the dark or light mode styles
+
         // Win Components TextViews
         TextView directXLabel = view.findViewById(R.id.TVDirectX);
         applyFieldSetLabelStyle(directXLabel, isDarkMode);  // Apply the dark or light mode styles
@@ -532,7 +535,7 @@ public class ContainerDetailFragment extends Fragment {
         createWinComponentsTab(view, isEditMode() ? container.getWinComponents() : Container.DEFAULT_WINCOMPONENTS);
         createDrivesTab(view);
 
-        AppUtils.setupTabLayout(view, R.id.TabLayout, R.id.LLTabWineConfiguration, R.id.LLTabWinComponents, R.id.LLTabEnvVars, R.id.LLTabDrives, R.id.LLTabAdvanced);
+        AppUtils.setupTabLayout(view, R.id.TabLayout, R.id.LLTabWineConfiguration, R.id.LLTabWinComponents, R.id.LLTabEnvVars, R.id.LLTabAdvanced);
 
         TabLayout tabLayout = view.findViewById(R.id.TabLayout);
 

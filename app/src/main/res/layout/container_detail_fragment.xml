@@ -249,31 +249,6 @@
                 android:layout_width="match_parent"
                 android:id="@+id/SMIDISoundFont" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/lc_all" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <EditText
-                    style="@style/AppTheme"
-                    android:layout_gravity="center"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:id="@+id/ETlcall" />
-
-                <ImageButton
-                    style="@style/ListMenuButton"
-                    android:id="@+id/BTShowLCALL"
-                    android:layout_gravity="center"
-                    android:src="@drawable/icon_menu" />
-            </LinearLayout>
-
             <CheckBox
                 android:id="@+id/CBShowFPS"
                 android:layout_width="wrap_content"
@@ -314,11 +289,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/environment_variables" />
-
-                <com.google.android.material.tabs.TabItem
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/drives" />
 
                 <com.google.android.material.tabs.TabItem
                     android:layout_width="match_parent"
@@ -378,6 +348,31 @@
                                 android:layout_width="84dp"
                                 android:layout_height="wrap_content"
                                 android:visibility="gone" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/lc_all" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <EditText
+                                style="@style/AppTheme"
+                                android:layout_gravity="center"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:id="@+id/ETlcall" />
+
+                            <ImageButton
+                                style="@style/ListMenuButton"
+                                android:id="@+id/BTShowLCALL"
+                                android:layout_gravity="center"
+                                android:src="@drawable/icon_menu" />
                         </LinearLayout>
                     </LinearLayout>
 
@@ -476,6 +471,62 @@
                         style="@style/FieldSetLabel"
                         android:text="@string/registry_keys" />
                 </FrameLayout>
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <LinearLayout style="@style/FieldSet">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:paddingLeft="20dp"
+                            android:paddingRight="20dp"
+                            android:layout_marginBottom="4dp">
+
+                            <TextView
+                                android:layout_width="100dp"
+                                android:layout_height="wrap_content"
+                                android:text="@string/letter" />
+
+                            <TextView
+                                android:layout_width="100dp"
+                                android:layout_height="wrap_content"
+                                android:text="@string/target_path" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/LLDrives"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingLeft="16dp"
+                            android:paddingRight="16dp"/>
+
+                        <TextView
+                            android:id="@+id/TVDrivesEmptyText"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:text="@string/no_items_to_display_drives"
+                            android:padding="16dp"
+                            android:visibility="gone" />
+
+                        <Button
+                            style="@style/ButtonNeutral"
+                            android:id="@+id/BTAddDrive"
+                            android:layout_width="160dp"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center_horizontal"
+                            android:text="@string/add" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/TVDrives"
+                        style="@style/FieldSetLabel"
+                        android:text="@string/drives" />
+                </FrameLayout>
             </LinearLayout>
 
             <LinearLayout
@@ -535,60 +586,6 @@
                 <Button
                     style="@style/ButtonNeutral"
                     android:id="@+id/BTAddEnvVar"
-                    android:layout_width="160dp"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:text="@string/add" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/LLTabDrives"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingLeft="20dp"
-                    android:paddingRight="20dp"
-                    android:layout_marginBottom="4dp">
-
-                    <TextView
-                        android:layout_width="100dp"
-                        android:layout_height="wrap_content"
-                        android:text="@string/letter" />
-
-                    <TextView
-                        android:layout_width="100dp"
-                        android:layout_height="wrap_content"
-                        android:text="@string/target_path" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/LLDrives"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingLeft="16dp"
-                    android:paddingRight="16dp"/>
-
-                <TextView
-                    android:id="@+id/TVDrivesEmptyText"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:text="@string/no_items_to_display_drives"
-                    android:padding="16dp"
-                    android:visibility="gone" />
-
-                <View style="@style/HorizontalLine" />
-
-                <Button
-                    style="@style/ButtonNeutral"
-                    android:id="@+id/BTAddDrive"
                     android:layout_width="160dp"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_horizontal"
