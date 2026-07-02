@@ -324,11 +324,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/advanced" />
-
-                <com.google.android.material.tabs.TabItem
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/xr" />
             </com.google.android.material.tabs.TabLayout>
 
             <LinearLayout
@@ -842,6 +837,51 @@
 <!--                        android:text="@string/game_controller" />-->
 <!--                </FrameLayout>-->
 
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp">
+
+                    <LinearLayout style="@style/FieldSet">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/cpu_level" />
+                        <Spinner
+                            style="@style/ComboBox"
+                            android:layout_width="match_parent"
+                            android:id="@+id/SCPULevel"
+                            android:entries="@array/xr_level_entries"
+                            android:spinnerMode="dialog"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/gpu_level" />
+                        <Spinner
+                            style="@style/ComboBox"
+                            android:layout_width="match_parent"
+                            android:id="@+id/SGPULevel"
+                            android:entries="@array/xr_level_entries"
+                            android:spinnerMode="dialog"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/refresh_rate" />
+                        <Spinner
+                            style="@style/ComboBox"
+                            android:layout_width="match_parent"
+                            android:id="@+id/SRefreshRate"
+                            android:entries="@array/xr_refresh_entries"
+                            android:spinnerMode="dialog"/>
+                    </LinearLayout>
+
+                    <TextView
+                        style="@style/FieldSetLabel"
+                        android:text="@string/xr" />
+                </FrameLayout>
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -867,47 +907,6 @@
 <!--                    android:layout_height="wrap_content"-->
 <!--                    android:gravity="center_horizontal"-->
 <!--                    android:layout_marginTop="4dp" />-->
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/LLTabXR"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/cpu_level" />
-                <Spinner
-                    style="@style/ComboBox"
-                    android:layout_width="match_parent"
-                    android:id="@+id/SCPULevel"
-                    android:entries="@array/xr_level_entries"
-                    android:spinnerMode="dialog"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/gpu_level" />
-                <Spinner
-                    style="@style/ComboBox"
-                    android:layout_width="match_parent"
-                    android:id="@+id/SGPULevel"
-                    android:entries="@array/xr_level_entries"
-                    android:spinnerMode="dialog"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/refresh_rate" />
-                <Spinner
-                    style="@style/ComboBox"
-                    android:layout_width="match_parent"
-                    android:id="@+id/SRefreshRate"
-                    android:entries="@array/xr_refresh_entries"
-                    android:spinnerMode="dialog"/>
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
