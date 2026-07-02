@@ -18,16 +18,21 @@
  */
 package com.winlator.xr;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.util.Pair;
 import android.view.KeyEvent;
+import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
 
 import androidx.preference.PreferenceManager;
 
 import com.drbeef.externalhapticsservice.HapticsConstants;
 import com.drbeef.externalhapticsservice.HapticServiceClient;
 
-import com.winlator.cmod.container.Container;
+import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.NavigationDialog;
 import com.winlator.cmod.xserver.Keyboard;
 import com.winlator.cmod.xserver.Pointer;
@@ -36,9 +41,17 @@ import com.winlator.xr.api.XrAPI;
 import com.winlator.xr.api.XrInterface;
 import com.winlator.xr.ui.XrContentDialog;
 
+import java.util.ArrayList;
 import java.util.Vector;
 
 public class XrController {
+    public enum Mapping {
+        BUTTON_A, BUTTON_B, BUTTON_X, BUTTON_Y, BUTTON_GRIP, BUTTON_TRIGGER,
+        THUMBSTICK_UP, THUMBSTICK_DOWN, THUMBSTICK_LEFT, THUMBSTICK_RIGHT
+    }
+
+    private static final String KEY_MAPPING = "KEY_MAPPING";
+    private static String mapping = null;
 
     private final XrActivity instance;
     private boolean[] currentButtons = new boolean[XrInterface.ControllerButton.values().length];
@@ -175,17 +188,18 @@ public class XrController {
 
         // Pass the controller mapping into XServer
         currentButtons = buttons;
+        Context context = XrActivity.getInstance();
         mapKey(XrInterface.ControllerButton.L_MENU, XKeycode.KEY_ESC.id);
-        mapKey(XrInterface.ControllerButton.R_A, instance.container.getControllerMapping(Container.XrControllerMapping.BUTTON_A));
-        mapKey(XrInterface.ControllerButton.R_B, instance.container.getControllerMapping(Container.XrControllerMapping.BUTTON_B));
-        mapKey(XrInterface.ControllerButton.L_X, instance.container.getControllerMapping(Container.XrControllerMapping.BUTTON_X));
-        mapKey(XrInterface.ControllerButton.L_Y, instance.container.getControllerMapping(Container.XrControllerMapping.BUTTON_Y));
-        mapKey(secondaryGrip, instance.container.getControllerMapping(Container.XrControllerMapping.BUTTON_GRIP));
-        mapKey(secondaryTrigger, instance.container.getControllerMapping(Container.XrControllerMapping.BUTTON_TRIGGER));
-        mapKey(secondaryUp, instance.container.getControllerMapping(Container.XrControllerMapping.THUMBSTICK_UP));
-        mapKey(secondaryDown, instance.container.getControllerMapping(Container.XrControllerMapping.THUMBSTICK_DOWN));
-        mapKey(secondaryLeft, instance.container.getControllerMapping(Container.XrControllerMapping.THUMBSTICK_LEFT));
-        mapKey(secondaryRight, instance.container.getControllerMapping(Container.XrControllerMapping.THUMBSTICK_RIGHT));
+        mapKey(XrInterface.ControllerButton.R_A, getMapping(context, Mapping.BUTTON_A));
+        mapKey(XrInterface.ControllerButton.R_B, getMapping(context, Mapping.BUTTON_B));
+        mapKey(XrInterface.ControllerButton.L_X, getMapping(context, Mapping.BUTTON_X));
+        mapKey(XrInterface.ControllerButton.L_Y, getMapping(context, Mapping.BUTTON_Y));
+        mapKey(secondaryGrip, getMapping(context, Mapping.BUTTON_GRIP));
+        mapKey(secondaryTrigger, getMapping(context, Mapping.BUTTON_TRIGGER));
+        mapKey(secondaryUp, getMapping(context, Mapping.THUMBSTICK_UP));
+        mapKey(secondaryDown, getMapping(context, Mapping.THUMBSTICK_DOWN));
+        mapKey(secondaryLeft, getMapping(context, Mapping.THUMBSTICK_LEFT));
+        mapKey(secondaryRight, getMapping(context, Mapping.THUMBSTICK_RIGHT));
         System.arraycopy(buttons, 0, lastButtons, 0, buttons.length);
     }
 
@@ -310,6 +324,73 @@ public class XrController {
 
     public boolean getButtonClicked(boolean[] buttons, XrInterface.ControllerButton button) {
         return buttons[button.ordinal()] && !lastButtons[button.ordinal()];
+    }
+
+    public static byte getMapping(Context context, Mapping input) {
+        if (mapping == null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+            mapping = prefs.getString(KEY_MAPPING, getDefaultMapping());
+        }
+        return (byte) mapping.charAt(input.ordinal());
+    }
+
+    public static void getMappingForUI(Spinner spinner, Mapping mapping) {
+        XKeycode[] values = XKeycode.values();
+        ArrayList<String> array = new ArrayList<>();
+        for (XKeycode value : values) {
+            array.add(value.name());
+        }
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(spinner.getContext(), android.R.layout.simple_spinner_dropdown_item, array);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(adapter);
+
+        byte keycode = getMapping(spinner.getContext(), mapping);
+        int index = 0;
+        for (int i = 0; i < values.length; i++) {
+            if (values[i].id == keycode) {
+                index = i;
+                break;
+            }
+        }
+        spinner.setSelection(index);
+    }
+
+    public static void setMapping(Context context, String value) {
+        mapping = value;
+        SharedPreferences.Editor e = PreferenceManager.getDefaultSharedPreferences(context).edit();
+        e.putString(KEY_MAPPING, mapping);
+        e.apply();
+    }
+
+    public static void setMappingFromUI(View view) {
+        //The order has to be the same as in Mapping enum
+        int[] ids = {
+                R.id.SButtonA, R.id.SButtonB, R.id.SButtonX, R.id.SButtonY, R.id.SButtonGrip, R.id.SButtonTrigger,
+                R.id.SThumbstickUp, R.id.SThumbstickDown, R.id.SThumbstickLeft, R.id.SThumbstickRight
+        };
+        byte[] output = new byte[ids.length];
+        for (int i = 0; i < ids.length; i++) {
+            int index =  ((Spinner)view.findViewById(ids[i])).getSelectedItemPosition();
+            byte value = XKeycode.values()[index].id;
+            output[i] = value;
+        }
+        setMapping(view.getContext(), new String(output));
+    }
+
+    private static String getDefaultMapping() {
+        //The order has to be the same as in Mapping enum
+        String output = "";
+        output += (char)XKeycode.KEY_A.id;
+        output += (char)XKeycode.KEY_B.id;
+        output += (char)XKeycode.KEY_X.id;
+        output += (char)XKeycode.KEY_Y.id;
+        output += (char)XKeycode.KEY_SPACE.id;
+        output += (char)XKeycode.KEY_ENTER.id;
+        output += (char)XKeycode.KEY_UP.id;
+        output += (char)XKeycode.KEY_DOWN.id;
+        output += (char)XKeycode.KEY_LEFT.id;
+        output += (char)XKeycode.KEY_RIGHT.id;
+        return output;
     }
 
     private float getAngleDiff(float oldAngle, float newAngle) {

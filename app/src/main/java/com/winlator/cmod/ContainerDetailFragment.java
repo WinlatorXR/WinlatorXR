@@ -33,7 +33,6 @@ import androidx.fragment.app.Fragment;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.tabs.TabLayout;
-import com.winlator.cmod.R;
 import com.winlator.cmod.box86_64.Box86_64Preset;
 import com.winlator.cmod.box86_64.Box86_64PresetManager;
 import com.winlator.cmod.box86_64.rc.RCManager;
@@ -52,23 +51,20 @@ import com.winlator.cmod.core.Callback;
 import com.winlator.cmod.core.DefaultVersion;
 import com.winlator.cmod.core.EnvVars;
 import com.winlator.cmod.core.FileUtils;
-import com.winlator.cmod.core.GPUInformation;
 import com.winlator.cmod.core.KeyValueSet;
 import com.winlator.cmod.core.PreloaderDialog;
 import com.winlator.cmod.core.StringUtils;
 import com.winlator.cmod.core.WineInfo;
 import com.winlator.cmod.core.WineRegistryEditor;
 import com.winlator.cmod.core.WineThemeManager;
-import com.winlator.cmod.core.WineUtils;
 import com.winlator.cmod.fexcore.FEXCoreManager;
 import com.winlator.cmod.midi.MidiManager;
 import com.winlator.cmod.widget.CPUListView;
 import com.winlator.cmod.widget.ColorPickerView;
 import com.winlator.cmod.widget.EnvVarsView;
 import com.winlator.cmod.widget.ImagePickerView;
-import com.winlator.cmod.winhandler.WinHandler;
 import com.winlator.cmod.xenvironment.ImageFs;
-import com.winlator.cmod.xserver.XKeycode;
+import com.winlator.xr.XrController;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -532,16 +528,16 @@ public class ContainerDetailFragment extends Fragment {
         final Spinner sRefreshRate = view.findViewById(R.id.SRefreshRate);
         AppUtils.setSpinnerSelectionFromNumber(sRefreshRate, isEditMode() ? "" + container.getRefreshRate() : "72");
 
-        setControllerMapping(view.findViewById(R.id.SButtonA), Container.XrControllerMapping.BUTTON_A, XKeycode.KEY_A.ordinal());
-        setControllerMapping(view.findViewById(R.id.SButtonB), Container.XrControllerMapping.BUTTON_B, XKeycode.KEY_B.ordinal());
-        setControllerMapping(view.findViewById(R.id.SButtonX), Container.XrControllerMapping.BUTTON_X, XKeycode.KEY_X.ordinal());
-        setControllerMapping(view.findViewById(R.id.SButtonY), Container.XrControllerMapping.BUTTON_Y, XKeycode.KEY_Y.ordinal());
-        setControllerMapping(view.findViewById(R.id.SButtonGrip), Container.XrControllerMapping.BUTTON_GRIP, XKeycode.KEY_SPACE.ordinal());
-        setControllerMapping(view.findViewById(R.id.SButtonTrigger), Container.XrControllerMapping.BUTTON_TRIGGER, XKeycode.KEY_ENTER.ordinal());
-        setControllerMapping(view.findViewById(R.id.SThumbstickUp), Container.XrControllerMapping.THUMBSTICK_UP, XKeycode.KEY_UP.ordinal());
-        setControllerMapping(view.findViewById(R.id.SThumbstickDown), Container.XrControllerMapping.THUMBSTICK_DOWN, XKeycode.KEY_DOWN.ordinal());
-        setControllerMapping(view.findViewById(R.id.SThumbstickLeft), Container.XrControllerMapping.THUMBSTICK_LEFT, XKeycode.KEY_LEFT.ordinal());
-        setControllerMapping(view.findViewById(R.id.SThumbstickRight), Container.XrControllerMapping.THUMBSTICK_RIGHT, XKeycode.KEY_RIGHT.ordinal());
+        XrController.getMappingForUI(view.findViewById(R.id.SButtonA), XrController.Mapping.BUTTON_A);
+        XrController.getMappingForUI(view.findViewById(R.id.SButtonB), XrController.Mapping.BUTTON_B);
+        XrController.getMappingForUI(view.findViewById(R.id.SButtonX), XrController.Mapping.BUTTON_X);
+        XrController.getMappingForUI(view.findViewById(R.id.SButtonY), XrController.Mapping.BUTTON_Y);
+        XrController.getMappingForUI(view.findViewById(R.id.SButtonGrip), XrController.Mapping.BUTTON_GRIP);
+        XrController.getMappingForUI(view.findViewById(R.id.SButtonTrigger), XrController.Mapping.BUTTON_TRIGGER);
+        XrController.getMappingForUI(view.findViewById(R.id.SThumbstickUp), XrController.Mapping.THUMBSTICK_UP);
+        XrController.getMappingForUI(view.findViewById(R.id.SThumbstickDown), XrController.Mapping.THUMBSTICK_DOWN);
+        XrController.getMappingForUI(view.findViewById(R.id.SThumbstickLeft), XrController.Mapping.THUMBSTICK_LEFT);
+        XrController.getMappingForUI(view.findViewById(R.id.SThumbstickRight), XrController.Mapping.THUMBSTICK_RIGHT);
 
         createWineConfigurationTab(view);
         final EnvVarsView envVarsView = createEnvVarsTab(view);
@@ -592,7 +588,7 @@ public class ContainerDetailFragment extends Fragment {
                 // Capture missing properties
                 String midiSoundFont = sMIDISoundFont.getSelectedItemPosition() == 0 ? "" : sMIDISoundFont.getSelectedItem().toString();
                 String lc_all = etLC_ALL.getText().toString();
-                String controllerMapping = getControllerMapping(view);
+                XrController.setMappingFromUI(view);
 
                 // Define final input type
 //                int finalInputType = 0;
@@ -652,7 +648,6 @@ public class ContainerDetailFragment extends Fragment {
                     container.setCpuLevel(StringUtils.parseInt(sCPULevel.getSelectedItem()));
                     container.setGpuLevel(StringUtils.parseInt(sGPULevel.getSelectedItem()));
                     container.setRefreshRate(StringUtils.parseInt(sRefreshRate.getSelectedItem()));
-                    container.setControllerMapping(controllerMapping);
                     container.setGstreamerWorkaround(gstreamerWorkaround);
                     container.saveData();
                     saveWineRegistryKeys(view);
@@ -692,7 +687,6 @@ public class ContainerDetailFragment extends Fragment {
                     data.put("cpuLevel", StringUtils.parseInt(sCPULevel.getSelectedItem()));
                     data.put("gpuLevel", StringUtils.parseInt(sGPULevel.getSelectedItem()));
                     data.put("refreshRate", StringUtils.parseInt(sRefreshRate.getSelectedItem()));
-                    data.put("controllerMapping", controllerMapping);
                     data.put("gstreamerWorkaround", gstreamerWorkaround);
 
                     preloaderDialog.show(R.string.creating_container);
@@ -1231,42 +1225,6 @@ public class ContainerDetailFragment extends Fragment {
         String wineVersion = sWineVersion.getSelectedItem().toString();
         WineInfo wineInfo = WineInfo.fromIdentifier(context, contentsManager, wineVersion);
         updateArchitecture(wineInfo);
-    }
-
-    public String getControllerMapping(View view) {
-        //The order has to be the same like Container.XrControllerMapping
-        int[] ids = {
-                R.id.SButtonA, R.id.SButtonB, R.id.SButtonX, R.id.SButtonY, R.id.SButtonGrip, R.id.SButtonTrigger,
-                R.id.SThumbstickUp, R.id.SThumbstickDown, R.id.SThumbstickLeft, R.id.SThumbstickRight
-        };
-        byte[] controllerMapping = new byte[ids.length];
-        for (int i = 0; i < ids.length; i++) {
-            int index =  ((Spinner)view.findViewById(ids[i])).getSelectedItemPosition();
-            byte value = XKeycode.values()[index].id;
-            controllerMapping[i] = value;
-        }
-        return new String(controllerMapping);
-    }
-
-    public void setControllerMapping(Spinner spinner, Container.XrControllerMapping mapping, int defaultValue) {
-        XKeycode[] values = XKeycode.values();
-        ArrayList<String> array = new ArrayList<>();
-        for (XKeycode value : values) {
-            array.add(value.name());
-        }
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(spinner.getContext(), android.R.layout.simple_spinner_dropdown_item, array);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinner.setAdapter(adapter);
-
-        byte keycode = isEditMode() ? container.getControllerMapping(mapping) : (byte) defaultValue;
-        int index = 0;
-        for (int i = 0; i < values.length; i++) {
-            if (values[i].id == keycode) {
-                index = i;
-                break;
-            }
-        }
-        spinner.setSelection(isEditMode() && (index != 0) ? index : defaultValue);
     }
 
     public static void updateGraphicsDriverSpinner(Context context, Spinner spinner) {

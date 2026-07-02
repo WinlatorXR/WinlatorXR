@@ -19,10 +19,6 @@ import java.io.File;
 import java.util.Iterator;
 
 public class Container {
-    public enum XrControllerMapping {
-        BUTTON_A, BUTTON_B, BUTTON_X, BUTTON_Y, BUTTON_GRIP, BUTTON_TRIGGER,
-        THUMBSTICK_UP, THUMBSTICK_DOWN, THUMBSTICK_LEFT, THUMBSTICK_RIGHT
-    }
     public static final String DEFAULT_ENV_VARS = "ZINK_DESCRIPTORS=lazy ZINK_DEBUG=compact MESA_SHADER_CACHE_DISABLE=false MESA_SHADER_CACHE_MAX_SIZE=512MB mesa_glthread=true WINEESYNC=1 MESA_VK_WSI_PRESENT_MODE=mailbox TU_DEBUG=noconform,sysmem DXVK_HUD=fps MANGOHUD=0 MANGOHUD_CONFIG=horizontal,ram,procmem,gpu_temp,frame_timing,engine_version,gpu_stats=0";
     public static final String DEFAULT_SCREEN_SIZE = "1280x720";
     public static final String DEFAULT_GRAPHICS_DRIVER = "wrapper";
@@ -78,7 +74,6 @@ public class Container {
     private int cpuLevel = 75;
     private int gpuLevel = 75;
     private int refreshRate = 72;
-    private String controllerMapping = new String(new char[XrControllerMapping.values().length]);
     private String fexcoreVersion = DefaultVersion.FEXCORE;
     private String box64Version = DefaultVersion.BOX64;
     private String emulator;
@@ -209,14 +204,6 @@ public class Container {
 
     public void setRefreshRate(int refreshRate) {
         this.refreshRate = refreshRate;
-    }
-
-    public byte getControllerMapping(XrControllerMapping input) {
-        return (byte) controllerMapping.charAt(input.ordinal());
-    }
-
-    public void setControllerMapping(String controllerMapping) {
-        this.controllerMapping = controllerMapping;
     }
 
     public boolean isRelativeMouseMovement() {
@@ -466,7 +453,6 @@ public class Container {
             data.put("cpuLevel", cpuLevel);
             data.put("gpuLevel", gpuLevel);
             data.put("refreshRate", refreshRate);
-            data.put("controllerMapping", controllerMapping);
             data.put("gstreamerWorkaround", gstreamerWorkaround);
             if (!WineInfo.isMainWineVersion(wineVersion)) data.put("wineVersion", wineVersion);
             FileUtils.writeString(getConfigFile(), data.toString());
@@ -580,9 +566,6 @@ public class Container {
                     break;
                 case "refreshRate" :
                     setRefreshRate(data.getInt(key));
-                    break;
-                case "controllerMapping" :
-                    controllerMapping = data.getString(key);
                     break;
                 case "gstreamerWorkaround" : // Add this case
                     setGstreamerWorkaround(data.getBoolean(key));
