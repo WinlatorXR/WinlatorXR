@@ -23,16 +23,12 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.util.Pair;
 import android.view.KeyEvent;
-import android.view.View;
-import android.widget.ArrayAdapter;
-import android.widget.Spinner;
 
 import androidx.preference.PreferenceManager;
 
 import com.drbeef.externalhapticsservice.HapticsConstants;
 import com.drbeef.externalhapticsservice.HapticServiceClient;
 
-import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.NavigationDialog;
 import com.winlator.cmod.xserver.Keyboard;
 import com.winlator.cmod.xserver.Pointer;
@@ -41,7 +37,6 @@ import com.winlator.xr.api.XrAPI;
 import com.winlator.xr.api.XrInterface;
 import com.winlator.xr.ui.XrContentDialog;
 
-import java.util.ArrayList;
 import java.util.Vector;
 
 public class XrController {
@@ -334,47 +329,11 @@ public class XrController {
         return (byte) mapping.charAt(input.ordinal());
     }
 
-    public static void getMappingForUI(Spinner spinner, Mapping mapping) {
-        XKeycode[] values = XKeycode.values();
-        ArrayList<String> array = new ArrayList<>();
-        for (XKeycode value : values) {
-            array.add(value.name());
-        }
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(spinner.getContext(), android.R.layout.simple_spinner_dropdown_item, array);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinner.setAdapter(adapter);
-
-        byte keycode = getMapping(spinner.getContext(), mapping);
-        int index = 0;
-        for (int i = 0; i < values.length; i++) {
-            if (values[i].id == keycode) {
-                index = i;
-                break;
-            }
-        }
-        spinner.setSelection(index);
-    }
-
     public static void setMapping(Context context, String value) {
         mapping = value;
         SharedPreferences.Editor e = PreferenceManager.getDefaultSharedPreferences(context).edit();
         e.putString(KEY_MAPPING, mapping);
         e.apply();
-    }
-
-    public static void setMappingFromUI(View view) {
-        //The order has to be the same as in Mapping enum
-        int[] ids = {
-                R.id.SButtonA, R.id.SButtonB, R.id.SButtonX, R.id.SButtonY, R.id.SButtonGrip, R.id.SButtonTrigger,
-                R.id.SThumbstickUp, R.id.SThumbstickDown, R.id.SThumbstickLeft, R.id.SThumbstickRight
-        };
-        byte[] output = new byte[ids.length];
-        for (int i = 0; i < ids.length; i++) {
-            int index =  ((Spinner)view.findViewById(ids[i])).getSelectedItemPosition();
-            byte value = XKeycode.values()[index].id;
-            output[i] = value;
-        }
-        setMapping(view.getContext(), new String(output));
     }
 
     private static String getDefaultMapping() {

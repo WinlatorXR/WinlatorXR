@@ -26,6 +26,7 @@ import com.winlator.cmod.XServerDisplayActivity;
 import com.winlator.cmod.inputcontrols.ControllerManager;
 import com.winlator.cmod.inputcontrols.PreferenceKeys;
 import com.winlator.cmod.winhandler.WinHandler;
+import com.winlator.xr.ui.XrControllerDialog;
 
 public class ControllerAssignmentDialog {
     private final ContentDialog dialog;
@@ -163,6 +164,10 @@ public class ControllerAssignmentDialog {
             });
             cbMouseLeftHanded.setEnabled(cbMouse.isChecked());
             cbMouseLightgun.setEnabled(cbMouse.isChecked());
+
+            Button btEditor = view.findViewById(R.id.BTControlsEditor);
+            btEditor.setOnClickListener(v -> new XrControllerDialog(v.getContext()).show());
+            btEditor.setVisibility(XrActivity.isActive() ? View.GONE : View.VISIBLE);
         } else {
             xr.setVisibility(View.GONE);
         }

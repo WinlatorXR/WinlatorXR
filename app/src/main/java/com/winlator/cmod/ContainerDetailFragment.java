@@ -64,7 +64,6 @@ import com.winlator.cmod.widget.ColorPickerView;
 import com.winlator.cmod.widget.EnvVarsView;
 import com.winlator.cmod.widget.ImagePickerView;
 import com.winlator.cmod.xenvironment.ImageFs;
-import com.winlator.xr.XrController;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -528,17 +527,6 @@ public class ContainerDetailFragment extends Fragment {
         final Spinner sRefreshRate = view.findViewById(R.id.SRefreshRate);
         AppUtils.setSpinnerSelectionFromNumber(sRefreshRate, isEditMode() ? "" + container.getRefreshRate() : "72");
 
-        XrController.getMappingForUI(view.findViewById(R.id.SButtonA), XrController.Mapping.BUTTON_A);
-        XrController.getMappingForUI(view.findViewById(R.id.SButtonB), XrController.Mapping.BUTTON_B);
-        XrController.getMappingForUI(view.findViewById(R.id.SButtonX), XrController.Mapping.BUTTON_X);
-        XrController.getMappingForUI(view.findViewById(R.id.SButtonY), XrController.Mapping.BUTTON_Y);
-        XrController.getMappingForUI(view.findViewById(R.id.SButtonGrip), XrController.Mapping.BUTTON_GRIP);
-        XrController.getMappingForUI(view.findViewById(R.id.SButtonTrigger), XrController.Mapping.BUTTON_TRIGGER);
-        XrController.getMappingForUI(view.findViewById(R.id.SThumbstickUp), XrController.Mapping.THUMBSTICK_UP);
-        XrController.getMappingForUI(view.findViewById(R.id.SThumbstickDown), XrController.Mapping.THUMBSTICK_DOWN);
-        XrController.getMappingForUI(view.findViewById(R.id.SThumbstickLeft), XrController.Mapping.THUMBSTICK_LEFT);
-        XrController.getMappingForUI(view.findViewById(R.id.SThumbstickRight), XrController.Mapping.THUMBSTICK_RIGHT);
-
         createWineConfigurationTab(view);
         final EnvVarsView envVarsView = createEnvVarsTab(view);
         createWinComponentsTab(view, isEditMode() ? container.getWinComponents() : Container.DEFAULT_WINCOMPONENTS);
@@ -588,7 +576,6 @@ public class ContainerDetailFragment extends Fragment {
                 // Capture missing properties
                 String midiSoundFont = sMIDISoundFont.getSelectedItemPosition() == 0 ? "" : sMIDISoundFont.getSelectedItem().toString();
                 String lc_all = etLC_ALL.getText().toString();
-                XrController.setMappingFromUI(view);
 
                 // Define final input type
 //                int finalInputType = 0;
