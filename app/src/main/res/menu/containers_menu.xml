@@ -35,11 +35,13 @@
 
     <item
         android:id="@+id/containers_menu_add"
-        android:title="@string/create"
+        android:icon="@drawable/icon_action_bar_add"
+        android:title="@string/add_container"
         app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/containers_menu_import"
-        android:title="@string/import_"
+        android:icon="@drawable/icon_action_bar_import"
+        android:title="@string/import_container"
         app:showAsAction="ifRoom" />
 </menu>

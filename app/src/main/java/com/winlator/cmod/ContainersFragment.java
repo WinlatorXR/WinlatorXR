@@ -1,7 +1,5 @@
 package com.winlator.cmod;
 
-import static com.winlator.cmod.core.AppUtils.showToast;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -15,10 +13,6 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
-import android.text.SpannableString;
-import android.text.Spanned;
-import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -26,10 +20,8 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -57,7 +49,6 @@ import com.winlator.cmod.contentdialog.StorageInfoDialog;
 import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.PreloaderDialog;
-import com.winlator.cmod.inputcontrols.ControllerManager;
 import com.winlator.cmod.xenvironment.ImageFs;
 
 import java.io.File;
@@ -176,15 +167,6 @@ public class ContainersFragment extends Fragment {
 
         // Finally, paint the current icon into the view
         applyFavoriteIcon();
-
-        changeItemColor(menu.findItem(R.id.containers_menu_add), Color.WHITE);
-        changeItemColor(menu.findItem(R.id.containers_menu_import), Color.WHITE);
-    }
-
-    private void changeItemColor(MenuItem item, int color) {
-        SpannableString title = new SpannableString(item.getTitle());
-        title.setSpan(new ForegroundColorSpan(color), 0, title.length(), Spanned.SPAN_INCLUSIVE_INCLUSIVE);
-        item.setTitle(title);
     }
 
     @Override
