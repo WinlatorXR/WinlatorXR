@@ -26,11 +26,6 @@
         <com.google.android.material.tabs.TabItem
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/wine_configuration" />
-
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
             android:text="@string/win_components" />
 
         <com.google.android.material.tabs.TabItem
@@ -314,14 +309,6 @@
                     android:text="@string/fullscreen_stretched"
                     android:layout_marginTop="8dp"
                     android:visibility="gone" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/LLTabWineConfiguration"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
 
                 <FrameLayout
                     android:layout_width="match_parent"
@@ -400,96 +387,6 @@
                         style="@style/FieldSetLabel"
                         android:id="@+id/TVDesktop"
                         android:text="@string/desktop" />
-                </FrameLayout>
-
-                <FrameLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
-
-                    <LinearLayout style="@style/FieldSet">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/renderer" />
-
-                        <Spinner
-                            style="@style/ComboBox"
-                            android:id="@+id/SRenderer"
-                            android:layout_width="match_parent" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/csmt" />
-
-                        <Spinner
-                            style="@style/ComboBox"
-                            android:id="@+id/SCSMT"
-                            android:layout_width="match_parent" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/gpu_name" />
-
-                        <Spinner
-                            style="@style/ComboBox"
-                            android:id="@+id/SGPUName"
-                            android:layout_width="match_parent"
-                            android:focusable="true"
-                            android:focusableInTouchMode="true"
-                            android:clickable="true"
-                            android:spinnerMode="dialog" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/offscreen_rendering_mode" />
-
-                        <Spinner
-                            style="@style/ComboBox"
-                            android:id="@+id/SOffscreenRenderingMode"
-                            android:layout_width="match_parent" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/strict_shader_math" />
-
-                        <Spinner
-                            style="@style/ComboBox"
-                            android:id="@+id/SStrictShaderMath"
-                            android:layout_width="match_parent" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/video_memory_size" />
-
-                        <Spinner
-                            style="@style/ComboBox"
-                            android:id="@+id/SVideoMemorySize"
-                            android:layout_width="match_parent"
-                            android:entries="@array/video_memory_size_entries" />
-
-                        <View style="@style/FieldSeparator" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/mouse_warp_override" />
-
-                        <Spinner
-                            style="@style/ComboBox"
-                            android:id="@+id/SMouseWarpOverride"
-                            android:layout_width="match_parent" />
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/TVRegistryKeys"
-                        style="@style/FieldSetLabel"
-                        android:text="@string/registry_keys" />
                 </FrameLayout>
 
                 <FrameLayout
@@ -718,6 +615,96 @@
                         style="@style/FieldSetLabel"
                         android:text="@string/fexcore_config" />
 
+                </FrameLayout>
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <LinearLayout style="@style/FieldSet">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/renderer" />
+
+                        <Spinner
+                            style="@style/ComboBox"
+                            android:id="@+id/SRenderer"
+                            android:layout_width="match_parent" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/csmt" />
+
+                        <Spinner
+                            style="@style/ComboBox"
+                            android:id="@+id/SCSMT"
+                            android:layout_width="match_parent" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/gpu_name" />
+
+                        <Spinner
+                            style="@style/ComboBox"
+                            android:id="@+id/SGPUName"
+                            android:layout_width="match_parent"
+                            android:focusable="true"
+                            android:focusableInTouchMode="true"
+                            android:clickable="true"
+                            android:spinnerMode="dialog" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/offscreen_rendering_mode" />
+
+                        <Spinner
+                            style="@style/ComboBox"
+                            android:id="@+id/SOffscreenRenderingMode"
+                            android:layout_width="match_parent" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/strict_shader_math" />
+
+                        <Spinner
+                            style="@style/ComboBox"
+                            android:id="@+id/SStrictShaderMath"
+                            android:layout_width="match_parent" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/video_memory_size" />
+
+                        <Spinner
+                            style="@style/ComboBox"
+                            android:id="@+id/SVideoMemorySize"
+                            android:layout_width="match_parent"
+                            android:entries="@array/video_memory_size_entries" />
+
+                        <View style="@style/FieldSeparator" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/mouse_warp_override" />
+
+                        <Spinner
+                            style="@style/ComboBox"
+                            android:id="@+id/SMouseWarpOverride"
+                            android:layout_width="match_parent" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/TVRegistryKeys"
+                        style="@style/FieldSetLabel"
+                        android:text="@string/registry_keys" />
                 </FrameLayout>
 
                 <FrameLayout
