@@ -16,6 +16,9 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -173,6 +176,15 @@ public class ContainersFragment extends Fragment {
 
         // Finally, paint the current icon into the view
         applyFavoriteIcon();
+
+        changeItemColor(menu.findItem(R.id.containers_menu_add), Color.WHITE);
+        changeItemColor(menu.findItem(R.id.containers_menu_import), Color.WHITE);
+    }
+
+    private void changeItemColor(MenuItem item, int color) {
+        SpannableString title = new SpannableString(item.getTitle());
+        title.setSpan(new ForegroundColorSpan(color), 0, title.length(), Spanned.SPAN_INCLUSIVE_INCLUSIVE);
+        item.setTitle(title);
     }
 
     @Override
@@ -180,12 +192,12 @@ public class ContainersFragment extends Fragment {
         switch (menuItem.getItemId()) {
             case R.id.containers_menu_add:
                 if (!ImageFs.find(getContext()).isValid()) return false;
-                showAddContainerOptions();
+                openCreateContainer();
                 return true;
 
-//            case R.id.containers_menu_import:
-//                showImportInfoDialog();
-//                return true;
+            case R.id.containers_menu_import:
+                openImportContainerArchive();
+                return true;
 
             case R.id.action_big_picture_mode:
                 toggleBigPictureMode();
@@ -314,22 +326,6 @@ public class ContainersFragment extends Fragment {
         startActivity(intent);
     }
 
-
-    // The + action offers either creating a fresh container or importing an exported image.
-    private void showAddContainerOptions() {
-        CharSequence[] options = {
-                getString(R.string.create_new_container),
-                getString(R.string.import_container)
-        };
-        new AlertDialog.Builder(getContext())
-                .setTitle(R.string.add_container)
-                .setItems(options, (dialog, which) -> {
-                    if (which == 0) openCreateContainer();
-                    else openImportContainerArchive();
-                })
-                .show();
-    }
-
     private void openCreateContainer() {
         getParentFragmentManager().beginTransaction()
                 .setCustomAnimations(R.anim.slide_in_up, R.anim.slide_out_down, R.anim.slide_in_down, R.anim.slide_out_up)
@@ -382,20 +378,6 @@ public class ContainersFragment extends Fragment {
 
     private void runOnUiThreadSafe(Runnable action) {
         if (getActivity() != null) getActivity().runOnUiThread(action);
-    }
-
-    // Show dialog to inform user about the import process
-    private void showImportInfoDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setTitle("Import Container");
-        builder.setMessage("This option will allow you to restore an exported container. To proceed, click OK and select your 'xuser-' directory. " +
-                "The container's settings will need to be configured after a successful import, but all files and shortcuts should be restored if you are restoring a real container. " +
-                "Beware, the directory you select will be copied into the app's storage directory, so be sure you have enough space. You can delete your copy afterward.");
-        builder.setPositiveButton("OK", (dialog, which) -> {
-            openFilePicker(); // Proceed to file picker
-        });
-        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
-        builder.show();
     }
 
     // Show confirmation dialog before importing the selected container
