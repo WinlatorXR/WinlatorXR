@@ -653,9 +653,6 @@ public class ContainersFragment extends Fragment {
                             new File(container.getRootDir(), ".wine/.update-timestamp").delete();
                         });
                         break;
-                    case R.id.container_export:
-                        exportContainer(container);
-                        break;
                     case R.id.container_export_image:
                         exportContainerImage(container);
                         break;
@@ -663,16 +660,6 @@ public class ContainersFragment extends Fragment {
                 return true;
             });
             listItemMenu.show();
-        }
-
-        private void exportContainer(Container container) {
-            File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Winlator/Backups/Containers");
-            preloaderDialog.show(R.string.exporting_container);
-
-            manager.exportContainer(container, () -> {
-                preloaderDialog.close(); // Ensure the dialog is closed after operation
-                showToast("Container exported successfully to " + backupDir.getPath());
-            });
         }
 
         // Export a container as a single compressed .tzst image (the golden-image artifact).
