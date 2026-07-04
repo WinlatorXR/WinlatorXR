@@ -3,20 +3,18 @@ package com.winlator.cmod;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.ProgressBar;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -29,6 +27,7 @@ import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.tabs.TabLayout;
 import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.ContainerManager;
 import com.winlator.cmod.contentdialog.ContentDialog;
@@ -54,10 +53,7 @@ public class ContentsFragment extends Fragment {
     private AdrenotoolsManager adrenotoolsManager;
     private ContentsManager manager;
     private ContentProfile.ContentType currentContentType = ContentProfile.ContentType.CONTENT_TYPE_WINE;
-    private Spinner sContentType;
     private Button btInstallContent;
-
-    private boolean isDarkMode;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -68,7 +64,7 @@ public class ContentsFragment extends Fragment {
         manager.syncContents();
 
         // Initialize isDarkMode based on shared preferences or theme
-        isDarkMode = PreferenceManager.getDefaultSharedPreferences(getContext())
+        boolean isDarkMode = PreferenceManager.getDefaultSharedPreferences(getContext())
                 .getBoolean("dark_mode", false);
     }
 
@@ -94,24 +90,6 @@ public class ContentsFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         ViewGroup layout = (ViewGroup) inflater.inflate(R.layout.contents_fragment, container, false);
-
-        sContentType = layout.findViewById(R.id.SContentType);
-        updateContentTypeSpinner(sContentType);
-        sContentType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (position >= ContentProfile.ContentType.CONTENT_TYPE_PROTON.ordinal()) {
-                    position++;
-                }
-                currentContentType = ContentProfile.ContentType.values()[position];
-                loadContentList();
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
 
         emptyText = layout.findViewById(R.id.TVEmptyText);
 
@@ -139,35 +117,38 @@ public class ContentsFragment extends Fragment {
         recyclerView = layout.findViewById(R.id.RecyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(recyclerView.getContext()));
         recyclerView.addItemDecoration(new DividerItemDecoration(recyclerView.getContext(), DividerItemDecoration.VERTICAL));
-        loadContentList();
 
-        return layout;
-    }
+        TabLayout tabLayout = layout.findViewById(R.id.TabLayout);
+        tabLayout.setTabTextColors(Color.LTGRAY, Color.WHITE);
+        tabLayout.setSelectedTabIndicatorColor(Color.WHITE);
 
-    private void updateContentTypeSpinner(Spinner spinner) {
-        List<String> typeList = new ArrayList<>();
-        for (ContentProfile.ContentType type : ContentProfile.ContentType.values()) {
-            if (type != ContentProfile.ContentType.CONTENT_TYPE_PROTON) {
-                typeList.add(type.toString());
-            }
-        }
-        spinner.setAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_dropdown_item, typeList));
-
-        // Set the popup background based on the theme
-        spinner.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
-
-        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                currentContentType = ContentProfile.ContentType.values()[position];
-                updateContentsListView();
+            public void onTabSelected(TabLayout.Tab tab) {
+                switch (tab.getPosition()) {
+                    case 0: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_WINE; break;
+                    case 1: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_RUNTIME; break;
+                    case 2: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_DXVK; break;
+                    case 3: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_VKD3D; break;
+                    case 4: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_BOX64; break;
+                    case 5: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_WOWBOX64; break;
+                    case 6: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_FEXCORE; break;
+                    case 7: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS; break;
+                }
+                loadContentList();
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> parent) {
+            public void onTabUnselected(TabLayout.Tab tab) {}
 
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+                onTabSelected(tab);
             }
         });
+        tabLayout.getTabAt(0).select();
+
+        return layout;
     }
 
     private void updateContentsListView() {
@@ -239,7 +220,6 @@ public class ContentsFragment extends Fragment {
                                 manager.syncContents();
                                 boolean flashAfter = currentContentType == profile.type;
                                 currentContentType = profile.type;
-                                AppUtils.setSpinnerSelectionFromValue(sContentType, currentContentType.toString());
                                 if (flashAfter) loadContentList();
                             });
                         }

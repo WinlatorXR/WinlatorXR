@@ -313,7 +313,6 @@
     <string name="box86_64_rc_files">RC File</string>
     <string name="simulate_touch_screen">Simulate touch screen</string>
     <string name="install_content">Install Content</string>
-    <string name="content_type">Content Type</string>
     <string name="contents">Contents</string>
     <string name="runtime_toast">Runtime downloaded into\n Z:\\runtimes, open it in the container.</string>
     <string name="do_you_want_to_install_content">Do you want to install additional content?</string>
