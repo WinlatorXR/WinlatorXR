@@ -134,59 +134,6 @@ public class ControllerAssignmentDialog {
         Button btConfigureAnalogSticks = view.findViewById(R.id.BTConfigureAnalogSticks);
         btConfigureAnalogSticks.setOnClickListener(v -> showAnalogStickConfigDialog(view.getContext()));
         btConfigureAnalogSticks.setVisibility(XrActivity.isActive() ? View.GONE : View.VISIBLE);
-
-        // Player XR
-        LinearLayout xr = view.findViewById(R.id.PlayerXR);
-        if (XrActivity.isEnabled(view.getContext())) {
-            xr.setVisibility(View.VISIBLE);
-
-            CheckBox cbMouseLeftHanded = view.findViewById(R.id.CBPlayerXRMouseLeftHanded);
-            loadConfig(cbMouseLeftHanded, "use_xr_leftHanded", false, XrActivity.mouseLeftHanded);
-            cbMouseLeftHanded.setOnCheckedChangeListener((compoundButton, checked) -> {
-                saveConfig(view, "use_xr_leftHanded", checked);
-                XrActivity.mouseLeftHanded = checked;
-            });
-
-            CheckBox cbMouseLightgun = view.findViewById(R.id.CBPlayerXRMouseLightgun);
-            loadConfig(cbMouseLightgun, "use_xr_lightgun", false, XrActivity.mouseLightgun);
-            cbMouseLightgun.setOnCheckedChangeListener((compoundButton, checked) -> {
-                saveConfig(view, "use_xr_lightgun", checked);
-                XrActivity.mouseLightgun = checked;
-            });
-
-            CheckBox cbMouse = view.findViewById(R.id.CBPlayerXRMouse);
-            loadConfig(cbMouse, "use_xr_mouse", true, XrActivity.mouseEmulation);
-            cbMouse.setOnCheckedChangeListener((compoundButton, checked) -> {
-                saveConfig(view, "use_xr_mouse", checked);
-                XrActivity.mouseEmulation = checked;
-                cbMouseLeftHanded.setEnabled(checked);
-                cbMouseLightgun.setEnabled(checked);
-            });
-            cbMouseLeftHanded.setEnabled(cbMouse.isChecked());
-            cbMouseLightgun.setEnabled(cbMouse.isChecked());
-
-            Button btEditor = view.findViewById(R.id.BTControlsEditor);
-            btEditor.setOnClickListener(v -> new XrControllerDialog(v.getContext()).show());
-            btEditor.setVisibility(XrActivity.isActive() ? View.GONE : View.VISIBLE);
-        } else {
-            xr.setVisibility(View.GONE);
-        }
-    }
-
-    private void loadConfig(CheckBox cb, String key, boolean defValue, boolean curValue) {
-        if (XrActivity.isActive()) {
-            cb.setChecked(curValue);
-        } else {
-            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(cb.getContext());
-            cb.setChecked(prefs.getBoolean(key, defValue));
-        }
-    }
-
-    private void saveConfig(View view, String key, boolean value) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(view.getContext());
-        SharedPreferences.Editor e = prefs.edit();
-        e.putBoolean(key, value);
-        e.apply();
     }
 
     private void initializeViews() {

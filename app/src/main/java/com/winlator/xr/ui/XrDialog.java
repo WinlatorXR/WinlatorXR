@@ -21,6 +21,7 @@ package com.winlator.xr.ui;
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.view.View;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.TextView;
 
@@ -43,10 +44,43 @@ public class XrDialog extends ContentDialog {
         TextView tvToApplyClose = findViewById(R.id.TVToApplyClose);
         hmdUI(activity, cbSBS, cbImmersiveMode, cbCurvedScreen, cbPassthrough, tvToApplyClose);
 
+        CheckBox cbMouseLeftHanded = findViewById(R.id.CBPlayerXRMouseLeftHanded);
+        CheckBox cbMouseLightgun = findViewById(R.id.CBPlayerXRMouseLightgun);
+        CheckBox cbMouse = findViewById(R.id.CBPlayerXRMouse);
+        Button btEditor = findViewById(R.id.BTControlsEditor);
+        controllerUI(activity, cbMouseLeftHanded, cbMouseLightgun, cbMouse, btEditor);
+
         findViewById(R.id.BTCancel).setVisibility(View.GONE);
         findViewById(R.id.BTConfirm).setVisibility(View.VISIBLE);
         findViewById(R.id.BTConfirm).setOnClickListener(v -> dismiss());
         setOnConfirmCallback(this::dismiss);
+    }
+
+    public static void controllerUI(Activity activity, CheckBox cbMouseLeftHanded, CheckBox cbMouseLightgun, CheckBox cbMouse, Button btEditor) {
+        loadConfig(cbMouseLeftHanded, "use_xr_leftHanded", false, XrActivity.mouseLeftHanded);
+        cbMouseLeftHanded.setOnCheckedChangeListener((compoundButton, checked) -> {
+            saveConfig(cbMouseLeftHanded, "use_xr_leftHanded", checked);
+            XrActivity.mouseLeftHanded = checked;
+        });
+
+        loadConfig(cbMouseLightgun, "use_xr_lightgun", false, XrActivity.mouseLightgun);
+        cbMouseLightgun.setOnCheckedChangeListener((compoundButton, checked) -> {
+            saveConfig(cbMouseLightgun, "use_xr_lightgun", checked);
+            XrActivity.mouseLightgun = checked;
+        });
+
+        loadConfig(cbMouse, "use_xr_mouse", true, XrActivity.mouseEmulation);
+        cbMouse.setOnCheckedChangeListener((compoundButton, checked) -> {
+            saveConfig(cbMouse, "use_xr_mouse", checked);
+            XrActivity.mouseEmulation = checked;
+            cbMouseLeftHanded.setEnabled(checked);
+            cbMouseLightgun.setEnabled(checked);
+        });
+        cbMouseLeftHanded.setEnabled(cbMouse.isChecked());
+        cbMouseLightgun.setEnabled(cbMouse.isChecked());
+
+        btEditor.setOnClickListener(v -> new XrControllerDialog(activity).show());
+        btEditor.setVisibility(XrActivity.isActive() ? View.GONE : View.VISIBLE);
     }
 
     public static void hmdUI(Activity activity, CheckBox cbSBS, CheckBox cbImmersiveMode, CheckBox cbCurvedScreen, CheckBox cbPassthrough, TextView tvToApplyClose) {
@@ -90,5 +124,21 @@ public class XrDialog extends ContentDialog {
         cbImmersiveMode.setOnCheckedChangeListener((compoundButton, b) -> applyAll.run());
         cbCurvedScreen.setOnCheckedChangeListener((compoundButton, b) -> applyAll.run());
         cbPassthrough.setOnCheckedChangeListener((compoundButton, b) -> applyAll.run());
+    }
+
+    private static void loadConfig(CheckBox cb, String key, boolean defValue, boolean curValue) {
+        if (XrActivity.isActive()) {
+            cb.setChecked(curValue);
+        } else {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(cb.getContext());
+            cb.setChecked(prefs.getBoolean(key, defValue));
+        }
+    }
+
+    private static void saveConfig(CheckBox cb, String key, boolean value) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(cb.getContext());
+        SharedPreferences.Editor e = prefs.edit();
+        e.putBoolean(key, value);
+        e.apply();
     }
 }

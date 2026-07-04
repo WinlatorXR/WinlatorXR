@@ -180,6 +180,11 @@ public class SettingsFragment extends Fragment {
         cbXTouchscreenToggle.setChecked(preferences.getBoolean("touchscreen_toggle", false));
 
         // XR stuff
+        CheckBox cbMouseLeftHanded = view.findViewById(R.id.CBPlayerXRMouseLeftHanded);
+        CheckBox cbMouseLightgun = view.findViewById(R.id.CBPlayerXRMouseLightgun);
+        CheckBox cbMouse = view.findViewById(R.id.CBPlayerXRMouse);
+        Button btEditor = view.findViewById(R.id.BTControlsEditor);
+        XrDialog.controllerUI(getActivity(), cbMouseLeftHanded, cbMouseLightgun, cbMouse, btEditor);
         CheckBox cbSBS = view.findViewById(R.id.CBEnableSBS);
         CheckBox cbImmersiveMode = view.findViewById(R.id.CBEnableImmersiveMode);
         CheckBox cbCurvedScreen = view.findViewById(R.id.CBEnableCurvedScreen);
