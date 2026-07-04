@@ -1,13 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/TabLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/colorPrimary"
+        app:tabGravity="center"
+        app:tabInlineLabel="true"
+        app:tabMinWidth="0dp"
+        app:tabMode="scrollable"
+        app:tabPaddingStart="8dp"
+        app:tabPaddingEnd="8dp"
+        xmlns:app="http://schemas.android.com/apk/res-auto">
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/system" />
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/profiles" />
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/xr" />
+    </com.google.android.material.tabs.TabLayout>
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
         <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+        <LinearLayout
+            android:id="@+id/LLTabSystem"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
@@ -26,60 +61,6 @@
                     android:layout_weight="1"
                     android:orientation="vertical"
                     android:paddingEnd="8dp">
-
-                    <!-- BOX64 -->
-                    <FrameLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
-
-                        <LinearLayout style="@style/FieldSet">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/box64_preset" />
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal"
-                                android:gravity="center_vertical">
-
-                                <Spinner
-                                    style="@style/ComboBox"
-                                    android:id="@+id/SBox64Preset"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:spinnerMode="dialog" />
-
-                                <ImageButton
-                                    style="@style/ListMenuButton"
-                                    android:id="@+id/BTAddBox64Preset"
-                                    android:src="@drawable/icon_add" />
-
-                                <ImageButton
-                                    style="@style/ListMenuButton"
-                                    android:id="@+id/BTEditBox64Preset"
-                                    android:src="@drawable/icon_edit" />
-
-                                <ImageButton
-                                    style="@style/ListMenuButton"
-                                    android:id="@+id/BTDuplicateBox64Preset"
-                                    android:src="@drawable/icon_duplicate" />
-
-                                <ImageButton
-                                    style="@style/ListMenuButton"
-                                    android:id="@+id/BTRemoveBox64Preset"
-                                    android:layout_marginRight="0dp"
-                                    android:src="@drawable/icon_remove" />
-                            </LinearLayout>
-                        </LinearLayout>
-
-                        <TextView
-                            android:id="@+id/TVBox86Box64"
-                            style="@style/FieldSetLabel"
-                            android:text="@string/box86_box64" />
-                    </FrameLayout>
 
                     <!-- XSERVER -->
                     <FrameLayout
@@ -203,50 +184,6 @@
                     android:layout_weight="1"
                     android:orientation="vertical"
                     android:paddingStart="8dp">
-
-                    <!-- MIDI -->
-                    <FrameLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
-
-                        <LinearLayout style="@style/FieldSet">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/midi_sound_font" />
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal">
-
-                                <Spinner
-                                    android:id="@+id/SMIDISoundFont"
-                                    style="@style/ComboBox"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1" />
-
-                                <ImageButton
-                                    android:id="@+id/BTInstallSF"
-                                    style="@style/ListMenuButton"
-                                    android:src="@drawable/icon_add" />
-
-                                <ImageButton
-                                    android:id="@+id/BTRemoveSF"
-                                    style="@style/ListMenuButton"
-                                    android:layout_marginRight="0dp"
-                                    android:src="@drawable/icon_remove" />
-                            </LinearLayout>
-                        </LinearLayout>
-
-                        <TextView
-                            android:id="@+id/TVSound"
-                            style="@style/FieldSetLabel"
-                            android:text="@string/sound" />
-                    </FrameLayout>
 
                     <!-- THEME -->
                     <FrameLayout
@@ -460,6 +397,119 @@
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/LLTabProfiles"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:visibility="gone">
+
+            <!-- BOX64 -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <LinearLayout style="@style/FieldSet">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/box64_preset" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <Spinner
+                            style="@style/ComboBox"
+                            android:id="@+id/SBox64Preset"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:spinnerMode="dialog" />
+
+                        <ImageButton
+                            style="@style/ListMenuButton"
+                            android:id="@+id/BTAddBox64Preset"
+                            android:src="@drawable/icon_add" />
+
+                        <ImageButton
+                            style="@style/ListMenuButton"
+                            android:id="@+id/BTEditBox64Preset"
+                            android:src="@drawable/icon_edit" />
+
+                        <ImageButton
+                            style="@style/ListMenuButton"
+                            android:id="@+id/BTDuplicateBox64Preset"
+                            android:src="@drawable/icon_duplicate" />
+
+                        <ImageButton
+                            style="@style/ListMenuButton"
+                            android:id="@+id/BTRemoveBox64Preset"
+                            android:layout_marginRight="0dp"
+                            android:src="@drawable/icon_remove" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/TVBox86Box64"
+                    style="@style/FieldSetLabel"
+                    android:text="@string/box86_box64" />
+            </FrameLayout>
+
+            <!-- MIDI -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <LinearLayout style="@style/FieldSet">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/midi_sound_font" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <Spinner
+                            android:id="@+id/SMIDISoundFont"
+                            style="@style/ComboBox"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1" />
+
+                        <ImageButton
+                            android:id="@+id/BTInstallSF"
+                            style="@style/ListMenuButton"
+                            android:src="@drawable/icon_add" />
+
+                        <ImageButton
+                            android:id="@+id/BTRemoveSF"
+                            style="@style/ListMenuButton"
+                            android:layout_marginRight="0dp"
+                            android:src="@drawable/icon_remove" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/TVSound"
+                    style="@style/FieldSetLabel"
+                    android:text="@string/sound" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <include
+            android:id="@+id/LLTabXR"
+            android:visibility="gone"
+            layout="@layout/xr_dialog"/>
+        </LinearLayout>
     </ScrollView>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -469,4 +519,4 @@
         android:layout_gravity="end|bottom"
         android:layout_margin="16dp"
         android:src="@drawable/icon_confirm" />
-</FrameLayout>
+</LinearLayout>

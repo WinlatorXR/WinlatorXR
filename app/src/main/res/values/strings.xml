@@ -47,6 +47,7 @@
     <string name="binding_left">Binding Left</string>
     <string name="overlay_opacity">Overlay Opacity</string>
     <string name="profile">Profile</string>
+    <string name="profiles">Profiles</string>
     <string name="select_profile">Select Profile</string>
     <string name="profile_name">Profile Name</string>
     <string name="name">Name</string>

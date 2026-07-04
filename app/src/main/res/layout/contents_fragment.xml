@@ -6,7 +6,6 @@
     android:orientation="vertical"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/TabLayout"
         android:layout_width="match_parent"

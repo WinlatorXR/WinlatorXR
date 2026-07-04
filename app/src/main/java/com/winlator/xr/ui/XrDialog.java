@@ -36,21 +36,35 @@ public class XrDialog extends ContentDialog {
         super(activity, R.layout.xr_dialog);
         setTitle(R.string.xr);
 
+        CheckBox cbSBS = findViewById(R.id.CBEnableSBS);
+        CheckBox cbImmersiveMode = findViewById(R.id.CBEnableImmersiveMode);
+        CheckBox cbCurvedScreen = findViewById(R.id.CBEnableCurvedScreen);
+        CheckBox cbPassthrough = findViewById(R.id.CBEnablePassthrough);
+        TextView tvToApplyClose = findViewById(R.id.TVToApplyClose);
+        hmdUI(activity, cbSBS, cbImmersiveMode, cbCurvedScreen, cbPassthrough, tvToApplyClose);
+
+        findViewById(R.id.BTCancel).setVisibility(View.GONE);
+        findViewById(R.id.BTConfirm).setVisibility(View.VISIBLE);
+        findViewById(R.id.BTConfirm).setOnClickListener(v -> dismiss());
+        setOnConfirmCallback(this::dismiss);
+    }
+
+    public static void hmdUI(Activity activity, CheckBox cbSBS, CheckBox cbImmersiveMode, CheckBox cbCurvedScreen, CheckBox cbPassthrough, TextView tvToApplyClose) {
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(activity);
         boolean isImmersive = XrActivity.isImmersive;
 
-        CheckBox cbSBS = findViewById(R.id.CBEnableSBS);
-        cbSBS.setEnabled(XrActivity.getInstance().lastMode3D < 0);
-        cbSBS.setChecked(XrActivity.isSBS);
-        CheckBox cbImmersiveMode = findViewById(R.id.CBEnableImmersiveMode);
-        cbImmersiveMode.setEnabled(!XrActivity.isUDP);
-        cbImmersiveMode.setChecked(isImmersive);
-        CheckBox cbCurvedScreen = findViewById(R.id.CBEnableCurvedScreen);
+        if (XrActivity.isActive()) {
+            cbSBS.setEnabled(XrActivity.getInstance().lastMode3D < 0);
+            cbSBS.setChecked(XrActivity.isSBS);
+            cbImmersiveMode.setEnabled(!XrActivity.isUDP);
+            cbImmersiveMode.setChecked(isImmersive);
+        } else {
+            cbSBS.setVisibility(View.GONE);
+            cbImmersiveMode.setVisibility(View.GONE);
+        }
         cbCurvedScreen.setChecked(preferences.getBoolean("use_cs", false));
-        CheckBox cbPassthrough = findViewById(R.id.CBEnablePassthrough);
         cbPassthrough.setEnabled(!isImmersive);
         cbPassthrough.setChecked(preferences.getBoolean("use_pt", true));
-        TextView tvToApplyClose = findViewById(R.id.TVToApplyClose);
 
         Runnable applyAll = () -> {
             SharedPreferences.Editor e = preferences.edit();
@@ -61,23 +75,20 @@ public class XrDialog extends ContentDialog {
             XrActivity.isSBS = cbSBS.isChecked();
             XrActivity.isImmersive = cbImmersiveMode.isChecked();
             XrActivity instance = XrActivity.getInstance();
-            instance.nativeSetCurvedScreen(cbCurvedScreen.isChecked());
-            instance.nativeSetUsePT(cbPassthrough.isChecked());
+            if (XrActivity.isActive()) {
+                instance.nativeSetCurvedScreen(cbCurvedScreen.isChecked());
+                instance.nativeSetUsePT(cbPassthrough.isChecked());
+            }
 
-            boolean warn = (XrActivity.isImmersive != isImmersive);
+            boolean warn = (XrActivity.isImmersive != isImmersive) && XrActivity.isActive();
             tvToApplyClose.setVisibility(warn ? View.VISIBLE : View.GONE);
             cbPassthrough.setEnabled(!XrActivity.isImmersive);
         };
 
-        // Apply changes immediatelly
+        // Apply changes immediately
         cbSBS.setOnCheckedChangeListener((compoundButton, b) -> applyAll.run());
         cbImmersiveMode.setOnCheckedChangeListener((compoundButton, b) -> applyAll.run());
         cbCurvedScreen.setOnCheckedChangeListener((compoundButton, b) -> applyAll.run());
         cbPassthrough.setOnCheckedChangeListener((compoundButton, b) -> applyAll.run());
-
-        findViewById(R.id.BTCancel).setVisibility(View.GONE);
-        findViewById(R.id.BTConfirm).setVisibility(View.VISIBLE);
-        findViewById(R.id.BTConfirm).setOnClickListener(v -> dismiss());
-        setOnConfirmCallback(this::dismiss);
     }
 }

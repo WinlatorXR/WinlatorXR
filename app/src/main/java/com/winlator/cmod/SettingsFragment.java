@@ -40,6 +40,7 @@ import androidx.fragment.app.FragmentManager;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.navigation.NavigationView;
+import com.google.android.material.tabs.TabLayout;
 import com.winlator.cmod.R;
 import com.winlator.cmod.box86_64.Box86_64EditPresetDialog;
 import com.winlator.cmod.box86_64.Box86_64Preset;
@@ -67,6 +68,7 @@ import com.winlator.cmod.restore.RestoreActivity;
 import com.winlator.cmod.widget.InputControlsView;
 import com.winlator.cmod.xenvironment.ImageFs;
 import com.winlator.cmod.xenvironment.ImageFsInstaller;
+import com.winlator.xr.ui.XrDialog;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -177,6 +179,46 @@ public class SettingsFragment extends Fragment {
         cbXTouchscreenToggle = view.findViewById(R.id.CBXTouchscreenToggle);
         cbXTouchscreenToggle.setChecked(preferences.getBoolean("touchscreen_toggle", false));
 
+        // XR stuff
+        CheckBox cbSBS = view.findViewById(R.id.CBEnableSBS);
+        CheckBox cbImmersiveMode = view.findViewById(R.id.CBEnableImmersiveMode);
+        CheckBox cbCurvedScreen = view.findViewById(R.id.CBEnableCurvedScreen);
+        CheckBox cbPassthrough = view.findViewById(R.id.CBEnablePassthrough);
+        TextView tvToApplyClose = view.findViewById(R.id.TVToApplyClose);
+        XrDialog.hmdUI(getActivity(), cbSBS, cbImmersiveMode, cbCurvedScreen, cbPassthrough, tvToApplyClose);
+
+        // Tab switcher
+        TabLayout tabLayout = view.findViewById(R.id.TabLayout);
+        tabLayout.setTabTextColors(Color.LTGRAY, Color.WHITE);
+        tabLayout.setSelectedTabIndicatorColor(Color.WHITE);
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                View[] tabs = {
+                        view.findViewById(R.id.LLTabSystem),
+                        view.findViewById(R.id.LLTabProfiles),
+                        view.findViewById(R.id.LLTabXR)
+                };
+
+                for (int i = 0; i < tabs.length; i++) {
+                    if (i == tab.getPosition()) {
+                        tabs[i].setVisibility(View.VISIBLE);
+                    } else {
+                        tabs[i].setVisibility(View.GONE);
+                    }
+                }
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+                onTabSelected(tab);
+            }
+        });
 
         // Initialize gyro enable checkbox
 //        cbGyroEnabled = view.findViewById(R.id.CBGyroEnabled);
