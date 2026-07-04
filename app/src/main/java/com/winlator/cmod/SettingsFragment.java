@@ -369,6 +369,7 @@ public class SettingsFragment extends Fragment {
             e.putBoolean("use_xr", checked);
             e.commit();
         });
+        cbUseXR.setVisibility(View.VISIBLE);
 
         final CheckBox cbEnableWineDebug = view.findViewById(R.id.CBEnableWineDebug);
         cbEnableWineDebug.setChecked(preferences.getBoolean("enable_wine_debug", false));
