@@ -29,20 +29,20 @@ import com.winlator.cmod.winhandler.WinHandler;
 import com.winlator.xr.ui.XrControllerDialog;
 
 public class ControllerAssignmentDialog {
-    private final ContentDialog dialog;
-    private final ControllerManager controllerManager;
-    private final WinHandler winHandler;     // may be null
-    private final Activity hostActivity;
+    private ContentDialog dialog;
+    private ControllerManager controllerManager;
+    private WinHandler winHandler;     // may be null
+    private Activity hostActivity;
 
-    private final CheckBox[] checkBoxes = new CheckBox[4];
-    private final TextView[] deviceNameTextViews = new TextView[4];
-    private final Button[] assignButtons = new Button[4];
-    private final Button[] btnMacros = new Button[4];   // <-- Button array
-    private final CheckBox[] vibrateBoxes = new CheckBox[4];
-    private final Button[] resetButtons = new Button[4];
+    private CheckBox[] checkBoxes = new CheckBox[4];
+    private TextView[] deviceNameTextViews = new TextView[4];
+    private Button[] assignButtons = new Button[4];
+    private Button[] btnMacros = new Button[4];   // <-- Button array
+    private CheckBox[] vibrateBoxes = new CheckBox[4];
+    private Button[] resetButtons = new Button[4];
 
-    private final TextView restartRequiredView;
-    private final int initialPlayerCount;
+    private TextView restartRequiredView;
+    private int initialPlayerCount;
     private static ControllerAssignmentDialog instance = null;
 
     // ---------- Public entry points -----------------------------------------
@@ -56,8 +56,18 @@ public class ControllerAssignmentDialog {
     public static void show(Context context, WinHandler winHandler) {
         int initialPlayerCount = ControllerManager.getInstance().getEnabledPlayerCount();
         Activity act = (Activity) context; // all current callers pass an Activity
-        instance = new ControllerAssignmentDialog(act, initialPlayerCount, winHandler);
+        instance = new ControllerAssignmentDialog(act, initialPlayerCount, winHandler, null);
         instance.showContentDialog();
+    }
+
+    public static void integrate(Context context, WinHandler winHandler, View layout) {
+        int initialPlayerCount = ControllerManager.getInstance().getEnabledPlayerCount();
+        Activity act = (Activity) context; // all current callers pass an Activity
+        instance = new ControllerAssignmentDialog(act, initialPlayerCount, winHandler, layout);
+    }
+
+    public static void save() {
+        instance.controllerManager.saveAssignments();
     }
 
     public static void dismiss() {
@@ -67,7 +77,7 @@ public class ControllerAssignmentDialog {
         }
     }
 
-    private static WinHandler extractWinHandler(Context ctx) {
+    public static WinHandler extractWinHandler(Context ctx) {
         if (ctx instanceof XServerDisplayActivity) {
             return ((XServerDisplayActivity) ctx).getWinHandler();
         }
@@ -75,33 +85,35 @@ public class ControllerAssignmentDialog {
     }
 
     // ---------- Impl ---------------------------------------------------------
+    private ControllerAssignmentDialog(Activity activity, int initialPlayerCount, WinHandler winHandler, View layout) {
+        if (layout == null) {
+            boolean dark = PreferenceManager.getDefaultSharedPreferences(activity)
+                    .getBoolean("dark_mode", false);
 
-    private ControllerAssignmentDialog(Activity activity, int initialPlayerCount, WinHandler winHandler) {
-        boolean dark = PreferenceManager.getDefaultSharedPreferences(activity)
-                .getBoolean("dark_mode", false);
+            ContextThemeWrapper themed =
+                    new ContextThemeWrapper(activity, dark ? R.style.ContentDialog : R.style.AppTheme);
 
-        ContextThemeWrapper themed =
-                new ContextThemeWrapper(activity, dark ? R.style.ContentDialog : R.style.AppTheme);
+            this.dialog = new ContentDialog(themed, R.layout.controller_assignment_dialog);
+            this.dialog.setTitle(R.string.controller_manager);
 
-        this.dialog = new ContentDialog(themed, R.layout.controller_assignment_dialog);
-        this.dialog.setTitle(R.string.controller_manager);
+            if (dark) {
+                View root = dialog.getContentView();
+                if (root instanceof ViewGroup) setTextColorForDialog((ViewGroup) root, 0xFFFFFFFF);
+            }
+        }
 
         this.controllerManager = ControllerManager.getInstance();
         this.initialPlayerCount = initialPlayerCount;
         this.winHandler = winHandler;     // can be null
         this.hostActivity = activity;
 
-        initializeViews();
-
-        restartRequiredView = dialog.getContentView().findViewById(R.id.TVRestartRequired);
-
-        if (dark) {
-            View root = dialog.getContentView();
-            if (root instanceof ViewGroup) setTextColorForDialog((ViewGroup) root, 0xFFFFFFFF);
-        }
-
+        initializeViews(layout != null ? layout : dialog.getContentView());
         populateView();
         setupListeners();
+
+        if (layout == null) {
+            dialog.setOnConfirmCallback(() -> controllerManager.saveAssignments());
+        }
     }
 
     private static int dp(Context c, int v){
@@ -128,17 +140,9 @@ public class ControllerAssignmentDialog {
         int capPx = dp(dialog.getContext(), 540);
         int target = Math.min((int) (widthPx * 0.90f), capPx);
         w.setLayout(target, WindowManager.LayoutParams.WRAP_CONTENT);
-
-        // Initialize the "Configure Analog Sticks" button
-        View view = dialog.getContentView();
-        Button btConfigureAnalogSticks = view.findViewById(R.id.BTConfigureAnalogSticks);
-        btConfigureAnalogSticks.setOnClickListener(v -> showAnalogStickConfigDialog(view.getContext()));
-        btConfigureAnalogSticks.setVisibility(XrActivity.isActive() ? View.GONE : View.VISIBLE);
     }
 
-    private void initializeViews() {
-        View view = dialog.getContentView();
-
+    private void initializeViews(View view) {
         // Player 1
         checkBoxes[0] = view.findViewById(R.id.CBPlayer1);
         deviceNameTextViews[0] = view.findViewById(R.id.TVPlayer1DeviceName);
@@ -178,6 +182,14 @@ public class ControllerAssignmentDialog {
         btnMacros[3] = view.findViewById(R.id.BTNMacrosP4);
         btnMacros[3].setOnClickListener(v ->
                 com.winlator.cmod.contentdialog.MacrosDialog.show(hostActivity, 3, winHandler));
+
+        // Initialize the "Configure Analog Sticks" button
+        Button btConfigureAnalogSticks = view.findViewById(R.id.BTConfigureAnalogSticks);
+        btConfigureAnalogSticks.setOnClickListener(v -> showAnalogStickConfigDialog(view.getContext()));
+        btConfigureAnalogSticks.setVisibility(XrActivity.isActive() ? View.GONE : View.VISIBLE);
+
+        // Text feedback
+        restartRequiredView = view.findViewById(R.id.TVRestartRequired);
     }
 
     private void populateView() {
@@ -190,7 +202,7 @@ public class ControllerAssignmentDialog {
             }
             InputDevice device = controllerManager.getAssignedDeviceForSlot(i);
             deviceNameTextViews[i].setText(
-                    device != null ? device.getName() : dialog.getContext().getString(R.string.not_assigned)
+                    device != null ? device.getName() : deviceNameTextViews[i].getContext().getString(R.string.not_assigned)
             );
             deviceNameTextViews[i].setSelected(true);
         }
@@ -198,7 +210,7 @@ public class ControllerAssignmentDialog {
 
     private void setupListeners() {
         for (int i = 0; i < 4; i++) {
-            final int slotIndex = i;
+            int slotIndex = i;
 
             checkBoxes[i].setOnCheckedChangeListener((buttonView, isChecked) -> {
                 controllerManager.setSlotEnabled(slotIndex, isChecked);
@@ -229,20 +241,17 @@ public class ControllerAssignmentDialog {
             });
 
             assignButtons[i].setOnClickListener(v -> {
-                String message = dialog.getContext().getString(R.string.press_any_button_for_player) + " " + (slotIndex + 1);
-                dialog.setMessage(message);
+                String message = v.getContext().getString(R.string.press_any_button_for_player) + " " + (slotIndex + 1);
 
-                dialog.setOnControllerInputListener(device -> {
+                ContentDialog dlg = ContentDialog.message(v.getContext(), message);
+                dlg.setOnControllerInputListener(device -> {
                     if (!ControllerManager.isGameController(device)) return;
                     controllerManager.assignDeviceToSlot(slotIndex, device);
-                    dialog.setMessage(null);
-                    dialog.setOnControllerInputListener(null);
+                    dlg.setOnControllerInputListener(null);
                     populateView();
                 });
             });
         }
-
-        dialog.setOnConfirmCallback(() -> controllerManager.saveAssignments());
     }
 
     private void setTextColorForDialog(ViewGroup viewGroup, int color) {

@@ -78,7 +78,6 @@
             <com.google.android.flexbox.FlexboxLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
                 app:flexWrap="wrap"
                 app:alignItems="center"
                 app:justifyContent="flex_end">
@@ -175,7 +174,6 @@
             <com.google.android.flexbox.FlexboxLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
                 app:flexWrap="wrap"
                 app:alignItems="center"
                 app:justifyContent="flex_end">
@@ -267,7 +265,6 @@
             <com.google.android.flexbox.FlexboxLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
                 app:flexWrap="wrap"
                 app:alignItems="center"
                 app:justifyContent="flex_end">
@@ -360,7 +357,6 @@
             <com.google.android.flexbox.FlexboxLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
                 app:flexWrap="wrap"
                 app:alignItems="center"
                 app:justifyContent="flex_end">

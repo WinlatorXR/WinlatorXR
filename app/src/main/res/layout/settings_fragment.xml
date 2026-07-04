@@ -30,6 +30,11 @@
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:text="@string/external_controllers" />
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:text="@string/xr" />
     </com.google.android.material.tabs.TabLayout>
 
@@ -498,6 +503,11 @@
                     android:text="@string/sound" />
             </FrameLayout>
         </LinearLayout>
+
+        <include
+            android:id="@+id/LLTabController"
+            android:visibility="gone"
+            layout="@layout/controller_assignment_dialog"/>
 
         <include
             android:id="@+id/LLTabXR"

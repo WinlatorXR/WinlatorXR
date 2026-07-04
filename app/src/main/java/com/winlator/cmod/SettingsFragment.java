@@ -48,6 +48,7 @@ import com.winlator.cmod.box86_64.Box86_64PresetManager;
 import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.ContainerManager;
 import com.winlator.cmod.contentdialog.ContentDialog;
+import com.winlator.cmod.contentdialog.ControllerAssignmentDialog;
 import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.core.AppUtils;
@@ -179,6 +180,9 @@ public class SettingsFragment extends Fragment {
         cbXTouchscreenToggle = view.findViewById(R.id.CBXTouchscreenToggle);
         cbXTouchscreenToggle.setChecked(preferences.getBoolean("touchscreen_toggle", false));
 
+        // External controllers
+        ControllerAssignmentDialog.integrate(getActivity(), ControllerAssignmentDialog.extractWinHandler(getActivity()), view);
+
         // XR stuff
         CheckBox cbMouseLeftHanded = view.findViewById(R.id.CBPlayerXRMouseLeftHanded);
         CheckBox cbMouseLightgun = view.findViewById(R.id.CBPlayerXRMouseLightgun);
@@ -202,6 +206,7 @@ public class SettingsFragment extends Fragment {
                 View[] tabs = {
                         view.findViewById(R.id.LLTabSystem),
                         view.findViewById(R.id.LLTabProfiles),
+                        view.findViewById(R.id.LLTabController),
                         view.findViewById(R.id.LLTabXR)
                 };
 
@@ -216,7 +221,6 @@ public class SettingsFragment extends Fragment {
 
             @Override
             public void onTabUnselected(TabLayout.Tab tab) {
-
             }
 
             @Override
@@ -494,6 +498,8 @@ public class SettingsFragment extends Fragment {
             saveCustomApiKeySettings(editor);
 
             editor.commit();
+
+            ControllerAssignmentDialog.save();
         });
 
 

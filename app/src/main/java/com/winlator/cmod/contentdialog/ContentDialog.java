@@ -188,6 +188,15 @@ public class ContentDialog extends XrContentDialog {
         dialog.show();
     }
 
+    public static ContentDialog message(Context context, String msg) {
+        ContentDialog dialog = new ContentDialog(context);
+        dialog.setMessage(msg);
+        dialog.findViewById(R.id.BTConfirm).setVisibility(View.GONE);
+        dialog.findViewById(R.id.BTCancel).setVisibility(View.GONE);
+        dialog.show();
+        return dialog;
+    }
+
     public static void prompt(Context context, int titleResId, String defaultText, Callback<String> callback) {
         ContentDialog dialog = new ContentDialog(context);
 
