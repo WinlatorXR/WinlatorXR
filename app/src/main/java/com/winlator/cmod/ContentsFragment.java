@@ -416,25 +416,29 @@ public class ContentsFragment extends Fragment {
                     long timestamp = System.currentTimeMillis();
                     File output = new File(getContext().getCacheDir(), "temp_" + timestamp);
 
-                    if (Downloader.downloadFile(profile.remoteUrl, output)) {
-                        if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME) {
-                            FileUtils.copy(output, runtimeFile);
-                            output.delete();
+                    try {
+                        if (Downloader.downloadFile(profile.remoteUrl, output)) {
+                            if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME) {
+                                FileUtils.copy(output, runtimeFile);
+                                output.delete();
 
-                            getActivity().runOnUiThread(() -> {
-                                Toast.makeText(getContext(), R.string.runtime_toast, Toast.LENGTH_LONG).show();
-                                holder.progressBar.setVisibility(View.GONE);
-                                loadContentList();
-                            });
-                            return;
+                                getActivity().runOnUiThread(() -> {
+                                    Toast.makeText(getContext(), R.string.runtime_toast, Toast.LENGTH_LONG).show();
+                                    holder.progressBar.setVisibility(View.GONE);
+                                    loadContentList();
+                                });
+                                return;
+                            }
+                            intent.setData(Uri.parse(output.getAbsolutePath()));
                         }
-                        intent.setData(Uri.parse(output.getAbsolutePath()));
+                        getActivity().runOnUiThread(() -> {
+                            holder.progressBar.setVisibility(View.GONE);
+                            holder.ibDownload.setVisibility(View.VISIBLE);
+                            onActivityResult(MainActivity.OPEN_FILE_REQUEST_CODE, Activity.RESULT_OK, intent);
+                        });
+                    } catch (Exception e) {
+                        //Expected to fail when the fragment is no longer visible
                     }
-                    getActivity().runOnUiThread(() -> {
-                        holder.progressBar.setVisibility(View.GONE);
-                        holder.ibDownload.setVisibility(View.VISIBLE);
-                        onActivityResult(MainActivity.OPEN_FILE_REQUEST_CODE, Activity.RESULT_OK, intent);
-                    });
                 }).start();
             });
         }
@@ -492,14 +496,18 @@ public class ContentsFragment extends Fragment {
                     new Thread(() -> {
                         long timestamp = System.currentTimeMillis();
                         File output = new File(getContext().getCacheDir(), "temp_" + timestamp);
-                        if (Downloader.downloadFile(adrenotoolsManager.getDriverUrl(driver), output)) {
-                            adrenotoolsManager.installDriver(Uri.fromFile(output));
+                        try {
+                            if (Downloader.downloadFile(adrenotoolsManager.getDriverUrl(driver), output)) {
+                                adrenotoolsManager.installDriver(Uri.fromFile(output));
+                            }
+                            getActivity().runOnUiThread(() -> {
+                                viewHolder.progressBar.setVisibility(View.GONE);
+                                viewHolder.btMenu.setVisibility(View.VISIBLE);
+                                reload();
+                            });
+                        } catch (Exception e) {
+                            //Expected to fail when the fragment is no longer visible
                         }
-                        getActivity().runOnUiThread(() -> {
-                            viewHolder.progressBar.setVisibility(View.GONE);
-                            viewHolder.btMenu.setVisibility(View.VISIBLE);
-                            reload();
-                        });
                     }).start();
                 } else {
                     removeAtIndex(position);
