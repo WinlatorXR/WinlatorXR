@@ -18,9 +18,15 @@
  */
 package com.winlator.xr.ui;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.Spinner;
+
+import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.ContentDialog;
@@ -30,10 +36,20 @@ import com.winlator.xr.XrController;
 import java.util.ArrayList;
 
 public class XrControllerDialog extends ContentDialog {
-    public XrControllerDialog(Context context) {
+    public static final String XR_CONTROLLER_PROFILE_COUNT = "XR_CONTROLLER_PROFILE_COUNT";
+    public static final String XR_CONTROLLER_PROFILE_INDEX = "XR_CONTROLLER_PROFILE_INDEX";
+    public static final String XR_CONTROLLER_PROFILE_NAME = "XR_CONTROLLER_PROFILE_NAME";
+    public static final String XR_CONTROLLER_PROFILE_VALUE = "XR_CONTROLLER_PROFILE_VALUE";
+
+    public XrControllerDialog(Context context, Runnable onSave) {
         super(context, R.layout.xr_controller_dialog);
         setIcon(R.drawable.icon_gamepad);
-        setTitle(context.getString(R.string.primary_controller));
+        setTitle(context.getString(R.string.controller_profile));
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        int index = prefs.getInt(XR_CONTROLLER_PROFILE_INDEX, 0);
+        EditText etName = findViewById(R.id.ETName);
+        etName.setText(prefs.getString(XR_CONTROLLER_PROFILE_NAME + index, "Unknown name"));
 
         bindMapping(findViewById(R.id.SButtonA), XrController.Mapping.BUTTON_A);
         bindMapping(findViewById(R.id.SButtonB), XrController.Mapping.BUTTON_B);
@@ -46,7 +62,58 @@ public class XrControllerDialog extends ContentDialog {
         bindMapping(findViewById(R.id.SThumbstickUp), XrController.Mapping.THUMBSTICK_UP);
         bindMapping(findViewById(R.id.SThumbstickDown), XrController.Mapping.THUMBSTICK_DOWN);
 
-        setOnConfirmCallback(this::saveMapping);
+        setOnConfirmCallback(() -> {
+            saveMapping(etName.getText().toString());
+            onSave.run();
+        });
+    }
+
+    public static void profileUI(Activity activity, Spinner[] sControllerPreset,
+                                 View btAddControllerPreset, View btEditControllerPreset,
+                                 View btDuplicateControllerPreset, View btRemoveControllerPreset) {
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
+        XrDialog.controllerUISpinner(activity, sControllerPreset);
+
+        btEditControllerPreset.setOnClickListener(v -> new XrControllerDialog(activity, () -> profileUI(activity, sControllerPreset,
+                btAddControllerPreset, btEditControllerPreset,
+                btDuplicateControllerPreset, btRemoveControllerPreset)).show());
+        btAddControllerPreset.setOnClickListener(view -> {
+            int count = prefs.getInt(XR_CONTROLLER_PROFILE_COUNT, 1);
+            SharedPreferences.Editor e = prefs.edit();
+            e.putString(XR_CONTROLLER_PROFILE_NAME + count, "New profile");
+            e.putInt(XR_CONTROLLER_PROFILE_COUNT, count + 1);
+            e.commit();
+            XrDialog.controllerUISpinner(activity, sControllerPreset);
+        });
+        btDuplicateControllerPreset.setOnClickListener(view -> {
+            int index = prefs.getInt(XR_CONTROLLER_PROFILE_INDEX, 0);
+            String name = prefs.getString(XR_CONTROLLER_PROFILE_NAME + index, "Cloned profile");
+            String value = prefs.getString(XR_CONTROLLER_PROFILE_VALUE + index, XrController.getDefaultMapping());
+
+            int count = prefs.getInt(XR_CONTROLLER_PROFILE_COUNT, 1);
+            SharedPreferences.Editor e = prefs.edit();
+            e.putString(XR_CONTROLLER_PROFILE_NAME + count, name + " (copy)");
+            e.putString(XR_CONTROLLER_PROFILE_VALUE + count, value);
+            e.putInt(XR_CONTROLLER_PROFILE_COUNT, count + 1);
+            e.commit();
+            XrDialog.controllerUISpinner(activity, sControllerPreset);
+        });
+        btRemoveControllerPreset.setOnClickListener(view -> {
+            int index = prefs.getInt(XR_CONTROLLER_PROFILE_INDEX, 0);
+            int count = prefs.getInt(XR_CONTROLLER_PROFILE_COUNT, 1);
+            SharedPreferences.Editor e = prefs.edit();
+            for (int i = index + 1; i < count; i++) {
+                String name = prefs.getString(XR_CONTROLLER_PROFILE_NAME + i, "Failed profile");
+                String value = prefs.getString(XR_CONTROLLER_PROFILE_VALUE + i, XrController.getDefaultMapping());
+                e.putString(XR_CONTROLLER_PROFILE_NAME + (i - 1), name);
+                e.putString(XR_CONTROLLER_PROFILE_VALUE + (i - 1), value);
+            }
+            e.putInt(XR_CONTROLLER_PROFILE_COUNT, count - 1);
+            e.putInt(XR_CONTROLLER_PROFILE_INDEX, 0);
+            e.commit();
+            XrDialog.controllerUISpinner(activity, sControllerPreset);
+        });
     }
 
     private void bindMapping(Spinner spinner, XrController.Mapping mapping) {
@@ -70,7 +137,7 @@ public class XrControllerDialog extends ContentDialog {
         spinner.setSelection(index);
     }
 
-    private void saveMapping() {
+    private void saveMapping(String name) {
         //The order has to be the same as in Mapping enum
         int[] ids = {
                 R.id.SButtonA, R.id.SButtonB, R.id.SButtonX, R.id.SButtonY, R.id.SButtonGrip, R.id.SButtonTrigger,
@@ -82,6 +149,6 @@ public class XrControllerDialog extends ContentDialog {
             byte value = XKeycode.values()[index].id;
             output[i] = value;
         }
-        XrController.setMapping(getContext(), new String(output));
+        XrController.setMapping(getContext(), name, new String(output));
     }
 }

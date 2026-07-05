@@ -69,6 +69,7 @@ import com.winlator.cmod.restore.RestoreActivity;
 import com.winlator.cmod.widget.InputControlsView;
 import com.winlator.cmod.xenvironment.ImageFs;
 import com.winlator.cmod.xenvironment.ImageFsInstaller;
+import com.winlator.xr.ui.XrControllerDialog;
 import com.winlator.xr.ui.XrDialog;
 
 import org.json.JSONArray;
@@ -184,11 +185,19 @@ public class SettingsFragment extends Fragment {
         ControllerAssignmentDialog.integrate(getActivity(), ControllerAssignmentDialog.extractWinHandler(getActivity()), view);
 
         // XR stuff
+        Spinner sControllerPreset = view.findViewById(R.id.SControllerPreset);
+        View btAddControllerPreset = view.findViewById(R.id.BTAddControllerPreset);
+        View btEditControllerPreset = view.findViewById(R.id.BTEditControllerPreset);
+        View btDuplicateControllerPreset = view.findViewById(R.id.BTDuplicateControllerPreset);
+        View btRemoveControllerPreset = view.findViewById(R.id.BTRemoveControllerPreset);
+        Spinner sControllerProfile = view.findViewById(R.id.SControllerProfile);
+        XrControllerDialog.profileUI(getActivity(), new Spinner[]{sControllerPreset, sControllerProfile},
+                btAddControllerPreset, btEditControllerPreset, btDuplicateControllerPreset, btRemoveControllerPreset);
         CheckBox cbMouseLeftHanded = view.findViewById(R.id.CBPlayerXRMouseLeftHanded);
         CheckBox cbMouseLightgun = view.findViewById(R.id.CBPlayerXRMouseLightgun);
         CheckBox cbMouse = view.findViewById(R.id.CBPlayerXRMouse);
-        Button btEditor = view.findViewById(R.id.BTControlsEditor);
-        XrDialog.controllerUI(getActivity(), cbMouseLeftHanded, cbMouseLightgun, cbMouse, btEditor);
+        XrDialog.controllerUI(getActivity(), cbMouseLeftHanded, cbMouseLightgun, cbMouse);
+        XrDialog.controllerUISpinner(getActivity(), new Spinner[]{sControllerPreset, sControllerProfile});
         CheckBox cbSBS = view.findViewById(R.id.CBEnableSBS);
         CheckBox cbImmersiveMode = view.findViewById(R.id.CBEnableImmersiveMode);
         CheckBox cbCurvedScreen = view.findViewById(R.id.CBEnableCurvedScreen);

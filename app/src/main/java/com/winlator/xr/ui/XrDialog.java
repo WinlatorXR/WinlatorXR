@@ -21,8 +21,11 @@ package com.winlator.xr.ui;
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.view.View;
-import android.widget.Button;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
+import android.widget.ListView;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.preference.PreferenceManager;
@@ -30,6 +33,10 @@ import androidx.preference.PreferenceManager;
 import com.winlator.xr.XrActivity;
 import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.ContentDialog;
+import com.winlator.xr.XrController;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class XrDialog extends ContentDialog {
 
@@ -47,8 +54,24 @@ public class XrDialog extends ContentDialog {
         CheckBox cbMouseLeftHanded = findViewById(R.id.CBPlayerXRMouseLeftHanded);
         CheckBox cbMouseLightgun = findViewById(R.id.CBPlayerXRMouseLightgun);
         CheckBox cbMouse = findViewById(R.id.CBPlayerXRMouse);
-        Button btEditor = findViewById(R.id.BTControlsEditor);
-        controllerUI(activity, cbMouseLeftHanded, cbMouseLightgun, cbMouse, btEditor);
+        Spinner sControllerProfile = findViewById(R.id.SControllerProfile);
+        controllerUI(activity, cbMouseLeftHanded, cbMouseLightgun, cbMouse);
+        controllerUISpinner(activity, new Spinner[]{sControllerProfile});
+        sControllerProfile.setVisibility(View.GONE);
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
+
+        ListView listView = findViewById(R.id.listView);
+        listView.setAdapter(new ArrayAdapter<>(activity, android.R.layout.simple_list_item_single_choice, getProfileNames(activity)));
+        listView.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
+        listView.setItemChecked(prefs.getInt(XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, 0), true);
+        listView.setOnItemClickListener((adapterView, view, index, l) -> {
+            SharedPreferences.Editor e = prefs.edit();
+            e.putInt(XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, index);
+            e.commit();
+            XrController.cleanMappingCache();
+            controllerUISpinner(activity, new Spinner[]{sControllerProfile});
+        });
 
         findViewById(R.id.BTCancel).setVisibility(View.GONE);
         findViewById(R.id.BTConfirm).setVisibility(View.VISIBLE);
@@ -56,7 +79,7 @@ public class XrDialog extends ContentDialog {
         setOnConfirmCallback(this::dismiss);
     }
 
-    public static void controllerUI(Activity activity, CheckBox cbMouseLeftHanded, CheckBox cbMouseLightgun, CheckBox cbMouse, Button btEditor) {
+    public static void controllerUI(Activity activity, CheckBox cbMouseLeftHanded, CheckBox cbMouseLightgun, CheckBox cbMouse) {
         loadConfig(cbMouseLeftHanded, "use_xr_leftHanded", false, XrActivity.mouseLeftHanded);
         cbMouseLeftHanded.setOnCheckedChangeListener((compoundButton, checked) -> {
             saveConfig(cbMouseLeftHanded, "use_xr_leftHanded", checked);
@@ -78,9 +101,37 @@ public class XrDialog extends ContentDialog {
         });
         cbMouseLeftHanded.setEnabled(cbMouse.isChecked());
         cbMouseLightgun.setEnabled(cbMouse.isChecked());
+    }
 
-        btEditor.setOnClickListener(v -> new XrControllerDialog(activity).show());
-        btEditor.setVisibility(XrActivity.isActive() ? View.GONE : View.VISIBLE);
+    public static List<String> getProfileNames(Activity activity) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
+        List<String> names = new ArrayList<>();
+        for (int i = 0; i < prefs.getInt(XrControllerDialog.XR_CONTROLLER_PROFILE_COUNT, 1); i++)
+            names.add(prefs.getString(XrControllerDialog.XR_CONTROLLER_PROFILE_NAME + i, "Default profile"));
+        return names;
+    }
+
+    public static void controllerUISpinner(Activity activity, Spinner[] sControllerProfile) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
+        List<String> names = getProfileNames(activity);
+        for (Spinner s : sControllerProfile) {
+            s.setAdapter(new ArrayAdapter<>(activity, android.R.layout.simple_spinner_dropdown_item, names));
+            s.setSelection(prefs.getInt(XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, 0));
+            s.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> adapterView, View view, int index, long l) {
+                    SharedPreferences.Editor e = prefs.edit();
+                    e.putInt(XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, index);
+                    e.commit();
+                    XrController.cleanMappingCache();
+                    controllerUISpinner(activity, sControllerProfile);
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> adapterView) {
+                }
+            });
+        }
     }
 
     public static void hmdUI(Activity activity, CheckBox cbSBS, CheckBox cbImmersiveMode, CheckBox cbCurvedScreen, CheckBox cbPassthrough, TextView tvToApplyClose) {

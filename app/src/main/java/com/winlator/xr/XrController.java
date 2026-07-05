@@ -36,6 +36,7 @@ import com.winlator.cmod.xserver.XKeycode;
 import com.winlator.xr.api.XrAPI;
 import com.winlator.xr.api.XrInterface;
 import com.winlator.xr.ui.XrContentDialog;
+import com.winlator.xr.ui.XrControllerDialog;
 
 import java.util.Vector;
 
@@ -45,7 +46,6 @@ public class XrController {
         THUMBSTICK_UP, THUMBSTICK_DOWN, THUMBSTICK_LEFT, THUMBSTICK_RIGHT
     }
 
-    private static final String KEY_MAPPING = "KEY_MAPPING";
     private static String mapping = null;
 
     private final XrActivity instance;
@@ -321,22 +321,31 @@ public class XrController {
         return buttons[button.ordinal()] && !lastButtons[button.ordinal()];
     }
 
+    public static void cleanMappingCache() {
+        mapping = null;
+    }
+
     public static byte getMapping(Context context, Mapping input) {
         if (mapping == null) {
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-            mapping = prefs.getString(KEY_MAPPING, getDefaultMapping());
+            int index = prefs.getInt(XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, 0);
+            String key = XrControllerDialog.XR_CONTROLLER_PROFILE_VALUE + index;
+            mapping = prefs.getString(key, getDefaultMapping());
         }
         return (byte) mapping.charAt(input.ordinal());
     }
 
-    public static void setMapping(Context context, String value) {
+    public static void setMapping(Context context, String name, String value) {
         mapping = value;
-        SharedPreferences.Editor e = PreferenceManager.getDefaultSharedPreferences(context).edit();
-        e.putString(KEY_MAPPING, mapping);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        int index = prefs.getInt(XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, 0);
+        SharedPreferences.Editor e = prefs.edit();
+        e.putString(XrControllerDialog.XR_CONTROLLER_PROFILE_NAME + index, name);
+        e.putString(XrControllerDialog.XR_CONTROLLER_PROFILE_VALUE + index, value);
         e.apply();
     }
 
-    private static String getDefaultMapping() {
+    public static String getDefaultMapping() {
         //The order has to be the same as in Mapping enum
         String output = "";
         output += (char)XKeycode.KEY_A.id;

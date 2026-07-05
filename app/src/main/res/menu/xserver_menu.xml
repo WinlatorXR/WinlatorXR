@@ -27,7 +27,7 @@
             android:icon="@drawable/icon_input_controls" />
         <item
             android:id="@+id/main_menu_controller_assignment"
-            android:title="@string/controller_manager"
+            android:title="@string/external_controllers"
             android:icon="@drawable/icon_gamepad" />
         <item
             android:id="@+id/main_menu_motion_controls"

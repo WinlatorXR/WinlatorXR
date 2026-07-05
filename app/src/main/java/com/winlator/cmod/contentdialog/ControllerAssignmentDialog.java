@@ -94,7 +94,7 @@ public class ControllerAssignmentDialog {
                     new ContextThemeWrapper(activity, dark ? R.style.ContentDialog : R.style.AppTheme);
 
             this.dialog = new ContentDialog(themed, R.layout.controller_assignment_dialog);
-            this.dialog.setTitle(R.string.controller_manager);
+            this.dialog.setTitle(R.string.external_controllers);
 
             if (dark) {
                 View root = dialog.getContentView();

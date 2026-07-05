@@ -438,6 +438,7 @@
     <string name="use_curved_screen">Use curved screen</string>
     <string name="use_immersive_mode">3DoF immersive mode (experimental)</string>
     <string name="use_sbs">Map side-by-side 3D render to left and right eye</string>
+    <string name="controller_profile">Controller profile</string>
     <string name="to_apply_close">To apply the change, close this dialog</string>
     <string name="xr" translatable="false">XR</string>
     <string name="cpu_level">CPU level</string>
@@ -716,7 +717,6 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="dpad_down">D‑Pad Down</string>
     <string name="dpad_left">D‑Pad Left</string>
     <string name="dpad_right">D‑Pad Right</string>
-    <string name="controller_manager">Controller Manager</string>
     <string name="gyro_target_stick">Apply to</string>
     <string name="right_stick">Right stick</string>
     <string name="left_stick">Left stick</string>

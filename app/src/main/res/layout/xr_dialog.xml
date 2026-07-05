@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
 <LinearLayout
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="10dp"
-    xmlns:android="http://schemas.android.com/apk/res/android">
+    android:layout_margin="10dp">
 
     <TextView
         android:id="@+id/TVToApplyClose"
@@ -84,10 +87,25 @@
         android:background="@drawable/xr_selector"
         android:text="@string/light_gun_mouse" />
 
-    <Button
-        android:id="@+id/BTControlsEditor"
+
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/controls_editor"
-        android:layout_marginTop="8dp" />
+        android:layout_marginTop="10dp"
+        android:text="@string/controller_profile" />
+
+    <Spinner
+        style="@style/ComboBox"
+        android:id="@+id/SControllerProfile"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:spinnerMode="dialog" />
+
+    <ListView
+        android:id="@+id/listView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:focusable="true"
+        android:choiceMode="singleChoice"/>
 </LinearLayout>
+</ScrollView>
