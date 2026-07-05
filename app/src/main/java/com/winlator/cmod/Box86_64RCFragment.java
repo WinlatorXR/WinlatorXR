@@ -67,6 +67,9 @@ public class Box86_64RCFragment extends Fragment {
     private Spinner sRCFile;
     private Callback<RCFile> importRCFileCallback;
 
+    private View btNewGroup;
+    private View btImportGroup;
+
     private boolean isDarkMode;
 
     @Override
@@ -99,8 +102,8 @@ public class Box86_64RCFragment extends Fragment {
         View btDuplicateRCFile = layout.findViewById(R.id.BTDuplicateRCFile);
         View btExportRCFile = layout.findViewById(R.id.BTExportRCFile);
         View btRemoveRCFile = layout.findViewById(R.id.BTRemoveRCFile);
-        View btNewGroup = layout.findViewById(R.id.BTNewGroup);
-        View btImportGroup = layout.findViewById(R.id.BTImportGroup);
+        btNewGroup = layout.findViewById(R.id.BTNewGroup);
+        btImportGroup = layout.findViewById(R.id.BTImportGroup);
 
         View[] buttons = {btAddRCFile, btEditRCFile, btDuplicateRCFile, btExportRCFile, btRemoveRCFile, btNewGroup, btImportGroup};
         for (View button : buttons)
@@ -141,6 +144,8 @@ public class Box86_64RCFragment extends Fragment {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 currentRCFile = position > 0 ? rcfiles.get(position - 1) : null;
+                btNewGroup.setVisibility(position > 0 ? View.VISIBLE : View.GONE);
+                btImportGroup.setVisibility(position > 0 ? View.VISIBLE : View.GONE);
                 loadRCGroupList();
             }
 

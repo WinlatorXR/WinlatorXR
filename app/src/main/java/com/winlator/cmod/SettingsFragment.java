@@ -442,12 +442,6 @@ public class SettingsFragment extends Fragment {
             selectBackupFileForRestore();
         });
 
-        final Button bButtonBox64RC = view.findViewById(R.id.BTBox64RC);
-        bButtonBox64RC.setOnClickListener(view1 -> getActivity().getSupportFragmentManager().beginTransaction()
-                .setCustomAnimations(R.anim.slide_in_up, R.anim.slide_out_down)  // Forward animation
-                .replace(R.id.FLFragmentContainer, new Box86_64RCFragment())
-                .commit());
-
 //        int finalSelectedIndex = selectedIndex;
             saveButton = view.findViewById(R.id.BTConfirm);
             saveButton.setVisibility(View.GONE);

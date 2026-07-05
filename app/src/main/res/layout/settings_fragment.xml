@@ -363,15 +363,6 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:text="@string/reinstall_imagefs" />
-
-                            <Button
-                                style="@style/ButtonPositive"
-                                android:id="@+id/BTBox64RC"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="@string/box64_rc_file" />
-
                            </LinearLayout>
 
                             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
@@ -451,6 +442,12 @@
                             android:layout_marginRight="0dp"
                             android:src="@drawable/icon_remove" />
                     </LinearLayout>
+
+                    <fragment
+                        android:id="@+id/box64_rc_file"
+                        android:name="com.winlator.cmod.Box86_64RCFragment"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
                 </LinearLayout>
 
                 <TextView
