@@ -417,6 +417,7 @@ public class AmazonGamesActivity extends NavActivity {
                     String dir = prefs.getString("amazon_dir_" + g.productId, null);
                     new Thread(() -> {
                         if (dir != null) StoreGridUi.deleteDir(new File(dir));
+                        LudashiLaunchBridge.deleteShortcut(this, g.title);
                         prefs.edit()
                                 .remove("amazon_exe_" + g.productId)
                                 .remove("amazon_dir_" + g.productId)

@@ -485,7 +485,7 @@ public class GogGamesActivity extends NavActivity {
     private void launchGog(GogGame g) {
         String exe = prefs.getString("gog_exe_" + g.gameId, null);
         if (exe == null) { openDetailScreen(g); return; }
-        GogLaunchHelper.addToLauncher(this, g.title, exe);
+        LudashiLaunchBridge.addToLauncher(this, g.title, exe);
     }
 
     private void uninstallGog(GogGame g) {
@@ -496,6 +496,7 @@ public class GogGamesActivity extends NavActivity {
                     String dir = prefs.getString("gog_dir_" + g.gameId, null);
                     new Thread(() -> {
                         if (dir != null) StoreGridUi.deleteDir(new File(dir));
+                        LudashiLaunchBridge.deleteShortcut(this, g.title);
                         prefs.edit()
                                 .remove("gog_dir_" + g.gameId)
                                 .remove("gog_exe_" + g.gameId)

@@ -12,6 +12,7 @@ import android.view.ViewGroup
 import android.widget.*
 import com.winlator.cmod.NavActivity
 import com.winlator.cmod.R
+import com.winlator.cmod.store.LudashiLaunchBridge
 import java.io.File
 import java.net.URL
 
@@ -456,6 +457,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
 
             if (g.installDir.isNotEmpty()) {
                 Thread {
+                    LudashiLaunchBridge.deleteShortcut(this, g.name)
                     try {
                         File(g.installDir).deleteRecursively()
                     } catch (_: Exception) {}

@@ -330,7 +330,7 @@ public class GogGameDetailActivity extends NavActivity {
         launchBtn.setOnClickListener(v -> {
             String exe = prefs.getString("gog_exe_" + gameId, null);
             if (exe != null) {
-                GogLaunchHelper.addToLauncher(this, title, exe);
+                LudashiLaunchBridge.addToLauncher(this, title, exe);
             } else {
                 String dir = prefs.getString("gog_dir_" + gameId, null);
                 File installPath = GogInstallPath.getInstallDir(this, dir);
@@ -339,7 +339,7 @@ public class GogGameDetailActivity extends NavActivity {
                 showExePicker(candidates, selected -> {
                     if (selected != null && !selected.isEmpty()) {
                         prefs.edit().putString("gog_exe_" + gameId, selected).apply();
-                        uiHandler.post(() -> GogLaunchHelper.addToLauncher(this, title, selected));
+                        uiHandler.post(() -> LudashiLaunchBridge.addToLauncher(this, title, selected));
                     }
                 });
             }
@@ -493,6 +493,7 @@ public class GogGameDetailActivity extends NavActivity {
         new Thread(() -> {
             File installPath = new File(dirName);
             deleteDir(installPath);
+            LudashiLaunchBridge.deleteShortcut(this, title);
             prefs.edit()
                 .remove("gog_dir_" + gameId)
                 .remove("gog_exe_" + gameId)

@@ -465,6 +465,7 @@ public class EpicGameDetailActivity extends NavActivity {
                 AlertDialog progress = showUninstallProgress();
                 new Thread(() -> {
                     deleteDir(new File(dir));
+                    LudashiLaunchBridge.deleteShortcut(this, title);
                     prefs.edit()
                         .remove("epic_exe_" + appName)
                         .remove("epic_dir_" + appName)

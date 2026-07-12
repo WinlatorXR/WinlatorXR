@@ -416,6 +416,7 @@ public class EpicGamesActivity extends NavActivity {
                     String dir = prefs.getString("epic_dir_" + g.appName, null);
                     new Thread(() -> {
                         if (dir != null) StoreGridUi.deleteDir(new File(dir));
+                        LudashiLaunchBridge.deleteShortcut(this, g.title);
                         prefs.edit()
                                 .remove("epic_exe_" + g.appName)
                                 .remove("epic_dir_" + g.appName)

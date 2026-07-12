@@ -14,6 +14,7 @@ import android.widget.*
 import com.winlator.cmod.NavActivity
 import com.winlator.cmod.R
 import java.util.concurrent.Executors
+import kotlin.io.deleteRecursively
 
 /**
  * Steam library screen — shows only type="game" entries.
@@ -461,6 +462,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         val db = SteamRepository.getInstance().database
         db.markUninstalled(game.appId)
         if (game.installDir.isNotEmpty()) {
+            LudashiLaunchBridge.deleteShortcut(this, game.name)
             Thread { java.io.File(game.installDir).deleteRecursively() }.start()
         }
         loadGames()

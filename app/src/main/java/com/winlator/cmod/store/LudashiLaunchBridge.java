@@ -2,20 +2,27 @@ package com.winlator.cmod.store;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.widget.Toast;
+
+import androidx.annotation.Nullable;
 
 import com.winlator.cmod.XServerDisplayActivity;
 import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.ContainerManager;
 import com.winlator.cmod.container.Shortcut;
+import com.winlator.cmod.core.FileUtils;
 import com.winlator.xr.XrActivity;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -30,6 +37,8 @@ import java.util.List;
  * Ludashi's Shortcuts list where the user can launch and configure it.
  */
 public final class LudashiLaunchBridge {
+
+    private static final String TAG = "LudashiLaunchBridge";
 
     private LudashiLaunchBridge() {}
 
@@ -77,6 +86,61 @@ public final class LudashiLaunchBridge {
         }).start();
     }
 
+    public static void deleteShortcut(Context context, String name) {
+        name = safeString(name);
+        for (Shortcut shortcut : getShortcutsList(context)) {
+            if (name.compareTo(safeString(shortcut.name)) == 0) {
+                safeDelete(shortcut.file);
+                deletePairedLnkForShortcut(shortcut);
+            }
+        }
+    }
+
+    private static void deletePairedLnkForShortcut(Shortcut shortcut) {
+        if (shortcut == null || shortcut.file == null) return;
+        File dir = shortcut.file.getParentFile();
+        if (dir == null) return;
+
+        String base = FileUtils.getBasename(shortcut.file.getName()); // strips extension
+        File lnk = new File(dir, base + ".lnk");
+        boolean deleted = safeDelete(lnk);
+        if (deleted) {
+            Log.d(TAG, "Paired .lnk removed: " + lnk.getAbsolutePath());
+        } else if (lnk.exists()) {
+            Log.w(TAG, "Paired .lnk exists but could not be removed: " + lnk.getAbsolutePath());
+        } else {
+            Log.d(TAG, "No paired .lnk found for " + base);
+        }
+    }
+
+    private static ArrayList<Shortcut> getShortcutsList(Context context) {
+
+        ArrayList<Shortcut> shortcuts = new ArrayList<>();
+
+        // ContainerManager can still throw (e.g. I/O permission issues).
+        // Keep the whole call in one try/catch so the UI never dies.
+        try {
+            ContainerManager manager = new ContainerManager(context);
+            for (Container c : manager.getContainers()) {
+                for (File f : c.getDesktopDir().listFiles((dir, n) -> n.endsWith(".desktop"))) {
+                    try {
+                        Shortcut s = new Shortcut(c, f);   // may throw
+                        // very cheap logical sanity check
+                        if (s.name == null || s.name.trim().isEmpty()) {
+                            throw new IllegalStateException("empty name");
+                        }
+                        shortcuts.add(s);
+
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Bad shortcut: " + f.getAbsolutePath(), t);
+                    }
+                }
+            }
+        } catch (Throwable fatal) {
+            Log.e(TAG, "Fatal error while scanning shortcuts!", fatal);
+        }
+        return shortcuts;
+    }
 
     private static void runFromShortcut(Activity activity, Shortcut shortcut) {
         if (!XrActivity.isEnabled(activity)) {
@@ -90,6 +154,27 @@ public final class LudashiLaunchBridge {
             activity.startActivity(intent);
         }
         else XrActivity.openIntent(activity, shortcut.container.id, shortcut.file.getPath());
+    }
+
+    private static boolean safeDelete(@Nullable File f) {
+        try {
+            return f != null && f.exists() && f.delete();
+        } catch (Exception e) {
+            Log.e(TAG, "Delete failed for: " + (f != null ? f.getAbsolutePath() : "null"), e);
+            return false;
+        }
+    }
+
+    private static String safeString(String str) {
+        StringBuilder output = new StringBuilder();
+        for (int i = 0; i < str.length(); i++) {
+            char c = str.charAt(i);
+            if (c == ' ') output.append(c);
+            else if ((c >= '0') && (c <= '9')) output.append(c);
+            else if ((c >= 'a') && (c <= 'z')) output.append(c);
+            else if ((c >= 'A') && (c <= 'Z')) output.append(c);
+        }
+        return output.toString();
     }
 
     private static void writeShortcut(Activity activity, Container container,

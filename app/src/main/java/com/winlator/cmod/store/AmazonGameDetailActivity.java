@@ -445,6 +445,7 @@ public class AmazonGameDetailActivity extends NavActivity {
                 AlertDialog progress = showUninstallProgress();
                 new Thread(() -> {
                     deleteDir(new File(dir));
+                    LudashiLaunchBridge.deleteShortcut(this, title);
                     prefs.edit()
                         .remove("amazon_exe_" + productId)
                         .remove("amazon_dir_" + productId)
