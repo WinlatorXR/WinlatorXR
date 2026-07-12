@@ -94,13 +94,42 @@
         android:layout_marginTop="10dp"
         android:text="@string/controller_profile" />
 
-    <Spinner
-        style="@style/ComboBox"
-        android:id="@+id/SControllerProfile"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:spinnerMode="dialog" />
+        <LinearLayout
+            android:id="@+id/LLSpinnerLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
+            <Spinner
+                style="@style/ComboBox"
+                android:id="@+id/SControllerPreset"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:spinnerMode="dialog" />
+
+            <ImageButton
+                style="@style/ListMenuButton"
+                android:id="@+id/BTAddControllerPreset"
+                android:src="@drawable/icon_add" />
+
+            <ImageButton
+                style="@style/ListMenuButton"
+                android:id="@+id/BTEditControllerPreset"
+                android:src="@drawable/icon_edit" />
+
+            <ImageButton
+                style="@style/ListMenuButton"
+                android:id="@+id/BTDuplicateControllerPreset"
+                android:src="@drawable/icon_duplicate" />
+
+            <ImageButton
+                style="@style/ListMenuButton"
+                android:id="@+id/BTRemoveControllerPreset"
+                android:layout_marginRight="0dp"
+                android:src="@drawable/icon_remove" />
+        </LinearLayout>
     <ListView
         android:id="@+id/listView"
         android:layout_width="match_parent"

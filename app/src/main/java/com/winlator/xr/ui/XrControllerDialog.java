@@ -22,6 +22,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
@@ -34,6 +35,7 @@ import com.winlator.cmod.xserver.XKeycode;
 import com.winlator.xr.XrController;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class XrControllerDialog extends ContentDialog {
     public static final String XR_CONTROLLER_PROFILE_COUNT = "XR_CONTROLLER_PROFILE_COUNT";
@@ -68,12 +70,12 @@ public class XrControllerDialog extends ContentDialog {
         });
     }
 
-    public static void profileUI(Activity activity, Spinner[] sControllerPreset,
+    public static void profileUI(Activity activity, Spinner sControllerPreset,
                                  View btAddControllerPreset, View btEditControllerPreset,
                                  View btDuplicateControllerPreset, View btRemoveControllerPreset) {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
-        XrDialog.controllerUISpinner(activity, sControllerPreset);
+        updateUISpinner(activity, sControllerPreset);
 
         btEditControllerPreset.setOnClickListener(v -> new XrControllerDialog(activity, () -> profileUI(activity, sControllerPreset,
                 btAddControllerPreset, btEditControllerPreset,
@@ -84,7 +86,7 @@ public class XrControllerDialog extends ContentDialog {
             e.putString(XR_CONTROLLER_PROFILE_NAME + count, "New profile");
             e.putInt(XR_CONTROLLER_PROFILE_COUNT, count + 1);
             e.commit();
-            XrDialog.controllerUISpinner(activity, sControllerPreset);
+            updateUISpinner(activity, sControllerPreset);
         });
         btDuplicateControllerPreset.setOnClickListener(view -> {
             int index = prefs.getInt(XR_CONTROLLER_PROFILE_INDEX, 0);
@@ -97,7 +99,7 @@ public class XrControllerDialog extends ContentDialog {
             e.putString(XR_CONTROLLER_PROFILE_VALUE + count, value);
             e.putInt(XR_CONTROLLER_PROFILE_COUNT, count + 1);
             e.commit();
-            XrDialog.controllerUISpinner(activity, sControllerPreset);
+            updateUISpinner(activity, sControllerPreset);
         });
         btRemoveControllerPreset.setOnClickListener(view -> {
             int index = prefs.getInt(XR_CONTROLLER_PROFILE_INDEX, 0);
@@ -112,7 +114,7 @@ public class XrControllerDialog extends ContentDialog {
             e.putInt(XR_CONTROLLER_PROFILE_COUNT, count - 1);
             e.putInt(XR_CONTROLLER_PROFILE_INDEX, 0);
             e.commit();
-            XrDialog.controllerUISpinner(activity, sControllerPreset);
+            updateUISpinner(activity, sControllerPreset);
         });
     }
 
@@ -150,5 +152,26 @@ public class XrControllerDialog extends ContentDialog {
             output[i] = value;
         }
         XrController.setMapping(getContext(), name, new String(output));
+    }
+
+    private static void updateUISpinner(Activity activity, Spinner sControllerProfile) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
+        List<String> names = XrDialog.getProfileNames(activity);
+        sControllerProfile.setAdapter(new ArrayAdapter<>(activity, android.R.layout.simple_spinner_dropdown_item, names));
+        sControllerProfile.setSelection(prefs.getInt(XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, 0));
+        sControllerProfile.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int index, long l) {
+                SharedPreferences.Editor e = prefs.edit();
+                e.putInt(XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, index);
+                e.commit();
+                XrController.cleanMappingCache();
+                updateUISpinner(activity, sControllerProfile);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+            }
+        });
     }
 }
