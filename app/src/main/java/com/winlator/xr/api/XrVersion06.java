@@ -12,6 +12,9 @@ public class XrVersion06 extends XrVersion05 {
                 " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_QX.ordinal()]) +
                 " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_QY.ordinal()]) +
                 " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_QZ.ordinal()]) +
-                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_QW.ordinal()]);
+                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_QW.ordinal()]) +
+                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_X.ordinal()]) +
+                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_Y.ordinal()]) +
+                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_Z.ordinal()]);
     }
 }
