@@ -228,7 +228,7 @@ JNIEXPORT jfloatArray JNICALL Java_com_winlator_xr_XrActivity_getAxes(JNIEnv *en
     data[count++] = xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOVX]; //HMD_FOVX
     data[count++] = xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOVY]; //HMD_FOVY
     data[count++] = xr_module_renderer.FrameSync; //HMD_SYNC
-    data[count++] = xr_module_renderer.HmdAltitude; //HMD_ALTITUDE
+    data[count++] = xr_module_renderer.HmdStage.position.y; //HMD_ALTITUDE
     data[count++] = lgPose.orientation.x; //LG_QX
     data[count++] = lgPose.orientation.y; //LG_QY
     data[count++] = lgPose.orientation.z; //LG_QZ
@@ -237,6 +237,10 @@ JNIEXPORT jfloatArray JNICALL Java_com_winlator_xr_XrActivity_getAxes(JNIEnv *en
     data[count++] = rgPose.orientation.y; //RG_QY
     data[count++] = rgPose.orientation.z; //RG_QZ
     data[count++] = rgPose.orientation.w; //RG_QW
+    data[count++] = xr_module_renderer.HmdStage.orientation.x; //HMD_STAGE_QX
+    data[count++] = xr_module_renderer.HmdStage.orientation.y; //HMD_STAGE_QY
+    data[count++] = xr_module_renderer.HmdStage.orientation.z; //HMD_STAGE_QZ
+    data[count++] = xr_module_renderer.HmdStage.orientation.w; //HMD_STAGE_QW
 
     jfloat values[count];
     memcpy(values, data, count * sizeof(float));

@@ -219,7 +219,7 @@ bool XrRendererInitFrame(struct XrEngine* engine, struct XrRenderer* renderer)
     XrSpaceLocation loc = {};
     loc.type = XR_TYPE_SPACE_LOCATION;
     OXR(xrLocateSpace(engine->HeadSpace, engine->StageSpace, engine->PredictedDisplayTime, &loc));
-    renderer->HmdAltitude = loc.pose.position.y;
+    renderer->HmdStage = loc.pose;
 
     renderer->ConfigFloat[CONFIG_VIEWPORT_FOVX] = ToDegrees(fovx);
     renderer->ConfigFloat[CONFIG_VIEWPORT_FOVY] = ToDegrees(fovy);
