@@ -291,8 +291,10 @@ public class XrActivity extends XServerDisplayActivity {
             if (wheelEmulation && !isVR) {
                 xrController.updateWheelEmulation(axes);
             }
-            xrController.updateMouseState(buttons);
-            xrController.updateKeyboardButtons(buttons);
+            if (!isVR) {
+                xrController.updateMouseState(buttons);
+                xrController.updateKeyboardButtons(buttons);
+            }
         }
     }
 
