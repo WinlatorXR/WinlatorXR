@@ -46,7 +46,6 @@ public class XrAPI implements XrInterface {
     private static final String VERSION_FILE = "version";
 
     private XrInterface impl = null;
-    private boolean running = false;
     private final DatagramSocket socket = new DatagramSocket();
 
     private String debugIp = null;
@@ -155,10 +154,6 @@ public class XrAPI implements XrInterface {
         }
     }
 
-    public void stop() {
-        running = false;
-    }
-
     public void updateImplementation() {
         if (impl != null) {
             return;
@@ -194,7 +189,6 @@ public class XrAPI implements XrInterface {
     }
 
     private void startUDPthreads() {
-        running = true;
         for (PortIntent intent : PortIntent.values()) {
             try {
                 int port = getPortIn(intent);
@@ -207,7 +201,7 @@ public class XrAPI implements XrInterface {
                     // start listening to the port
                     Thread udpThread = new Thread(() -> {
                         try {
-                            while (running) {
+                            while (XrActivity.isActive()) {
                                 socket.receive(packet);
                                 dataReceived(intent, new String(buffer, 0, packet.getLength()));
                                 Thread.sleep(10);
