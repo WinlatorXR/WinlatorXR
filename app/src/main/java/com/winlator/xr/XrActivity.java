@@ -32,7 +32,6 @@ import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.R;
 import com.winlator.cmod.XServerDisplayActivity;
-import com.winlator.cmod.inputcontrols.ControllerManager;
 import com.winlator.xr.api.XrAPI;
 import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.cmod.xserver.Drawable;
@@ -102,10 +101,8 @@ public class XrActivity extends XServerDisplayActivity {
             }
         }
 
-        ControllerManager controllerManager = ControllerManager.getInstance();
-        controllerManager.scanForDevices();
-        if (!controllerManager.isSlotEnabled(0)) {
-            controllerManager.setSlotEnabled(0, true);
+        if (wheelEmulation) {
+            XrController.ensureVirtualControllerAttached();
         }
     }
 

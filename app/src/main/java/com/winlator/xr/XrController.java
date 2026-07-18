@@ -30,6 +30,7 @@ import com.drbeef.externalhapticsservice.HapticsConstants;
 import com.drbeef.externalhapticsservice.HapticServiceClient;
 
 import com.winlator.cmod.contentdialog.NavigationDialog;
+import com.winlator.cmod.inputcontrols.ControllerManager;
 import com.winlator.cmod.xserver.Keyboard;
 import com.winlator.cmod.xserver.Pointer;
 import com.winlator.cmod.xserver.XKeycode;
@@ -323,6 +324,14 @@ public class XrController {
 
     public static void cleanMappingCache() {
         mapping = null;
+    }
+
+    public static void ensureVirtualControllerAttached() {
+        ControllerManager controllerManager = ControllerManager.getInstance();
+        controllerManager.scanForDevices();
+        if (!controllerManager.isSlotEnabled(0)) {
+            controllerManager.setSlotEnabled(0, true);
+        }
     }
 
     public static byte getMapping(Context context, Mapping input) {

@@ -33,6 +33,7 @@ import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.winhandler.WinHandler;
 import com.winlator.xr.XrActivity;
+import com.winlator.xr.XrController;
 
 import java.util.List;
 
@@ -240,6 +241,9 @@ public class MotionControls implements SensorEventListener {
                     e.putBoolean("use_xr_wheel", checked);
                     e.apply();
                     XrActivity.wheelEmulation = checked;
+                    if (checked) {
+                        XrController.ensureVirtualControllerAttached();
+                    }
                 });
             }
         }
