@@ -13,6 +13,7 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -40,6 +41,7 @@ import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.tabs.TabLayout;
 import com.winlator.xr.XrActivity;
 import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.ContainerManager;
@@ -73,6 +75,8 @@ public class ContainersFragment extends Fragment {
 
     private ImageView favoriteActionView;
 
+    private int currentTab = 0;
+
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -97,27 +101,63 @@ public class ContainersFragment extends Fragment {
         emptyTextView = frameLayout.findViewById(R.id.TVEmptyText);
         recyclerView.setLayoutManager(new LinearLayoutManager(recyclerView.getContext()));
         recyclerView.addItemDecoration(new DividerItemDecoration(recyclerView.getContext(), DividerItemDecoration.VERTICAL));
+
+        // Tab switcher
+        TabLayout tabLayout = frameLayout.findViewById(R.id.TabLayout);
+        tabLayout.setTabTextColors(Color.LTGRAY, Color.WHITE);
+        tabLayout.setSelectedTabIndicatorColor(Color.WHITE);
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                currentTab = tab.getPosition();
+                loadContainersList();
+                requireActivity().invalidateOptionsMenu();
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+                onTabSelected(tab);
+            }
+        });
+        tabLayout.selectTab(tabLayout.getTabAt(0));
         return frameLayout;
     }
 
     private void loadContainersList() {
-        ArrayList<Container> containers = manager.getContainers();
-        recyclerView.setAdapter(new ContainersAdapter(containers));
-        emptyTextView.setVisibility(containers.isEmpty() ? View.VISIBLE : View.GONE);
-    }
-
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        // re-create the menu so the icon always matches current favorite
-        requireActivity().invalidateOptionsMenu();
+        if (manager != null) {
+            ArrayList<Container> containers;
+            if (currentTab == 0) {
+                containers = manager.getContainers();
+            } else {
+                int index = 0;
+                File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Winlator/Backups/Containers");
+                containers = new ArrayList<>();
+                if (dir != null && dir.exists()) {
+                    for (File file : dir.listFiles()) {
+                        if (!file.isDirectory() && file.getAbsolutePath().endsWith(".tzst")) {
+                            Container c = new Container(index++);
+                            c.setName(file.getName());
+                            containers.add(c);
+                        }
+                    }
+                }
+            }
+            recyclerView.setAdapter(new ContainersAdapter(containers));
+            emptyTextView.setVisibility(containers.isEmpty() ? View.VISIBLE : View.GONE);
+        }
     }
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         menu.clear();
         inflater.inflate(R.menu.containers_menu, menu);
+
+        menu.findItem(R.id.containers_menu_add).setVisible(currentTab == 0);
+        menu.findItem(R.id.containers_menu_import).setVisible(currentTab == 1);
 
         // Other items tinting...
         MenuItem bigPictureItem = menu.findItem(R.id.action_big_picture_mode);
@@ -546,6 +586,8 @@ public class ContainersFragment extends Fragment {
             holder.runButton.setOnClickListener(view -> proceedWithLaunch(item)); // Correct item reference
 
             holder.menuButton.setOnClickListener(view -> showListItemMenu(view, item));
+
+            holder.runButton.setVisibility(currentTab == 0 ? View.VISIBLE : View.GONE);
         }
 
         @Override
@@ -574,11 +616,20 @@ public class ContainersFragment extends Fragment {
         private void showListItemMenu(View anchorView, Container container) {
             final Context context = getContext();
             PopupMenu listItemMenu = new PopupMenu(context, anchorView);
-            listItemMenu.inflate(R.menu.container_popup_menu);
+            listItemMenu.inflate(currentTab == 0 ? R.menu.container_popup_menu : R.menu.container_backup_menu);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) listItemMenu.setForceShowIcon(true);
 
+            File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Winlator/Backups/Containers");
             listItemMenu.setOnMenuItemClickListener((menuItem) -> {
                 switch (menuItem.getItemId()) {
+                    case R.id.backup_import:
+                        File file = new File(dir, container.getName());
+                        importContainerArchive(Uri.fromFile(file));
+                        break;
+                    case R.id.backup_remove:
+                        new File(dir, container.getName()).delete();
+                        loadContainersList();
+                        break;
                     case R.id.container_edit:
                         FragmentManager fragmentManager = getParentFragmentManager();
                         fragmentManager.beginTransaction()

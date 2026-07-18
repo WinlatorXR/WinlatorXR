@@ -13,6 +13,7 @@
     <string name="store">Store</string>
     <string name="shortcuts">Shortcuts</string>
     <string name="containers">Containers</string>
+    <string name="container_list">Container list</string>
     <string name="input_controls">Input Controls</string>
     <string name="no_items_to_display">No items to display.</string>
     <string name="no_items_to_display_envvars">No environmental variables activated.</string>
@@ -387,6 +388,8 @@
     <string name="exporting_save">Exporting save...</string>
     <string name="importing_save">Importing save...</string>
     <string name="_copy">copy</string>
+    <string name="backups">Backups</string>
+    <string name="backup_images">Backup images</string>
     <string name="backing_up_data">Backing up data...</string>
     <string name="restoring_data">Restoring data...</string>
     <string name="midi_sound_font">MIDI SoundFont</string>
