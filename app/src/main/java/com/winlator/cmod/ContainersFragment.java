@@ -4,12 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.graphics.Bitmap;
 import android.graphics.Color;
-import android.graphics.PorterDuff;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -30,13 +25,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.content.res.AppCompatResources;
-import androidx.appcompat.widget.AppCompatImageView;
-import androidx.core.view.ViewCompat;
-import androidx.documentfile.provider.DocumentFile;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
-import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -54,10 +44,6 @@ import com.winlator.cmod.core.PreloaderDialog;
 import com.winlator.cmod.xenvironment.ImageFs;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -68,12 +54,6 @@ public class ContainersFragment extends Fragment {
     private TextView emptyTextView;
     private ContainerManager manager;
     private PreloaderDialog preloaderDialog;
-
-    private MenuItem favoriteItem;
-
-    private static final String PREF_FAVORITE_UUID = "favorite_uuid";
-
-    private ImageView favoriteActionView;
 
     private int currentTab = 0;
 
@@ -158,48 +138,6 @@ public class ContainersFragment extends Fragment {
 
         menu.findItem(R.id.containers_menu_add).setVisible(currentTab == 0);
         menu.findItem(R.id.containers_menu_import).setVisible(currentTab == 1);
-
-        favoriteItem = menu.findItem(R.id.action_favorite_star);
-        if (favoriteItem != null) {
-            // Ensure it shows in the toolbar
-            favoriteItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
-
-            // Create an ImageView as the action view
-            AppCompatImageView iv = new AppCompatImageView(requireContext());
-            int pad = dp(8);
-            iv.setPadding(pad, pad, pad, pad);
-            iv.setAdjustViewBounds(true);
-            iv.setClickable(true);
-            iv.setFocusable(true);
-            iv.setContentDescription(getString(R.string.app_name)); // or "Favorite shortcut"
-            ViewCompat.setTooltipText(iv, "Favorite");
-
-            favoriteItem.setActionView(iv);
-            favoriteActionView = iv;
-
-            // Click => launch (or prompt to choose)
-            iv.setOnClickListener(v -> handleFavoriteClick());
-
-            // Long‑press => clear (if set)
-            iv.setOnLongClickListener(v -> {
-                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
-                Shortcut fav = getFavoriteShortcut();
-                if (fav == null) {
-                    Toast.makeText(getContext(), "No favorite assigned.", Toast.LENGTH_SHORT).show();
-                } else {
-                    new AlertDialog.Builder(getContext())
-                            .setTitle("Clear favorite")
-                            .setMessage("Remove the current favorite?")
-                            .setPositiveButton("Remove", (d, w) -> clearFavorite())
-                            .setNegativeButton("Cancel", null)
-                            .show();
-                }
-                return true;
-            });
-        }
-
-        // Finally, paint the current icon into the view
-        applyFavoriteIcon();
     }
 
     @Override
@@ -214,127 +152,9 @@ public class ContainersFragment extends Fragment {
                 openImportContainerArchive();
                 return true;
 
-//            case R.id.action_terminal:  // New case for TerminalActivity
-//                openTerminal();
-//                return true;
-
-//            case R.id.action_copy_dev_libs:
-//                copyDevLibs();
-//                return true;
-
-            case R.id.action_favorite_star: {
-                Shortcut fav = getFavoriteShortcut();
-                if (fav == null) {
-                    new AlertDialog.Builder(getContext())
-                            .setTitle("Favorite")
-                            .setMessage("No favorite assigned. Choose one now?")
-                            .setPositiveButton("Choose", (d, w) -> {
-                                getParentFragmentManager().beginTransaction()
-                                        .setCustomAnimations(R.anim.slide_in_up, R.anim.slide_out_down,
-                                                R.anim.slide_in_down, R.anim.slide_out_up)
-                                        .addToBackStack(null)
-                                        .replace(R.id.FLFragmentContainer, new ShortcutsFragment())
-                                        .commit();
-                            })
-                            .setNegativeButton("Cancel", null)
-                            .show();
-                } else {
-                    runShortcut(fav);
-                }
-                return true;
-            }
-
-
             default:
                 return super.onOptionsItemSelected(menuItem);
         }
-    }
-
-    private void runShortcut(Shortcut s) {
-        Intent intent = new Intent(getActivity(), XServerDisplayActivity.class);
-        intent.setAction(Intent.ACTION_VIEW);
-        intent.putExtra("container_id", s.container.id);
-        intent.putExtra("shortcut_path", s.file.getPath());
-        startActivity(intent);
-    }
-
-    private void copyDevLibs() {
-        // Use requireActivity() or getActivity() to get the context
-        android.content.res.AssetManager assetManager = requireActivity().getAssets();
-        String sourceDir = "devLibs";
-        String destDir = "/data/data/com.winlator.cmod/files/imagefs/opt/proton-9.0-arm64ec/lib/wine/aarch64-unix/";
-
-        try {
-            // Create the destination directory if it doesn't exist
-            java.io.File destDirFile = new java.io.File(destDir);
-            if (!destDirFile.exists()) {
-                if (!destDirFile.mkdirs()) {
-                    // If directory creation fails, show an error and exit
-                    android.widget.Toast.makeText(requireActivity(), "Failed to create destination directory.", android.widget.Toast.LENGTH_SHORT).show();
-                    return;
-                }
-            }
-
-            // List all files in the assets/devLibs folder
-            String[] files = assetManager.list(sourceDir);
-            if (files == null || files.length == 0) {
-                android.widget.Toast.makeText(requireActivity(), "No dev libs found in assets.", android.widget.Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // Loop through each file and copy it
-            for (String filename : files) {
-                java.io.InputStream in = null;
-                java.io.OutputStream out = null;
-                try {
-                    in = assetManager.open(sourceDir + "/" + filename);
-                    java.io.File outFile = new java.io.File(destDir, filename);
-                    out = new java.io.FileOutputStream(outFile);
-
-                    // Copy the file in a buffered way
-                    byte[] buffer = new byte[1024];
-                    int read;
-                    while ((read = in.read(buffer)) != -1) {
-                        out.write(buffer, 0, read);
-                    }
-                } catch (java.io.IOException e) {
-                    // Log the error for debugging
-                    android.util.Log.e("CopyDevLibs", "Failed to copy asset file: " + filename, e);
-                    throw new java.io.IOException("Failed to copy " + filename, e); // Rethrow to be caught by the outer catch block
-                } finally {
-                    // Ensure streams are closed
-                    if (in != null) {
-                        try {
-                            in.close();
-                        } catch (java.io.IOException e) {
-                            // ignore
-                        }
-                    }
-                    if (out != null) {
-                        try {
-                            out.flush();
-                            out.close();
-                        } catch (java.io.IOException e) {
-                            // ignore
-                        }
-                    }
-                }
-            }
-
-            // If the loop completes without throwing an exception, it was successful
-            android.widget.Toast.makeText(requireActivity(), "Dev libs copied successfully!", android.widget.Toast.LENGTH_SHORT).show();
-
-        } catch (java.io.IOException e) {
-            // If any file fails, show a general error message
-            android.util.Log.e("CopyDevLibs", "An error occurred during asset copying.", e);
-            android.widget.Toast.makeText(requireActivity(), "Error copying dev libs.", android.widget.Toast.LENGTH_SHORT).show();
-        }
-    }
-
-
-    private void openTerminal() {
-        Intent intent = new Intent(getContext(), TerminalActivity.class);
-        startActivity(intent);
     }
 
     private void openCreateContainer() {
@@ -469,58 +289,6 @@ public class ContainersFragment extends Fragment {
         }).start();
     }
 
-
-    private boolean copyDocumentFileToDirectory(DocumentFile sourceDir, File targetDir) {
-        if (!sourceDir.isDirectory()) return false;
-
-        for (DocumentFile file : sourceDir.listFiles()) {
-            File targetFile = new File(targetDir, file.getName());
-            if (file.isDirectory()) {
-                if (!targetFile.mkdirs()) return false;
-                if (!copyDocumentFileToDirectory(file, targetFile)) return false;
-            } else {
-                try (InputStream in = getContext().getContentResolver().openInputStream(file.getUri());
-                     OutputStream out = new FileOutputStream(targetFile)) {
-                    byte[] buffer = new byte[1024];
-                    int len;
-                    while ((len = in.read(buffer)) > 0) {
-                        out.write(buffer, 0, len);
-                    }
-                } catch (IOException e) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    @Nullable
-    private Shortcut getFavoriteShortcut() {
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getContext());
-        String uuid = sp.getString(PREF_FAVORITE_UUID, null);
-        if (uuid == null || uuid.isEmpty()) return null;
-
-        if (manager == null) manager = new ContainerManager(getContext());
-        for (Shortcut sc : manager.loadShortcuts()) {
-            if (uuid.equals(sc.getExtra("uuid"))) return sc;
-        }
-        return null;
-    }
-
-    private void setFavorite(@NonNull Shortcut sc) {
-        if (sc.getExtra("uuid").isEmpty()) sc.genUUID();
-        PreferenceManager.getDefaultSharedPreferences(getContext())
-                .edit().putString(PREF_FAVORITE_UUID, sc.getExtra("uuid")).apply();
-        requireActivity().invalidateOptionsMenu();
-    }
-
-    private void clearFavorite() {
-        PreferenceManager.getDefaultSharedPreferences(getContext())
-                .edit().remove(PREF_FAVORITE_UUID).apply();
-        requireActivity().invalidateOptionsMenu();
-    }
-
-
     private class ContainersAdapter extends RecyclerView.Adapter<ContainersAdapter.ViewHolder> {
         private final List<Container> data;
 
@@ -529,8 +297,6 @@ public class ContainersFragment extends Fragment {
             private final ImageView menuButton; // Changed to ImageButton
             private final ImageView imageView;
             private final TextView title;
-
-            private static final String PREF_FAVORITE_UUID = "favorite_uuid";
 
             private ViewHolder(View view) {
                 super(view);
@@ -677,52 +443,5 @@ public class ContainersFragment extends Fragment {
                 });
             }
         }
-    }
-
-    private void handleFavoriteClick() {
-        Shortcut fav = getFavoriteShortcut();
-        if (fav == null) {
-            new AlertDialog.Builder(getContext())
-                    .setTitle("Favorite")
-                    .setMessage("No favorite assigned. Choose one now?")
-                    .setPositiveButton("Choose", (d, w) -> {
-                        getParentFragmentManager().beginTransaction()
-                                .setCustomAnimations(R.anim.slide_in_up, R.anim.slide_out_down,
-                                        R.anim.slide_in_down, R.anim.slide_out_up)
-                                .addToBackStack(null)
-                                .replace(R.id.FLFragmentContainer, new ShortcutsFragment())
-                                .commit();
-                    })
-                    .setNegativeButton("Cancel", null)
-                    .show();
-        } else {
-            runShortcut(fav);
-        }
-    }
-
-    private void applyFavoriteIcon() {
-        if (favoriteItem == null) return;
-
-        Shortcut hit = getFavoriteShortcut();
-        Drawable drawable;
-        if (hit != null && hit.icon != null) {
-            int size = dp(24);
-            Bitmap scaled = Bitmap.createScaledBitmap(hit.icon, size, size, true);
-            drawable = new BitmapDrawable(getResources(), scaled);
-            drawable.setTintList(null);
-        } else {
-            drawable = AppCompatResources.getDrawable(requireContext(), R.drawable.ic_star_border);
-            drawable.mutate().setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN);
-        }
-
-        if (favoriteActionView != null) {
-            favoriteActionView.setImageDrawable(drawable);
-        } else {
-            favoriteItem.setIcon(drawable);
-        }
-    }
-
-    private int dp(int v) {
-        return Math.round(v * getResources().getDisplayMetrics().density);
     }
 }

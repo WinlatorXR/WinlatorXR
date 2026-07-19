@@ -61,11 +61,6 @@
         </activity>
 
         <activity
-            android:name="com.winlator.cmod.BigPictureActivity"
-            android:theme="@style/Theme.AppCompat"
-            android:exported="false" />
-
-        <activity
             android:name="com.winlator.cmod.TerminalActivity"
             android:theme="@style/Theme.AppCompat"
             android:exported="false" />

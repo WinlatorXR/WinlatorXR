@@ -566,12 +566,6 @@ public class ShortcutsFragment extends Fragment {
                 else if (itemId == R.id.shortcut_properties) {
                     showShortcutProperties(shortcut);
                 }
-                else if (itemId == R.id.shortcut_set_favorite) {
-                    if (shortcut.getExtra("uuid").equals("")) shortcut.genUUID();  // ensure UUID
-                    PreferenceManager.getDefaultSharedPreferences(context)
-                            .edit().putString("favorite_uuid", shortcut.getExtra("uuid")).apply();
-                    Toast.makeText(context, "Favorite set to " + shortcut.name, Toast.LENGTH_SHORT).show();
-                }
                 return true;
             });
             listItemMenu.show();

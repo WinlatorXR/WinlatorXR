@@ -3,28 +3,6 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-
-
-<!--    <item-->
-<!--        android:id="@+id/action_terminal"-->
-<!--        android:title="Open Terminal"-->
-<!--        android:icon="@drawable/icon_env_var"-->
-<!--        app:showAsAction="ifRoom" />-->
-
-<!--    <item-->
-<!--        android:id="@+id/action_copy_dev_libs"-->
-<!--        android:title="Big Picture Mode"-->
-<!--        android:icon="@drawable/ic_copy_dev_libs"-->
-<!--        android:color="#FFFFFF"-->
-<!--        app:showAsAction="ifRoom" />-->
-
-    <item
-        android:id="@+id/action_favorite_star"
-        android:title="Favorite"
-        android:icon="@drawable/ic_star_border"
-        android:visible="false"
-    app:showAsAction="ifRoom" />
-
     <item
         android:id="@+id/containers_menu_add"
         android:icon="@drawable/icon_action_bar_add"
