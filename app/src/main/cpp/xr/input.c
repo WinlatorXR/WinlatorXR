@@ -305,21 +305,14 @@ void XrInputUpdate(struct XrEngine* engine, struct XrInput* input)
 
 void XrInputVibrate(struct XrInput* input, int duration, int chan, float intensity)
 {
-    for (int i = 0; i < 2; ++i)
-    {
-        int channel = i & chan;
-        if (channel)
-        {
-            if (input->VibrationChannelDuration[channel] > 0.0f)
-                return;
+    if (input->VibrationChannelDuration[chan] > 0.0f)
+        return;
 
-            if (input->VibrationChannelDuration[channel] == -1.0f && duration != 0.0f)
-                return;
+    if (input->VibrationChannelDuration[chan] == -1.0f && duration != 0.0f)
+        return;
 
-            input->VibrationChannelDuration[channel] = (float)duration;
-            input->VibrationChannelIntensity[channel] = intensity;
-        }
-    }
+    input->VibrationChannelDuration[chan] = (float)duration;
+    input->VibrationChannelIntensity[chan] = intensity;
 }
 
 XrAction XrInputCreateAction(XrActionSet output_set, XrActionType type, const char* name,
