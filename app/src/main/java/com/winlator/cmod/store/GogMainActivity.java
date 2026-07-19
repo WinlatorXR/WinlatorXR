@@ -10,8 +10,6 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.winlator.cmod.NavActivity;
-
 /**
  * Entry point for the GOG integration.
  * Shows either a login card or a signed-in card depending on

@@ -1,4 +1,4 @@
-package com.winlator.cmod;
+package com.winlator.cmod.store;
 
 import android.content.Context;
 import android.content.Intent;
@@ -31,6 +31,7 @@ import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.navigation.NavigationView;
+import com.winlator.cmod.R;
 
 public class NavActivity extends AppCompatActivity {
     private GridLayout gridLayout;

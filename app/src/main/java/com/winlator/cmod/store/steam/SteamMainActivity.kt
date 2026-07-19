@@ -5,7 +5,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import com.winlator.cmod.NavActivity
 
 /**
  * Entry point for the Steam store tab.

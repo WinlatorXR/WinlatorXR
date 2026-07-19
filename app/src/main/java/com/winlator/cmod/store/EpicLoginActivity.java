@@ -8,8 +8,6 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
-import com.winlator.cmod.NavActivity;
-
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**

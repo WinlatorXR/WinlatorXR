@@ -10,9 +10,7 @@ import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import com.winlator.cmod.NavActivity
 import com.winlator.cmod.R
-import com.winlator.cmod.store.LudashiLaunchBridge
 import java.io.File
 import java.net.URL
 

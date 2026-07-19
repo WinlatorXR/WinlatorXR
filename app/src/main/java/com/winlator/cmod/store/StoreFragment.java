@@ -1,4 +1,4 @@
-package com.winlator.cmod;
+package com.winlator.cmod.store;
 
 import android.content.Context;
 import android.content.Intent;
@@ -16,12 +16,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
-import com.winlator.cmod.store.AmazonMainActivity;
-import com.winlator.cmod.store.DownloadsActivity;
-import com.winlator.cmod.store.EpicMainActivity;
-import com.winlator.cmod.store.GogMainActivity;
-import com.winlator.cmod.store.SteamMainActivity;
-import com.winlator.cmod.store.StoreDownloadQueue;
+import com.winlator.cmod.R;
 
 public class StoreFragment extends Fragment {
     @Override

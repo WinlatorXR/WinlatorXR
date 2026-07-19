@@ -11,7 +11,6 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import com.winlator.cmod.NavActivity
 import com.winlator.cmod.R
 import java.util.concurrent.Executors
 import kotlin.io.deleteRecursively

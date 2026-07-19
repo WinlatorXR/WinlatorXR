@@ -57,6 +57,7 @@ import com.winlator.cmod.inputcontrols.ControllerManager;
 import com.winlator.cmod.saves.Save;
 import com.winlator.cmod.saves.SaveManager;
 import com.winlator.cmod.settings.SettingsFragment;
+import com.winlator.cmod.store.StoreFragment;
 import com.winlator.cmod.xenvironment.ImageFsInstaller;
 
 import java.io.File;

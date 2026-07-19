@@ -11,8 +11,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.winlator.cmod.NavActivity;
-
 /**
  * Entry point for the Epic Games integration.
  *

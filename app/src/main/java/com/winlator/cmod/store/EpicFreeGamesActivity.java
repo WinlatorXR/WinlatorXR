@@ -23,7 +23,6 @@ import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import com.winlator.cmod.NavActivity;
 import com.winlator.cmod.R;
 
 import org.json.JSONArray;

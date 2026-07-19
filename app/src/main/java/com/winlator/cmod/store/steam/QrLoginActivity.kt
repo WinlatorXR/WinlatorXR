@@ -9,7 +9,6 @@ import android.view.View
 import android.widget.*
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
-import com.winlator.cmod.NavActivity
 
 /**
  * QR code login screen.
