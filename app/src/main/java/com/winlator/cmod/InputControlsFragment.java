@@ -58,8 +58,8 @@ public class InputControlsFragment extends Fragment {
 
     private boolean isDarkMode;
 
-    public InputControlsFragment(int selectedProfileId) {
-        this.selectedProfileId = selectedProfileId;
+    public InputControlsFragment() {
+        this.selectedProfileId = MainActivity.selectedProfileId;
     }
 
     @Override
@@ -131,7 +131,7 @@ public class InputControlsFragment extends Fragment {
                 sbCursorSpeed.setProgress((int)(currentProfile.getCursorSpeed() * 100));
             }
             else sbCursorSpeed.setProgress(100);
-            loadExternalControllers(view);
+            //loadExternalControllers(view);
         };
 
         updateLayout.run();
@@ -355,7 +355,7 @@ public class InputControlsFragment extends Fragment {
                     removeButton.setOnClickListener((v) -> ContentDialog.confirm(getContext(), R.string.do_you_want_to_remove_this_controller, () -> {
                         currentProfile.removeController(controller);
                         currentProfile.save();
-                        loadExternalControllers(view);
+                        //loadExternalControllers(view);
                     }));
                 }
 

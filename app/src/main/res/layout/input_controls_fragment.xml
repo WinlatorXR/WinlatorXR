@@ -7,8 +7,7 @@
     <LinearLayout
         android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="16dp">
+        android:layout_height="match_parent">
 
         <TextView
             android:layout_width="wrap_content"
@@ -101,10 +100,6 @@
             android:min="10"
             android:max="100" />
 
-        <View
-            style="@style/HorizontalLine"
-            android:layout_marginTop="16dp" />
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -125,17 +120,15 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/export_profile" />
+
+            <Button
+                style="@style/ButtonPositive"
+                android:id="@+id/BTControlsEditor"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/controls_editor" />
         </LinearLayout>
-
-        <View style="@style/HorizontalLine" />
-
-        <Button
-            style="@style/ButtonPositive"
-            android:id="@+id/BTControlsEditor"
-            android:layout_width="240dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:text="@string/controls_editor" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -143,15 +136,18 @@
             android:textStyle="bold"
             android:text="@string/external_controllers"
             android:textColor="@color/colorPrimary"
-            android:layout_marginTop="8dp" />
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
 
-        <View style="@style/HorizontalLine" />
+        <View style="@style/HorizontalLine"
+            android:visibility="gone" />
 
         <LinearLayout
             android:id="@+id/LLExternalControllers"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:orientation="vertical"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/TVEmptyText"

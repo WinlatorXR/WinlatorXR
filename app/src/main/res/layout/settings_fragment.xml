@@ -437,6 +437,23 @@
                     style="@style/FieldSetLabel"
                     android:text="@string/sound" />
             </FrameLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <LinearLayout style="@style/FieldSet">
+                    <fragment
+                        android:id="@+id/LLInputControls"
+                        android:name="com.winlator.cmod.InputControlsFragment"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+
+                <TextView
+                    style="@style/FieldSetLabel"
+                    android:text="@string/input_controls" />
+            </FrameLayout>
         </LinearLayout>
 
         <include
