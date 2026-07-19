@@ -525,13 +525,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
     }
 
-    private void showSavesFragment() {
-        SavesFragment fragment = new SavesFragment();
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.FLFragmentContainer, fragment)
-                .commit();
-    }
-
     // Method to show SaveEditDialog
     public void showSaveEditDialog(Save saveToEdit) {
         saveEditDialog = new SaveEditDialog(this, saveManager, containerManager, saveToEdit);
@@ -626,14 +619,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
     }
 
-    public void toggleDrawer() {
-        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
-            drawerLayout.closeDrawer(GravityCompat.START);
-        } else {
-            drawerLayout.openDrawer(GravityCompat.START);
-        }
-    }
-
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         FragmentManager fragmentManager = getSupportFragmentManager();
@@ -687,59 +672,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         transaction.replace(R.id.FLFragmentContainer, fragment).commit();
 
         drawerLayout.closeDrawer(GravityCompat.START);
-    }
-
-    private void showAboutDialog() {
-        ContentDialog dialog = new ContentDialog(this, R.layout.about_dialog);
-        dialog.findViewById(R.id.LLBottomBar).setVisibility(View.GONE);
-
-        if (isDarkMode) {
-            dialog.getWindow().setBackgroundDrawableResource(R.drawable.content_dialog_background_dark);
-        } else {
-            dialog.getWindow().setBackgroundDrawableResource(R.drawable.content_dialog_background);
-        }
-
-        try {
-            final PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
-
-            TextView tvWebpage = dialog.findViewById(R.id.TVWebpage);
-            tvWebpage.setText(Html.fromHtml("<a href=\"https://www.winlator.org\">winlator.org</a>", Html.FROM_HTML_MODE_LEGACY));
-            tvWebpage.setMovementMethod(LinkMovementMethod.getInstance());
-
-            ((TextView) dialog.findViewById(R.id.TVAppVersion)).setText(getString(R.string.version) + " " + pInfo.versionName);
-
-            String creditsAndThirdPartyAppsHTML = String.join("<br />",
-                    "Winlator was created by Brunodev85 (<a href=\"https://github.com/brunodev85\">Git</a>)",
-                    "Winlator Cmod by <a href=\"https://github.com/coffincolors/winlator\">coffincolors</a>, <a href=\"https://github.com/Pipetto-crypto/winlator\">Pipetto-crypto</a>",
-                    "Winlator Glibc by longjunyu2 (<a href=\"https://github.com/longjunyu2/winlator/\">Fork</a>)",
-                    "Winlator OpenXR by lvonasek (<a href=\"https://github.com/lvonasek\">Git</a>)",
-                    "Big Picture Mode Music by Fumer",
-                    "---",
-                    "Ubuntu RootFs (<a href=\"https://releases.ubuntu.com/focal\">Focal Fossa</a>)",
-                    "Wine (<a href=\"https://www.winehq.org\">winehq.org</a>)",
-                    "Box86/Box64 by <a href=\"https://github.com/ptitSeb\">ptitseb</a>",
-                    "PRoot (<a href=\"https://proot-me.github.io\">proot-me.github.io</a>)",
-                    "Mesa (Turnip/Zink/VirGL) (<a href=\"https://www.mesa3d.org\">mesa3d.org</a>)",
-                    "DXVK (<a href=\"https://github.com/doitsujin/dxvk\">github.com/doitsujin/dxvk</a>)",
-                    "VKD3D (<a href=\"https://gitlab.winehq.org/wine/vkd3d\">gitlab.winehq.org/wine/vkd3d</a>)",
-                    "D8VK (<a href=\"https://github.com/AlpyneDreams/d8vk\">github.com/AlpyneDreams/d8vk</a>)",
-                    "CNC DDraw (<a href=\"https://github.com/FunkyFr3sh/cnc-ddraw\">github.com/FunkyFr3sh/cnc-ddraw</a>)"
-            );
-
-            TextView tvCreditsAndThirdPartyApps = dialog.findViewById(R.id.TVCreditsAndThirdPartyApps);
-            tvCreditsAndThirdPartyApps.setText(Html.fromHtml(creditsAndThirdPartyAppsHTML, Html.FROM_HTML_MODE_LEGACY));
-            tvCreditsAndThirdPartyApps.setMovementMethod(LinkMovementMethod.getInstance());
-
-            // String glibcExpVersionForkHTML = String.join("<br />",
-            // "longjunyu2's <a href=\"https://github.com/longjunyu2/winlator/tree/use-glibc-instead-of-proot\">(Fork)</a>");
-            // TextView tvGlibcExpVersionFork = dialog.findViewById(R.id.TVGlibcExpVersionFork);
-            // tvGlibcExpVersionFork.setText(Html.fromHtml(glibcExpVersionForkHTML, Html.FROM_HTML_MODE_LEGACY));
-            // tvGlibcExpVersionFork.setMovementMethod(LinkMovementMethod.getInstance());
-        } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
-        }
-
-        dialog.show();
     }
 
     private void setNavigationViewItemTextColor(NavigationView navigationView, int color) {
