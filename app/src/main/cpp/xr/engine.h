@@ -46,6 +46,23 @@
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 
+// Fallback definitions for SDK headers that predate XR_FB_composition_layer_settings
+#ifndef XR_FB_composition_layer_settings
+#define XR_FB_composition_layer_settings 1
+#define XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME "XR_FB_composition_layer_settings"
+#define XR_TYPE_COMPOSITION_LAYER_SETTINGS_FB ((XrStructureType) 1000204000)
+typedef XrFlags64 XrCompositionLayerSettingsFlagsFB;
+#define XR_COMPOSITION_LAYER_SETTINGS_NORMAL_SUPER_SAMPLING_BIT_FB ((XrCompositionLayerSettingsFlagsFB) 0x00000001)
+#define XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SUPER_SAMPLING_BIT_FB ((XrCompositionLayerSettingsFlagsFB) 0x00000002)
+#define XR_COMPOSITION_LAYER_SETTINGS_NORMAL_SHARPENING_BIT_FB ((XrCompositionLayerSettingsFlagsFB) 0x00000004)
+#define XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SHARPENING_BIT_FB ((XrCompositionLayerSettingsFlagsFB) 0x00000008)
+typedef struct XrCompositionLayerSettingsFB {
+    XrStructureType type;
+    const void* XR_MAY_ALIAS next;
+    XrCompositionLayerSettingsFlagsFB layerFlags;
+} XrCompositionLayerSettingsFB;
+#endif
+
 #if defined(_DEBUG)
 void GLCheckErrors(const char* file, int line);
 void OXRCheckErrors(XrResult result, const char* file, int line);
@@ -82,6 +99,7 @@ enum XrPlatformFlag
   PLATFORM_EXTENSION_PASSTHROUGH,
   PLATFORM_EXTENSION_PERFORMANCE,
   PLATFORM_EXTENSION_REFRESHRATE,
+  PLATFORM_EXTENSION_LAYER_SETTINGS,
   PLATFORM_MAX
 };
 
