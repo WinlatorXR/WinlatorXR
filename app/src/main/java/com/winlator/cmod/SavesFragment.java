@@ -107,6 +107,9 @@ public class SavesFragment extends Fragment {
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater menuInflater) {
         menuInflater.inflate(R.menu.saves_menu, menu);
+
+        menu.findItem(R.id.saves_menu_add).setVisible(ShortcutsFragment.currentTab == 1);
+        menu.findItem(R.id.saves_menu_import).setVisible(ShortcutsFragment.currentTab == 1);
     }
 
     @Override

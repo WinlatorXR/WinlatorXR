@@ -3,20 +3,65 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <androidx.recyclerview.widget.RecyclerView
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        android:id="@+id/RecyclerView"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scrollbars="vertical"
-        app:layoutManager="LinearLayoutManager" />
+        android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/TVEmptyText"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:text="@string/no_items_to_display_shortcuts"
-        android:textSize="24sp"
-        android:visibility="gone" />
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/TabLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/colorPrimary"
+            app:tabGravity="center"
+            app:tabInlineLabel="true"
+            app:tabMinWidth="0dp"
+            app:tabMode="scrollable"
+            app:tabPaddingStart="8dp"
+            app:tabPaddingEnd="8dp"
+            xmlns:app="http://schemas.android.com/apk/res-auto">
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/shortcuts" />
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/saves" />
+        </com.google.android.material.tabs.TabLayout>
+
+        <LinearLayout
+            android:id="@+id/LLTabShortcuts"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <androidx.recyclerview.widget.RecyclerView
+                xmlns:app="http://schemas.android.com/apk/res-auto"
+                android:id="@+id/RecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scrollbars="vertical"
+                app:layoutManager="LinearLayoutManager" />
+
+            <TextView
+                android:id="@+id/TVEmptyText"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="12dp"
+                android:gravity="center"
+                android:text="@string/no_items_to_display_shortcuts"
+                android:textSize="24sp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <fragment
+            android:id="@+id/LLTabSaves"
+            android:name="com.winlator.cmod.SavesFragment"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+    </LinearLayout>
 </FrameLayout>

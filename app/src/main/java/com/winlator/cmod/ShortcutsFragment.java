@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
+import android.graphics.Color;
 import android.graphics.drawable.Icon;
 import android.net.Uri;
 import android.os.Build;
@@ -17,6 +18,8 @@ import android.os.Environment;
 import android.os.FileObserver;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -38,6 +41,7 @@ import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.tabs.TabLayout;
 import com.winlator.xr.XrActivity;
 import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.ContainerManager;
@@ -68,6 +72,8 @@ public class ShortcutsFragment extends Fragment {
 
     private ArrayList<FileObserver> fileObservers = new ArrayList<>();
     private PreloaderDialog preloaderDialog;
+
+    public static int currentTab = 0;
 
     private final ActivityResultLauncher<Intent> iconPickerLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -154,20 +160,51 @@ public class ShortcutsFragment extends Fragment {
         preloaderDialog = new PreloaderDialog(getActivity());
         loadShortcutsList();
         startFileObservers(); // Start watching for new file
-        ((AppCompatActivity)getActivity()).getSupportActionBar().setTitle(R.string.shortcuts);
+        ((AppCompatActivity)getActivity()).getSupportActionBar().setTitle(R.string.games);
     }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-
-
-
         FrameLayout frameLayout = (FrameLayout)inflater.inflate(R.layout.shortcuts_fragment, container, false);
         recyclerView = frameLayout.findViewById(R.id.RecyclerView);
         emptyTextView = frameLayout.findViewById(R.id.TVEmptyText);
         recyclerView.setLayoutManager(new LinearLayoutManager(recyclerView.getContext()));
         recyclerView.addItemDecoration(new DividerItemDecoration(recyclerView.getContext(), DividerItemDecoration.VERTICAL));
+
+        // Tab switcher
+        TabLayout tabLayout = frameLayout.findViewById(R.id.TabLayout);
+        tabLayout.setTabTextColors(Color.LTGRAY, Color.WHITE);
+        tabLayout.setSelectedTabIndicatorColor(Color.WHITE);
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                View[] tabs = {
+                        frameLayout.findViewById(R.id.LLTabShortcuts),
+                        frameLayout.findViewById(R.id.LLTabSaves)
+                };
+
+                currentTab = tab.getPosition();
+                for (int i = 0; i < tabs.length; i++) {
+                    if (i == currentTab) {
+                        tabs[i].setVisibility(View.VISIBLE);
+                    } else {
+                        tabs[i].setVisibility(View.GONE);
+                    }
+                }
+                requireActivity().invalidateOptionsMenu();
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+                onTabSelected(tab);
+            }
+        });
+        tabLayout.selectTab(tabLayout.getTabAt(0));
         return frameLayout;
     }
 
