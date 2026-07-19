@@ -750,6 +750,9 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="gl">gl</string>
     <string name="vulkan">vulkan</string>
     <string name="gdi">gdi</string>
+    <string name="battery">Battery</string>
+    <string name="gamepad">Gamepad</string>
+    <string name="charging">charging</string>
 
 
 </resources>
