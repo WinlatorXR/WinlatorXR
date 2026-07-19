@@ -1,4 +1,4 @@
-package com.winlator.cmod;
+package com.winlator.cmod.settings;
 
 import android.graphics.BitmapFactory;
 import android.os.Bundle;

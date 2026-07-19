@@ -123,13 +123,13 @@
         </activity>
 
         <activity
-            android:name="com.winlator.cmod.ControlsEditorActivity"
+            android:name="com.winlator.cmod.settings.ControlsEditorActivity"
             android:theme="@style/AppThemeFullscreen"
             android:screenOrientation="sensorLandscape"
             android:exported="false" />
 
         <activity
-            android:name="com.winlator.cmod.ExternalControllerBindingsActivity"
+            android:name="com.winlator.cmod.settings.ExternalControllerBindingsActivity"
             android:theme="@style/AppThemeFullscreen"
             android:screenOrientation="sensor"
             android:exported="false" />
@@ -164,7 +164,7 @@
         </provider>
 
         <activity
-            android:name=".restore.RestoreActivity"
+            android:name=".settings.RestoreActivity"
             android:process=":restore_process"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"
             android:exported="true" />

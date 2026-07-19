@@ -1,4 +1,4 @@
-package com.winlator.cmod;
+package com.winlator.cmod.settings;
 
 import android.app.Activity;
 import android.content.Context;
@@ -34,6 +34,7 @@ import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.winlator.cmod.MainActivity;
 import com.winlator.cmod.R;
 import com.winlator.cmod.box86_64.rc.RCField;
 import com.winlator.cmod.box86_64.rc.RCGroup;

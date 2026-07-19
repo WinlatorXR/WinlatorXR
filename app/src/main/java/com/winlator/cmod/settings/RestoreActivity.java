@@ -1,4 +1,4 @@
-package com.winlator.cmod.restore;
+package com.winlator.cmod.settings;
 
 import android.app.Activity;
 import android.content.Intent;

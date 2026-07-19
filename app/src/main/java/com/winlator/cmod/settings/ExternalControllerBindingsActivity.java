@@ -1,4 +1,4 @@
-package com.winlator.cmod;
+package com.winlator.cmod.settings;
 
 import android.animation.ValueAnimator;
 import android.content.Context;

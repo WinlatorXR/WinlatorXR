@@ -2,37 +2,24 @@ package com.winlator.cmod.xenvironment;
 
 import android.app.AlertDialog;
 import android.content.Context;
-import android.net.Uri;
 import android.os.Build;
 import android.text.Html;
 import android.util.Log;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.winlator.cmod.MainActivity;
 import com.winlator.cmod.R;
-import com.winlator.cmod.SettingsFragment;
+import com.winlator.cmod.settings.SettingsFragment;
 import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.ContainerManager;
-import com.winlator.cmod.contents.ContentProfile;
-import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.DownloadProgressDialog;
 import com.winlator.cmod.core.FileUtils;
-import com.winlator.cmod.core.PreloaderDialog;
 import com.winlator.cmod.core.TarCompressorUtils;
 import com.winlator.cmod.core.WineInfo;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 

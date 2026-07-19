@@ -383,7 +383,7 @@
 
                     <fragment
                         android:id="@+id/box64_rc_file"
-                        android:name="com.winlator.cmod.Box86_64RCFragment"
+                        android:name="com.winlator.cmod.settings.Box86_64RCFragment"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content" />
                 </LinearLayout>
@@ -445,7 +445,7 @@
                 <LinearLayout style="@style/FieldSet">
                     <fragment
                         android:id="@+id/LLInputControls"
-                        android:name="com.winlator.cmod.InputControlsFragment"
+                        android:name="com.winlator.cmod.settings.InputControlsFragment"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content" />
                 </LinearLayout>

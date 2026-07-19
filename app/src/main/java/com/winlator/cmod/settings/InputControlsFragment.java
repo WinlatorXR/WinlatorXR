@@ -1,4 +1,4 @@
-package com.winlator.cmod;
+package com.winlator.cmod.settings;
 
 import android.app.Activity;
 import android.content.Context;
@@ -29,6 +29,7 @@ import androidx.core.widget.ImageViewCompat;
 import androidx.fragment.app.Fragment;
 import androidx.preference.PreferenceManager;
 
+import com.winlator.cmod.MainActivity;
 import com.winlator.cmod.R;
 import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.Callback;
