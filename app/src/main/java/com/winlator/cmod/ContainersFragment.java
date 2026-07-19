@@ -159,13 +159,6 @@ public class ContainersFragment extends Fragment {
         menu.findItem(R.id.containers_menu_add).setVisible(currentTab == 0);
         menu.findItem(R.id.containers_menu_import).setVisible(currentTab == 1);
 
-        // Other items tinting...
-        MenuItem bigPictureItem = menu.findItem(R.id.action_big_picture_mode);
-        if (bigPictureItem != null && bigPictureItem.getIcon() != null) {
-            bigPictureItem.getIcon().mutate();
-            bigPictureItem.getIcon().setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN);
-        }
-
         favoriteItem = menu.findItem(R.id.action_favorite_star);
         if (favoriteItem != null) {
             // Ensure it shows in the toolbar
@@ -219,10 +212,6 @@ public class ContainersFragment extends Fragment {
 
             case R.id.containers_menu_import:
                 openImportContainerArchive();
-                return true;
-
-            case R.id.action_big_picture_mode:
-                toggleBigPictureMode();
                 return true;
 
 //            case R.id.action_terminal:  // New case for TerminalActivity
@@ -503,15 +492,6 @@ public class ContainersFragment extends Fragment {
             }
         }
         return true;
-    }
-
-
-
-    private void toggleBigPictureMode() {
-        // Start BigPictureActivity without passing shortcut data explicitly
-        Intent intent = new Intent(getContext(), BigPictureActivity.class);
-        startActivity(intent);
-        getActivity().overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
     }
 
     @Nullable

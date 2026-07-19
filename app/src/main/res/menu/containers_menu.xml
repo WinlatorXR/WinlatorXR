@@ -26,14 +26,6 @@
     app:showAsAction="ifRoom" />
 
     <item
-        android:id="@+id/action_big_picture_mode"
-        android:title="Big Picture Mode"
-        android:icon="@drawable/ic_big_picture_mode"
-        android:color="#FFFFFF"
-        android:visible="false"
-        app:showAsAction="ifRoom" />
-
-    <item
         android:id="@+id/containers_menu_add"
         android:icon="@drawable/icon_action_bar_add"
         android:title="@string/add_container"

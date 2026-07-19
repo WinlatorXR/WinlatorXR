@@ -36,11 +36,7 @@
     <!--/group!-->
 
     <!-- ===== DISPLAY ===== -->
-    <!--item
-        android:id="@+id/header_display"
-        android:title="@string/menu_section_display"
-        android:icon="@drawable/ic_big_picture_mode" />
-    <group
+    <!--group
         android:id="@+id/group_display"
         android:checkableBehavior="none"!-->
         <item
