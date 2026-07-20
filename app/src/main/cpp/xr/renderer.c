@@ -336,11 +336,14 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
     }
 
 
-    // Ask the compositor to sharpen the layer, greatly improves readability
+    // Ask the compositor to sharpen the layer, greatly improves readability.
+    // Level: 0 = off, 1 = normal, 2 = quality (more expensive).
+    int sharpening_level = renderer->ConfigInt[CONFIG_SHARPENING];
     XrCompositionLayerSettingsFB layer_settings = {};
     layer_settings.type = XR_TYPE_COMPOSITION_LAYER_SETTINGS_FB;
-    layer_settings.layerFlags = XR_COMPOSITION_LAYER_SETTINGS_NORMAL_SHARPENING_BIT_FB;
-    const void* layer_settings_chain = engine->PlatformFlag[PLATFORM_EXTENSION_LAYER_SETTINGS] ? &layer_settings : NULL;
+    layer_settings.layerFlags = (sharpening_level >= 2) ? XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SHARPENING_BIT_FB
+                                                        : XR_COMPOSITION_LAYER_SETTINGS_NORMAL_SHARPENING_BIT_FB;
+    const void* layer_settings_chain = (engine->PlatformFlag[PLATFORM_EXTENSION_LAYER_SETTINGS] && sharpening_level > 0) ? &layer_settings : NULL;
 
     XrCompositionLayerProjectionView projection_layer_elements[2] = {};
     struct XrFramebuffer* framebuffer = &renderer->Framebuffer[0];

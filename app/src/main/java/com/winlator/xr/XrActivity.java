@@ -89,6 +89,8 @@ public class XrActivity extends XServerDisplayActivity {
         nativeSetUsePT(usePassthrough);
         boolean curvedScreen = prefs.getBoolean("use_cs", false);
         nativeSetCurvedScreen(curvedScreen);
+        int sharpening = prefs.getInt("sharpening_level", 0);
+        nativeSetSharpening(sharpening);
         mouseEmulation = prefs.getBoolean("use_xr_mouse", true);
         mouseLeftHanded = prefs.getBoolean("use_xr_leftHanded", false);
         mouseLightgun = prefs.getBoolean("use_xr_lightgun", false);
@@ -364,6 +366,8 @@ public class XrActivity extends XServerDisplayActivity {
     public native void nativeSetFoV(float x, float y);
     public native void nativeSetCurvedScreen(boolean enabled);
     public native void nativeSetUsePT(boolean enabled);
+    public native void nativeSetSharpening(int level);
+    public native boolean nativeIsSharpeningSupported();
     public native void nativeSetUseVR(boolean enabled);
     public native void nativeSetFramesync(int r, int g, int b, int a);
     public native void sendManufacturer(String manufacturer);

@@ -16,6 +16,7 @@ import androidx.preference.PreferenceManager;
 import com.winlator.cmod.R;
 import com.winlator.cmod.XServerDisplayActivity;
 import com.winlator.cmod.core.AppUtils;
+import com.winlator.xr.XrActivity;
 import com.winlator.cmod.core.KeyValueSet;
 import com.winlator.cmod.renderer.GLRenderer;
 import com.winlator.cmod.renderer.effects.BloomEffect;
@@ -80,6 +81,22 @@ public class ScreenEffectDialog extends ContentDialog {
         cbEnableNTSCEffect = findViewById(R.id.CBEnableNTSCEffect);
         cbEnableCAS = findViewById(R.id.CBEnableCAS);
         cbEnableDLS = findViewById(R.id.CBEnableDLS);
+
+        // Compositor sharpening (VR-only; requires XR_FB_composition_layer_settings, e.g. Quest).
+        // Applied by the OpenXR compositor, independent of the GL effect composer below.
+        // Slider snaps to 0 = Off, 50 = Balanced, 100 = Quality (native levels 0/1/2).
+        View llSharpening = findViewById(R.id.LLSharpening);
+        SeekBar sbSharpening = findViewById(R.id.SBSharpening);
+        if (XrActivity.isActive() && XrActivity.getInstance().nativeIsSharpeningSupported()) {
+            sbSharpening.setValue(preferences.getInt("sharpening_level", 0) * 50);
+            sbSharpening.setOnValueChangeListener((seekBar, value) -> {
+                int level = Math.round(value / 50);
+                preferences.edit().putInt("sharpening_level", level).apply();
+                if (XrActivity.isActive()) XrActivity.getInstance().nativeSetSharpening(level);
+            });
+        } else {
+            llSharpening.setVisibility(View.GONE);
+        }
 
 
         GLRenderer renderer = activity.getXServerView().getRenderer();

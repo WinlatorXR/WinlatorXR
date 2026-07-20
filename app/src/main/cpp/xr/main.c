@@ -32,6 +32,7 @@ struct XrRenderer xr_module_renderer;
 bool xr_initialized = false;
 bool xr_curvedScreen = false;
 bool xr_usePassthrough = false;
+int xr_sharpening = 0;
 bool xr_vr = false;
 float xr_aspect = 0;
 float xr_fovx = 0;
@@ -139,6 +140,7 @@ JNIEXPORT jboolean JNICALL Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env
 
         // Set render canvas
         xr_module_renderer.ConfigInt[CONFIG_VIEWPORT_CURVED] = !immersive && xr_curvedScreen;
+        xr_module_renderer.ConfigInt[CONFIG_SHARPENING] = xr_sharpening;
         xr_module_renderer.ConfigFloat[CONFIG_CANVAS_DISTANCE] = distance;
         xr_module_renderer.ConfigFloat[CONFIG_CANVAS_SIZE] = xr_aspect;
         xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOV_SCALE] = 1.1f;
@@ -299,6 +301,16 @@ Java_com_winlator_xr_XrActivity_nativeSetCurvedScreen(JNIEnv *env, jobject obj, 
 JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_nativeSetUsePT(JNIEnv *env, jobject obj, jboolean enabled) {
     xr_usePassthrough = enabled;
+}
+
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_nativeSetSharpening(JNIEnv *env, jobject obj, jint level) {
+    xr_sharpening = level;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_winlator_xr_XrActivity_nativeIsSharpeningSupported(JNIEnv *env, jobject obj) {
+    return xr_module_engine.PlatformFlag[PLATFORM_EXTENSION_LAYER_SETTINGS];
 }
 
 JNIEXPORT void JNICALL
