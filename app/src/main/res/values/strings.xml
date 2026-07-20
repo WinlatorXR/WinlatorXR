@@ -441,6 +441,7 @@
     <string name="use_curved_screen">Use curved screen</string>
     <string name="use_immersive_mode">3DoF immersive mode (experimental)</string>
     <string name="use_sbs">Map side-by-side 3D render to left and right eye</string>
+    <string name="use_sharpening">Compositor sharpening</string>
     <string name="controller_profile">Controller profile</string>
     <string name="to_apply_close">To apply the change, close this dialog</string>
     <string name="xr" translatable="false">XR</string>
@@ -730,7 +731,7 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="vkbasalt">vkBasalt</string>
     <string name="vkbasalt_sharpness_effects">Sharpness Effect</string>
     <string name="vkbasalt_sharpness_level">Sharpness Level</string>
-    <string name="vkbasalt_sharpness_denoise">Sharpeness Denoise</string>
+    <string name="vkbasalt_sharpness_denoise">Sharpness Denoise</string>
     <string name="enable_cas">Enable CAS</string>
     <string name="enable_dls">Enable DLS</string>
     <string name="enable_peb_logs">Log Windows PEB Data</string>
