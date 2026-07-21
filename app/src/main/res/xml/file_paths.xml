@@ -1,3 +1,5 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <external-path name="external_files" path="." />
+    <!-- Lets the system package installer read downloaded Steam APKs (internal storage). -->
+    <files-path name="steam_games" path="imagefs/steam_games/" />
 </paths>

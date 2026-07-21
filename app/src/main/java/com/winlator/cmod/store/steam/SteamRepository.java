@@ -554,6 +554,17 @@ public final class SteamRepository {
         return v != null ? v : "";
     }
 
+    /** Parse a Steam "oslist" string (e.g. "windows,macos,android") into lowercase tokens. */
+    private static List<String> splitOsList(String raw) {
+        List<String> out = new ArrayList<>();
+        if (raw == null || raw.isEmpty()) return out;
+        for (String tok : raw.split(",")) {
+            String t = tok.trim().toLowerCase();
+            if (!t.isEmpty()) out.add(t);
+        }
+        return out;
+    }
+
     /** Map Steam PICS flat genre IDs (numeric strings) to human-readable names. */
     private static String resolveGenreId(String id) {
         switch (id) {
@@ -653,9 +664,17 @@ public final class SteamRepository {
                             }
                         }
 
-                        // Collect depot IDs, manifest IDs, and sizes from the "depots" section
+                        // Platform tokens the app ships depots for (union of common/oslist
+                        // and every depot's config/oslist). Used for the Android filter/option.
+                        java.util.LinkedHashSet<String> platforms = new java.util.LinkedHashSet<>();
+                        for (String p : splitOsList(kvStr(common.get("oslist")))) platforms.add(p);
+
+                        // Collect depot IDs, manifest IDs, and sizes from the "depots" section.
+                        // Sizes are split per platform: the PC (Windows) download and the
+                        // Android (APK) download each get their own total.
                         StringBuilder depotSb = new StringBuilder();
-                        long totalSize = 0L;
+                        long windowsSize = 0L;   // depots that are Windows or shared (no oslist)
+                        long androidSize = 0L;   // depots explicitly tagged android and downloadable
                         KeyValue depotsKv = root.get("depots");
                         List<KeyValue> depotChildren = depotsKv.getChildren();
                         if (depotChildren != null) {
@@ -665,6 +684,15 @@ public final class SteamRepository {
                                 catch (NumberFormatException ignored) { continue; }
                                 if (depotSb.length() > 0) depotSb.append(',');
                                 depotSb.append(depotId);
+
+                                // Per-depot OS filter from depots/{id}/config/oslist.
+                                // Blank oslist = shared depot (installed for every platform).
+                                List<String> depotOs = splitOsList(kvStr(d.get("config").get("oslist")));
+                                platforms.addAll(depotOs);
+                                boolean isShared  = depotOs.isEmpty();
+                                boolean isWindows = isShared || depotOs.contains("windows");
+                                boolean isAndroid = depotOs.contains("android");
+
                                 // Extract manifest GID from depots/{id}/manifests/public/gid
                                 String manifestGid = kvStr(d.get("manifests").get("public").get("gid"));
                                 if (manifestGid.isEmpty()) {
@@ -677,9 +705,15 @@ public final class SteamRepository {
                                 if (sizeStr.isEmpty()) sizeStr = kvStr(d.get("maxsize"));
                                 long depotSize = 0L;
                                 if (!sizeStr.isEmpty()) {
-                                    try { depotSize = Long.parseLong(sizeStr); totalSize += depotSize; }
+                                    try { depotSize = Long.parseLong(sizeStr); }
                                     catch (NumberFormatException ignored) {}
                                 }
+                                if (isWindows) windowsSize += depotSize;
+                                // Only a depot with a public manifest counts toward the Android
+                                // download size — a tagged-but-manifest-less depot means the APK
+                                // exists but isn't publicly downloadable yet.
+                                if (isAndroid && !manifestGid.isEmpty()) androidSize += depotSize;
+
                                 if (!manifestGid.isEmpty()) {
                                     try {
                                         long manifestId = Long.parseLong(manifestGid);
@@ -689,8 +723,9 @@ public final class SteamRepository {
                             }
                         }
 
-                        db.upsertGame(app.getId(), name, icon, totalSize, depotSb.toString(), type,
-                                developer, metacriticScore, genreSb.toString());
+                        String oslist = String.join(",", platforms);
+                        db.upsertGame(app.getId(), name, icon, windowsSize, depotSb.toString(), type,
+                                developer, metacriticScore, genreSb.toString(), oslist, androidSize);
                         count++;
                     } catch (Exception e) {
                         Log.w(TAG, "Skipping app " + app.getId() + ": " + e.getMessage());

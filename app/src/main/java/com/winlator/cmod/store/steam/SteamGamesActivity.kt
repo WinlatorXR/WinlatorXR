@@ -34,7 +34,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
     private var sortKey = SortKey.TITLE
     private var sortAsc = true
 
-    private enum class InstallFilter { ALL, INSTALLED, NOT_INSTALLED }
+    private enum class InstallFilter { ALL, INSTALLED, NOT_INSTALLED, ANDROID }
     private enum class SortKey { TITLE, SIZE }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -155,6 +155,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         seq = when (installFilter) {
             InstallFilter.INSTALLED     -> seq.filter { it.isInstalled }
             InstallFilter.NOT_INSTALLED -> seq.filter { !it.isInstalled }
+            InstallFilter.ANDROID       -> seq.filter { it.hasAndroid }
             InstallFilter.ALL           -> seq
         }
         val cmp: Comparator<SteamGame> = when (sortKey) {
@@ -358,6 +359,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
                 menu.add(0, 0, 0, "All")
                 menu.add(0, 1, 1, "Installed")
                 menu.add(0, 2, 2, "Not installed")
+                menu.add(0, 3, 3, "Android (VR)")
                 menu.setGroupCheckable(0, true, true)
                 menu.getItem(installFilter.ordinal).isChecked = true
                 setOnMenuItemClickListener { item ->
@@ -366,6 +368,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
                         InstallFilter.ALL           -> "All"
                         InstallFilter.INSTALLED     -> "Installed"
                         InstallFilter.NOT_INSTALLED -> "Not installed"
+                        InstallFilter.ANDROID       -> "Android"
                     }
                     refreshList()
                     true

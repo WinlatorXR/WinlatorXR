@@ -39,7 +39,28 @@ data class SteamGame(
 
     /** Comma-separated genre names from PICS common.genres. Empty if not available. */
     val genres: String = "",
+
+    /** Comma-separated platform tokens the app ships depots for, e.g. "windows,android". */
+    val oslist: String = "",
+
+    /** Download size of the publicly available Android (APK) depots. 0 = no downloadable APK. */
+    val androidSizeBytes: Long = 0L,
+
+    /** Which variant is currently installed: "" (none), "windows", or "android". */
+    val installedVariant: String = "",
 ) {
+    /** True if the app ships an Android (APK) build — drives the Android filter and option. */
+    val hasAndroid: Boolean
+        get() = oslist.split(",").any { it.trim().equals("android", ignoreCase = true) }
+
+    /** True if the Android build is publicly downloadable right now (has a public manifest). */
+    val androidDownloadable: Boolean
+        get() = androidSizeBytes > 0L
+
+    /** True if the installed content is the Android (APK) variant rather than the PC build. */
+    val isAndroidInstall: Boolean
+        get() = installedVariant.equals("android", ignoreCase = true)
+
     /** Store header image URL — available for all apps, no hash needed. */
     val headerUrl: String
         get() = "https://shared.steamstatic.com/store_item_assets/steam/apps/$appId/header.jpg"
@@ -67,6 +88,9 @@ data class SteamGame(
                 developer      = row.developer,
                 metacriticScore = row.metacriticScore,
                 genres         = row.genres,
+                oslist         = row.oslist,
+                androidSizeBytes = row.androidSizeBytes,
+                installedVariant = row.installedVariant,
             )
         }
     }

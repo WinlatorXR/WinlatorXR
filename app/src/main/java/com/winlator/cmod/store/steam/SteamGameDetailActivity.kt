@@ -37,6 +37,13 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
     @Volatile private var downloadHandle: SteamDepotDownloader.DownloadControl? = null
     private var lastThreadCount = 4
 
+    // Which platform variant the buttons act on: "windows" (PC/Wine) or "android" (native APK).
+    private var selectedOs = SteamDepotDownloader.OS_WINDOWS
+    // OS of the in-flight download, so retries re-request the same variant.
+    private var lastOs = SteamDepotDownloader.OS_WINDOWS
+    // True once the user manually taps a variant toggle — stops auto-defaulting on refresh.
+    private var userPickedVariant = false
+
     // auto retry state
     private val retryCounts = mutableMapOf<Int, Int>()
     private val maxAutoRetries = 3
@@ -52,6 +59,11 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
     private lateinit var launchBtn: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var progressText: TextView
+
+    // Version selector — visible only for titles that ship an Android (APK) build.
+    private lateinit var versionRow: LinearLayout
+    private lateinit var pcVariantBtn: Button
+    private lateinit var androidVariantBtn: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,6 +89,22 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
     }
 
     private fun scheduleRetry(reason: String) {
+        // Some failures are permanent — retrying just wastes time. An Android build that
+        // isn't publicly available won't become available by trying again.
+        if (reason.contains("not publicly available", ignoreCase = true)) {
+            ui.post {
+                progressBar.isIndeterminate = false
+                progressBar.visibility = View.GONE
+                progressText.visibility = View.GONE
+                statusText.text = reason
+                statusText.setTextColor(Color.parseColor("#FF9800"))
+                installBtn.isEnabled = true
+                installBtn.text = installLabel()
+                installBtn.setBackgroundColor(COLOR_INSTALL)
+            }
+            return
+        }
+
         val currentRetry = retryCounts[appId] ?: 0
 
         // -------------------------------------------------------------
@@ -154,7 +182,8 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
                 SteamDepotDownloader.installApp(
                     appId,
                     applicationContext,
-                    lastThreadCount
+                    lastThreadCount,
+                    lastOs
                 )
 
             StoreDownloadQueue.registerHandle(appId, downloadHandle)
@@ -283,7 +312,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
                     statusText.setTextColor(Color.parseColor("#AAAAAA"))
 
                     installBtn.isEnabled = true
-                    installBtn.text = "Install"
+                    installBtn.text = installLabel()
                     installBtn.setBackgroundColor(COLOR_INSTALL)
                 }
             }
@@ -321,6 +350,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         val row = SteamRepository.getInstance().database.getGame(appId)
         if (row == null) { finish(); return }
         game = SteamGame.fromGameRow(row)
+        initVariantSelection()
         refreshUI()
         loadHeaderImage()
 
@@ -354,26 +384,77 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         nameText.text = g.name.ifEmpty { "App ${g.appId}" }
         typeText.text = g.type.uppercase()
         typeText.setTextColor(if (g.type == "game") Color.parseColor("#4CAF50") else Color.parseColor("#FF9800"))
-        sizeText.text = if (g.sizeBytes > 0) "~${fmtSize(g.sizeBytes)}" else "Size unknown"
 
-        if (g.isInstalled) {
-            statusText.text = "Installed"
+        // Version selector — only meaningful when an Android (APK) build exists.
+        versionRow.visibility = if (g.hasAndroid) View.VISIBLE else View.GONE
+        updateVariantButtons()
+
+        val androidSelected = selectedOs == SteamDepotDownloader.OS_ANDROID
+        sizeText.text = when {
+            androidSelected && g.androidDownloadable -> "~${fmtSize(g.androidSizeBytes)}  ·  APK"
+            androidSelected                          -> "Android build not publicly available"
+            g.sizeBytes > 0                          -> "~${fmtSize(g.sizeBytes)}"
+            else                                     -> "Size unknown"
+        }
+
+        // installed_variant is "" for legacy rows — treat a bare installed flag as the PC build.
+        val installedOs = if (g.isInstalled)
+            g.installedVariant.ifEmpty { SteamDepotDownloader.OS_WINDOWS } else ""
+        val installedThisVariant = g.isInstalled && installedOs == selectedOs
+
+        if (installedThisVariant) {
+            statusText.text = if (androidSelected) "APK downloaded" else "Installed"
             statusText.setTextColor(Color.parseColor("#4CAF50"))
-            installBtn.text = "Uninstall"
+            // Android only removes the downloaded APK file — it can't uninstall an APK the
+            // user already pushed through the system installer, so don't imply that it does.
+            installBtn.text = if (androidSelected) "Delete APK" else "Uninstall"
             installBtn.setBackgroundColor(COLOR_UNINSTALL)
             installBtn.isEnabled = true
             launchBtn.isEnabled  = true
             launchBtn.alpha      = 1f
+            launchBtn.text       = if (androidSelected) "Install APK" else "Launch"
         } else {
             if (progressBar.visibility != View.VISIBLE) {
-                statusText.text = "Not installed"
+                statusText.text = if (g.isInstalled)
+                    "Installed: ${if (installedOs == SteamDepotDownloader.OS_ANDROID) "Android" else "PC"} version"
+                else "Not installed"
             }
             statusText.setTextColor(Color.parseColor("#AAAAAA"))
-            installBtn.text = "Install"
+            installBtn.text = installLabel()
             installBtn.setBackgroundColor(COLOR_INSTALL)
             installBtn.isEnabled = true
             launchBtn.isEnabled  = false
             launchBtn.alpha      = 0.4f
+            launchBtn.text       = "Launch"
+        }
+    }
+
+    /** Label for the primary action when nothing is installed: the Android variant only
+     *  fetches the APK (installed separately via the Install APK button), so it reads "Download". */
+    private fun installLabel(): String =
+        if (selectedOs == SteamDepotDownloader.OS_ANDROID) "Download" else "Install"
+
+    /** Highlight whichever variant button is currently selected. */
+    private fun updateVariantButtons() {
+        val androidSelected = selectedOs == SteamDepotDownloader.OS_ANDROID
+        pcVariantBtn.setBackgroundColor(if (!androidSelected) COLOR_INSTALL else Color.parseColor("#3A3A3A"))
+        androidVariantBtn.setBackgroundColor(if (androidSelected) COLOR_INSTALL else Color.parseColor("#3A3A3A"))
+    }
+
+    /**
+     * Pick a sensible default variant the first time a game loads (before the user taps a
+     * toggle): the installed variant if any, otherwise PC when a PC build exists, else Android.
+     */
+    private fun initVariantSelection() {
+        if (userPickedVariant) return
+        val g = game ?: return
+        selectedOs = when {
+            g.isInstalled && g.installedVariant.isNotEmpty() -> g.installedVariant
+            !g.hasAndroid                                    -> SteamDepotDownloader.OS_WINDOWS
+            g.sizeBytes > 0 ||
+                g.oslist.split(",").any { it.trim().equals("windows", true) }
+                                                             -> SteamDepotDownloader.OS_WINDOWS
+            else                                             -> SteamDepotDownloader.OS_ANDROID
         }
     }
 
@@ -438,7 +519,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
             statusText.text = "Download cancelled"
             statusText.setTextColor(Color.parseColor("#AAAAAA"))
 
-            installBtn.text = "Install"
+            installBtn.text = installLabel()
             installBtn.setBackgroundColor(COLOR_INSTALL)
             installBtn.isEnabled = true
 
@@ -447,10 +528,14 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
             return
         }
 
+        val installedOs = if (g.isInstalled)
+            g.installedVariant.ifEmpty { SteamDepotDownloader.OS_WINDOWS } else ""
+        val installedThisVariant = g.isInstalled && installedOs == selectedOs
+
         // -------------------------------------------------------------
-        // UNINSTALL
+        // UNINSTALL (only when the *selected* variant is the installed one)
         // -------------------------------------------------------------
-        if (g.isInstalled) {
+        if (installedThisVariant) {
             db.markUninstalled(appId)
 
             if (g.installDir.isNotEmpty()) {
@@ -467,10 +552,35 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         }
 
         // -------------------------------------------------------------
+        // Android build known to be unavailable — say so, don't try.
+        // -------------------------------------------------------------
+        if (selectedOs == SteamDepotDownloader.OS_ANDROID && !g.androidDownloadable) {
+            statusText.text = "The Android version exists but is currently not publicly available"
+            statusText.setTextColor(Color.parseColor("#FF9800"))
+            return
+        }
+
+        // -------------------------------------------------------------
+        // Switching variants — remove the other variant that's installed first
+        // so its files don't linger orphaned on disk.
+        // -------------------------------------------------------------
+        if (g.isInstalled && !installedThisVariant) {
+            db.markUninstalled(appId)
+            if (g.installDir.isNotEmpty()) {
+                val oldDir = g.installDir
+                Thread {
+                    LudashiLaunchBridge.deleteShortcut(this, g.name)
+                    try { File(oldDir).deleteRecursively() } catch (_: Exception) {}
+                }.start()
+            }
+        }
+
+        // -------------------------------------------------------------
         // START DOWNLOAD
         // -------------------------------------------------------------
         resetRetryState()
         lastThreadCount = 4
+        lastOs = selectedOs
 
         installBtn.isEnabled = false
         installBtn.text = "Starting…"
@@ -481,7 +591,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         progressText.visibility = View.VISIBLE
         progressText.text = "Initializing download…"
 
-        downloadHandle = SteamDepotDownloader.installApp(appId, applicationContext, lastThreadCount)
+        downloadHandle = SteamDepotDownloader.installApp(appId, applicationContext, lastThreadCount, selectedOs)
         StoreDownloadQueue.registerHandle(appId, downloadHandle)
     }
 
@@ -489,6 +599,12 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         val g = game ?: return
         if (!g.isInstalled || g.installDir.isEmpty()) {
             Toast.makeText(this, "Game not installed", Toast.LENGTH_SHORT).show()
+            return
+        }
+        // The Android variant is a native APK — hand it to the system package installer
+        // rather than the Wine/Box64 exe launcher.
+        if (g.isAndroidInstall) {
+            installApkFromDir(File(g.installDir))
             return
         }
         val installDir = File(g.installDir)
@@ -520,6 +636,79 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
                 ui.post { LudashiLaunchBridge.addToLauncher(this, g.name, chosen) }
             }
         }.start()
+    }
+
+    /** Locate the downloaded APK under [dir] and hand it to Android's package installer. */
+    private fun installApkFromDir(dir: File) {
+        Thread {
+            val apks = mutableListOf<File>()
+            collectApks(dir, apks)
+            if (apks.isEmpty()) {
+                ui.post { Toast.makeText(this, "No APK found in ${dir.name}", Toast.LENGTH_LONG).show() }
+                return@Thread
+            }
+            // Prefer the largest APK (the base package); split/config APKs are smaller.
+            apks.sortByDescending { it.length() }
+            val apk = apks[0]
+
+            // Android 8+ requires the app to be allowed to install unknown apps.
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
+                && !packageManager.canRequestPackageInstalls()) {
+                ui.post {
+                    AlertDialog.Builder(this)
+                        .setTitle("Allow app installs")
+                        .setMessage("To install the APK, allow WinlatorXR to install unknown apps, then tap Install APK again.")
+                        .setPositiveButton("Open settings") { _, _ ->
+                            try {
+                                startActivity(android.content.Intent(
+                                    android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                    android.net.Uri.parse("package:$packageName")))
+                            } catch (_: Exception) {
+                                try {
+                                    startActivity(android.content.Intent(
+                                        android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES))
+                                } catch (_: Exception) {}
+                            }
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                }
+                return@Thread
+            }
+
+            val uri = try {
+                androidx.core.content.FileProvider.getUriForFile(this, "$packageName.tileprovider", apk)
+            } catch (e: Exception) {
+                ui.post { Toast.makeText(this, "Can't share APK: ${e.message}", Toast.LENGTH_LONG).show() }
+                return@Thread
+            }
+
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            ui.post {
+                try {
+                    startActivity(intent)
+                    if (apks.size > 1) {
+                        Toast.makeText(this,
+                            "This title ships extra split/OBB files — some VR games may need them placed manually.",
+                            Toast.LENGTH_LONG).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(this, "No installer available: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
+    }
+
+    private fun collectApks(dir: File, out: MutableList<File>) {
+        val files = dir.listFiles() ?: return
+        for (f in files) {
+            if (f.isDirectory) collectApks(f, out)
+            else if (f.name.endsWith(".apk", ignoreCase = true)) out.add(f)
+        }
     }
 
     private fun showExePicker(candidates: List<String>, onSelected: (String) -> Unit) {
@@ -614,6 +803,41 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         row1.addView(typeText)
         row1.addView(sizeText)
         info.addView(row1)
+
+        // Version selector (PC vs Android APK) — hidden unless the title ships an Android build.
+        versionRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, dp(8), 0, dp(4))
+            visibility = View.GONE
+        }
+        pcVariantBtn = Button(this).apply {
+            text = "PC (Windows)"
+            textSize = 12f
+            setTextColor(Color.WHITE)
+            setBackgroundColor(COLOR_INSTALL)
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                .apply { marginEnd = dp(6) }
+            setOnClickListener {
+                userPickedVariant = true
+                selectedOs = SteamDepotDownloader.OS_WINDOWS
+                refreshUI()
+            }
+        }
+        androidVariantBtn = Button(this).apply {
+            text = "Android (VR)"
+            textSize = 12f
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.parseColor("#3A3A3A"))
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            setOnClickListener {
+                userPickedVariant = true
+                selectedOs = SteamDepotDownloader.OS_ANDROID
+                refreshUI()
+            }
+        }
+        versionRow.addView(pcVariantBtn)
+        versionRow.addView(androidVariantBtn)
+        info.addView(versionRow)
 
         statusText = TextView(this).apply {
             text = "Not installed"
