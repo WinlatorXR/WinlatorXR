@@ -59,7 +59,7 @@ public class ContainerManager {
     }
 
     // Load containers from the home directory
-    private void loadContainers() {
+    public void loadContainers() {
         containers.clear();
         maxContainerId = 0;
 

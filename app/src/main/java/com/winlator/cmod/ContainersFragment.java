@@ -54,6 +54,7 @@ public class ContainersFragment extends Fragment {
     private TextView emptyTextView;
     private ContainerManager manager;
     private PreloaderDialog preloaderDialog;
+    private TabLayout tabLayout;
 
     private int currentTab = 0;
 
@@ -83,7 +84,7 @@ public class ContainersFragment extends Fragment {
         recyclerView.addItemDecoration(new DividerItemDecoration(recyclerView.getContext(), DividerItemDecoration.VERTICAL));
 
         // Tab switcher
-        TabLayout tabLayout = frameLayout.findViewById(R.id.TabLayout);
+        tabLayout = frameLayout.findViewById(R.id.TabLayout);
         tabLayout.setTabTextColors(Color.LTGRAY, Color.WHITE);
         tabLayout.setSelectedTabIndicatorColor(Color.WHITE);
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
@@ -103,7 +104,8 @@ public class ContainersFragment extends Fragment {
                 onTabSelected(tab);
             }
         });
-        tabLayout.selectTab(tabLayout.getTabAt(0));
+        currentTab = 0;
+        tabLayout.selectTab(tabLayout.getTabAt(currentTab));
         return frameLayout;
     }
 
@@ -111,6 +113,7 @@ public class ContainersFragment extends Fragment {
         if (manager != null) {
             ArrayList<Container> containers;
             if (currentTab == 0) {
+                manager.loadContainers();
                 containers = manager.getContainers();
             } else {
                 int index = 0;
@@ -227,6 +230,8 @@ public class ContainersFragment extends Fragment {
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_IMPORT_CONTAINER_ARCHIVE && resultCode == Activity.RESULT_OK) {
+            currentTab = 0;
+            tabLayout.selectTab(tabLayout.getTabAt(currentTab));
             if (data != null && data.getData() != null) importContainerArchive(data.getData());
             return;
         }
@@ -369,6 +374,8 @@ public class ContainersFragment extends Fragment {
             listItemMenu.setOnMenuItemClickListener((menuItem) -> {
                 switch (menuItem.getItemId()) {
                     case R.id.backup_import:
+                        currentTab = 0;
+                        tabLayout.selectTab(tabLayout.getTabAt(currentTab));
                         File file = new File(dir, container.getName());
                         importContainerArchive(Uri.fromFile(file));
                         break;
