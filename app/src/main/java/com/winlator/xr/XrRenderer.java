@@ -52,6 +52,7 @@ public class XrRenderer extends GLRenderer {
     private boolean xrFrameStarted = false;
 
     public static boolean autoclose = true;
+    public static boolean vrWindowOnTop = false;
 
     public XrRenderer(XServerView xServerView, XServer xServer) {
         super(xServerView, xServer);
@@ -159,6 +160,10 @@ public class XrRenderer extends GLRenderer {
         super.postWindows();
         if (!renderableWindows.isEmpty()) {
             timestampHadWindow = System.currentTimeMillis();
+            if (!renderableWindows.isEmpty()) {
+                RenderableWindow window = renderableWindows.get(renderableWindows.size() - 1);
+                vrWindowOnTop = (window.rootX == 0) && (window.rootY == 0);
+            }
         }  else if ((System.currentTimeMillis() - timestampHadWindow > 1000)) {
             if (autoclose && XrActivity.isEnabled(null)) {
                 XrActivity.getInstance().runOnUiThread(() -> XrActivity.getInstance().closeSession());

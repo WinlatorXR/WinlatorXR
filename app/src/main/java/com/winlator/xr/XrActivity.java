@@ -60,7 +60,7 @@ public class XrActivity extends XServerDisplayActivity {
     private static boolean isAER = false;
     public static boolean isSBS = false;
     public static boolean isUDP = false;
-    public static boolean isVR = false;
+    private static boolean isVR = false;
     public static boolean mouseEmulation;
     public static boolean mouseLeftHanded;
     public static boolean mouseLightgun;
@@ -152,11 +152,14 @@ public class XrActivity extends XServerDisplayActivity {
         return isAER && XrContentDialog.getFrontInstance() == null;
     }
     public static boolean getSBS() {
+        if (isVR && !XrRenderer.vrWindowOnTop) {
+            return false;
+        }
         return isSBS;
     }
 
     public static boolean getVR() {
-        return isVR && XrContentDialog.getFrontInstance() == null;
+        return isVR && XrRenderer.vrWindowOnTop && XrContentDialog.getFrontInstance() == null;
     }
 
     public static float getDistance() {
@@ -284,13 +287,13 @@ public class XrActivity extends XServerDisplayActivity {
             if (mouseEmulation) {
                 xrController.updateMouseAxes(axes, isImmersive && isHeadTrackingAllowed);
                 xrController.updateMouseSnapturn(buttons, isImmersive ? 250 : 50);
-                if (mouseLightgun && !isImmersive && !isVR)
+                if (mouseLightgun && !isImmersive && !getVR())
                     xrController.updateMouseLightgun(axes, lastDistance);
             }
-            if (wheelEmulation && !isVR) {
+            if (wheelEmulation && !getVR()) {
                 xrController.updateWheelEmulation(axes);
             }
-            if (!isVR) {
+            if (!getVR()) {
                 xrController.updateMouseState(buttons);
                 xrController.updateKeyboardButtons(buttons);
             }
@@ -322,7 +325,7 @@ public class XrActivity extends XServerDisplayActivity {
             isHeadTrackingAllowed = (vrMode == 0) || (vrMode == 3);
             isUDP = vrMode > 0;
             isVR = vrMode == 1;
-            getInstance().nativeSetUseVR(isVR);
+            getInstance().nativeSetUseVR(getVR());
 
             if (isUDP) {
                 // Field of view adjustment

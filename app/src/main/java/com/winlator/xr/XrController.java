@@ -111,7 +111,6 @@ public class XrController {
             System.arraycopy(buttons, 0, lastButtons, 0, buttons.length);
             lastDialogShown = System.currentTimeMillis();
             instance.nativeSetUseVR(false);
-            XrActivity.isVR = false;
             return false;
         } else if (getButtonClicked(buttons, primaryPress)) {
             instance.runOnUiThread(() -> new NavigationDialog(instance).show());
