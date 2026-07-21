@@ -336,6 +336,15 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
     }
 
 
+    // Ask the compositor to sharpen the layer, greatly improves readability.
+    // Level: 0 = off, 1 = normal, 2 = quality (more expensive).
+    int sharpening_level = renderer->ConfigInt[CONFIG_SHARPENING];
+    XrCompositionLayerSettingsFB layer_settings = {};
+    layer_settings.type = XR_TYPE_COMPOSITION_LAYER_SETTINGS_FB;
+    layer_settings.layerFlags = (sharpening_level >= 2) ? XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SHARPENING_BIT_FB
+                                                        : XR_COMPOSITION_LAYER_SETTINGS_NORMAL_SHARPENING_BIT_FB;
+    const void* layer_settings_chain = (engine->PlatformFlag[PLATFORM_EXTENSION_LAYER_SETTINGS] && sharpening_level > 0) ? &layer_settings : NULL;
+
     XrCompositionLayerProjectionView projection_layer_elements[2] = {};
     struct XrFramebuffer* framebuffer = &renderer->Framebuffer[0];
     if (renderer->ConfigInt[CONFIG_VR])
@@ -380,6 +389,7 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
 
         XrCompositionLayerProjection projection_layer = {};
         projection_layer.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
+        projection_layer.next = layer_settings_chain;
         projection_layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
         projection_layer.layerFlags |= XR_COMPOSITION_LAYER_CORRECT_CHROMATIC_ABERRATION_BIT;
         projection_layer.space = engine->CurrentSpace;
@@ -391,6 +401,7 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
         // Setup the cylinder layer
         XrCompositionLayerCylinderKHR cylinder_layer = {};
         cylinder_layer.type = XR_TYPE_COMPOSITION_LAYER_CYLINDER_KHR;
+        cylinder_layer.next = layer_settings_chain;
         cylinder_layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
         cylinder_layer.space = engine->CurrentSpace;
         memset(&cylinder_layer.subImage, 0, sizeof(XrSwapchainSubImage));
@@ -424,6 +435,7 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
         // Setup quad layer
         XrCompositionLayerQuad quad_layer = {};
         quad_layer.type = XR_TYPE_COMPOSITION_LAYER_QUAD;
+        quad_layer.next = layer_settings_chain;
         quad_layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
         quad_layer.space = engine->CurrentSpace;
         memset(&quad_layer.subImage, 0, sizeof(XrSwapchainSubImage));

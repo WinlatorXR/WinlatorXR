@@ -69,6 +69,28 @@ void XrEngineInit(struct XrEngine* engine, void* system, const char* name, int v
     }
 #endif
 
+    // Enable compositor layer settings (sharpening) if the runtime supports it
+    uint32_t available_count = 0;
+    if ((xrEnumerateInstanceExtensionProperties(NULL, 0, &available_count, NULL) == XR_SUCCESS) && (available_count > 0)) {
+        XrExtensionProperties* available = calloc(available_count, sizeof(XrExtensionProperties));
+        if (available != NULL) {
+            for (uint32_t i = 0; i < available_count; i++) {
+                available[i].type = XR_TYPE_EXTENSION_PROPERTIES;
+            }
+            if (xrEnumerateInstanceExtensionProperties(NULL, available_count, &available_count, available) == XR_SUCCESS) {
+                for (uint32_t i = 0; i < available_count; i++) {
+                    if (strcmp(available[i].extensionName, XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME) == 0) {
+                        engine->PlatformFlag[PLATFORM_EXTENSION_LAYER_SETTINGS] = true;
+                        extensions[count++] = XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME;
+                        break;
+                    }
+                }
+            }
+            free(available);
+        }
+    }
+    ALOGV("XR_FB_composition_layer_settings %s", engine->PlatformFlag[PLATFORM_EXTENSION_LAYER_SETTINGS] ? "enabled" : "not supported");
+
     // Create the OpenXR instance.
     XrApplicationInfo app_info;
     memset(&app_info, 0, sizeof(app_info));
