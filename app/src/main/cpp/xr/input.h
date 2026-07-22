@@ -102,5 +102,6 @@ XrActionStateBoolean XrInputGetActionStateBoolean(XrSession session, XrAction ac
 XrActionStateFloat XrInputGetActionStateFloat(XrSession session, XrAction action);
 XrActionStateVector2f XrInputGetActionStateVector2(XrSession session, XrAction action);
 XrActionSuggestedBinding XrInputGetBinding(XrInstance instance, XrAction action, const char* name);
+XrAction XrInputGetControllerAction(struct XrInput* input, int type, int grip);
 int XrInputGetMilliseconds(struct XrInput* input);
 void XrInputProcessHaptics(struct XrInput* input, XrSession session);

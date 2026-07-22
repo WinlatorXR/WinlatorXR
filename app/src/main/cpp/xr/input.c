@@ -409,6 +409,14 @@ XrActionSuggestedBinding XrInputGetBinding(XrInstance instance, XrAction action,
     return output;
 }
 
+XrAction XrInputGetControllerAction(struct XrInput* input, int type, int grip) {
+    if (type == 1) {
+        return grip == 1 ? input->HandGripLeft : input->HandPoseLeft;
+    } else {
+        return grip == 1 ? input->HandGripRight : input->HandPoseRight;
+    }
+}
+
 int XrInputGetMilliseconds(struct XrInput* input)
 {
     struct timeval tp;

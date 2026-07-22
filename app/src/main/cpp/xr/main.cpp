@@ -20,9 +20,13 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <map>
 #include <vector>
 
+#include "openxr.h"
+
 std::vector<std::pair<int, int> > xr_locate_spaces;
+std::map<int, XrSpace> xr_spaces;
 bool xr_initialized = false;
 bool xr_curvedScreen = false;
 bool xr_usePassthrough = false;
@@ -362,30 +366,50 @@ JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_updateActionSpace(JNIEnv *env, jobject thiz, jint space, jint type,
                                                   jint grip, jfloat x, jfloat y, jfloat z,
                                                   jfloat qx, jfloat qy, jfloat qz, jfloat qw) {
-    XrPosef pose;
-    pose.orientation.x = qx;
-    pose.orientation.y = qy;
-    pose.orientation.z = qz;
-    pose.orientation.w = qw;
-    pose.position.x = x;
-    pose.position.y = y;
-    pose.position.z = z;
-    // TODO: implement updateActionSpace()
+    if (xr_spaces.find(space) == xr_spaces.end()) {
+        ALOGV("Creating action space %d", space);
+        XrSpace output = {};
+        XrAction action = XrInputGetControllerAction(&xr_module_input, type, grip);
+        XrActionSpaceCreateInfo space_info = {};
+        space_info.type = XR_TYPE_ACTION_SPACE_CREATE_INFO;
+        space_info.action = action;
+        space_info.poseInActionSpace.orientation.x = qx;
+        space_info.poseInActionSpace.orientation.y = qy;
+        space_info.poseInActionSpace.orientation.z = qz;
+        space_info.poseInActionSpace.orientation.w = qw;
+        space_info.poseInActionSpace.position.x = x;
+        space_info.poseInActionSpace.position.y = y;
+        space_info.poseInActionSpace.position.z = z;
+        if (xrCreateActionSpace(xr_module_engine.Session, &space_info, &output) != XR_SUCCESS) {
+            ALOGE("Failed to create action space %d", space);
+            std::exit(-1);
+        }
+    }
 }
 
 JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_updateReferenceSpace(JNIEnv *env, jobject thiz, jint space,
                                                      jint type, jfloat x, jfloat y, jfloat z,
                                                      jfloat qx, jfloat qy, jfloat qz, jfloat qw) {
-    XrPosef pose;
-    pose.orientation.x = qx;
-    pose.orientation.y = qy;
-    pose.orientation.z = qz;
-    pose.orientation.w = qw;
-    pose.position.x = x;
-    pose.position.y = y;
-    pose.position.z = z;
-    // TODO: implement updateReferenceSpace()
+    if (xr_spaces.find(space) == xr_spaces.end()) {
+        ALOGV("Creating reference space %d", space);
+        XrSpace output = {};
+        XrReferenceSpaceCreateInfo space_info = {};
+        space_info.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
+        space_info.referenceSpaceType = (XrReferenceSpaceType)type;
+        space_info.poseInReferenceSpace.orientation.x = qx;
+        space_info.poseInReferenceSpace.orientation.y = qy;
+        space_info.poseInReferenceSpace.orientation.z = qz;
+        space_info.poseInReferenceSpace.orientation.w = qw;
+        space_info.poseInReferenceSpace.position.x = x;
+        space_info.poseInReferenceSpace.position.y = y;
+        space_info.poseInReferenceSpace.position.z = z;
+        if (xrCreateReferenceSpace(xr_module_engine.Session, &space_info, &output) != XR_SUCCESS) {
+            ALOGE("Failed to create reference space %d", space);
+            std::exit(-1);
+        }
+        xr_spaces[space] = output;
+    }
 }
 
 }
