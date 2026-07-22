@@ -31,14 +31,14 @@ public class XrVersion02 extends XrVersion01 {
         if (intent == PortIntent.HMD_STATE) {
             try {
                 String[] parts = message.split("\\s+");
-                for (int i = 0; i < parts.length; i++) {
+                for (int i = 0; i < Math.min(input.length, parts.length); i++) {
                     float value = Float.parseFloat(parts[i]);
                     if ((value > 0) || (i >= 2)) {
                         input[i] = value;
                     }
                 }
-            } catch (NumberFormatException e) {
-                System.err.println("Error parsing float values: " + e.getMessage());
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     }
