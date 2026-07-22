@@ -37,27 +37,6 @@ float xr_aspect = 0;
 float xr_fovx = 0;
 float xr_fovy = 0;
 
-#if defined(_DEBUG)
-#include <GLES2/gl2.h>
-void GLCheckErrors(const char* file, int line) {
-	for (int i = 0; i < 10; i++) {
-		const GLenum error = glGetError();
-		if (error == GL_NO_ERROR) {
-			break;
-		}
-		ALOGE("OpenGL error on line %s:%d %d", file, line, error);
-	}
-}
-
-void OXRCheckErrors(XrResult result, const char* file, int line) {
-	if (XR_FAILED(result)) {
-		char errorBuffer[XR_MAX_RESULT_STRING_SIZE];
-		xrResultToString(xr_module_engine.Instance, result, errorBuffer);
-        ALOGE("OpenXR error on line %s:%d %s", file, line, errorBuffer);
-	}
-}
-#endif
-
 char gManufacturer[128] = {0};
 
 extern "C" {
@@ -70,6 +49,27 @@ extern "C" {
 struct XrEngine xr_module_engine;
 struct XrInput xr_module_input;
 struct XrRenderer xr_module_renderer;
+
+#if defined(_DEBUG)
+#include <GLES2/gl2.h>
+void GLCheckErrors(const char* file, int line) {
+    for (int i = 0; i < 10; i++) {
+        const GLenum error = glGetError();
+        if (error == GL_NO_ERROR) {
+            break;
+        }
+        ALOGE("OpenGL error on line %s:%d %d", file, line, error);
+    }
+}
+
+void OXRCheckErrors(XrResult result, const char* file, int line) {
+    if (XR_FAILED(result)) {
+        char errorBuffer[XR_MAX_RESULT_STRING_SIZE];
+        xrResultToString(xr_module_engine.Instance, result, errorBuffer);
+        ALOGE("OpenXR error on line %s:%d %s", file, line, errorBuffer);
+    }
+}
+#endif
 
 void updatePoses() {
     if (xr_locate_spaces.empty()) {
