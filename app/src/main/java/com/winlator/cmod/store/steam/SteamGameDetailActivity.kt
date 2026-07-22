@@ -24,6 +24,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
 
     companion object {
         const val EXTRA_APP_ID = "steam_app_id"
+        private const val DOWNLOAD_THREADS = 8
         private const val COLOR_INSTALL   = 0xFF1565C0.toInt()
         private const val COLOR_CANCEL    = 0xFFCC3333.toInt()
         private const val COLOR_UNINSTALL = 0xFFB71C1C.toInt()
@@ -35,7 +36,6 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
     private var game: SteamGame? = null
 
     @Volatile private var downloadHandle: SteamDepotDownloader.DownloadControl? = null
-    private var lastThreadCount = 4
 
     // Which platform variant the buttons act on: "windows" (PC/Wine) or "android" (native APK).
     private var selectedOs = SteamDepotDownloader.OS_WINDOWS
@@ -182,7 +182,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
                 SteamDepotDownloader.installApp(
                     appId,
                     applicationContext,
-                    lastThreadCount,
+                    DOWNLOAD_THREADS,
                     lastOs
                 )
 
@@ -579,7 +579,6 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         // START DOWNLOAD
         // -------------------------------------------------------------
         resetRetryState()
-        lastThreadCount = 4
         lastOs = selectedOs
 
         installBtn.isEnabled = false
@@ -591,7 +590,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         progressText.visibility = View.VISIBLE
         progressText.text = "Initializing download…"
 
-        downloadHandle = SteamDepotDownloader.installApp(appId, applicationContext, lastThreadCount, selectedOs)
+        downloadHandle = SteamDepotDownloader.installApp(appId, applicationContext, DOWNLOAD_THREADS, selectedOs)
         StoreDownloadQueue.registerHandle(appId, downloadHandle)
     }
 
