@@ -29,20 +29,12 @@
             android:id="@+id/main_menu_controller_assignment"
             android:title="@string/external_controllers"
             android:icon="@drawable/icon_gamepad" />
-        <item
-            android:id="@+id/main_menu_motion_controls"
-            android:title="@string/motion_controls"
-            android:icon="@drawable/icon_motion_controls" />
     <!--/group!-->
 
     <!-- ===== DISPLAY ===== -->
     <!--group
         android:id="@+id/group_display"
         android:checkableBehavior="none"!-->
-        <item
-            android:id="@+id/main_menu_screen_effects"
-            android:title="@string/screen_effect"
-            android:icon="@drawable/icon_screen_effect" />
         <item
             android:id="@+id/main_menu_toggle_fullscreen"
             android:title="@string/toggle_fullscreen"
@@ -77,6 +69,10 @@
         android:id="@+id/main_menu_advanced"
         android:icon="@drawable/icon_popup_menu_cpu"
         android:title="@string/advanced" />
+    <item
+        android:id="@+id/main_menu_screen_effects"
+        android:title="@string/screen_effect"
+        android:icon="@drawable/icon_screen_effect" />
 
     <item
         android:id="@+id/main_menu_pause"

@@ -28,12 +28,7 @@ public class NavigationAdvDialog extends ContentDialog {
         findViewById(R.id.BTCancel).setVisibility(View.GONE);
 
         GridLayout grid = findViewById(R.id.main_menu_grid);
-        int orientation = context.getResources().getConfiguration().orientation;
-        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            grid.setColumnCount(4);
-        } else {
-            grid.setColumnCount(2);
-        }
+        grid.setColumnCount(5);
 
         NavigationView navigation = context.findViewById(R.id.NavigationAdvanced);
         Menu menu = navigation.getMenu();

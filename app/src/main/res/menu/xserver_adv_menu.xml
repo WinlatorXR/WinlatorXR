@@ -16,4 +16,8 @@
         android:id="@+id/main_menu_reshade"
         android:title="@string/reshade"
         android:icon="@drawable/icon_popup_menu_bring_to_front" />
+    <item
+        android:id="@+id/main_menu_motion_controls"
+        android:title="@string/motion_controls"
+        android:icon="@drawable/icon_motion_controls" />
 </menu>

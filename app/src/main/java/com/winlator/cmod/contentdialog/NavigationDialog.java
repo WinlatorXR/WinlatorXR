@@ -37,7 +37,7 @@ public class NavigationDialog extends ContentDialog {
         findViewById(R.id.BTCancel).setVisibility(View.GONE);
 
         GridLayout grid = findViewById(R.id.main_menu_grid);
-        grid.setColumnCount(3);
+        grid.setColumnCount(4);
 
         NavigationView navigation = context.findViewById(R.id.NavigationView);
         Menu menu = navigation.getMenu();
