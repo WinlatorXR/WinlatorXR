@@ -29,7 +29,7 @@ public class XrVersion01 implements XrInterface {
 
     private static final String FLAG_SBS = "sbs";
     private static final String FLAG_VR = "vr";
-    private static final String MSG_CLIENT = "client";
+    protected static final String MSG_CLIENT = "client";
 
     private final File dir;
     protected final float[] input = new float[XrAPI.AppInput.values().length];

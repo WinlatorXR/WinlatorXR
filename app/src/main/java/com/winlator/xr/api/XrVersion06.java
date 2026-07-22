@@ -60,14 +60,20 @@ public class XrVersion06 extends XrVersion05 {
 
     @Override
     public String encode(@NonNull float[] axes, @NonNull boolean[] buttons, int clientIndex) {
-        return super.encode(axes, buttons, clientIndex) +
-                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_QX.ordinal()]) +
-                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_QY.ordinal()]) +
-                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_QZ.ordinal()]) +
-                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_QW.ordinal()]) +
-                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_X.ordinal()]) +
-                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_Y.ordinal()]) +
-                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_Z.ordinal()]);
+        StringBuilder binary = new StringBuilder();
+        for (boolean button : buttons) {
+            binary.append(button ? "T" : "F");
+        }
+        return (MSG_CLIENT + clientIndex +
+                " " + String.format(Locale.US, "%.1f", axes[XrAPI.ControllerAxis.L_THUMBSTICK_X.ordinal()]) +
+                " " + String.format(Locale.US, "%.1f", axes[XrAPI.ControllerAxis.L_THUMBSTICK_Y.ordinal()]) +
+                " " + String.format(Locale.US, "%.1f", axes[XrAPI.ControllerAxis.R_THUMBSTICK_X.ordinal()]) +
+                " " + String.format(Locale.US, "%.1f", axes[XrAPI.ControllerAxis.R_THUMBSTICK_Y.ordinal()]) +
+                " " + String.format(Locale.US, "%.4f", axes[XrAPI.ControllerAxis.HMD_IPD.ordinal()]) +
+                " " + String.format(Locale.US, "%.2f", axes[XrAPI.ControllerAxis.HMD_FOVX.ordinal()]) +
+                " " + String.format(Locale.US, "%.2f", axes[XrAPI.ControllerAxis.HMD_FOVY.ordinal()]) +
+                " " + String.format(Locale.US, "%d", (int)axes[XrAPI.ControllerAxis.HMD_SYNC.ordinal()]) +
+                " " + binary);
     }
 
     private Pose parsePose(Scanner sc) {

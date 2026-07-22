@@ -254,13 +254,6 @@ JNIEXPORT jfloatArray JNICALL Java_com_winlator_xr_XrActivity_getAxes(JNIEnv *en
     data[count++] = rgPose.orientation.y; //RG_QY
     data[count++] = rgPose.orientation.z; //RG_QZ
     data[count++] = rgPose.orientation.w; //RG_QW
-    data[count++] = xr_module_renderer.HmdStage.orientation.x; //HMD_STAGE_QX
-    data[count++] = xr_module_renderer.HmdStage.orientation.y; //HMD_STAGE_QY
-    data[count++] = xr_module_renderer.HmdStage.orientation.z; //HMD_STAGE_QZ
-    data[count++] = xr_module_renderer.HmdStage.orientation.w; //HMD_STAGE_QW
-    data[count++] = xr_module_renderer.HmdStage.position.x; //HMD_STAGE_X
-    data[count++] = xr_module_renderer.HmdStage.position.y; //HMD_STAGE_Y
-    data[count++] = xr_module_renderer.HmdStage.position.z; //HMD_STAGE_Z
 
     jfloat values[count];
     memcpy(values, data, count * sizeof(float));
