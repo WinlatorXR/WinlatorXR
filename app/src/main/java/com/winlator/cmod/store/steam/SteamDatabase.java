@@ -30,7 +30,7 @@ public final class SteamDatabase extends SQLiteOpenHelper {
 
     private static final String TAG        = "SteamDB";
     private static final String DB_NAME    = "steam.db";
-    private static final int    DB_VERSION = 3;
+    private static final int    DB_VERSION = 4;
 
     // -------------------------------------------------------------------------
     // DDL
@@ -49,7 +49,10 @@ public final class SteamDatabase extends SQLiteOpenHelper {
             "  last_updated    INTEGER NOT NULL DEFAULT 0," +
             "  developer       TEXT    NOT NULL DEFAULT ''," +
             "  metacritic_score INTEGER NOT NULL DEFAULT 0," +
-            "  genres          TEXT    NOT NULL DEFAULT ''" +
+            "  genres          TEXT    NOT NULL DEFAULT ''," +
+            "  oslist          TEXT    NOT NULL DEFAULT ''," +
+            "  android_size_bytes INTEGER NOT NULL DEFAULT 0," +
+            "  installed_variant TEXT   NOT NULL DEFAULT ''" +
             ")";
 
     private static final String SQL_LICENSES =
@@ -155,10 +158,14 @@ public final class SteamDatabase extends SQLiteOpenHelper {
         public final String  developer;
         public final int     metacriticScore; // 0 = not rated
         public final String  genres;          // comma-separated genre names
+        public final String  oslist;          // comma-separated platform tokens, e.g. "windows,android"
+        public final long    androidSizeBytes; // downloadable Android (APK) size; 0 = none available
+        public final String  installedVariant; // "", "windows", or "android"
 
         GameRow(int appId, String name, String installDir, String iconHash,
                 long sizeBytes, String depotIds, String type, boolean isInstalled,
-                String developer, int metacriticScore, String genres) {
+                String developer, int metacriticScore, String genres,
+                String oslist, long androidSizeBytes, String installedVariant) {
             this.appId           = appId;
             this.name            = name;
             this.installDir      = installDir;
@@ -170,6 +177,9 @@ public final class SteamDatabase extends SQLiteOpenHelper {
             this.developer       = developer;
             this.metacriticScore = metacriticScore;
             this.genres          = genres;
+            this.oslist          = oslist;
+            this.androidSizeBytes = androidSizeBytes;
+            this.installedVariant = installedVariant;
         }
     }
 
@@ -202,7 +212,8 @@ public final class SteamDatabase extends SQLiteOpenHelper {
      */
     public void upsertGame(int appId, String name, String iconHash,
                            long sizeBytes, String depotIds, String type,
-                           String developer, int metacriticScore, String genres) {
+                           String developer, int metacriticScore, String genres,
+                           String oslist, long androidSizeBytes) {
         SQLiteDatabase db = getWritableDatabase();
         long now = System.currentTimeMillis() / 1000L;
         ContentValues cv = new ContentValues();
@@ -215,9 +226,12 @@ public final class SteamDatabase extends SQLiteOpenHelper {
         cv.put("developer",        developer != null ? developer : "");
         cv.put("metacritic_score", metacriticScore);
         cv.put("genres",           genres != null ? genres : "");
+        cv.put("oslist",           oslist != null ? oslist : "");
+        cv.put("android_size_bytes", androidSizeBytes);
         cv.put("last_updated",     now);
         db.insertWithOnConflict("steam_games", null, cv, SQLiteDatabase.CONFLICT_IGNORE);
-        // On collision: update metadata but preserve install state
+        // On collision: update metadata but preserve install state (is_installed,
+        // install_dir, installed_variant are left untouched).
         ContentValues upd = new ContentValues();
         upd.put("name",             cv.getAsString("name"));
         upd.put("icon_hash",        cv.getAsString("icon_hash"));
@@ -227,17 +241,24 @@ public final class SteamDatabase extends SQLiteOpenHelper {
         upd.put("developer",        cv.getAsString("developer"));
         upd.put("metacritic_score", metacriticScore);
         upd.put("genres",           cv.getAsString("genres"));
+        upd.put("oslist",           cv.getAsString("oslist"));
+        upd.put("android_size_bytes", androidSizeBytes);
         upd.put("last_updated",     now);
         db.update("steam_games", upd, "app_id = ?", new String[]{String.valueOf(appId)});
     }
 
-    /** Mark a game as installed at the given path. */
-    public void markInstalled(int appId, String installDir, long sizeBytes) {
+    /** Mark a game as installed at the given path with the given variant ("windows" / "android"). */
+    public void markInstalled(int appId, String installDir, long sizeBytes, String variant) {
         SQLiteDatabase db = getWritableDatabase();
         ContentValues cv = new ContentValues();
-        cv.put("is_installed", 1);
-        cv.put("install_dir",  installDir != null ? installDir : "");
-        cv.put("size_bytes",   sizeBytes);
+        cv.put("is_installed",      1);
+        cv.put("install_dir",       installDir != null ? installDir : "");
+        cv.put("installed_variant", variant != null ? variant : "");
+        // Do NOT overwrite size_bytes here — that column is the PC download size shown in
+        // the library. Android installs report their own size via android_size_bytes instead.
+        if (!"android".equals(variant)) {
+            cv.put("size_bytes", sizeBytes);
+        }
         db.update("steam_games", cv, "app_id = ?", new String[]{String.valueOf(appId)});
     }
 
@@ -245,8 +266,9 @@ public final class SteamDatabase extends SQLiteOpenHelper {
     public void markUninstalled(int appId) {
         SQLiteDatabase db = getWritableDatabase();
         ContentValues cv = new ContentValues();
-        cv.put("is_installed", 0);
-        cv.put("install_dir",  "");
+        cv.put("is_installed",      0);
+        cv.put("install_dir",       "");
+        cv.put("installed_variant", "");
         db.update("steam_games", cv, "app_id = ?", new String[]{String.valueOf(appId)});
         // Invalidate in-memory cache so the library list reflects the new state immediately
         SteamRepository.getInstance().invalidateGameCache();
@@ -289,7 +311,8 @@ public final class SteamDatabase extends SQLiteOpenHelper {
     private List<GameRow> queryGames(String where, String[] args) {
         List<GameRow> result = new ArrayList<>();
         String sql = "SELECT app_id,name,install_dir,icon_hash,size_bytes,depot_ids,type," +
-                     "is_installed,developer,metacritic_score,genres" +
+                     "is_installed,developer,metacritic_score,genres," +
+                     "oslist,android_size_bytes,installed_variant" +
                      " FROM steam_games" +
                      (where != null ? " WHERE " + where : "") +
                      " ORDER BY name COLLATE NOCASE";
@@ -306,7 +329,10 @@ public final class SteamDatabase extends SQLiteOpenHelper {
                         c.getInt(7) != 0,
                         c.getString(8),
                         c.getInt(9),
-                        c.getString(10)));
+                        c.getString(10),
+                        c.getString(11),
+                        c.getLong(12),
+                        c.getString(13)));
             }
         }
         return result;

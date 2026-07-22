@@ -97,27 +97,35 @@ object SteamDepotDownloader {
     /** Java-compatible singleton accessor. */
     @JvmStatic fun getInstance(): SteamDepotDownloader = this
 
+    /** Platform strings passed to installApp()/AppItem.os. */
+    const val OS_WINDOWS = "windows"
+    const val OS_ANDROID = "android"
+
     /**
      * Start a fresh install. Returns a DownloadControl with cancel + pause Runnables.
      * @param threads number of parallel chunk downloads + decompression workers (4 / 8 / 16)
+     * @param os      which platform's depots to download — "windows" (default, PC build via
+     *                Wine/Box64) or "android" (the native APK build for Steam VR titles).
      */
-    fun installApp(appId: Int, ctx: Context, threads: Int = 4): DownloadControl =
-        buildControl(appId, ctx, threads, isResume = false)
+    @JvmOverloads
+    fun installApp(appId: Int, ctx: Context, threads: Int = 4, os: String = OS_WINDOWS): DownloadControl =
+        buildControl(appId, ctx, threads, isResume = false, os = os)
 
     /**
      * Resume a previously paused install. Keeps the existing DB row (bytes intact).
      * DepotDownloader will re-verify and skip already-written chunks where possible.
      */
-    fun resumeApp(appId: Int, ctx: Context, threads: Int = 4): DownloadControl =
-        buildControl(appId, ctx, threads, isResume = true)
+    @JvmOverloads
+    fun resumeApp(appId: Int, ctx: Context, threads: Int = 4, os: String = OS_WINDOWS): DownloadControl =
+        buildControl(appId, ctx, threads, isResume = true, os = os)
 
-    private fun buildControl(appId: Int, ctx: Context, threads: Int, isResume: Boolean): DownloadControl {
+    private fun buildControl(appId: Int, ctx: Context, threads: Int, isResume: Boolean, os: String): DownloadControl {
         val cancelled     = AtomicBoolean(false)
         val paused        = AtomicBoolean(false)
         val downloaderRef = AtomicReference<DepotDownloader?>(null)
 
         CoroutineScope(Dispatchers.IO).launch {
-            runInstall(appId, ctx, cancelled, paused, downloaderRef, threads, isResume)
+            runInstall(appId, ctx, cancelled, paused, downloaderRef, threads, isResume, os)
         }
 
         return DownloadControl(
@@ -149,10 +157,12 @@ object SteamDepotDownloader {
         downloaderRef: AtomicReference<DepotDownloader?>,
         threads: Int = 4,
         isResume: Boolean = false,
+        os: String = OS_WINDOWS,
     ) {
+        val isAndroid = os.equals(OS_ANDROID, ignoreCase = true)
         activeDownloads[appId] = Unit
         initDebugLog(ctx)
-        dlog("=== Starting install: appId=$appId ===")
+        dlog("=== Starting install: appId=$appId os=$os ===")
 
         val repo = SteamRepository.getInstance()
         val steamClient = repo.steamClient
@@ -198,16 +208,30 @@ object SteamDepotDownloader {
             row.name
         )
 
-        // Sanitise game name for directory usage
+        // Android APKs can't be publicly downloadable even when the depot is listed in PICS.
+        // androidSizeBytes is 0 in that case — fail early with a clear message instead of
+        // handing an empty depot set to DepotDownloader (which would "complete" with no files).
+        if (isAndroid && row.androidSizeBytes <= 0L) {
+            dlog("FAIL: Android build for appId=$appId is not publicly downloadable (no public manifest)")
+            activeDownloads.remove(appId)
+            emitFailed(appId, "The Android version exists but is currently not publicly available")
+            return
+        }
+
+        // Sanitise game name for directory usage. Android installs go to a separate folder so
+        // they never mix with an existing PC (Wine) install of the same title.
         val safeName = row.name.replace(Regex("[/\\\\:*?\"<>|]"), "_").trim()
-        val installDir = File(File(ctx.filesDir, "imagefs/steam_games"), safeName)
+        val dirName = if (isAndroid) "$safeName (Android)" else safeName
+        val installDir = File(File(ctx.filesDir, "imagefs/steam_games"), dirName)
         dlog("Install dir: ${installDir.absolutePath}")
 
-        // total bytes from PICS size data (falls back to depot manifest sum)
+        // total bytes from PICS size data (falls back to depot manifest sum).
+        // Android uses its own per-platform size; PC uses the Windows depot size.
+        val picsSize = if (isAndroid) row.androidSizeBytes else row.sizeBytes
         val hasPicsSize: Boolean
-        val totalExpected: Long = if (row.sizeBytes > 0L) {
+        val totalExpected: Long = if (picsSize > 0L) {
             hasPicsSize = true
-            row.sizeBytes
+            picsSize
         } else {
             hasPicsSize = false
             db.getDepotManifests(appId).sumOf { it.sizeBytes }.let { if (it > 0L) it else 1L }
@@ -299,7 +323,7 @@ object SteamDepotDownloader {
                 val finalTotal = totalRunning.get()
                 // Emit 100% before switching to installed state
                 repo.emit("DownloadProgress:$appId:$finalTotal:$finalTotal")
-                db.markInstalled(appId, installDir.absolutePath, finalBytes)
+                db.markInstalled(appId, installDir.absolutePath, finalBytes, os)
                 repo.emit("DownloadComplete:$appId")
             }
 
@@ -319,11 +343,12 @@ object SteamDepotDownloader {
             appId = appId,
             installDirectory = installDir.absolutePath,
             branch = "public",
-            // Explicitly request Windows depots — don't let Util.getSteamOS() guess,
-            // since androidEmulation only works if IS_OS_ANDROID is true at runtime.
-            os = "windows",
-            // Skip arch filtering — we always want the game's Windows depots regardless
-            // of what os.arch returns on this Android device (arm64, aarch64, armv8l, etc.).
+            // Explicitly request the target platform's depots — don't let Util.getSteamOS()
+            // guess, since androidEmulation forces it to report "windows" on this device.
+            // "windows" = PC build (run via Wine/Box64); "android" = native APK depots.
+            os = os,
+            // Skip arch filtering — we always want the game's depots regardless of what
+            // os.arch returns on this Android device (arm64, aarch64, armv8l, etc.).
             // Wine/Box64 handles x86_64 translation; arch mismatch would filter all depots.
             downloadAllArchs = true,
         )
