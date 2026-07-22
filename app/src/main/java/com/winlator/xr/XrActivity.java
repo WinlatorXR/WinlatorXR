@@ -374,4 +374,12 @@ public class XrActivity extends XServerDisplayActivity {
     public native void nativeSetUseVR(boolean enabled);
     public native void nativeSetFramesync(int r, int g, int b, int a);
     public native void sendManufacturer(String manufacturer);
+
+    // XrAPI
+    public native void addLocateSpace(int a, int b);
+    public native void clearLocateSpaces();
+    public native void updateActionSpace(int space, int type, int grip, float x, float y, float z,
+                                         float qx, float qy, float qz, float qw);
+    public native void updateReferenceSpace(int space, int type, float x, float y, float z,
+                                            float qx, float qy, float qz, float qw);
 }

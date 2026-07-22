@@ -32,7 +32,7 @@ add_library(xr SHARED
         xr/engine.c
         xr/framebuffer.c
         xr/input.c
-        xr/main.c
+        xr/main.cpp
         xr/math.c
         xr/renderer.c
 )

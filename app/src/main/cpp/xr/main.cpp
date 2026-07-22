@@ -17,18 +17,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "engine.h"
-#include "input.h"
-#include "math.h"
-#include "renderer.h"
-#include "stdio.h"
-#include "stdlib.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <vector>
 
-#include <string.h>
-
-struct XrEngine xr_module_engine;
-struct XrInput xr_module_input;
-struct XrRenderer xr_module_renderer;
+std::vector<std::pair<int, int> > xr_locate_spaces;
 bool xr_initialized = false;
 bool xr_curvedScreen = false;
 bool xr_usePassthrough = false;
@@ -61,15 +55,28 @@ void OXRCheckErrors(XrResult result, const char* file, int line) {
 
 char gManufacturer[128] = {0};
 
-JNIEXPORT void JNICALL Java_com_winlator_xr_XrActivity_sendManufacturer(JNIEnv *env, jobject thiz, jstring manufacturer) {
-    const char *nativeStr = (*env)->GetStringUTFChars(env, manufacturer, 0);
+extern "C" {
+
+#include "engine.h"
+#include "input.h"
+#include "math.h"
+#include "renderer.h"
+
+struct XrEngine xr_module_engine;
+struct XrInput xr_module_input;
+struct XrRenderer xr_module_renderer;
+
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_sendManufacturer(JNIEnv *env, jobject thiz, jstring manufacturer) {
+    const char *nativeStr = env->GetStringUTFChars(manufacturer, 0);
     strncpy(gManufacturer, nativeStr, sizeof(gManufacturer) - 1);
     gManufacturer[sizeof(gManufacturer) - 1] = '\0';
-    (*env)->ReleaseStringUTFChars(env, manufacturer, nativeStr);
+    env->ReleaseStringUTFChars(manufacturer, nativeStr);
 }
 
-JNIEXPORT void JNICALL Java_com_winlator_xr_XrActivity_init(JNIEnv *env, jobject obj, jint width, jint height,
-                                                              jint refresh, jint cpu, jint gpu) {
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_init(JNIEnv *env, jobject obj, jint width, jint height,
+                                     jint refresh, jint cpu, jint gpu) {
 
     // Do not allow second initialization
     if (xr_initialized) {
@@ -100,16 +107,16 @@ JNIEXPORT void JNICALL Java_com_winlator_xr_XrActivity_init(JNIEnv *env, jobject
     xr_module_renderer.ConfigInt[CONFIG_FRAMERATE] = refresh;
     xr_module_renderer.ConfigInt[CONFIG_VIEWPORT_WIDTH] = width;
     xr_module_renderer.ConfigInt[CONFIG_VIEWPORT_HEIGHT] = width; //Use square resolution
-    xr_aspect = (float)width / (float)height;
+    xr_aspect = (float) width / (float) height;
 
     // Get Java VM
-    JavaVM* vm;
-    (*env)->GetJavaVM(env, &vm);
+    JavaVM *vm;
+    env->GetJavaVM(&vm);
 
     // Init XR
     xrJava java;
     java.vm = vm;
-    java.activity = (*env)->NewGlobalRef(env, obj);
+    java.activity = env->NewGlobalRef(obj);
     XrEngineInit(&xr_module_engine, &java, "Winlator", 1);
 
     // Enter XR
@@ -133,7 +140,9 @@ JNIEXPORT jint JNICALL Java_com_winlator_xr_XrActivity_getHeight(JNIEnv *env, jo
     return xr_module_renderer.ConfigInt[CONFIG_VIEWPORT_HEIGHT];
 }
 
-JNIEXPORT jboolean JNICALL Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean immersive, jboolean sbs, jboolean aer, jfloat distance) {
+JNIEXPORT jboolean JNICALL
+Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean immersive,
+                                          jboolean sbs, jboolean aer, jfloat distance) {
     if (XrRendererInitFrame(&xr_module_engine, &xr_module_renderer)) {
         // Update controllers state
         XrInputUpdate(&xr_module_engine, &xr_module_input);
@@ -146,7 +155,8 @@ JNIEXPORT jboolean JNICALL Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env
         xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOV_SCALE] = 1.1f;
         if (xr_fovx > 1) xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOVX] = xr_fovx;
         if (xr_fovy > 1) xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOVY] = xr_fovy;
-        xr_module_renderer.ConfigInt[CONFIG_PASSTHROUGH] = !immersive && !xr_vr && xr_usePassthrough;
+        xr_module_renderer.ConfigInt[CONFIG_PASSTHROUGH] =
+                !immersive && !xr_vr && xr_usePassthrough;
         xr_module_renderer.ConfigInt[CONFIG_IMMERSIVE] = immersive && !xr_vr;
         xr_module_renderer.ConfigInt[CONFIG_FRAMESYNC] = xr_vr;
         xr_module_renderer.ConfigInt[CONFIG_AER] = aer;
@@ -168,7 +178,8 @@ JNIEXPORT jboolean JNICALL Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env
     return false;
 }
 
-JNIEXPORT void JNICALL Java_com_winlator_xr_XrActivity_bindFBO(JNIEnv *env, jobject obj, jint fboIndex) {
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_bindFBO(JNIEnv *env, jobject obj, jint fboIndex) {
     XrRendererEndFrame(&xr_module_renderer);
     XrRendererBeginFrame(&xr_module_renderer, fboIndex);
 }
@@ -249,41 +260,42 @@ JNIEXPORT jfloatArray JNICALL Java_com_winlator_xr_XrActivity_getAxes(JNIEnv *en
 
     jfloat values[count];
     memcpy(values, data, count * sizeof(float));
-    jfloatArray output = (*env)->NewFloatArray(env, count);
-    (*env)->SetFloatArrayRegion(env, output, (jsize)0, (jsize)count, values);
+    jfloatArray output = env->NewFloatArray(count);
+    env->SetFloatArrayRegion(output, (jsize) 0, (jsize) count, values);
     return output;
 }
 
-JNIEXPORT jbooleanArray JNICALL Java_com_winlator_xr_XrActivity_getButtons(JNIEnv *env, jobject obj) {
+JNIEXPORT jbooleanArray JNICALL
+Java_com_winlator_xr_XrActivity_getButtons(JNIEnv *env, jobject obj) {
     uint32_t l = XrInputGetButtonState(&xr_module_input, 0);
     uint32_t r = XrInputGetButtonState(&xr_module_input, 1);
 
     int count = 0;
     bool data[32];
-    data[count++] = l & (int)Grip; //L_GRIP
-    data[count++] = l & (int)Enter; //L_MENU
-    data[count++] = l & (int)LThumb; //L_THUMBSTICK_PRESS
-    data[count++] = l & (int)Left; //L_THUMBSTICK_LEFT
-    data[count++] = l & (int)Right; //L_THUMBSTICK_RIGHT
-    data[count++] = l & (int)Up; //L_THUMBSTICK_UP
-    data[count++] = l & (int)Down; //L_THUMBSTICK_DOWN
-    data[count++] = l & (int)Trigger; //L_TRIGGER
-    data[count++] = l & (int)X; //L_X
-    data[count++] = l & (int)Y; //L_Y
-    data[count++] = r & (int)A; //R_A
-    data[count++] = r & (int)B; //R_B
-    data[count++] = r & (int)Grip; //R_GRIP
-    data[count++] = r & (int)RThumb; //R_THUMBSTICK_PRESS
-    data[count++] = r & (int)Left; //R_THUMBSTICK_LEFT
-    data[count++] = r & (int)Right; //R_THUMBSTICK_RIGHT
-    data[count++] = r & (int)Up; //R_THUMBSTICK_UP
-    data[count++] = r & (int)Down; //R_THUMBSTICK_DOWN
-    data[count++] = r & (int)Trigger; //R_TRIGGER
+    data[count++] = l & (int) Grip; //L_GRIP
+    data[count++] = l & (int) Enter; //L_MENU
+    data[count++] = l & (int) LThumb; //L_THUMBSTICK_PRESS
+    data[count++] = l & (int) Left; //L_THUMBSTICK_LEFT
+    data[count++] = l & (int) Right; //L_THUMBSTICK_RIGHT
+    data[count++] = l & (int) Up; //L_THUMBSTICK_UP
+    data[count++] = l & (int) Down; //L_THUMBSTICK_DOWN
+    data[count++] = l & (int) Trigger; //L_TRIGGER
+    data[count++] = l & (int) X; //L_X
+    data[count++] = l & (int) Y; //L_Y
+    data[count++] = r & (int) A; //R_A
+    data[count++] = r & (int) B; //R_B
+    data[count++] = r & (int) Grip; //R_GRIP
+    data[count++] = r & (int) RThumb; //R_THUMBSTICK_PRESS
+    data[count++] = r & (int) Left; //R_THUMBSTICK_LEFT
+    data[count++] = r & (int) Right; //R_THUMBSTICK_RIGHT
+    data[count++] = r & (int) Up; //R_THUMBSTICK_UP
+    data[count++] = r & (int) Down; //R_THUMBSTICK_DOWN
+    data[count++] = r & (int) Trigger; //R_TRIGGER
 
     jboolean values[count];
     memcpy(values, data, count * sizeof(jboolean));
-    jbooleanArray output = (*env)->NewBooleanArray(env, count);
-    (*env)->SetBooleanArrayRegion(env, output, (jsize)0, (jsize)count, values);
+    jbooleanArray output = env->NewBooleanArray(count);
+    env->SetBooleanArrayRegion(output, (jsize) 0, (jsize) count, values);
     return output;
 }
 
@@ -319,13 +331,61 @@ Java_com_winlator_xr_XrActivity_nativeSetUseVR(JNIEnv *env, jobject obj, jboolea
 }
 
 JNIEXPORT void JNICALL
-Java_com_winlator_xr_XrActivity_nativeSetFramesync(JNIEnv *env, jobject obj, jint r, jint g, jint b, jint a) {
+Java_com_winlator_xr_XrActivity_nativeSetFramesync(JNIEnv *env, jobject obj, jint r, jint g, jint b,
+                                                   jint a) {
     xr_module_renderer.ConfigInt[CONFIG_FRAMESYNC_R] = r;
     xr_module_renderer.ConfigInt[CONFIG_FRAMESYNC_G] = g;
     xr_module_renderer.ConfigInt[CONFIG_FRAMESYNC_B] = b;
     xr_module_renderer.ConfigInt[CONFIG_FRAMESYNC_A] = a;
 }
 
-JNIEXPORT void JNICALL Java_com_winlator_xr_XrActivity_vibrateController(JNIEnv *env, jobject obj, int duration, int chan, float intensity) {
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_vibrateController(JNIEnv *env, jobject obj, int duration, int chan,
+                                                  float intensity) {
     XrInputVibrate(&xr_module_input, duration, chan, intensity);
+}
+
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_addLocateSpace(JNIEnv *env, jobject thiz, jint a, jint b) {
+    std::pair<int, int> value;
+    value.first = a;
+    value.second = b;
+    xr_locate_spaces.push_back(value);
+}
+
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_clearLocateSpaces(JNIEnv *env, jobject thiz) {
+    xr_locate_spaces.clear();
+}
+
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_updateActionSpace(JNIEnv *env, jobject thiz, jint space, jint type,
+                                                  jint grip, jfloat x, jfloat y, jfloat z,
+                                                  jfloat qx, jfloat qy, jfloat qz, jfloat qw) {
+    XrPosef pose;
+    pose.orientation.x = qx;
+    pose.orientation.y = qy;
+    pose.orientation.z = qz;
+    pose.orientation.w = qw;
+    pose.position.x = x;
+    pose.position.y = y;
+    pose.position.z = z;
+    // TODO: implement updateActionSpace()
+}
+
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_updateReferenceSpace(JNIEnv *env, jobject thiz, jint space,
+                                                     jint type, jfloat x, jfloat y, jfloat z,
+                                                     jfloat qx, jfloat qy, jfloat qz, jfloat qw) {
+    XrPosef pose;
+    pose.orientation.x = qx;
+    pose.orientation.y = qy;
+    pose.orientation.z = qz;
+    pose.orientation.w = qw;
+    pose.position.x = x;
+    pose.position.y = y;
+    pose.position.z = z;
+    // TODO: implement updateReferenceSpace()
+}
+
 }

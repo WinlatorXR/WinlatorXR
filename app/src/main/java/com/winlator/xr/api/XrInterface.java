@@ -50,6 +50,16 @@ public interface XrInterface {
         XSERVER_INPUT
     }
 
+    class Pose {
+        float x;
+        float y;
+        float z;
+        float qx;
+        float qy;
+        float qz;
+        float qw;
+    }
+
     void consumeInputs(XServer xServer);
     void dataReceived(PortIntent intent, @NonNull String message);
     String encode(@NonNull float[] axes, @NonNull boolean[] buttons, int clientIndex);
