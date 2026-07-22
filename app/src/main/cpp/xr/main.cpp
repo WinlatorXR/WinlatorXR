@@ -86,7 +86,10 @@ void updatePoses() {
             projection_info.displayTime = xr_module_engine.PredictedDisplayTime;
             projection_info.space = xr_spaces[space.second];
 
-            XrView projections[XrMaxNumEyes];
+            XrView projections[XrMaxNumEyes] = {};
+            for (auto & projection : projections) {
+                projection.type = XR_TYPE_VIEW;
+            }
             uint32_t projection_capacity = XrMaxNumEyes;
             uint32_t projection_count = projection_capacity;
             XrViewState view_state = {XR_TYPE_VIEW_STATE, NULL};
