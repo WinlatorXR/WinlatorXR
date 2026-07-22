@@ -26,6 +26,7 @@
 #include "openxr.h"
 
 std::vector<std::pair<int, int> > xr_locate_spaces;
+std::map<std::pair<int, int>, XrPosef> xr_poses;
 std::map<int, XrSpace> xr_spaces;
 bool xr_initialized = false;
 bool xr_curvedScreen = false;
@@ -69,6 +70,44 @@ extern "C" {
 struct XrEngine xr_module_engine;
 struct XrInput xr_module_input;
 struct XrRenderer xr_module_renderer;
+
+void updatePoses() {
+    if (xr_locate_spaces.empty()) {
+        return;
+    }
+
+    xr_poses.clear();
+    for (auto& space : xr_locate_spaces) {
+        if (space.first == 0) {
+            XrViewLocateInfo projection_info = {};
+            projection_info.type = XR_TYPE_VIEW_LOCATE_INFO;
+            projection_info.next = NULL;
+            projection_info.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+            projection_info.displayTime = xr_module_engine.PredictedDisplayTime;
+            projection_info.space = xr_spaces[space.second];
+
+            XrView projections[XrMaxNumEyes];
+            uint32_t projection_capacity = XrMaxNumEyes;
+            uint32_t projection_count = projection_capacity;
+            XrViewState view_state = {XR_TYPE_VIEW_STATE, NULL};
+            OXR(xrLocateViews(xr_module_engine.Session, &projection_info, &view_state,
+                              projection_capacity, &projection_count, projections));
+
+            XrPosef pose;
+            pose.orientation = projections[0].pose.orientation;
+            pose.position.x = (projections[0].pose.position.x + projections[1].pose.position.x) * 0.5f;
+            pose.position.y = (projections[0].pose.position.y + projections[1].pose.position.y) * 0.5f;
+            pose.position.z = (projections[0].pose.position.z + projections[1].pose.position.z) * 0.5f;
+            xr_poses[space] = pose;
+        } else {
+            XrSpaceLocation loc = {};
+            loc.type = XR_TYPE_SPACE_LOCATION;
+            OXR(xrLocateSpace(xr_spaces[space.first], xr_spaces[space.second],
+                              xr_module_engine.PredictedDisplayTime, &loc));
+            xr_poses[space] = loc.pose;
+        }
+    }
+}
 
 JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_sendManufacturer(JNIEnv *env, jobject thiz, jstring manufacturer) {
@@ -166,6 +205,9 @@ Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean imm
         xr_module_renderer.ConfigInt[CONFIG_AER] = aer;
         xr_module_renderer.ConfigInt[CONFIG_SBS] = sbs;
         xr_module_renderer.ConfigInt[CONFIG_VR] = xr_vr;
+
+        // Get poses for XrAPI
+        updatePoses();
 
         // Recenter on the first frame
         static bool first_frame = true;
@@ -353,6 +395,32 @@ Java_com_winlator_xr_XrActivity_addLocateSpace(JNIEnv *env, jobject thiz, jint a
 JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_clearLocateSpaces(JNIEnv *env, jobject thiz) {
     xr_locate_spaces.clear();
+}
+
+JNIEXPORT jfloatArray JNICALL
+Java_com_winlator_xr_XrActivity_getPose(JNIEnv *env, jobject thiz, jint a, jint b) {
+    int count = 0;
+    float data[7];
+    std::pair<int, int> key;
+    key.first = a;
+    key.second = b;
+
+    if (xr_poses.find(key) != xr_poses.end()) {
+        XrPosef pose = xr_poses[key];
+        data[count++] = pose.position.x;
+        data[count++] = pose.position.y;
+        data[count++] = pose.position.z;
+        data[count++] = pose.orientation.x;
+        data[count++] = pose.orientation.y;
+        data[count++] = pose.orientation.z;
+        data[count++] = pose.orientation.w;
+    }
+
+    jfloat values[count];
+    memcpy(values, data, count * sizeof(float));
+    jfloatArray output = env->NewFloatArray(count);
+    env->SetFloatArrayRegion(output, (jsize) 0, (jsize) count, values);
+    return output;
 }
 
 JNIEXPORT void JNICALL
