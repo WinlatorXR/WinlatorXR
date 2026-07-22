@@ -45,6 +45,7 @@ public class XrKeyboard extends ContentDialog {
 
     private static int width, height;
     private static int x1, y1, x2, y2;
+    private static boolean isClosing = false;
     private static boolean isShown = false;
     private static XrKeyboard keyboard;
 
@@ -70,7 +71,7 @@ public class XrKeyboard extends ContentDialog {
     @Override
     public void dismiss() {
         super.dismiss();
-        isShown = false;
+        isClosing = true;
     }
 
     @Override
@@ -88,6 +89,9 @@ public class XrKeyboard extends ContentDialog {
 
     @Override
     public void redraw() {
+        if (isClosing) {
+            return;
+        }
         View root = findViewById(R.id.keyboardRoot);
         ArrayList<Button> keys = new ArrayList<>();
         collectButtons(root, keys);
@@ -125,6 +129,15 @@ public class XrKeyboard extends ContentDialog {
     }
 
     public static void update(float[] axes, boolean[] buttons, float distance) {
+        if (isClosing) {
+            if (buttons[XrInterface.ControllerButton.L_MENU.ordinal()]) return;
+            if (buttons[XrInterface.ControllerButton.L_THUMBSTICK_PRESS.ordinal()]) return;
+            if (buttons[XrInterface.ControllerButton.R_THUMBSTICK_PRESS.ordinal()]) return;
+            isClosing = false;
+            isShown = false;
+            return;
+        }
+
         // laser raycasting
         Pair<Integer, Integer> values;
         values = calculateRaycast(0, axes, distance);
