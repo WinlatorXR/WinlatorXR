@@ -433,10 +433,10 @@ Java_com_winlator_xr_XrActivity_updateActionSpace(JNIEnv *env, jobject thiz, jin
     if (xr_spaces.find(space) == xr_spaces.end()) {
         ALOGV("Creating action space %d", space);
         XrSpace output = {};
-        XrAction action = XrInputGetControllerAction(&xr_module_input, type, grip);
         XrActionSpaceCreateInfo space_info = {};
         space_info.type = XR_TYPE_ACTION_SPACE_CREATE_INFO;
-        space_info.action = action;
+        space_info.action = XrInputGetControllerAction(&xr_module_input, type, grip);
+        space_info.subactionPath = XrInputGetControllerPath(&xr_module_input, type);
         space_info.poseInActionSpace.orientation.x = qx;
         space_info.poseInActionSpace.orientation.y = qy;
         space_info.poseInActionSpace.orientation.z = qz;
@@ -448,6 +448,7 @@ Java_com_winlator_xr_XrActivity_updateActionSpace(JNIEnv *env, jobject thiz, jin
             ALOGE("Failed to create action space %d", space);
             std::exit(-1);
         }
+        xr_spaces[space] = output;
     }
 }
 
