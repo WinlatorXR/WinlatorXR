@@ -1,13 +1,18 @@
 package com.winlator.xr.api;
 
+import android.util.Pair;
+
 import androidx.annotation.NonNull;
 
 import com.winlator.xr.XrActivity;
 
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Scanner;
 
 public class XrVersion06 extends XrVersion05 {
+
+    private final ArrayList<Pair<Integer, Integer>> spaces = new ArrayList<>();
 
     @Override
     public void dataReceived(PortIntent intent, @NonNull String message) {
@@ -46,12 +51,16 @@ public class XrVersion06 extends XrVersion05 {
 
             // Process locate spaces
             if (sc.hasNext()) {
-                int count = sc.nextInt();
-                instance.clearLocateSpaces();
-                for (int i = 0; i < count; i++) {
-                    int a = sc.nextInt();
-                    int b = sc.nextInt();
-                    instance.addLocateSpace(a, b);
+                synchronized (spaces) {
+                    spaces.clear();
+                    int count = sc.nextInt();
+                    instance.clearLocateSpaces();
+                    for (int i = 0; i < count; i++) {
+                        int a = sc.nextInt();
+                        int b = sc.nextInt();
+                        spaces.add(new Pair<>(a, b));
+                        instance.addLocateSpace(a, b);
+                    }
                 }
             }
             sc.close();
@@ -60,14 +69,36 @@ public class XrVersion06 extends XrVersion05 {
 
     @Override
     public String encode(@NonNull float[] axes, @NonNull boolean[] buttons, int clientIndex) {
-        return super.encode(axes, buttons, clientIndex) +
-                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_QX.ordinal()]) +
-                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_QY.ordinal()]) +
-                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_QZ.ordinal()]) +
-                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_QW.ordinal()]) +
-                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_X.ordinal()]) +
-                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_Y.ordinal()]) +
-                " " + String.format(Locale.US, "%.3f", axes[ControllerAxis.HMD_STAGE_Z.ordinal()]);
+        StringBuilder binary = new StringBuilder();
+        for (boolean button : buttons) {
+            binary.append(button ? "T" : "F");
+        }
+
+        XrActivity instance = XrActivity.getInstance();
+        StringBuilder poses = new StringBuilder();
+        synchronized (spaces) {
+            poses.append(spaces.size()).append(" ");
+            for (Pair<Integer, Integer> space : spaces) {
+                poses.append(space.first).append(" ");
+                poses.append(space.second).append(" ");
+                float[] pose = instance.getPose(space.first, space.second);
+                if (pose.length != 7) pose = new float[7];
+                for (float f : pose) {
+                    String str = String.format(Locale.US, "%.3f", f);
+                    poses.append(str).append(" ");
+                }
+            }
+        }
+        return (MSG_CLIENT + clientIndex +
+                " " + String.format(Locale.US, "%.1f", axes[XrAPI.ControllerAxis.L_THUMBSTICK_X.ordinal()]) +
+                " " + String.format(Locale.US, "%.1f", axes[XrAPI.ControllerAxis.L_THUMBSTICK_Y.ordinal()]) +
+                " " + String.format(Locale.US, "%.1f", axes[XrAPI.ControllerAxis.R_THUMBSTICK_X.ordinal()]) +
+                " " + String.format(Locale.US, "%.1f", axes[XrAPI.ControllerAxis.R_THUMBSTICK_Y.ordinal()]) +
+                " " + String.format(Locale.US, "%.4f", axes[XrAPI.ControllerAxis.HMD_IPD.ordinal()]) +
+                " " + String.format(Locale.US, "%.2f", axes[XrAPI.ControllerAxis.HMD_FOVX.ordinal()]) +
+                " " + String.format(Locale.US, "%.2f", axes[XrAPI.ControllerAxis.HMD_FOVY.ordinal()]) +
+                " " + String.format(Locale.US, "%d", (int)axes[XrAPI.ControllerAxis.HMD_SYNC.ordinal()]) +
+                " " + binary + " " + poses);
     }
 
     private Pose parsePose(Scanner sc) {

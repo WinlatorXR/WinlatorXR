@@ -417,6 +417,10 @@ XrAction XrInputGetControllerAction(struct XrInput* input, int type, int grip) {
     }
 }
 
+XrPath XrInputGetControllerPath(struct XrInput* input, int type) {
+    return type == 1 ? input->LeftHandPath : input->RightHandPath;
+}
+
 int XrInputGetMilliseconds(struct XrInput* input)
 {
     struct timeval tp;

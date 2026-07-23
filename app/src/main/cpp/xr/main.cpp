@@ -26,6 +26,7 @@
 #include "openxr.h"
 
 std::vector<std::pair<int, int> > xr_locate_spaces;
+std::map<std::pair<int, int>, XrPosef> xr_poses;
 std::map<int, XrSpace> xr_spaces;
 bool xr_initialized = false;
 bool xr_curvedScreen = false;
@@ -35,27 +36,6 @@ bool xr_vr = false;
 float xr_aspect = 0;
 float xr_fovx = 0;
 float xr_fovy = 0;
-
-#if defined(_DEBUG)
-#include <GLES2/gl2.h>
-void GLCheckErrors(const char* file, int line) {
-	for (int i = 0; i < 10; i++) {
-		const GLenum error = glGetError();
-		if (error == GL_NO_ERROR) {
-			break;
-		}
-		ALOGE("OpenGL error on line %s:%d %d", file, line, error);
-	}
-}
-
-void OXRCheckErrors(XrResult result, const char* file, int line) {
-	if (XR_FAILED(result)) {
-		char errorBuffer[XR_MAX_RESULT_STRING_SIZE];
-		xrResultToString(xr_module_engine.Instance, result, errorBuffer);
-        ALOGE("OpenXR error on line %s:%d %s", file, line, errorBuffer);
-	}
-}
-#endif
 
 char gManufacturer[128] = {0};
 
@@ -69,6 +49,71 @@ extern "C" {
 struct XrEngine xr_module_engine;
 struct XrInput xr_module_input;
 struct XrRenderer xr_module_renderer;
+
+#if defined(_DEBUG)
+#include <GLES2/gl2.h>
+void GLCheckErrors(const char* file, int line) {
+    for (int i = 0; i < 10; i++) {
+        const GLenum error = glGetError();
+        if (error == GL_NO_ERROR) {
+            break;
+        }
+        ALOGE("OpenGL error on line %s:%d %d", file, line, error);
+    }
+}
+
+void OXRCheckErrors(XrResult result, const char* file, int line) {
+    if (XR_FAILED(result)) {
+        char errorBuffer[XR_MAX_RESULT_STRING_SIZE];
+        xrResultToString(xr_module_engine.Instance, result, errorBuffer);
+        ALOGE("OpenXR error on line %s:%d %s", file, line, errorBuffer);
+    }
+}
+#endif
+
+void updatePoses() {
+    if (xr_locate_spaces.empty()) {
+        return;
+    }
+
+    xr_poses.clear();
+    for (auto& space : xr_locate_spaces) {
+        bool hasFirst = xr_spaces.find(space.first) != xr_spaces.end();
+        bool hasSecond = xr_spaces.find(space.second) != xr_spaces.end();
+
+        if ((space.first == 0) && hasSecond) {
+            XrViewLocateInfo projection_info = {};
+            projection_info.type = XR_TYPE_VIEW_LOCATE_INFO;
+            projection_info.next = NULL;
+            projection_info.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+            projection_info.displayTime = xr_module_engine.PredictedDisplayTime;
+            projection_info.space = xr_spaces[space.second];
+
+            XrView projections[XrMaxNumEyes] = {};
+            for (auto & projection : projections) {
+                projection.type = XR_TYPE_VIEW;
+            }
+            uint32_t projection_capacity = XrMaxNumEyes;
+            uint32_t projection_count = projection_capacity;
+            XrViewState view_state = {XR_TYPE_VIEW_STATE, NULL};
+            OXR(xrLocateViews(xr_module_engine.Session, &projection_info, &view_state,
+                              projection_capacity, &projection_count, projections));
+
+            XrPosef pose;
+            pose.orientation = projections[0].pose.orientation;
+            pose.position.x = (projections[0].pose.position.x + projections[1].pose.position.x) * 0.5f;
+            pose.position.y = (projections[0].pose.position.y + projections[1].pose.position.y) * 0.5f;
+            pose.position.z = (projections[0].pose.position.z + projections[1].pose.position.z) * 0.5f;
+            xr_poses[space] = pose;
+        } else if (hasFirst && hasSecond) {
+            XrSpaceLocation loc = {};
+            loc.type = XR_TYPE_SPACE_LOCATION;
+            OXR(xrLocateSpace(xr_spaces[space.first], xr_spaces[space.second],
+                              xr_module_engine.PredictedDisplayTime, &loc));
+            xr_poses[space] = loc.pose;
+        }
+    }
+}
 
 JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_sendManufacturer(JNIEnv *env, jobject thiz, jstring manufacturer) {
@@ -167,6 +212,9 @@ Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean imm
         xr_module_renderer.ConfigInt[CONFIG_SBS] = sbs;
         xr_module_renderer.ConfigInt[CONFIG_VR] = xr_vr;
 
+        // Get poses for XrAPI
+        updatePoses();
+
         // Recenter on the first frame
         static bool first_frame = true;
         if (first_frame) {
@@ -254,13 +302,6 @@ JNIEXPORT jfloatArray JNICALL Java_com_winlator_xr_XrActivity_getAxes(JNIEnv *en
     data[count++] = rgPose.orientation.y; //RG_QY
     data[count++] = rgPose.orientation.z; //RG_QZ
     data[count++] = rgPose.orientation.w; //RG_QW
-    data[count++] = xr_module_renderer.HmdStage.orientation.x; //HMD_STAGE_QX
-    data[count++] = xr_module_renderer.HmdStage.orientation.y; //HMD_STAGE_QY
-    data[count++] = xr_module_renderer.HmdStage.orientation.z; //HMD_STAGE_QZ
-    data[count++] = xr_module_renderer.HmdStage.orientation.w; //HMD_STAGE_QW
-    data[count++] = xr_module_renderer.HmdStage.position.x; //HMD_STAGE_X
-    data[count++] = xr_module_renderer.HmdStage.position.y; //HMD_STAGE_Y
-    data[count++] = xr_module_renderer.HmdStage.position.z; //HMD_STAGE_Z
 
     jfloat values[count];
     memcpy(values, data, count * sizeof(float));
@@ -362,6 +403,32 @@ Java_com_winlator_xr_XrActivity_clearLocateSpaces(JNIEnv *env, jobject thiz) {
     xr_locate_spaces.clear();
 }
 
+JNIEXPORT jfloatArray JNICALL
+Java_com_winlator_xr_XrActivity_getPose(JNIEnv *env, jobject thiz, jint a, jint b) {
+    int count = 0;
+    float data[7];
+    std::pair<int, int> key;
+    key.first = a;
+    key.second = b;
+
+    if (xr_poses.find(key) != xr_poses.end()) {
+        XrPosef pose = xr_poses[key];
+        data[count++] = pose.position.x;
+        data[count++] = pose.position.y;
+        data[count++] = pose.position.z;
+        data[count++] = pose.orientation.x;
+        data[count++] = pose.orientation.y;
+        data[count++] = pose.orientation.z;
+        data[count++] = pose.orientation.w;
+    }
+
+    jfloat values[count];
+    memcpy(values, data, count * sizeof(float));
+    jfloatArray output = env->NewFloatArray(count);
+    env->SetFloatArrayRegion(output, (jsize) 0, (jsize) count, values);
+    return output;
+}
+
 JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_updateActionSpace(JNIEnv *env, jobject thiz, jint space, jint type,
                                                   jint grip, jfloat x, jfloat y, jfloat z,
@@ -369,10 +436,10 @@ Java_com_winlator_xr_XrActivity_updateActionSpace(JNIEnv *env, jobject thiz, jin
     if (xr_spaces.find(space) == xr_spaces.end()) {
         ALOGV("Creating action space %d", space);
         XrSpace output = {};
-        XrAction action = XrInputGetControllerAction(&xr_module_input, type, grip);
         XrActionSpaceCreateInfo space_info = {};
         space_info.type = XR_TYPE_ACTION_SPACE_CREATE_INFO;
-        space_info.action = action;
+        space_info.action = XrInputGetControllerAction(&xr_module_input, type, grip);
+        space_info.subactionPath = XrInputGetControllerPath(&xr_module_input, type);
         space_info.poseInActionSpace.orientation.x = qx;
         space_info.poseInActionSpace.orientation.y = qy;
         space_info.poseInActionSpace.orientation.z = qz;
@@ -384,6 +451,7 @@ Java_com_winlator_xr_XrActivity_updateActionSpace(JNIEnv *env, jobject thiz, jin
             ALOGE("Failed to create action space %d", space);
             std::exit(-1);
         }
+        xr_spaces[space] = output;
     }
 }
 

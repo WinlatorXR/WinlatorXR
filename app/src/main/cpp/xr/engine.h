@@ -21,6 +21,17 @@
 
 #include "openxr.h"
 
+#if defined(_DEBUG)
+void GLCheckErrors(const char* file, int line);
+void OXRCheckErrors(XrResult result, const char* file, int line);
+
+#define GL(func) func; GLCheckErrors(__FILE__ , __LINE__);
+#define OXR(func) OXRCheckErrors(func, __FILE__ , __LINE__);
+#else
+#define GL(func) func;
+#define OXR(func) func;
+#endif
+
 enum
 {
     XrFrameSyncStep = 12
