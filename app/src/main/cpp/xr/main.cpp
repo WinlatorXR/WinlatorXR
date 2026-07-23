@@ -78,7 +78,10 @@ void updatePoses() {
 
     xr_poses.clear();
     for (auto& space : xr_locate_spaces) {
-        if (space.first == 0) {
+        bool hasFirst = xr_spaces.find(space.first) != xr_spaces.end();
+        bool hasSecond = xr_spaces.find(space.second) != xr_spaces.end();
+
+        if ((space.first == 0) && hasSecond) {
             XrViewLocateInfo projection_info = {};
             projection_info.type = XR_TYPE_VIEW_LOCATE_INFO;
             projection_info.next = NULL;
@@ -102,7 +105,7 @@ void updatePoses() {
             pose.position.y = (projections[0].pose.position.y + projections[1].pose.position.y) * 0.5f;
             pose.position.z = (projections[0].pose.position.z + projections[1].pose.position.z) * 0.5f;
             xr_poses[space] = pose;
-        } else {
+        } else if (hasFirst && hasSecond) {
             XrSpaceLocation loc = {};
             loc.type = XR_TYPE_SPACE_LOCATION;
             OXR(xrLocateSpace(xr_spaces[space.first], xr_spaces[space.second],
