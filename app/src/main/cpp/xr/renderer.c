@@ -190,7 +190,10 @@ bool XrRendererInitFrame(struct XrEngine* engine, struct XrRenderer* renderer)
 
     OXR(xrLocateViews(engine->Session, &projection_info, &view_state, projection_capacity,
                       &projection_count, renderer->Projections));
+    return true;
+}
 
+void XrRendererLockFrame(struct XrEngine* engine, struct XrRenderer* renderer) {
     // Get the HMD pose, predicted for the middle of the time period during which
     // the new eye images will be displayed. The number of frames predicted ahead
     // depends on the pipeline depth of the engine and the synthesis rate.
@@ -226,7 +229,6 @@ bool XrRendererInitFrame(struct XrEngine* engine, struct XrRenderer* renderer)
     renderer->HmdOrientation = XrQuaternionfEulerAngles(renderer->InvertedViewPose[0][renderer->FrameSync].orientation);
     renderer->LayerCount = 0;
     memset(renderer->Layers, 0, sizeof(XrCompositorLayer) * XrMaxLayerCount);
-    return true;
 }
 
 void XrRendererBeginFrame(struct XrRenderer* renderer, int fbo_index)

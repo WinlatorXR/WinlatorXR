@@ -196,6 +196,12 @@ Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean imm
         // Update controllers state
         XrInputUpdate(&xr_module_engine, &xr_module_input);
 
+        // Get poses for XrAPI
+        updatePoses();
+
+        // All spaces are located, we can lock the frame
+        XrRendererLockFrame(&xr_module_engine, &xr_module_renderer);
+
         // Set render canvas
         xr_module_renderer.ConfigInt[CONFIG_VIEWPORT_CURVED] = !immersive && xr_curvedScreen;
         xr_module_renderer.ConfigInt[CONFIG_SHARPENING] = xr_sharpening;
@@ -211,9 +217,6 @@ Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean imm
         xr_module_renderer.ConfigInt[CONFIG_AER] = aer;
         xr_module_renderer.ConfigInt[CONFIG_SBS] = sbs;
         xr_module_renderer.ConfigInt[CONFIG_VR] = xr_vr;
-
-        // Get poses for XrAPI
-        updatePoses();
 
         // Recenter on the first frame
         static bool first_frame = true;

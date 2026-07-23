@@ -94,6 +94,7 @@ void XrRendererInit(struct XrEngine* engine, struct XrRenderer* renderer);
 void XrRendererDestroy(struct XrEngine* engine, struct XrRenderer* renderer);
 
 bool XrRendererInitFrame(struct XrEngine* engine, struct XrRenderer* renderer);
+void XrRendererLockFrame(struct XrEngine* engine, struct XrRenderer* renderer);
 void XrRendererBeginFrame(struct XrRenderer* renderer, int fbo_index);
 void XrRendererEndFrame(struct XrRenderer* renderer);
 void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer);
