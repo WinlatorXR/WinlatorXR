@@ -297,6 +297,7 @@ public class XrActivity extends XServerDisplayActivity {
                 xrController.updateMouseState(buttons);
                 xrController.updateKeyboardButtons(buttons);
             }
+            xrController.updateFinished(axes, buttons);
         }
     }
 

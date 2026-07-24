@@ -130,6 +130,11 @@ public class XrController {
         return true;
     }
 
+    public void updateFinished(float[] axes, boolean[] buttons) {
+        System.arraycopy(axes, 0, lastAxes, 0, axes.length);
+        System.arraycopy(buttons, 0, lastButtons, 0, buttons.length);
+    }
+
     public void updateHaptics(XrAPI xrAPI) {
         // Define haptics
         String[] sendEvent = {null, null};
@@ -201,7 +206,6 @@ public class XrController {
         mapKey(secondaryDown, getMapping(context, Mapping.THUMBSTICK_DOWN));
         mapKey(secondaryLeft, getMapping(context, Mapping.THUMBSTICK_LEFT));
         mapKey(secondaryRight, getMapping(context, Mapping.THUMBSTICK_RIGHT));
-        System.arraycopy(buttons, 0, lastButtons, 0, buttons.length);
     }
 
     public void updateMouseAxes(float[] axes, boolean headMapping) {
@@ -237,8 +241,6 @@ public class XrController {
         dy *= mouseSpeed;
         smoothedMouse[0] = smoothedMouse[0] * f + (mouse.getClampedX() + 0.5f + dx) * (1 - f);
         smoothedMouse[1] = smoothedMouse[1] * f + (mouse.getClampedY() + 0.5f - dy) * (1 - f);
-
-        System.arraycopy(axes, 0, lastAxes, 0, axes.length);
     }
 
     public void updateMouseLightgun(float[] axes, float distance) {
