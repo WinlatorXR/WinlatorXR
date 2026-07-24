@@ -24,7 +24,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
 
     companion object {
         const val EXTRA_APP_ID = "steam_app_id"
-        private const val DOWNLOAD_THREADS = 8
+        private const val DOWNLOAD_THREADS = 24
         private const val COLOR_INSTALL   = 0xFF1565C0.toInt()
         private const val COLOR_CANCEL    = 0xFFCC3333.toInt()
         private const val COLOR_UNINSTALL = 0xFFB71C1C.toInt()
