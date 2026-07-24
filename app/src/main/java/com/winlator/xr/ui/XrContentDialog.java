@@ -37,16 +37,17 @@ import java.util.ArrayList;
 public class XrContentDialog extends Dialog {
     protected View contentView;
 
-    private static int counter;
-    private static int[] pixels;
-    private static Bitmap bitmap;
-    private static Bitmap bitmapCopy;
-    private static Canvas canvas;
-    private static Drawable drawable;
+    private int counter;
+    private int[] pixels;
+    private Bitmap bitmap;
+    private Bitmap bitmapCopy;
+    private Canvas canvas;
+    private Drawable drawable;
     private static ArrayList<XrContentDialog> instances = new ArrayList<>();
 
     public XrContentDialog(@NonNull Context context, int layoutResId) {
         super(context, layoutResId);
+        counter = 1000;
     }
 
     public View getContentView() {
@@ -70,8 +71,8 @@ public class XrContentDialog extends Dialog {
             XrActivity.getInstance().runOnUiThread(this::redraw);
             counter = 0;
         }
-        if (bitmapCopy != null) {
-            synchronized (this) {
+        synchronized (this) {
+            if (bitmapCopy != null) {
                 drawable.drawBitmap(bitmapCopy);
             }
         }
@@ -126,8 +127,8 @@ public class XrContentDialog extends Dialog {
         v.draw(canvas);
 
         //Double buffering
-        if (bitmap != null) {
-            synchronized (this) {
+        synchronized (this) {
+            if (bitmap != null) {
                 bitmapCopy = bitmap.copy(bitmap.getConfig(), true);
             }
         }
@@ -135,5 +136,9 @@ public class XrContentDialog extends Dialog {
 
     public static XrContentDialog getFrontInstance() {
         return instances.isEmpty() ? null : instances.get(instances.size() - 1);
+    }
+
+    public static ArrayList<XrContentDialog> getInstances() {
+        return new ArrayList<>(instances);
     }
 }

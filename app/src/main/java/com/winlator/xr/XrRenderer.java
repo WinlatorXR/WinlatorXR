@@ -206,8 +206,7 @@ public class XrRenderer extends GLRenderer {
         float aspect = xServer.screenInfo.width / (float)xServer.screenInfo.height;
         try (XLock lock = xServer.lock(XServer.Lockable.DRAWABLE_MANAGER)) {
             float div = XrActivity.getSBS() ? 2 : 1;
-            XrContentDialog dialog = XrContentDialog.getFrontInstance();
-            if (dialog != null) {
+            for (XrContentDialog dialog : XrContentDialog.getInstances()) {
                 Drawable drawable = dialog.getDrawable();
                 if (drawable != null) {
                     float scale = xServer.screenInfo.height / 1200.0f;

@@ -77,13 +77,15 @@ public class XrKeyboard extends ContentDialog {
     @Override
     public Drawable getDrawable() {
         Drawable drawable = super.getDrawable();
-        width = drawable.width;
-        height = drawable.height;
-        int radius = 5;
-        drawable.drawLine(x1 - radius, y1, x1 + radius, y1, Color.BLUE, radius);
-        drawable.drawLine(x1, y1 - radius, x1, y1 + radius, Color.BLUE, radius);
-        drawable.drawLine(x2 - radius, y2, x2 + radius, y2, Color.RED, radius);
-        drawable.drawLine(x2, y2 - radius, x2, y2 + radius, Color.RED, radius);
+        if (drawable != null) {
+            width = drawable.width;
+            height = drawable.height;
+            int radius = 5;
+            drawable.drawLine(x1 - radius, y1, x1 + radius, y1, Color.BLUE, radius);
+            drawable.drawLine(x1, y1 - radius, x1, y1 + radius, Color.BLUE, radius);
+            drawable.drawLine(x2 - radius, y2, x2 + radius, y2, Color.RED, radius);
+            drawable.drawLine(x2, y2 - radius, x2, y2 + radius, Color.RED, radius);
+        }
         return drawable;
     }
 
