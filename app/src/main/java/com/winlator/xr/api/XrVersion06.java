@@ -85,6 +85,7 @@ public class XrVersion06 extends XrVersion05 {
                 if (pose.length != 7) pose = new float[7];
                 for (float f : pose) {
                     String str = String.format(Locale.US, "%.3f", f);
+                    str = str.replaceAll("\\.000", "");
                     poses.append(str).append(" ");
                 }
             }
