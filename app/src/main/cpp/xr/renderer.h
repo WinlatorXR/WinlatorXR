@@ -79,6 +79,7 @@ struct XrRenderer {
     float FovScale;
     int FrameSync;
     int LayerCount;
+    int RecenterCount;
     XrCompositorLayer Layers[XrMaxLayerCount];
     XrPassthroughFB Passthrough;
     XrPassthroughLayerFB PassthroughLayer;

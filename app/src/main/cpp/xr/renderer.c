@@ -657,6 +657,7 @@ void XrRendererHandleXrEvents(struct XrEngine* engine, struct XrRenderer* render
                 break;
             case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING:
                 XrRendererRecenter(engine, renderer);
+                renderer->RecenterCount++;
                 break;
             case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED:
             {

@@ -90,14 +90,15 @@ public class XrVersion06 extends XrVersion05 {
             }
         }
         return (MSG_CLIENT + clientIndex +
-                " " + String.format(Locale.US, "%.1f", axes[XrAPI.ControllerAxis.L_THUMBSTICK_X.ordinal()]) +
-                " " + String.format(Locale.US, "%.1f", axes[XrAPI.ControllerAxis.L_THUMBSTICK_Y.ordinal()]) +
-                " " + String.format(Locale.US, "%.1f", axes[XrAPI.ControllerAxis.R_THUMBSTICK_X.ordinal()]) +
-                " " + String.format(Locale.US, "%.1f", axes[XrAPI.ControllerAxis.R_THUMBSTICK_Y.ordinal()]) +
-                " " + String.format(Locale.US, "%.4f", axes[XrAPI.ControllerAxis.HMD_IPD.ordinal()]) +
-                " " + String.format(Locale.US, "%.2f", axes[XrAPI.ControllerAxis.HMD_FOVX.ordinal()]) +
-                " " + String.format(Locale.US, "%.2f", axes[XrAPI.ControllerAxis.HMD_FOVY.ordinal()]) +
-                " " + String.format(Locale.US, "%d", (int)axes[XrAPI.ControllerAxis.HMD_SYNC.ordinal()]) +
+                " " + String.format(Locale.US, "%.1f", axes[ControllerAxis.L_THUMBSTICK_X.ordinal()]) +
+                " " + String.format(Locale.US, "%.1f", axes[ControllerAxis.L_THUMBSTICK_Y.ordinal()]) +
+                " " + String.format(Locale.US, "%.1f", axes[ControllerAxis.R_THUMBSTICK_X.ordinal()]) +
+                " " + String.format(Locale.US, "%.1f", axes[ControllerAxis.R_THUMBSTICK_Y.ordinal()]) +
+                " " + String.format(Locale.US, "%.4f", axes[ControllerAxis.HMD_IPD.ordinal()]) +
+                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.HMD_FOVX.ordinal()]) +
+                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.HMD_FOVY.ordinal()]) +
+                " " + String.format(Locale.US, "%d", (int)axes[ControllerAxis.HMD_SYNC.ordinal()]) +
+                " " + String.format(Locale.US, "%d", (int)axes[ControllerAxis.HMD_RECENTER.ordinal()]) +
                 " " + binary + " " + poses);
     }
 
