@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.util.Log;
+import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.View;
@@ -1022,8 +1023,20 @@ public class ContainerDetailFragment extends Fragment {
             spinner.setSelection(Integer.parseInt(wincomponent[1]), false);
             spinner.setTag(wincomponent[0]);
 
+            // Recreate the adapter to ensure correct color scheme
+            String[] items = context.getResources().getStringArray(R.array.wincomponent_entries);
+            ArrayAdapter<String> adapter = new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, items);
+            adapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
+            spinner.setAdapter(adapter);
+
             // Set the background color of the spinners dynamically based on the current theme
             spinner.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
+            if (isDarkMode) {
+                ContextThemeWrapper wrapper = new ContextThemeWrapper(spinner.getContext(), R.style.SpinnerDialogDark);
+                adapter.setDropDownViewTheme(wrapper.getTheme());
+            } else {
+                adapter.setDropDownViewTheme(context.getTheme());
+            }
 
             parent.addView(itemView);
         }
