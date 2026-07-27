@@ -51,6 +51,7 @@ public class XrKeyboard extends ContentDialog {
 
     private boolean isCaps = true;
     private boolean isSymbols = false;
+    private ArrayList<Button> keys = new ArrayList<>();
 
     public XrKeyboard(Activity activity) {
         super(activity, R.layout.xr_keyboard);
@@ -94,9 +95,6 @@ public class XrKeyboard extends ContentDialog {
         if (isClosing) {
             return;
         }
-        View root = findViewById(R.id.keyboardRoot);
-        ArrayList<Button> keys = new ArrayList<>();
-        collectButtons(root, keys);
         for (Button key : keys) {
             if (isInside(key, x1, y1) && isInside(key, x2, y2)) {
                 key.setBackgroundColor(Color.rgb(128, 0, 128));
@@ -206,8 +204,7 @@ public class XrKeyboard extends ContentDialog {
     }
 
     private void bindKeyboard(View keyboardRoot) {
-        ArrayList<Button> keys = new ArrayList<>();
-        collectButtons(keyboardRoot, keys);
+        collectButtons(keyboardRoot);
 
         for (Button key : keys) {
             key.setOnClickListener(v -> {
@@ -296,13 +293,13 @@ public class XrKeyboard extends ContentDialog {
         return new Pair<>((int)mx, (int)my);
     }
 
-    private void collectButtons(View view, ArrayList<Button> result) {
+    private void collectButtons(View view) {
         if (view instanceof Button) {
-            result.add((Button) view);
+            keys.add((Button) view);
         } else if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view;
             for (int i = 0; i < group.getChildCount(); i++) {
-                collectButtons(group.getChildAt(i), result);
+                collectButtons(group.getChildAt(i));
             }
         }
     }
@@ -333,9 +330,6 @@ public class XrKeyboard extends ContentDialog {
     }
 
     private void processClick(int x, int y) {
-        View root = findViewById(R.id.keyboardRoot);
-        ArrayList<Button> keys = new ArrayList<>();
-        collectButtons(root, keys);
         for (Button key : keys) {
             if (isInside(key, x, y)) {
                 key.callOnClick();
@@ -360,9 +354,6 @@ public class XrKeyboard extends ContentDialog {
         if (isSymbols) toggleKeyboard(keyboardRoot);
         isCaps = !isCaps;
 
-        ArrayList<Button> keys = new ArrayList<>();
-        collectButtons(keyboardRoot, keys);
-
         for (Button key : keys) {
             String text = key.getText().toString();
 
@@ -376,9 +367,6 @@ public class XrKeyboard extends ContentDialog {
     private void toggleKeyboard(View keyboardRoot) {
         isSymbols = !isSymbols;
         isCaps = false;
-
-        ArrayList<Button> keys = new ArrayList<>();
-        collectButtons(keyboardRoot, keys);
 
         if (isSymbols) {
             applySymbols(keys);
