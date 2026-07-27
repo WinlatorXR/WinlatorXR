@@ -40,6 +40,10 @@ import java.util.ArrayList;
 
 public class XrKeyboard extends ContentDialog {
 
+    private static final int HAPTICS_CLICK = 50;
+    private static final int HAPTICS_HOVER = 5;
+    private static final int HAPTICS_INTENSITY = 5;
+
     private static final KeyCharacterMap chars = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD);
     private static final boolean[] lastButtons = new boolean[XrInterface.ControllerButton.values().length];
 
@@ -51,7 +55,9 @@ public class XrKeyboard extends ContentDialog {
 
     private boolean isCaps = true;
     private boolean isSymbols = false;
-    private ArrayList<Button> keys = new ArrayList<>();
+    private final ArrayList<Button> keys = new ArrayList<>();
+    private int lastLeftKey = -1;
+    private int lastRightKey = -1;
 
     public XrKeyboard(Activity activity) {
         super(activity, R.layout.xr_keyboard);
@@ -146,14 +152,15 @@ public class XrKeyboard extends ContentDialog {
         values = calculateRaycast(1, axes, distance);
         x2 = values.first;
         y2 = values.second;
+        keyboard.processHaptics();
 
         // handle buttons
         XrActivity instance = XrActivity.getInstance();
         if (getButtonClicked(buttons, XrInterface.ControllerButton.L_MENU)) instance.runOnUiThread(() -> keyboard.dismiss());
         if (getButtonClicked(buttons, XrInterface.ControllerButton.L_THUMBSTICK_PRESS)) instance.runOnUiThread(() -> keyboard.dismiss());
         if (getButtonClicked(buttons, XrInterface.ControllerButton.R_THUMBSTICK_PRESS)) instance.runOnUiThread(() -> keyboard.dismiss());
-        if (getButtonClicked(buttons, XrInterface.ControllerButton.L_TRIGGER)) instance.runOnUiThread(() -> keyboard.processClick(x1, y1));
-        if (getButtonClicked(buttons, XrInterface.ControllerButton.R_TRIGGER)) instance.runOnUiThread(() -> keyboard.processClick(x2, y2));
+        if (getButtonClicked(buttons, XrInterface.ControllerButton.L_TRIGGER)) instance.runOnUiThread(() -> keyboard.processClick(x1, y1, 0));
+        if (getButtonClicked(buttons, XrInterface.ControllerButton.R_TRIGGER)) instance.runOnUiThread(() -> keyboard.processClick(x2, y2, 1));
         System.arraycopy(buttons, 0, lastButtons, 0, buttons.length);
     }
 
@@ -308,6 +315,15 @@ public class XrKeyboard extends ContentDialog {
         return buttons[button.ordinal()] && !lastButtons[button.ordinal()];
     }
 
+    private int getKeyPointed(int x, int y) {
+        for (int i = 0; i < keys.size(); i++) {
+            if (isInside(keys.get(i), x, y)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     private boolean isInside(View view, float x, float y) {
         float left = view.getLeft() + ((View)view.getParent()).getLeft();
         float top = view.getTop() + ((View)view.getParent()).getTop();
@@ -329,12 +345,27 @@ public class XrKeyboard extends ContentDialog {
                 text.equals("ABC");
     }
 
-    private void processClick(int x, int y) {
+    private void processClick(int x, int y, int chan) {
         for (Button key : keys) {
             if (isInside(key, x, y)) {
+                XrActivity.getInstance().vibrateController(HAPTICS_CLICK, chan, HAPTICS_INTENSITY);
                 key.callOnClick();
             }
         }
+    }
+
+    private void processHaptics() {
+        int leftKey = getKeyPointed(x1, y1);
+        if ((lastLeftKey != leftKey) && (leftKey >= 0)) {
+            XrActivity.getInstance().vibrateController(HAPTICS_HOVER, 0, HAPTICS_INTENSITY);
+        }
+        lastLeftKey = leftKey;
+
+        int rightKey = getKeyPointed(x2, y2);
+        if ((lastRightKey != rightKey) && (rightKey >= 0)) {
+            XrActivity.getInstance().vibrateController(HAPTICS_HOVER, 1, HAPTICS_INTENSITY);
+        }
+        lastRightKey = rightKey;
     }
 
     private void sendChar(char c) {
