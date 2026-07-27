@@ -386,7 +386,7 @@ public class ContainersFragment extends Fragment {
                     case R.id.container_edit:
                         FragmentManager fragmentManager = getParentFragmentManager();
                         fragmentManager.beginTransaction()
-                                .setCustomAnimations(R.anim.slide_in_up, R.anim.slide_out_down, R.anim.slide_in_down, R.anim.slide_out_up)
+                                .setCustomAnimations(R.anim.slide_in_right, R.anim.slide_out_left)
                                 .addToBackStack(null)
                                 .replace(R.id.FLFragmentContainer, new ContainerDetailFragment(container.id))
                                 .commit();

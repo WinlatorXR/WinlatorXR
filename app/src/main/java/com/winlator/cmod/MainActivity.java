@@ -611,6 +611,17 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
     }
 
+    private int getTabIndex(String name) {
+        NavigationView navigation = findViewById(R.id.NavigationView);
+        Menu menu = navigation.getMenu();
+        for (int i = 0; i < menu.size(); i++) {
+            if (name.compareTo(menu.getItem(i).toString()) == 0) {
+                return i;
+            }
+        }
+        return Integer.MAX_VALUE;
+    }
+
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         FragmentManager fragmentManager = getSupportFragmentManager();
@@ -618,46 +629,39 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             fragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
         }
 
-        switch (item.getItemId()) {
-            case R.id.main_menu_shortcuts:
-                show(new ShortcutsFragment(), false);  // Forward animation
-                break;
-            case R.id.main_menu_containers:
-                show(new ContainersFragment(), false);  // Forward animation
-                break;
-            case R.id.main_menu_contents:
-                show(new ContentsFragment(), false);  // Forward animation
-                break;
-            case R.id.main_menu_store:
-                show(new StoreFragment(), false);  // Forward animation
-                break;
-            case R.id.main_menu_settings:
-                show(new SettingsFragment(), false);  // Forward animation
-                break;
-            case R.id.main_menu_about:
-                show(new WebFragment(), false);  // Forward animation
-                break;
-        }
-        return true;
+        int oldTab = getTabIndex(sharedPreferences.getString("tab_last", ""));
+        int newTab = getTabIndex(item.getTitle().toString());
+        boolean reverse = oldTab > newTab;
+
+        return switch (item.getItemId()) {
+            case R.id.main_menu_shortcuts -> show(new ShortcutsFragment(), reverse);
+            case R.id.main_menu_containers -> show(new ContainersFragment(), reverse);
+            case R.id.main_menu_contents -> show(new ContentsFragment(), reverse);
+            case R.id.main_menu_store -> show(new StoreFragment(), reverse);
+            case R.id.main_menu_settings -> show(new SettingsFragment(), reverse);
+            case R.id.main_menu_about -> show(new WebFragment(), reverse);
+            default -> true;
+        };
     }
 
 
-    private void show(Fragment fragment, boolean reverse) {
+    private boolean show(Fragment fragment, boolean reverse) {
         FragmentManager fragmentManager = getSupportFragmentManager();
         Fragment currentFragment = fragmentManager.findFragmentById(R.id.FLFragmentContainer);
 
         // Do nothing if the target fragment is already displayed
         if (currentFragment != null && currentFragment.getClass().equals(fragment.getClass())) {
             drawerLayout.closeDrawer(GravityCompat.START);
-            return;
+            return false;
         }
 
         FragmentTransaction transaction = fragmentManager.beginTransaction();
-        if (reverse) transaction.setCustomAnimations(R.anim.slide_in_down, R.anim.slide_out_up);
-        else transaction.setCustomAnimations(R.anim.slide_in_up, R.anim.slide_out_down);
+        if (reverse) transaction.setCustomAnimations(R.anim.slide_in_left, R.anim.slide_out_right);
+        else transaction.setCustomAnimations(R.anim.slide_in_right, R.anim.slide_out_left);
         transaction.replace(R.id.FLFragmentContainer, fragment).commit();
 
         drawerLayout.closeDrawer(GravityCompat.START);
+        return true;
     }
 
     private void setNavigationViewItemTextColor(NavigationView navigationView, int color) {
