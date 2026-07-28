@@ -1613,7 +1613,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         if (ddrawrapper.equals("cnc-ddraw")) envVars.put("CNC_DDRAW_CONFIG_FILE", "C:\\windows\\syswow64\\ddraw.ini");
 
-        String wincomponents = shortcut != null ? shortcut.getExtra("wincomponents", container.getWinComponents()) : container.getWinComponents();
+        String wincomponents = container.getWinComponents();
         if (!wincomponents.equals(container.getExtra("wincomponents"))) {
             extractWinComponentFiles();
             container.putExtra("wincomponents", wincomponents);

@@ -43,7 +43,6 @@ import com.winlator.cmod.contentdialog.AddEnvVarDialog;
 import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.contentdialog.DXVKConfigDialog;
 import com.winlator.cmod.contentdialog.GraphicsDriverConfigDialog;
-import com.winlator.cmod.contentdialog.ShortcutSettingsDialog;
 import com.winlator.cmod.contentdialog.VKD3DConfigDialog;
 import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
@@ -1006,43 +1005,6 @@ public class ContainerDetailFragment extends Fragment {
             parent.addView(itemView);
 
         }
-    }
-
-    public static void createWinComponentsTabFromShortcut(ShortcutSettingsDialog dialog, View view, String wincomponents, boolean isDarkMode) {
-        Context context = dialog.getContext();
-        LayoutInflater inflater = LayoutInflater.from(context);
-        ViewGroup tabView = view.findViewById(R.id.LLTabWinComponents);
-        ViewGroup directxSectionView = tabView.findViewById(R.id.LLWinComponentsDirectX);
-        ViewGroup generalSectionView = tabView.findViewById(R.id.LLWinComponentsGeneral);
-
-        for (String[] wincomponent : new KeyValueSet(wincomponents)) {
-            ViewGroup parent = wincomponent[0].startsWith("direct") ? directxSectionView : generalSectionView;
-            View itemView = inflater.inflate(R.layout.wincomponent_list_item, parent, false);
-            ((TextView) itemView.findViewById(R.id.TextView)).setText(StringUtils.getString(context, wincomponent[0]));
-            Spinner spinner = itemView.findViewById(R.id.Spinner);
-            spinner.setSelection(Integer.parseInt(wincomponent[1]), false);
-            spinner.setTag(wincomponent[0]);
-
-            // Recreate the adapter to ensure correct color scheme
-            String[] items = context.getResources().getStringArray(R.array.wincomponent_entries);
-            ArrayAdapter<String> adapter = new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, items);
-            adapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
-            spinner.setAdapter(adapter);
-
-            // Set the background color of the spinners dynamically based on the current theme
-            spinner.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
-            if (isDarkMode) {
-                ContextThemeWrapper wrapper = new ContextThemeWrapper(spinner.getContext(), R.style.SpinnerDialogDark);
-                adapter.setDropDownViewTheme(wrapper.getTheme());
-            } else {
-                adapter.setDropDownViewTheme(context.getTheme());
-            }
-
-            parent.addView(itemView);
-        }
-
-        // Notify that the views are ready
-        dialog.onWinComponentsViewsAdded(isDarkMode);
     }
 
     private EnvVarsView createEnvVarsTab(final View view) {

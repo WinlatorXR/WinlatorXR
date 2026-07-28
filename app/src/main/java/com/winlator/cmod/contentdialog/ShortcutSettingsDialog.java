@@ -22,7 +22,6 @@ import android.widget.TextView;
 
 import androidx.preference.PreferenceManager;
 
-import com.google.android.material.tabs.TabLayout;
 import com.winlator.cmod.ContainerDetailFragment;
 import com.winlator.cmod.R;
 import com.winlator.cmod.ShortcutsFragment;
@@ -43,15 +42,12 @@ import com.winlator.cmod.inputcontrols.InputControlsManager;
 import com.winlator.cmod.midi.MidiManager;
 import com.winlator.cmod.widget.CPUListView;
 import com.winlator.cmod.widget.EnvVarsView;
-import com.winlator.cmod.winhandler.WinHandler;
 
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import kotlin.random.Random;
 
 public class ShortcutSettingsDialog extends ContentDialog {
     private final ShortcutsFragment fragment;
@@ -341,20 +337,7 @@ public class ShortcutSettingsDialog extends ContentDialog {
         String isTouchScreenMode = shortcut.getExtra("simTouchScreen");
         cbSimTouchScreen.setChecked(isTouchScreenMode.equals("1") ? true : false);
 
-        ContainerDetailFragment.createWinComponentsTabFromShortcut(this, getContentView(),
-                shortcut.getExtra("wincomponents", shortcut.container.getWinComponents()), isDarkMode);
-
         final EnvVarsView envVarsView = createEnvVarsTab();
-
-        AppUtils.setupTabLayout(getContentView(), R.id.TabLayout, R.id.LLTabWinComponents, R.id.LLTabEnvVars, R.id.LLTabAdvanced);
-
-        TabLayout tabLayout = findViewById(R.id.TabLayout);
-
-        if (isDarkMode) {
-            tabLayout.setBackgroundResource(R.drawable.tab_layout_background_dark);
-        } else {
-            tabLayout.setBackgroundResource(R.drawable.tab_layout_background);
-        }
 
         findViewById(R.id.BTExtraArgsMenu).setOnClickListener((v) -> {
             PopupMenu popupMenu = new PopupMenu(context, v);
@@ -499,11 +482,6 @@ public class ShortcutSettingsDialog extends ContentDialog {
                 shortcut.putExtra("useTrackIR", STrackIR.getSelectedItemPosition() + "");
                 shortcut.putExtra("fullscreenStretched", cbFullscreenStretched.isChecked() ? "1" : null);
 
-                String wincomponents = containerDetailFragment.getWinComponents(getContentView());
-                shortcut.putExtra("wincomponents", !wincomponents.equals(shortcut.container.getWinComponents()) ? wincomponents : null);
-
-
-
                 String envVars = envVarsView.getEnvVars();
 
                 shortcut.putExtra("envVars", !envVars.isEmpty() ? envVars : null);
@@ -569,13 +547,6 @@ public class ShortcutSettingsDialog extends ContentDialog {
                 text.equalsIgnoreCase("Game Controller") ||
                 text.equalsIgnoreCase("System");
     }
-
-    public void onWinComponentsViewsAdded(boolean isDarkMode) {
-        // Apply styles to all dynamically added TextViews
-        ViewGroup llContent = findViewById(R.id.LLContent);
-        applyFieldSetLabelStylesDynamically(llContent, isDarkMode);
-    }
-
 
     public static void loadScreenSizeSpinner(View view, String selectedValue, boolean isDarkMode) {
         final Spinner sScreenSize = view.findViewById(R.id.SScreenSize);

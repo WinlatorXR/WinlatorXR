@@ -360,100 +360,11 @@
             android:layout_height="wrap_content"
             android:text="@string/autoclose" />
 
-        <com.google.android.material.tabs.TabLayout
-            android:id="@+id/TabLayout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="4dp"
-            android:background="@drawable/tab_layout_background"
-            app:tabGravity="center"
-            app:tabMode="auto">
-
-            <com.google.android.material.tabs.TabItem
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/win_components" />
-
-            <com.google.android.material.tabs.TabItem
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/environment_variables" />
-
-            <com.google.android.material.tabs.TabItem
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/advanced" />
-        </com.google.android.material.tabs.TabLayout>
-
-        <LinearLayout
-            android:id="@+id/LLTabWinComponents"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp">
-
-                <LinearLayout
-                    style="@style/FieldSet"
-                    android:id="@+id/LLWinComponentsDirectX" />
-
-                <TextView
-                    style="@style/FieldSetLabel"
-                    android:background="#ffffff"
-                    android:text="@string/directx" />
-            </FrameLayout>
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp">
-
-                <LinearLayout
-                    style="@style/FieldSet"
-                    android:id="@+id/LLWinComponentsGeneral" />
-
-                <TextView
-                    style="@style/FieldSetLabel"
-                    android:background="#ffffff"
-                    android:text="@string/general" />
-            </FrameLayout>
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/LLTabEnvVars"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <com.winlator.cmod.widget.EnvVarsView
-                android:id="@+id/EnvVarsView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingLeft="16dp"
-                android:paddingRight="16dp"/>
-
-            <View style="@style/HorizontalLine" />
-
-            <Button
-                style="@style/ButtonNeutral"
-                android:id="@+id/BTAddEnvVar"
-                android:layout_width="160dp"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:text="@string/add" />
-        </LinearLayout>
-
         <LinearLayout
             android:id="@+id/LLTabAdvanced"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone">
+            android:orientation="vertical">
 
             <FrameLayout
                 android:layout_width="match_parent"
@@ -638,83 +549,6 @@
                     android:text="@string/input_controls" />
             </FrameLayout>
 
-<!--            <FrameLayout-->
-<!--                android:layout_width="match_parent"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:layout_marginTop="8dp">-->
-
-<!--                <LinearLayout style="@style/FieldSet">-->
-
-<!--                    <LinearLayout-->
-<!--                        android:id="@+id/LLDinputMapperType"-->
-<!--                        android:layout_width="match_parent"-->
-<!--                        android:layout_height="wrap_content"-->
-<!--                        android:orientation="vertical">-->
-
-<!--                        <TextView-->
-<!--                            android:layout_width="wrap_content"-->
-<!--                            android:layout_height="wrap_content"-->
-<!--                            android:text="@string/directinput_mapper_type" />-->
-
-<!--                        <Spinner-->
-<!--                            style="@style/ComboBox"-->
-<!--                            android:id="@+id/SDInputType"-->
-<!--                            android:layout_width="match_parent"-->
-<!--                            android:entries="@array/dinput_mapper_type_entries" />-->
-<!--                    </LinearLayout>-->
-
-<!--                    <LinearLayout-->
-<!--                        android:layout_width="match_parent"-->
-<!--                        android:layout_height="wrap_content"-->
-<!--                        android:orientation="horizontal"-->
-<!--                        android:layout_marginTop="8dp">-->
-
-<!--                        <CheckBox-->
-<!--                            android:id="@+id/CBEnableXInput"-->
-<!--                            android:layout_width="wrap_content"-->
-<!--                            android:layout_height="wrap_content"-->
-<!--                            android:layout_gravity="center"-->
-<!--                            android:text="@string/enable_xinput_for_wine_game" />-->
-
-<!--                        <ImageView-->
-<!--                            android:id="@+id/BTXInputHelp"-->
-<!--                            style="@style/HelpButton"-->
-<!--                            android:layout_gravity="center" />-->
-<!--                    </LinearLayout>-->
-
-<!--                    <LinearLayout-->
-<!--                        android:layout_width="match_parent"-->
-<!--                        android:layout_height="wrap_content"-->
-<!--                        android:orientation="horizontal"-->
-<!--                        android:layout_marginTop="8dp">-->
-
-<!--                        <CheckBox-->
-<!--                            android:id="@+id/CBEnableDInput"-->
-<!--                            android:layout_width="wrap_content"-->
-<!--                            android:layout_height="wrap_content"-->
-<!--                            android:text="@string/enable_dinput_for_wine_game" />-->
-
-<!--                        <ImageView-->
-<!--                            android:id="@+id/BTDInputHelp"-->
-<!--                            style="@style/HelpButton"-->
-<!--                            android:layout_gravity="center" />-->
-<!--                    </LinearLayout>-->
-
-<!--                    <TextView-->
-<!--                        android:id="@+id/TVLegacyInputMessage"-->
-<!--                        android:layout_width="wrap_content"-->
-<!--                        android:layout_height="wrap_content"-->
-<!--                        android:text="7.1.2 Legacy Input Mode Enabled in Settings"-->
-<!--                        android:visibility="gone" />-->
-
-<!--                </LinearLayout>-->
-
-<!--                <TextView-->
-<!--                    style="@style/FieldSetLabel"-->
-<!--                    android:background="#ffffff"-->
-<!--                    android:text="@string/game_controller" />-->
-<!--            </FrameLayout>-->
-
             <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -863,19 +697,29 @@
                 android:gravity="center_horizontal"
                 android:layout_marginTop="4dp" />
 
-<!--            <TextView-->
-<!--                android:layout_width="wrap_content"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:text="@string/processor_affinity_32_bit_apps"-->
-<!--                android:layout_marginTop="8dp" />-->
+            <LinearLayout
+                android:id="@+id/LLTabEnvVars"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
 
-<!--            <com.winlator.cmod.widget.CPUListView-->
-<!--                android:id="@+id/CPUListViewWoW64"-->
-<!--                android:layout_width="match_parent"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:gravity="center_horizontal"-->
-<!--                android:layout_marginTop="4dp" />-->
+                <com.winlator.cmod.widget.EnvVarsView
+                    android:id="@+id/EnvVarsView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingLeft="16dp"
+                    android:paddingRight="16dp"/>
 
+                <View style="@style/HorizontalLine" />
+
+                <Button
+                    style="@style/ButtonNeutral"
+                    android:id="@+id/BTAddEnvVar"
+                    android:layout_width="160dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:text="@string/add" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 </ScrollView>
