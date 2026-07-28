@@ -264,37 +264,6 @@
             android:layout_height="wrap_content"
             android:text="@string/use_secondary_executable" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:text="@string/xr_mods" />
-
-        <CheckBox
-            android:id="@+id/CBAutoclose"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/autoclose" />
-
-        <CheckBox
-            android:id="@+id/CBUseReshade"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/use_reshade" />
-
-        <CheckBox
-            android:id="@+id/CBForceDXGI"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/force_dxgi" />
-
-        <CheckBox
-            android:id="@+id/CBUseTrackIR"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/use_trackir" />
-
-
         <!-- Secondary Executable Options -->
         <LinearLayout
             android:id="@+id/LLSecondaryExecOptions"
@@ -348,6 +317,48 @@
                     android:hint="@string/enter_delay_seconds" />
             </LinearLayout>
         </LinearLayout>
+
+        <!-- OpenXR plugins -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="10dp" >
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/reshade_plugin" />
+
+            <Spinner
+                style="@style/ComboBox"
+                android:layout_width="match_parent"
+                android:id="@+id/SReshade"
+                android:entries="@array/reshade_entries" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/trackir_plugin" />
+
+            <Spinner
+                style="@style/ComboBox"
+                android:layout_width="match_parent"
+                android:id="@+id/STrackIR"
+                android:entries="@array/trackir_entries" />
+        </LinearLayout>
+
+        <CheckBox
+            android:id="@+id/CBAutoclose"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/autoclose" />
 
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/TabLayout"

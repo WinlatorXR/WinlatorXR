@@ -346,4 +346,14 @@
         <item>CAS</item>
         <item>DLS</item>
     </string-array>
+    <string-array name="reshade_entries">
+        <item>None</item>
+        <item>Reshade SuperDepth3D</item>
+        <item>Reshade SuperDepth3D DCGI fallback</item>
+        <item>Custom setup</item>
+    </string-array>
+    <string-array name="trackir_entries">
+        <item>None</item>
+        <item>OpenTrack-WXR</item>
+    </string-array>
 </resources>

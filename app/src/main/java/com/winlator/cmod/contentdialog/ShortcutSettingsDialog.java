@@ -222,19 +222,14 @@ public class ShortcutSettingsDialog extends ContentDialog {
         cbAutoclose.setChecked(autoclose);
 
         // Reshade integration
-        boolean useReshade = shortcut.getExtra("useReshade", "0").equals("1");
-        final CheckBox cbUseReshade = findViewById(R.id.CBUseReshade);
-        cbUseReshade.setChecked(useReshade);
-        boolean forceDXGI = shortcut.getExtra("forceDXGI", "0").equals("1");
-        final CheckBox cbForceDXGI = findViewById(R.id.CBForceDXGI);
-        cbForceDXGI.setEnabled(useReshade);
-        cbForceDXGI.setChecked(forceDXGI);
-        cbUseReshade.setOnCheckedChangeListener((compoundButton, checked) -> cbForceDXGI.setEnabled(checked));
+        int reshade = Integer.parseInt(shortcut.getExtra("useReshade", "0"));
+        final Spinner SReshade = findViewById(R.id.SReshade);
+        SReshade.setSelection(reshade);
 
         // TrackIR integration
-        boolean useTrackIR = shortcut.getExtra("useTrackIR", "0").equals("1");
-        final CheckBox cbUseTrackIR = findViewById(R.id.CBUseTrackIR);
-        cbUseTrackIR.setChecked(useTrackIR);
+        int trackIR = Integer.parseInt(shortcut.getExtra("useTrackIR", "0"));
+        final Spinner STrackIR = findViewById(R.id.STrackIR);
+        STrackIR.setSelection(trackIR);
 
         // Initialize the TextView for the legacy mode message
 //        TextView tvLegacyInputMessage = findViewById(R.id.TVLegacyInputMessage);
@@ -500,9 +495,8 @@ public class ShortcutSettingsDialog extends ContentDialog {
                 }
 
                 shortcut.putExtra("autoclose", cbAutoclose.isChecked() ? "1" : "0");
-                shortcut.putExtra("useReshade", cbUseReshade.isChecked() ? "1" : null);
-                shortcut.putExtra("forceDXGI", cbForceDXGI.isChecked() ? "1" : null);
-                shortcut.putExtra("useTrackIR", cbUseTrackIR.isChecked() ? "1" : null);
+                shortcut.putExtra("useReshade", SReshade.getSelectedItemPosition() + "");
+                shortcut.putExtra("useTrackIR", STrackIR.getSelectedItemPosition() + "");
                 shortcut.putExtra("fullscreenStretched", cbFullscreenStretched.isChecked() ? "1" : null);
 
                 String wincomponents = containerDetailFragment.getWinComponents(getContentView());

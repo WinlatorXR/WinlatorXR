@@ -508,7 +508,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         enableLogs = preferences.getBoolean("enable_wine_debug", false)
                 || preferences.getBoolean("enable_box86_64_logs", false);
         boolean useReshade = XrActivity.isEnabled(this) &&(shortcut != null) &&
-                shortcut.getExtra("useReshade", "0").equals("1");
+                (Integer.parseInt(shortcut.getExtra("useReshade", "0")) > 0);
         Menu advancedMenu = ((NavigationView)findViewById(R.id.NavigationAdvanced)).getMenu();
         advancedMenu.findItem(R.id.main_menu_logs).setVisible(enableLogs);
         advancedMenu.findItem(R.id.main_menu_logs).setEnabled(enableLogs);
@@ -1670,9 +1670,10 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         if (shortcut != null) {
             try {
                 File dst = ModdingUtils.getLocalExeFile(imageFs, shortcut.getFullExecutable(), shortcut.container).getParentFile();
-                boolean useReshade = shortcut.getExtra("useReshade", "0").equals("1");
-                boolean forceDXGI = useReshade && shortcut.getExtra("forceDXGI", "0").equals("1");
-                ModdingUtils.updateReshade(this, dst, useReshade, forceDXGI);
+                int reshade = Integer.parseInt(shortcut.getExtra("useReshade", "0"));
+                if (reshade < 3) {
+                    ModdingUtils.updateReshade(this, dst, reshade > 0, reshade > 1);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
