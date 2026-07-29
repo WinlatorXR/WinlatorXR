@@ -180,7 +180,7 @@
     <string name="open_file">Open File</string>
     <string name="download_file">Download File</string>
     <string name="do_you_want_to_download_the_selected_profiles">Do you want to download the selected profiles?</string>
-    <string name="downloading_file">Downloading File...</string>
+    <string name="downloading_file">Downloading file...</string>
     <string name="unable_to_load_profile_list">Unable to load profile list</string>
     <string name="copy">Copy</string>
     <string name="installed_version">Installed Version</string>

@@ -32,6 +32,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.tabs.TabLayout;
+import com.winlator.cmod.contents.Downloader;
 import com.winlator.xr.XrActivity;
 import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.ContainerManager;
@@ -46,8 +47,10 @@ import com.winlator.cmod.xenvironment.ImageFs;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 public class ContainersFragment extends Fragment {
+    private static final String REMOTE_CONTAINERS = "https://raw.githubusercontent.com/WinlatorXR/Winlator-Contents/refs/heads/main/containers.lst";
     private static final int REQUEST_CODE_IMPORT_CONTAINER = 1070;
     private static final int REQUEST_CODE_IMPORT_CONTAINER_ARCHIVE = 1071;
     private RecyclerView recyclerView;
@@ -115,7 +118,7 @@ public class ContainersFragment extends Fragment {
             if (currentTab == 0) {
                 manager.loadContainers();
                 containers = manager.getContainers();
-            } else {
+            } else if (currentTab == 1) {
                 int index = 0;
                 File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Winlator/Backups/Containers");
                 containers = new ArrayList<>();
@@ -128,6 +131,28 @@ public class ContainersFragment extends Fragment {
                         }
                     }
                 }
+            } else {
+                containers = new ArrayList<>();
+                new Thread(() -> {
+                    int index = 0;
+                    Scanner sc = new Scanner(Downloader.downloadString(REMOTE_CONTAINERS));
+                    while (sc.hasNext()) {
+                        String line = sc.nextLine();
+                        String[] parts = line.split(",");
+                        Container c = new Container(index++);
+                        c.setName(parts[0]);
+                        c.setEmulator(parts[1]);
+                        containers.add(c);
+                    }
+                    sc.close();
+                    Activity activity = getActivity();
+                    if (activity == null)
+                        return;
+                    activity.runOnUiThread(() -> {
+                        recyclerView.setAdapter(new ContainersAdapter(containers));
+                        emptyTextView.setVisibility(containers.isEmpty() ? View.VISIBLE : View.GONE);
+                    });
+                }).start();
             }
             recyclerView.setAdapter(new ContainersAdapter(containers));
             emptyTextView.setVisibility(containers.isEmpty() ? View.VISIBLE : View.GONE);
@@ -177,7 +202,7 @@ public class ContainersFragment extends Fragment {
         startActivityForResult(intent, REQUEST_CODE_IMPORT_CONTAINER_ARCHIVE);
     }
 
-    private void importContainerArchive(Uri uri) {
+    private void importContainerArchive(Uri uri, Runnable onFinish) {
         if (uri == null) return;
         preloaderDialog.show(R.string.importing_container);
 
@@ -206,6 +231,10 @@ public class ContainersFragment extends Fragment {
                         && archive.getAbsolutePath().startsWith(getContext().getCacheDir().getAbsolutePath())) {
                     FileUtils.delete(archive);
                 }
+
+                if (onFinish != null) {
+                    onFinish.run();
+                }
             });
         }).start();
     }
@@ -232,7 +261,7 @@ public class ContainersFragment extends Fragment {
         if (requestCode == REQUEST_CODE_IMPORT_CONTAINER_ARCHIVE && resultCode == Activity.RESULT_OK) {
             currentTab = 0;
             tabLayout.selectTab(tabLayout.getTabAt(currentTab));
-            if (data != null && data.getData() != null) importContainerArchive(data.getData());
+            if (data != null && data.getData() != null) importContainerArchive(data.getData(), null);
             return;
         }
         if (requestCode == REQUEST_CODE_IMPORT_CONTAINER && resultCode == Activity.RESULT_OK) {
@@ -367,7 +396,17 @@ public class ContainersFragment extends Fragment {
         private void showListItemMenu(View anchorView, Container container) {
             final Context context = getContext();
             PopupMenu listItemMenu = new PopupMenu(context, anchorView);
-            listItemMenu.inflate(currentTab == 0 ? R.menu.container_popup_menu : R.menu.container_backup_menu);
+            switch (currentTab) {
+                case 0:
+                    listItemMenu.inflate(R.menu.container_popup_menu);
+                    break;
+                case 1:
+                    listItemMenu.inflate(R.menu.container_backup_menu);
+                    break;
+                case 2:
+                    listItemMenu.inflate(R.menu.container_download_menu);
+                    break;
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) listItemMenu.setForceShowIcon(true);
 
             File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Winlator/Backups/Containers");
@@ -377,11 +416,25 @@ public class ContainersFragment extends Fragment {
                         currentTab = 0;
                         tabLayout.selectTab(tabLayout.getTabAt(currentTab));
                         File file = new File(dir, container.getName());
-                        importContainerArchive(Uri.fromFile(file));
+                        importContainerArchive(Uri.fromFile(file), null);
                         break;
                     case R.id.backup_remove:
                         new File(dir, container.getName()).delete();
                         loadContainersList();
+                        break;
+                    case R.id.download_import:
+                        File temp = new File(context.getCacheDir(), "container.tzst");
+                        String url = container.getEmulator();
+                        preloaderDialog.show(R.string.downloading_file);
+                        new Thread(() -> {
+                            Downloader.downloadFile(url, temp);
+                            runOnUiThreadSafe(() -> {
+                                currentTab = 0;
+                                preloaderDialog.close();
+                                tabLayout.selectTab(tabLayout.getTabAt(currentTab));
+                                importContainerArchive(Uri.fromFile(temp), () -> temp.delete());
+                            });
+                        }).start();
                         break;
                     case R.id.container_edit:
                         FragmentManager fragmentManager = getParentFragmentManager();
