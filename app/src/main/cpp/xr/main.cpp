@@ -408,6 +408,15 @@ Java_com_winlator_xr_XrActivity_clearLocateSpaces(JNIEnv *env, jobject thiz) {
     xr_locate_spaces.clear();
 }
 
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_clearOtherSpaces(JNIEnv *env, jobject thiz) {
+    for (auto & xr_space : xr_spaces) {
+        xrDestroySpace(xr_space.second);
+    }
+    xr_spaces.clear();
+    xr_info.clear();
+}
+
 JNIEXPORT jfloatArray JNICALL
 Java_com_winlator_xr_XrActivity_getPose(JNIEnv *env, jobject thiz, jint a, jint b) {
     int count = 0;

@@ -395,6 +395,7 @@ public class XrActivity extends XServerDisplayActivity {
     // XrAPI
     public native void addLocateSpace(int a, int b);
     public native void clearLocateSpaces();
+    public native void clearOtherSpaces();
     public native float[] getPose(int a, int b);
     public native void increaseReferenceSpacesOffset(float x, float y, float z);
     public native void updateActionSpace(int space, int type, int grip, float x, float y, float z,
