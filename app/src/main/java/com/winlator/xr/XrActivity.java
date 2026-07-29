@@ -267,21 +267,41 @@ public class XrActivity extends XServerDisplayActivity {
         boolean[] buttons = instance.getButtons();
 
         // Communication between XR and Windows apps
-        updateXrAPI(axes, buttons);
+        updateXrAPI();
         xrController.updateHaptics(xrAPI);
 
         // Android UI input
+        boolean blocking = false;
         lastActive = System.currentTimeMillis();
         if (XrKeyboard.isShown()) {
             XrKeyboard.update(axes, buttons, lastDistance);
-            return;
+            blocking = true;
         } else if (!xrController.updateAndroidInput(buttons))
-            return;
+            blocking = true;
 
-        // Switch immersive/SBS mode
-        updateShortcuts(buttons);
+        // XR input
+        if (blocking) {
+            updateXrApp(axes, new boolean[buttons.length]);
+        } else {
+            updateShortcuts(buttons);
+            updateXrApp(axes, buttons);
+            updateXServer(axes, buttons);
+        }
+    }
 
-        // XServer input
+    private void updateShortcuts(boolean[] buttons) {
+        ControllerButton primaryGrip = mouseLeftHanded ? ControllerButton.L_GRIP : ControllerButton.R_GRIP;
+        ControllerButton secondaryPress = !mouseLeftHanded ? ControllerButton.L_THUMBSTICK_PRESS : ControllerButton.R_THUMBSTICK_PRESS;
+        if (xrController.getButtonClicked(buttons, secondaryPress)) {
+            if (buttons[primaryGrip.ordinal()]) {
+                isSBS = !isSBS;
+            } else {
+                isImmersive = !isImmersive;
+            }
+        }
+    }
+
+    private void updateXServer(float[] axes, boolean[] buttons) {
         try (XLock lock = instance.getXServer().lock(XServer.Lockable.WINDOW_MANAGER, XServer.Lockable.INPUT_DEVICE)) {
             xrAPI.consumeInputs(instance.getXServer());
             if (mouseEmulation) {
@@ -301,19 +321,18 @@ public class XrActivity extends XServerDisplayActivity {
         }
     }
 
-    private void updateShortcuts(boolean[] buttons) {
-        ControllerButton primaryGrip = mouseLeftHanded ? ControllerButton.L_GRIP : ControllerButton.R_GRIP;
-        ControllerButton secondaryPress = !mouseLeftHanded ? ControllerButton.L_THUMBSTICK_PRESS : ControllerButton.R_THUMBSTICK_PRESS;
-        if (xrController.getButtonClicked(buttons, secondaryPress)) {
-            if (buttons[primaryGrip.ordinal()]) {
-                isSBS = !isSBS;
-            } else {
-                isImmersive = !isImmersive;
+    private void updateXrApp(float[] axes, boolean[] buttons) {
+        if (isUDP) {
+            try {
+                String data = xrAPI.encode(axes, buttons, 0) + xrAPI.getFlags();
+                xrAPI.send(data.getBytes(StandardCharsets.US_ASCII));
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     }
 
-    private void updateXrAPI(float[] axes, boolean[] buttons) {
+    private void updateXrAPI() {
         try {
             if (xrAPI == null) {
                 // Set the param to true and put a udp_debug folder in your Winlator D:\ drive
@@ -340,10 +359,6 @@ public class XrActivity extends XServerDisplayActivity {
                     isAER = lastMode3D == 2;
                     isSBS = lastMode3D == 1;
                 }
-
-                // Send data into the Windows app
-                String data = xrAPI.encode(axes, buttons, 0) + xrAPI.getFlags();
-                xrAPI.send(data.getBytes(StandardCharsets.US_ASCII));
             } else {
                 xrAPI.updateImplementation();
             }
