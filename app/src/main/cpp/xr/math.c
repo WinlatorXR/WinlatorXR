@@ -72,6 +72,16 @@ XrQuaternionf XrQuaternionfCreateFromVectorAngle(const XrVector3f axis, const fl
     return r;
 }
 
+XrQuaternionf XrQuaternionfInvert(const XrQuaternionf q)
+{
+    XrQuaternionf result;
+    result.x = -q.x;
+    result.y = -q.y;
+    result.z = -q.z;
+    result.w = q.w;
+    return result;
+}
+
 XrQuaternionf XrQuaternionfMultiply(const XrQuaternionf a, const XrQuaternionf b)
 {
     XrQuaternionf c;
@@ -104,6 +114,20 @@ XrVector3f XrQuaternionfEulerAngles(const XrQuaternionf q)
     XrVector3f upNormal = XrVector3fNormalized(up);
 
     return XrVector3fGetAnglesFromVectors(forwardNormal, rightNormal, upNormal);
+}
+
+XrVector3f XrQuaternionfRotateVector3f(const XrQuaternionf a, const XrVector3f v)
+{
+    XrQuaternionf q = {v.x, v.y, v.z, 0.0f};
+    XrQuaternionf aq = XrQuaternionfMultiply(q, a);
+    XrQuaternionf aInv = XrQuaternionfInvert(a);
+    XrQuaternionf aqaInv = XrQuaternionfMultiply(aInv, aq);
+
+    XrVector3f result;
+    result.x = aqaInv.x;
+    result.y = aqaInv.y;
+    result.z = aqaInv.z;
+    return result;
 }
 
 void XrQuaternionfToMatrix4f(const XrQuaternionf* q, float* m)
@@ -158,6 +182,15 @@ float XrVector3fDistance(const XrVector3f a, const XrVector3f b)
 float XrVector3fLengthSquared(const XrVector3f v)
 {
     return v.x * v.x + v.y * v.y + v.z * v.z;
+}
+
+XrVector3f XrVector3fAdd(const XrVector3f a, const XrVector3f b)
+{
+    XrVector3f result;
+    result.x = a.x + b.x;
+    result.y = a.y + b.y;
+    result.z = a.z + b.z;
+    return result;
 }
 
 XrVector3f XrVector3fGetAnglesFromVectors(XrVector3f forward, XrVector3f right, XrVector3f up)
@@ -234,4 +267,21 @@ XrVector4f XrVector4fMultiplyMatrix4f(const float* m, const XrVector4f* v)
     out.z = M[2][0] * v->x + M[2][1] * v->y + M[2][2] * v->z + M[2][3] * v->w;
     out.w = M[3][0] * v->x + M[3][1] * v->y + M[3][2] * v->z + M[3][3] * v->w;
     return out;
+}
+
+/*
+================================================================================
+
+XrPosef
+
+================================================================================
+*/
+
+XrPosef XrPosefMultiply(const XrPosef a, const XrPosef b)
+{
+    XrPosef result;
+    result.orientation = XrQuaternionfMultiply(b.orientation, a.orientation);
+    XrVector3f r0 = XrQuaternionfRotateVector3f(a.orientation, b.position);
+    result.position = XrVector3fAdd(r0, a.position);
+    return result;
 }

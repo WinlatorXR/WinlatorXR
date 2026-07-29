@@ -27,6 +27,7 @@
 
 std::vector<std::pair<int, int> > xr_locate_spaces;
 std::map<std::pair<int, int>, XrPosef> xr_poses;
+std::map<int, XrReferenceSpaceCreateInfo> xr_info;
 std::map<int, XrSpace> xr_spaces;
 bool xr_initialized = false;
 bool xr_curvedScreen = false;
@@ -434,6 +435,35 @@ Java_com_winlator_xr_XrActivity_getPose(JNIEnv *env, jobject thiz, jint a, jint 
 }
 
 JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_increaseReferenceSpacesOffset(JNIEnv *env, jobject thiz, jfloat x,
+                                                              jfloat y, jfloat z) {
+    double yaw = -ToRadians(xr_module_renderer.ConfigFloat[CONFIG_MENU_YAW]);
+    auto c = (float)cos(yaw);
+    auto s = (float)sin(yaw);
+
+    for (auto it = xr_info.begin(); it != xr_info.end(); ++it) {
+        int space = it->first;
+        XrSpace output = {};
+        XrReferenceSpaceCreateInfo space_info = it->second;
+        if (space_info.referenceSpaceType == XR_REFERENCE_SPACE_TYPE_VIEW) {
+            continue;
+        }
+
+        XrPosef offset = {};
+        offset.position.x = -(x * c - z * s);
+        offset.position.y = -y;
+        offset.position.z = -(x * s + z * c);
+        offset.orientation.w = 1;
+        space_info.poseInReferenceSpace = XrPosefMultiply(space_info.poseInReferenceSpace, offset);
+
+        xrCreateReferenceSpace(xr_module_engine.Session, &space_info, &output);
+        xrDestroySpace(xr_spaces[space]);
+        xr_info[space] = space_info;
+        xr_spaces[space] = output;
+    }
+}
+
+JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_updateActionSpace(JNIEnv *env, jobject thiz, jint space, jint type,
                                                   jint grip, jfloat x, jfloat y, jfloat z,
                                                   jfloat qx, jfloat qy, jfloat qz, jfloat qw) {
@@ -480,6 +510,7 @@ Java_com_winlator_xr_XrActivity_updateReferenceSpace(JNIEnv *env, jobject thiz, 
             ALOGE("Failed to create reference space %d", space);
             std::exit(-1);
         }
+        xr_info[space] = space_info;
         xr_spaces[space] = output;
     }
 }

@@ -281,6 +281,7 @@ public class XrActivity extends XServerDisplayActivity {
 
         // XR input
         if (blocking) {
+            if (isUDP) xrController.updateXrCamera(buttons);
             updateXrApp(axes, new boolean[buttons.length]);
         } else {
             updateShortcuts(buttons);
@@ -298,26 +299,6 @@ public class XrActivity extends XServerDisplayActivity {
             } else {
                 isImmersive = !isImmersive;
             }
-        }
-    }
-
-    private void updateXServer(float[] axes, boolean[] buttons) {
-        try (XLock lock = instance.getXServer().lock(XServer.Lockable.WINDOW_MANAGER, XServer.Lockable.INPUT_DEVICE)) {
-            xrAPI.consumeInputs(instance.getXServer());
-            if (mouseEmulation) {
-                xrController.updateMouseAxes(axes, isImmersive && isHeadTrackingAllowed);
-                xrController.updateMouseSnapturn(buttons, isImmersive ? 250 : 50);
-                if (mouseLightgun && !isImmersive && !getVR())
-                    xrController.updateMouseLightgun(axes, lastDistance);
-            }
-            if (wheelEmulation && !getVR()) {
-                xrController.updateWheelEmulation(axes);
-            }
-            if (!getVR()) {
-                xrController.updateMouseState(buttons);
-                xrController.updateKeyboardButtons(buttons);
-            }
-            xrController.updateFinished(axes, buttons);
         }
     }
 
@@ -367,6 +348,26 @@ public class XrActivity extends XServerDisplayActivity {
         }
     }
 
+    private void updateXServer(float[] axes, boolean[] buttons) {
+        try (XLock lock = instance.getXServer().lock(XServer.Lockable.WINDOW_MANAGER, XServer.Lockable.INPUT_DEVICE)) {
+            xrAPI.consumeInputs(instance.getXServer());
+            if (mouseEmulation) {
+                xrController.updateMouseAxes(axes, isImmersive && isHeadTrackingAllowed);
+                xrController.updateMouseSnapturn(buttons, isImmersive ? 250 : 50);
+                if (mouseLightgun && !isImmersive && !getVR())
+                    xrController.updateMouseLightgun(axes, lastDistance);
+            }
+            if (wheelEmulation && !getVR()) {
+                xrController.updateWheelEmulation(axes);
+            }
+            if (!getVR()) {
+                xrController.updateMouseState(buttons);
+                xrController.updateKeyboardButtons(buttons);
+            }
+            xrController.updateFinished(axes, buttons);
+        }
+    }
+
     // Rendering
     public native void init(int width, int height, int refresh, int cpu, int gpu);
     public native void bindFramebuffer();
@@ -395,6 +396,7 @@ public class XrActivity extends XServerDisplayActivity {
     public native void addLocateSpace(int a, int b);
     public native void clearLocateSpaces();
     public native float[] getPose(int a, int b);
+    public native void increaseReferenceSpacesOffset(float x, float y, float z);
     public native void updateActionSpace(int space, int type, int grip, float x, float y, float z,
                                          float qx, float qy, float qz, float qw);
     public native void updateReferenceSpace(int space, int type, float x, float y, float z,

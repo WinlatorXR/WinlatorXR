@@ -32,14 +32,20 @@ float ToRadians(float deg);
 
 // XrQuaternionf
 XrQuaternionf XrQuaternionfCreateFromVectorAngle(const XrVector3f axis, const float angle);
+XrQuaternionf XrQuaternionfInvert(const XrQuaternionf q);
 XrQuaternionf XrQuaternionfMultiply(const XrQuaternionf a, const XrQuaternionf b);
 XrVector3f XrQuaternionfEulerAngles(const XrQuaternionf q);
+XrVector3f XrQuaternionfRotateVector3f(const XrQuaternionf a, const XrVector3f v);
 void XrQuaternionfToMatrix4f(const XrQuaternionf* q, float* m);
 
 // XrVector3f, XrVector4f
 float XrVector3fDistance(const XrVector3f a, const XrVector3f b);
 float XrVector3fLengthSquared(const XrVector3f v);
+XrVector3f XrVector3fAdd(const XrVector3f a, const XrVector3f b);
 XrVector3f XrVector3fGetAnglesFromVectors(XrVector3f forward, XrVector3f right, XrVector3f up);
 XrVector3f XrVector3fNormalized(const XrVector3f v);
 XrVector3f XrVector3fScalarMultiply(const XrVector3f v, float scale);
 XrVector4f XrVector4fMultiplyMatrix4f(const float* m, const XrVector4f* v);
+
+// XrPosef
+XrPosef XrPosefMultiply(const XrPosef a, const XrPosef b);

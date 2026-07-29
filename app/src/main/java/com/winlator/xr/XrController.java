@@ -325,6 +325,20 @@ public class XrController {
         XrActivity.getInstance().getWinHandler().updateGyroData(-dy * 4.0f, thumbstick * 2.0f);
     }
 
+    public void updateXrCamera(boolean[] buttons) {
+        XrInterface.ControllerButton secondaryUp = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_UP : XrInterface.ControllerButton.R_THUMBSTICK_UP;
+        XrInterface.ControllerButton secondaryDown = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_DOWN : XrInterface.ControllerButton.R_THUMBSTICK_DOWN;
+        XrInterface.ControllerButton secondaryLeft = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_LEFT : XrInterface.ControllerButton.R_THUMBSTICK_LEFT;
+        XrInterface.ControllerButton secondaryRight = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_RIGHT : XrInterface.ControllerButton.R_THUMBSTICK_RIGHT;
+
+        float x = 0; float z = 0; float step = 0.025f;
+        if (buttons[secondaryUp.ordinal()]) z -= step;
+        if (buttons[secondaryDown.ordinal()]) z += step;
+        if (buttons[secondaryLeft.ordinal()]) x -= step;
+        if (buttons[secondaryRight.ordinal()]) x += step;
+        XrActivity.getInstance().increaseReferenceSpacesOffset(x, 0, z);
+    }
+
     public boolean getButtonClicked(boolean[] buttons, XrInterface.ControllerButton button) {
         return buttons[button.ordinal()] && !lastButtons[button.ordinal()];
     }
