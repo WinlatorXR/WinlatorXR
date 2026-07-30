@@ -475,6 +475,7 @@ public class ContainersFragment extends Fragment {
                         });
                         break;
                     case R.id.container_export_image:
+                        container.clearCache();
                         exportContainerImage(container);
                         break;
                 }

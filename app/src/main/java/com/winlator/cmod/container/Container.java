@@ -294,6 +294,15 @@ public class Container {
         return rootDir;
     }
 
+    public void clearCache() {
+        File rootDir = getRootDir();
+        final File cacheDir = new File(rootDir, ".cache");
+        FileUtils.clear(cacheDir);
+
+        putExtra("desktopTheme", null);
+        saveData();
+    }
+
     public void setRootDir(File rootDir) {
         this.rootDir = rootDir;
     }

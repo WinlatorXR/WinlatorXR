@@ -78,11 +78,6 @@ public class StorageInfoDialog extends ContentDialog {
         });
 
         ((TextView)findViewById(R.id.BTCancel)).setText(R.string.clear_cache);
-        setOnCancelCallback(() -> {
-            FileUtils.clear(cacheDir);
-
-            container.putExtra("desktopTheme", null);
-            container.saveData();
-        });
+        setOnCancelCallback(container::clearCache);
     }
 }
