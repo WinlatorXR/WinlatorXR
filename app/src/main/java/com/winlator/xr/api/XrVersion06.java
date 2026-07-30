@@ -28,7 +28,6 @@ public class XrVersion06 extends XrVersion05 {
 
             // Process reference spaces
             if (sc.hasNext()) {
-                instance.clearOtherSpaces();
                 int count = sc.nextInt();
                 for (int i = 0; i < count; i++) {
                     int space = sc.nextInt();
