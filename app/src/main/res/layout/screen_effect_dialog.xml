@@ -7,19 +7,19 @@
                 <LinearLayout style="@style/FieldSet">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/brightness" />
                     <com.winlator.cmod.widget.SeekBar
-                        android:id="@+id/SBBrightness" android:layout_width="fill_parent" android:layout_height="60dp" android:background="@drawable/xr_selector" app:maxValue="50" app:minValue="-50" />
+                        android:id="@+id/SBBrightness" android:layout_width="fill_parent" android:layout_height="30dp" android:background="@drawable/xr_selector" app:maxValue="50" app:minValue="-50" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/contrast" />
                     <com.winlator.cmod.widget.SeekBar
-                        android:id="@+id/SBContrast" android:layout_width="fill_parent" android:layout_height="60dp" android:background="@drawable/xr_selector" app:maxValue="100" app:minValue="-100" />
+                        android:id="@+id/SBContrast" android:layout_width="fill_parent" android:layout_height="30dp" android:background="@drawable/xr_selector" app:maxValue="100" app:minValue="-100" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/gamma" />
                     <com.winlator.cmod.widget.SeekBar
-                        android:id="@+id/SBGamma" android:layout_width="fill_parent" android:layout_height="60dp" android:background="@drawable/xr_selector" app:maxValue="3.0" app:minValue="0.5" app:step="0.01" />
+                        android:id="@+id/SBGamma" android:layout_width="fill_parent" android:layout_height="30dp" android:background="@drawable/xr_selector" app:maxValue="3.0" app:minValue="0.5" app:step="0.01" />
 
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8.0dip" android:text="@string/vkbasalt_sharpness_level" />
                     <com.winlator.cmod.widget.SeekBar
                         android:id="@+id/SBSharpnessLevel"
                         android:layout_width="fill_parent"
-                        android:layout_height="60dp"
+                        android:layout_height="30dp"
                         android:background="@drawable/xr_selector"
                         app:sbMaxValue="100"
                         app:sbMinValue="0" />
@@ -28,7 +28,7 @@
                     <com.winlator.cmod.widget.SeekBar
                         android:id="@+id/SBSharpnessDenoise"
                         android:layout_width="fill_parent"
-                        android:layout_height="60dp"
+                        android:layout_height="30dp"
                         android:background="@drawable/xr_selector"
                         app:sbMaxValue="100"
                         app:sbMinValue="0" />
@@ -38,7 +38,7 @@
                         <com.winlator.cmod.widget.SeekBar
                             android:id="@+id/SBSharpening"
                             android:layout_width="fill_parent"
-                            android:layout_height="60dp"
+                            android:layout_height="30dp"
                             android:background="@drawable/xr_selector"
                             app:sbMaxValue="100"
                             app:sbMinValue="0"
