@@ -80,6 +80,7 @@ struct XrRenderer {
     int FrameSync;
     int LayerCount;
     int RecenterCount;
+    bool RecenterPending;
     XrCompositorLayer Layers[XrMaxLayerCount];
     XrPassthroughFB Passthrough;
     XrPassthroughLayerFB PassthroughLayer;

@@ -49,6 +49,7 @@ void XrRendererInit(struct XrEngine* engine, struct XrRenderer* renderer)
         XrRendererDestroy(engine, renderer);
     }
     memset(renderer, 0, sizeof(renderer));
+    renderer->RecenterPending = true;
 
     if (engine->PlatformFlag[PLATFORM_EXTENSION_PASSTHROUGH])
     {
@@ -284,9 +285,20 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
     int y = 0;
     int w = renderer->ConfigInt[CONFIG_VIEWPORT_WIDTH];
     int h = renderer->ConfigInt[CONFIG_VIEWPORT_HEIGHT];
-    if (renderer->ConfigInt[CONFIG_SBS])
-    {
+    if (renderer->ConfigInt[CONFIG_SBS]) {
         w /= 2;
+    }
+
+    if (renderer->RecenterPending) {
+        // Guard against uninitialized pose (first frame before xrLocateViews)
+        XrQuaternionf orientation = renderer->Projections[0].pose.orientation;
+        float qLenSq = orientation.x * orientation.x + orientation.y * orientation.y +
+                       orientation.z * orientation.z + orientation.w * orientation.w;
+        if (qLenSq > 0.5f) {
+            renderer->ConfigFloat[CONFIG_MENU_PITCH] = renderer->HmdOrientation.x;
+            renderer->ConfigFloat[CONFIG_MENU_YAW] = XrQuaternionfEulerAngles(orientation).y;
+            renderer->RecenterPending = false;
+        }
     }
 
     // Screen pose definition
@@ -551,9 +563,8 @@ void XrRendererRecenter(struct XrEngine* engine, struct XrRenderer* renderer)
         ALOGV("Created stage space");
     }
 
-    // Update menu orientation
-    renderer->ConfigFloat[CONFIG_MENU_PITCH] = renderer->HmdOrientation.x;
-    renderer->ConfigFloat[CONFIG_MENU_YAW] = 0.0f;
+    // Update menu orientation on next frame with valid head tracking
+    renderer->RecenterPending = true;
 }
 
 void XrRendererHandleSessionStateChanges(struct XrEngine* engine, struct XrRenderer* renderer, XrSessionState state)
