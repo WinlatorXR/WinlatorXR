@@ -64,6 +64,22 @@
         android:background="@color/colorPrimary"/>
 
     <CheckBox
+        android:id="@+id/CBPlayerXRGamepad"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/xr_selector"
+        android:text="@string/controllers_as_gamepad" />
+
+    <CheckBox
+        android:id="@+id/CBPlayerXRKeys"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/xr_selector"
+        android:text="@string/controllers_as_keys" />
+
+    <CheckBox
         android:id="@+id/CBPlayerXRMouse"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

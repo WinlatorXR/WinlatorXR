@@ -39,7 +39,7 @@ public class ExternalController {
     private String name;
     private String id;
     private int deviceId = -1;
-    private byte triggerType = TRIGGER_IS_AXIS;
+    private byte triggerType = TRIGGER_IS_BOTH;
     private final ArrayList<ExternalControllerBinding> controllerBindings = new ArrayList<>();
     public final GamepadState state = new GamepadState();
     private XServerDisplayActivity activity;

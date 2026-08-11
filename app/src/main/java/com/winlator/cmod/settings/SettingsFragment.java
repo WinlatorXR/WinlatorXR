@@ -155,7 +155,9 @@ public class SettingsFragment extends Fragment {
         CheckBox cbMouseLeftHanded = view.findViewById(R.id.CBPlayerXRMouseLeftHanded);
         CheckBox cbMouseLightgun = view.findViewById(R.id.CBPlayerXRMouseLightgun);
         CheckBox cbMouse = view.findViewById(R.id.CBPlayerXRMouse);
-        XrDialog.controllerUI(getActivity(), cbMouseLeftHanded, cbMouseLightgun, cbMouse);
+        CheckBox cbGamepad = view.findViewById(R.id.CBPlayerXRGamepad);
+        CheckBox cbKeys = view.findViewById(R.id.CBPlayerXRKeys);
+        XrDialog.controllerUI(cbMouseLeftHanded, cbMouseLightgun, cbMouse, cbGamepad, cbKeys);
         CheckBox cbSBS = view.findViewById(R.id.CBEnableSBS);
         CheckBox cbImmersiveMode = view.findViewById(R.id.CBEnableImmersiveMode);
         CheckBox cbCurvedScreen = view.findViewById(R.id.CBEnableCurvedScreen);

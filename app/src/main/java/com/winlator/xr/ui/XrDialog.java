@@ -52,7 +52,9 @@ public class XrDialog extends ContentDialog {
         CheckBox cbMouseLeftHanded = findViewById(R.id.CBPlayerXRMouseLeftHanded);
         CheckBox cbMouseLightgun = findViewById(R.id.CBPlayerXRMouseLightgun);
         CheckBox cbMouse = findViewById(R.id.CBPlayerXRMouse);
-        controllerUI(activity, cbMouseLeftHanded, cbMouseLightgun, cbMouse);
+        CheckBox cbGamepad = findViewById(R.id.CBPlayerXRGamepad);
+        CheckBox cbKeys = findViewById(R.id.CBPlayerXRKeys);
+        controllerUI(cbMouseLeftHanded, cbMouseLightgun, cbMouse, cbGamepad, cbKeys);
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
 
@@ -74,7 +76,7 @@ public class XrDialog extends ContentDialog {
         setOnConfirmCallback(this::dismiss);
     }
 
-    public static void controllerUI(Activity activity, CheckBox cbMouseLeftHanded, CheckBox cbMouseLightgun, CheckBox cbMouse) {
+    public static void controllerUI(CheckBox cbMouseLeftHanded, CheckBox cbMouseLightgun, CheckBox cbMouse, CheckBox cbGamepad, CheckBox cbKeys) {
         loadConfig(cbMouseLeftHanded, "use_xr_leftHanded", false, XrActivity.mouseLeftHanded);
         cbMouseLeftHanded.setOnCheckedChangeListener((compoundButton, checked) -> {
             saveConfig(cbMouseLeftHanded, "use_xr_leftHanded", checked);
@@ -96,6 +98,21 @@ public class XrDialog extends ContentDialog {
         });
         cbMouseLeftHanded.setEnabled(cbMouse.isChecked());
         cbMouseLightgun.setEnabled(cbMouse.isChecked());
+
+        loadConfig(cbGamepad, "use_xr_gamepad", false, XrActivity.gamepadEmulation);
+        cbGamepad.setOnCheckedChangeListener((compoundButton, checked) -> {
+            saveConfig(cbGamepad, "use_xr_gamepad", checked);
+            XrActivity.gamepadEmulation = checked;
+            if (checked && XrActivity.isActive()) {
+                XrController.ensureVirtualControllerAttached();
+            }
+        });
+
+        loadConfig(cbKeys, "use_xr_keys", false, XrActivity.keysEmulation);
+        cbKeys.setOnCheckedChangeListener((compoundButton, checked) -> {
+            saveConfig(cbKeys, "use_xr_keys", checked);
+            XrActivity.keysEmulation = checked;
+        });
     }
 
     public static List<String> getProfileNames(Activity activity) {

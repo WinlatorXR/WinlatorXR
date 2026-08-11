@@ -31,6 +31,8 @@ import com.drbeef.externalhapticsservice.HapticServiceClient;
 
 import com.winlator.cmod.contentdialog.NavigationDialog;
 import com.winlator.cmod.inputcontrols.ControllerManager;
+import com.winlator.cmod.inputcontrols.ExternalController;
+import com.winlator.cmod.inputcontrols.GamepadState;
 import com.winlator.cmod.xserver.Keyboard;
 import com.winlator.cmod.xserver.Pointer;
 import com.winlator.cmod.xserver.XKeycode;
@@ -133,6 +135,33 @@ public class XrController {
     public void updateFinished(float[] axes, boolean[] buttons) {
         System.arraycopy(axes, 0, lastAxes, 0, axes.length);
         System.arraycopy(buttons, 0, lastButtons, 0, buttons.length);
+    }
+
+    public void updateGamepad(float[] axes, boolean[] buttons) {
+        GamepadState state = new GamepadState();
+
+        state.setPressed(ExternalController.IDX_BUTTON_X, buttons[XrInterface.ControllerButton.L_X.ordinal()]);
+        state.setPressed(ExternalController.IDX_BUTTON_Y, buttons[XrInterface.ControllerButton.L_Y.ordinal()]);
+        state.setPressed(ExternalController.IDX_BUTTON_A, buttons[XrInterface.ControllerButton.R_A.ordinal()]);
+        state.setPressed(ExternalController.IDX_BUTTON_B, buttons[XrInterface.ControllerButton.R_B.ordinal()]);
+        state.setPressed(ExternalController.IDX_BUTTON_L1, buttons[XrInterface.ControllerButton.L_TRIGGER.ordinal()]);
+        state.setPressed(ExternalController.IDX_BUTTON_L3, buttons[XrInterface.ControllerButton.L_GRIP.ordinal()]);
+        state.setPressed(ExternalController.IDX_BUTTON_START, buttons[XrInterface.ControllerButton.L_THUMBSTICK_PRESS.ordinal()]);
+        state.setPressed(ExternalController.IDX_BUTTON_R1, buttons[XrInterface.ControllerButton.R_TRIGGER.ordinal()]);
+        state.setPressed(ExternalController.IDX_BUTTON_R3, buttons[XrInterface.ControllerButton.R_GRIP.ordinal()]);
+        state.setPressed(ExternalController.IDX_BUTTON_SELECT, buttons[XrInterface.ControllerButton.R_THUMBSTICK_PRESS.ordinal()]);
+
+        state.dpad[0] = buttons[XrInterface.ControllerButton.L_THUMBSTICK_UP.ordinal()];
+        state.dpad[1] = buttons[XrInterface.ControllerButton.L_THUMBSTICK_RIGHT.ordinal()];
+        state.dpad[2] = buttons[XrInterface.ControllerButton.L_THUMBSTICK_DOWN.ordinal()];
+        state.dpad[3] = buttons[XrInterface.ControllerButton.L_THUMBSTICK_LEFT.ordinal()];
+
+        state.thumbLX = axes[XrInterface.ControllerAxis.L_THUMBSTICK_X.ordinal()];
+        state.thumbLY =-axes[XrInterface.ControllerAxis.L_THUMBSTICK_Y.ordinal()];
+        state.thumbRX = axes[XrInterface.ControllerAxis.R_THUMBSTICK_X.ordinal()];
+        state.thumbRY =-axes[XrInterface.ControllerAxis.R_THUMBSTICK_Y.ordinal()];
+
+        XrActivity.getInstance().getWinHandler().sendVirtualGamepadState(state);
     }
 
     public void updateHaptics(XrAPI xrAPI) {
