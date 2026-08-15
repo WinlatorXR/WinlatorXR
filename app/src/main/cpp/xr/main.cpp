@@ -258,7 +258,7 @@ JNIEXPORT jfloatArray JNICALL Java_com_winlator_xr_XrActivity_getAxes(JNIEnv *en
     XrVector3f angles = xr_module_renderer.HmdOrientation;
 
     int count = 0;
-    float data[49];
+    float data[64];
     data[count++] = XrQuaternionfEulerAngles(lPose.orientation).x; //L_PITCH
     data[count++] = XrQuaternionfEulerAngles(lPose.orientation).y; //L_YAW
     data[count++] = XrQuaternionfEulerAngles(lPose.orientation).z; //L_ROLL
@@ -307,6 +307,8 @@ JNIEXPORT jfloatArray JNICALL Java_com_winlator_xr_XrActivity_getAxes(JNIEnv *en
     data[count++] = rgPose.orientation.y; //RG_QY
     data[count++] = rgPose.orientation.z; //RG_QZ
     data[count++] = rgPose.orientation.w; //RG_QW
+    data[count++] = xr_module_input.TriggerLeft; //L_TRIGGER
+    data[count++] = xr_module_input.TriggerRight; //R_TRIGGER
 
     jfloat values[count];
     memcpy(values, data, count * sizeof(float));

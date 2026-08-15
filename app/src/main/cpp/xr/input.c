@@ -31,8 +31,8 @@ void XrInputInit(struct XrEngine* engine, struct XrInput* input)
 
     // Actions
     input->ActionSet = XrInputCreateActionSet(engine->Instance, "running_action_set", "Actionset");
-    input->IndexLeft = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "index_left", "Index left", 0, NULL);
-    input->IndexRight = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "index_right","Index right", 0, NULL);
+    input->IndexLeft = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_FLOAT_INPUT, "index_left", "Index left", 0, NULL);
+    input->IndexRight = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_FLOAT_INPUT, "index_right","Index right", 0, NULL);
     input->ButtonMenu = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "menu_action", "ButtonMenu", 0, NULL);
     input->ButtonA = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "button_a", "XrButton A", 0, NULL);
     input->ButtonB = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "button_b", "XrButton B", 0, NULL);
@@ -71,14 +71,14 @@ void XrInputInit(struct XrEngine* engine, struct XrInput* input)
 
     if (engine->PlatformFlag[PLATFORM_CONTROLLER_QUEST])
     {
-        bindings[curr++] = XrInputGetBinding(instance, input->IndexLeft, "/user/hand/left/input/trigger");
-        bindings[curr++] = XrInputGetBinding(instance, input->IndexRight, "/user/hand/right/input/trigger");
+        bindings[curr++] = XrInputGetBinding(instance, input->IndexLeft, "/user/hand/left/input/trigger/value");
+        bindings[curr++] = XrInputGetBinding(instance, input->IndexRight, "/user/hand/right/input/trigger/value");
         bindings[curr++] = XrInputGetBinding(instance, input->ButtonMenu, "/user/hand/left/input/menu/click");
     }
     else if (engine->PlatformFlag[PLATFORM_CONTROLLER_PICO])
     {
-        bindings[curr++] = XrInputGetBinding(instance, input->IndexLeft, "/user/hand/left/input/trigger/click");
-        bindings[curr++] = XrInputGetBinding(instance, input->IndexRight, "/user/hand/right/input/trigger/click");
+        bindings[curr++] = XrInputGetBinding(instance, input->IndexLeft, "/user/hand/left/input/trigger/value");
+        bindings[curr++] = XrInputGetBinding(instance, input->IndexRight, "/user/hand/right/input/trigger/value");
         bindings[curr++] = XrInputGetBinding(instance, input->ButtonMenu, "/user/hand/left/input/back/click");
         //bindings[curr++] = XrInputGetBinding(instance, input->ButtonMenu, "/user/hand/right/input/back/click");
     }
@@ -242,24 +242,26 @@ void XrInputUpdate(struct XrEngine* engine, struct XrInput* input)
 
     // button mapping
     input->ButtonsLeft = 0;
+    input->TriggerLeft = XrInputGetActionStateFloat(session, input->IndexLeft).currentState;
     if (XrInputGetActionStateBoolean(session, input->ButtonMenu).currentState)
         input->ButtonsLeft |= (int)Enter;
     if (XrInputGetActionStateBoolean(session, input->ButtonX).currentState)
         input->ButtonsLeft |= (int)X;
     if (XrInputGetActionStateBoolean(session, input->ButtonY).currentState)
         input->ButtonsLeft |= (int)Y;
-    if (XrInputGetActionStateBoolean(session, input->IndexLeft).currentState)
+    if (input->TriggerLeft > 0.5f)
         input->ButtonsLeft |= (int)Trigger;
     if (XrInputGetActionStateFloat(session, input->GripLeft).currentState > 0.5f)
         input->ButtonsLeft |= (int)Grip;
     if (XrInputGetActionStateBoolean(session, input->ThumbLeft).currentState)
         input->ButtonsLeft |= (int)LThumb;
     input->ButtonsRight = 0;
+    input->TriggerRight = XrInputGetActionStateFloat(session, input->IndexRight).currentState;
     if (XrInputGetActionStateBoolean(session, input->ButtonA).currentState)
         input->ButtonsRight |= (int)A;
     if (XrInputGetActionStateBoolean(session, input->ButtonB).currentState)
         input->ButtonsRight |= (int)B;
-    if (XrInputGetActionStateBoolean(session, input->IndexRight).currentState)
+    if (input->TriggerRight > 0.5f)
         input->ButtonsRight |= (int)Trigger;
     if (XrInputGetActionStateFloat(session, input->GripRight).currentState > 0.5f)
         input->ButtonsRight |= (int)Grip;
