@@ -365,7 +365,9 @@ public class XrController {
         if (buttons[secondaryDown.ordinal()]) z += step;
         if (buttons[secondaryLeft.ordinal()]) x -= step;
         if (buttons[secondaryRight.ordinal()]) x += step;
-        XrActivity.getInstance().increaseReferenceSpacesOffset(x, 0, z);
+        if ((Math.abs(x) > 0) || (Math.abs(z) > 0)) {
+            XrActivity.getInstance().increaseReferenceSpacesOffset(x, 0, z);
+        }
     }
 
     public boolean getButtonClicked(boolean[] buttons, XrInterface.ControllerButton button) {
