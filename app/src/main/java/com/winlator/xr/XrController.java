@@ -165,7 +165,14 @@ public class XrController {
         state.thumbLY =-axes[XrInterface.ControllerAxis.L_THUMBSTICK_Y.ordinal()];
         state.thumbRX = axes[XrInterface.ControllerAxis.R_THUMBSTICK_X.ordinal()];
         state.thumbRY =-axes[XrInterface.ControllerAxis.R_THUMBSTICK_Y.ordinal()];
-        
+
+        float lenL = (float) Math.sqrt(state.thumbLX * state.thumbLX + state.thumbLY * state.thumbLY);
+        float lenR = (float) Math.sqrt(state.thumbRX * state.thumbRX + state.thumbRY * state.thumbRY);
+        state.thumbLX = Math.max(-1.0f, Math.min(state.thumbLX * lenL, 1.0f));
+        state.thumbLY = Math.max(-1.0f, Math.min(state.thumbLY * lenL, 1.0f));
+        state.thumbRX = Math.max(-1.0f, Math.min(state.thumbRX * lenR, 1.0f));
+        state.thumbRY = Math.max(-1.0f, Math.min(state.thumbRY * lenR, 1.0f));
+
         XrActivity.getInstance().getWinHandler().sendVirtualGamepadState(state);
     }
 
