@@ -72,6 +72,8 @@ public class XrActivity extends XServerDisplayActivity {
     private static long lastActive = 0;
     private static float lastDistance = 5;
     private final ArrayList<Integer> framesyncMapping = new ArrayList<>();
+    private boolean framesyncMappingHigh = false;
+    private boolean framesyncMappingLow = false;
     private int lastFrameSync = 0;
     public int lastMode3D = -1;
 
@@ -232,11 +234,19 @@ public class XrActivity extends XServerDisplayActivity {
             }
             return new Pair<>(false, b);
         } else if (framesyncMapping.size() == expectedLength) {
-            if (!framesyncMapping.contains(r)) {
-                framesyncMapping.clear();
-                return new Pair<>(false, b);
+            if (g == 0) {
+                if (r < 128) framesyncMappingLow = true;
+                if (r > 128) framesyncMappingHigh = true;
+                if (framesyncMappingLow && framesyncMappingHigh) {
+                    if (!framesyncMapping.contains(r)) {
+                        framesyncMappingHigh = false;
+                        framesyncMappingLow = false;
+                        framesyncMapping.clear();
+                        return new Pair<>(false, b);
+                    }
+                    r = framesyncMapping.indexOf(r) * step;
+                }
             }
-            r = framesyncMapping.indexOf(r) * step;
         }
 
         // apply the values
