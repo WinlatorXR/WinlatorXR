@@ -78,6 +78,8 @@ struct XrInput {
     // Controller state
     uint32_t ButtonsLeft;
     uint32_t ButtonsRight;
+    float TriggerLeft;
+    float TriggerRight;
     XrSpaceLocation ControllerPose[4];
     XrActionStateVector2f JoystickState[2];
     float VibrationChannelDuration[2];

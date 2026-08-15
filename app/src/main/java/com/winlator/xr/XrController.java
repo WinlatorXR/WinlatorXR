@@ -144,22 +144,34 @@ public class XrController {
         state.setPressed(ExternalController.IDX_BUTTON_Y, buttons[XrInterface.ControllerButton.L_Y.ordinal()]);
         state.setPressed(ExternalController.IDX_BUTTON_A, buttons[XrInterface.ControllerButton.R_A.ordinal()]);
         state.setPressed(ExternalController.IDX_BUTTON_B, buttons[XrInterface.ControllerButton.R_B.ordinal()]);
-        state.setPressed(ExternalController.IDX_BUTTON_L1, buttons[XrInterface.ControllerButton.L_TRIGGER.ordinal()]);
-        state.setPressed(ExternalController.IDX_BUTTON_L3, buttons[XrInterface.ControllerButton.L_GRIP.ordinal()]);
-        state.setPressed(ExternalController.IDX_BUTTON_START, buttons[XrInterface.ControllerButton.L_THUMBSTICK_PRESS.ordinal()]);
-        state.setPressed(ExternalController.IDX_BUTTON_R1, buttons[XrInterface.ControllerButton.R_TRIGGER.ordinal()]);
-        state.setPressed(ExternalController.IDX_BUTTON_R3, buttons[XrInterface.ControllerButton.R_GRIP.ordinal()]);
-        state.setPressed(ExternalController.IDX_BUTTON_SELECT, buttons[XrInterface.ControllerButton.R_THUMBSTICK_PRESS.ordinal()]);
+        state.setPressed(ExternalController.IDX_BUTTON_L1, buttons[XrInterface.ControllerButton.L_GRIP.ordinal()]);
+        state.triggerL = axes[XrInterface.ControllerAxis.L_TRIGGER.ordinal()];
+        state.setPressed(ExternalController.IDX_BUTTON_L2, state.triggerL > 0.5f);
+        state.setPressed(ExternalController.IDX_BUTTON_L3, buttons[XrInterface.ControllerButton.L_THUMBSTICK_PRESS.ordinal()]);
+        state.setPressed(ExternalController.IDX_BUTTON_R1, buttons[XrInterface.ControllerButton.R_GRIP.ordinal()]);
+        state.triggerR = axes[XrInterface.ControllerAxis.R_TRIGGER.ordinal()];
+        state.setPressed(ExternalController.IDX_BUTTON_R2, state.triggerR > 0.5f);
+        state.setPressed(ExternalController.IDX_BUTTON_R3, buttons[XrInterface.ControllerButton.R_TRIGGER.ordinal()] && buttons[XrInterface.ControllerButton.R_GRIP.ordinal()] && buttons[XrInterface.ControllerButton.R_THUMBSTICK_PRESS.ordinal()]);
+        state.setPressed(ExternalController.IDX_BUTTON_SELECT, buttons[XrInterface.ControllerButton.L_TRIGGER.ordinal()] && buttons[XrInterface.ControllerButton.L_GRIP.ordinal()] && buttons[XrInterface.ControllerButton.L_Y.ordinal()]);
+        state.setPressed(ExternalController.IDX_BUTTON_START, buttons[XrInterface.ControllerButton.R_TRIGGER.ordinal()] && buttons[XrInterface.ControllerButton.R_GRIP.ordinal()] && buttons[XrInterface.ControllerButton.R_B.ordinal()]);
 
-        state.dpad[0] = buttons[XrInterface.ControllerButton.L_THUMBSTICK_UP.ordinal()];
-        state.dpad[1] = buttons[XrInterface.ControllerButton.L_THUMBSTICK_RIGHT.ordinal()];
-        state.dpad[2] = buttons[XrInterface.ControllerButton.L_THUMBSTICK_DOWN.ordinal()];
-        state.dpad[3] = buttons[XrInterface.ControllerButton.L_THUMBSTICK_LEFT.ordinal()];
+        boolean dpadActive = buttons[XrInterface.ControllerButton.L_TRIGGER.ordinal()] && buttons[XrInterface.ControllerButton.L_GRIP.ordinal()];
+        state.dpad[0] = dpadActive && buttons[XrInterface.ControllerButton.L_THUMBSTICK_UP.ordinal()];
+        state.dpad[1] = dpadActive && buttons[XrInterface.ControllerButton.L_THUMBSTICK_RIGHT.ordinal()];
+        state.dpad[2] = dpadActive && buttons[XrInterface.ControllerButton.L_THUMBSTICK_DOWN.ordinal()];
+        state.dpad[3] = dpadActive && buttons[XrInterface.ControllerButton.L_THUMBSTICK_LEFT.ordinal()];
 
         state.thumbLX = axes[XrInterface.ControllerAxis.L_THUMBSTICK_X.ordinal()];
         state.thumbLY =-axes[XrInterface.ControllerAxis.L_THUMBSTICK_Y.ordinal()];
         state.thumbRX = axes[XrInterface.ControllerAxis.R_THUMBSTICK_X.ordinal()];
         state.thumbRY =-axes[XrInterface.ControllerAxis.R_THUMBSTICK_Y.ordinal()];
+
+        float lenL = (float) Math.sqrt(state.thumbLX * state.thumbLX + state.thumbLY * state.thumbLY);
+        float lenR = (float) Math.sqrt(state.thumbRX * state.thumbRX + state.thumbRY * state.thumbRY);
+        state.thumbLX = Math.max(-1.0f, Math.min(state.thumbLX * lenL, 1.0f));
+        state.thumbLY = Math.max(-1.0f, Math.min(state.thumbLY * lenL, 1.0f));
+        state.thumbRX = Math.max(-1.0f, Math.min(state.thumbRX * lenR, 1.0f));
+        state.thumbRY = Math.max(-1.0f, Math.min(state.thumbRY * lenR, 1.0f));
 
         XrActivity.getInstance().getWinHandler().sendVirtualGamepadState(state);
     }
