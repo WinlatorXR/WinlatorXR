@@ -368,6 +368,9 @@ public class XrActivity extends XServerDisplayActivity {
                     xrController.updateMouseSnapturn(buttons, isImmersive ? 250 : 50);
                     if (mouseLightgun && !isImmersive)
                         xrController.updateMouseLightgun(axes, lastDistance);
+                } else if (isImmersive && isHeadTrackingAllowed) {
+                    xrController.updateMouseAxes(axes, true);
+                    xrController.updateMouseState(new boolean[buttons.length]);
                 }
                 if (wheelEmulation) {
                     xrController.updateWheelEmulation(axes);
