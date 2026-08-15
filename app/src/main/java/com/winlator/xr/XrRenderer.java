@@ -33,6 +33,7 @@ import com.winlator.cmod.widget.XServerView;
 import com.winlator.cmod.xserver.Drawable;
 import com.winlator.cmod.xserver.XLock;
 import com.winlator.cmod.xserver.XServer;
+import com.winlator.xr.api.XrFramesync;
 import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.xr.ui.XrKeyboard;
 
@@ -50,12 +51,14 @@ public class XrRenderer extends GLRenderer {
     private boolean xrImmersive = false;
     private boolean xrFrameReady = false;
     private boolean xrFrameStarted = false;
+    private final XrFramesync xrFramesync;
 
     public static boolean autoclose = true;
     public static boolean vrWindowOnTop = false;
 
     public XrRenderer(XServerView xServerView, XServer xServer) {
         super(xServerView, xServer);
+        xrFramesync = new XrFramesync(xServerView.getContext());
     }
 
     @Override
@@ -86,10 +89,10 @@ public class XrRenderer extends GLRenderer {
     @Override
     protected boolean preDrawable(ShaderMaterial material, Drawable drawable) {
         if (XrActivity.isEnabled(null) && XrActivity.getVR() && xrFrameReady) {
-            Pair<Boolean, Integer> framesync = XrActivity.getInstance().processFramesync(drawable);
+            xrFramesync.process(drawable, (r, g, b, a) -> XrActivity.getInstance().nativeSetFramesync(r, g, b, a));
             xrFrameReady = false;
             if (XrActivity.getAER()) {
-                renderAER(drawable, material, framesync.first, framesync.second);
+                renderAER(drawable, material, xrFramesync.getAerShouldUpdate(), xrFramesync.getAerTargetFBO());
                 return false;
             }
         }

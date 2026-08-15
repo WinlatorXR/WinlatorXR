@@ -24,7 +24,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
-import android.util.Pair;
 import android.view.Display;
 import android.content.SharedPreferences;
 
@@ -34,7 +33,6 @@ import com.winlator.cmod.R;
 import com.winlator.cmod.XServerDisplayActivity;
 import com.winlator.xr.api.XrAPI;
 import com.winlator.xr.ui.XrContentDialog;
-import com.winlator.cmod.xserver.Drawable;
 import com.winlator.cmod.xserver.XKeycode;
 import com.winlator.cmod.xserver.XLock;
 import com.winlator.cmod.xserver.XServer;
@@ -43,14 +41,9 @@ import com.winlator.xr.ui.XrKeyboard;
 import static com.winlator.xr.api.XrInterface.AppInput;
 import static com.winlator.xr.api.XrInterface.ControllerButton;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Comparator;
 
 public class XrActivity extends XServerDisplayActivity {
-    private static final String KEY_FRAMESYNC_MAPPING = "KEY_FRAMESYNC_MAPPING";
-
     private static XrActivity instance;
 
     // Configuration flags
@@ -71,10 +64,6 @@ public class XrActivity extends XServerDisplayActivity {
     // Rendering status
     private static long lastActive = 0;
     private static float lastDistance = 5;
-    private final ArrayList<Integer> framesyncMapping = new ArrayList<>();
-    private boolean framesyncMappingHigh = false;
-    private boolean framesyncMappingLow = false;
-    private int lastFrameSync = 0;
     public int lastMode3D = -1;
 
     // XR input/output
@@ -101,13 +90,6 @@ public class XrActivity extends XServerDisplayActivity {
         mouseLeftHanded = prefs.getBoolean("use_xr_leftHanded", false);
         mouseLightgun = prefs.getBoolean("use_xr_lightgun", false);
         wheelEmulation = prefs.getBoolean("use_xr_wheel", false);
-
-        if (framesyncMapping.isEmpty()) {
-            int size = prefs.getInt(KEY_FRAMESYNC_MAPPING, 0);
-            for (int i = 0; i < size; i++) {
-                framesyncMapping.add(prefs.getInt(KEY_FRAMESYNC_MAPPING + i, 0));
-            }
-        }
 
         if (gamepadEmulation || wheelEmulation) {
             XrController.ensureVirtualControllerAttached();
@@ -203,57 +185,6 @@ public class XrActivity extends XServerDisplayActivity {
                 XrKeyboard.sendKey(XKeycode.KEY_HOME);
                 break;
         }
-    }
-
-    public Pair<Boolean, Integer> processFramesync(Drawable drawable) {
-        // get sync pixel
-        ByteBuffer buffer = drawable.getImage((short)0, (short)0, (short)1, (short)1);
-        int b = buffer.get(0) & 0xFF;
-        int g = buffer.get(1) & 0xFF;
-        int r = buffer.get(2) & 0xFF;
-        int a = buffer.get(3) & 0xFF;
-
-        //define framesync behavior (the same as in xr/engine.h)
-        int step = 12;
-        int limit = 256;
-        int expectedLength = (limit / step) + 1;
-
-        //automatically find mapping for current color space
-        if (framesyncMapping.size() < expectedLength) {
-            if (!framesyncMapping.contains(r)) {
-                framesyncMapping.add(r);
-                framesyncMapping.sort(Comparator.comparingInt(i -> i));
-            }
-            if (framesyncMapping.size() == expectedLength) {
-                SharedPreferences.Editor e = PreferenceManager.getDefaultSharedPreferences(this).edit();
-                e.putInt(KEY_FRAMESYNC_MAPPING, framesyncMapping.size());
-                for (int i = 0; i < framesyncMapping.size(); i++) {
-                    e.putInt(KEY_FRAMESYNC_MAPPING + i, framesyncMapping.get(i));
-                }
-                e.commit();
-            }
-            return new Pair<>(false, b);
-        } else if (framesyncMapping.size() == expectedLength) {
-            if (g == 0) {
-                if (r < 128) framesyncMappingLow = true;
-                if (r > 128) framesyncMappingHigh = true;
-                if (framesyncMappingLow && framesyncMappingHigh) {
-                    if (!framesyncMapping.contains(r)) {
-                        framesyncMappingHigh = false;
-                        framesyncMappingLow = false;
-                        framesyncMapping.clear();
-                        return new Pair<>(false, b);
-                    }
-                    r = framesyncMapping.indexOf(r) * step;
-                }
-            }
-        }
-
-        // apply the values
-        nativeSetFramesync(r, g, b, a);
-        Pair<Boolean, Integer> output = new Pair<>(lastFrameSync != r, b > 0 ? 1 : 0);
-        lastFrameSync = r;
-        return output;
     }
 
     public static void openIntent(Activity context, int containerId, String path) {
