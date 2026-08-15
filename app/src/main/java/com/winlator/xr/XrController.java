@@ -155,10 +155,11 @@ public class XrController {
         state.setPressed(ExternalController.IDX_BUTTON_SELECT, buttons[XrInterface.ControllerButton.L_TRIGGER.ordinal()] && buttons[XrInterface.ControllerButton.L_GRIP.ordinal()] && buttons[XrInterface.ControllerButton.L_Y.ordinal()]);
         state.setPressed(ExternalController.IDX_BUTTON_START, buttons[XrInterface.ControllerButton.R_TRIGGER.ordinal()] && buttons[XrInterface.ControllerButton.R_GRIP.ordinal()] && buttons[XrInterface.ControllerButton.R_B.ordinal()]);
 
-        state.dpad[0] = buttons[XrInterface.ControllerButton.L_THUMBSTICK_UP.ordinal()];
-        state.dpad[1] = buttons[XrInterface.ControllerButton.L_THUMBSTICK_RIGHT.ordinal()];
-        state.dpad[2] = buttons[XrInterface.ControllerButton.L_THUMBSTICK_DOWN.ordinal()];
-        state.dpad[3] = buttons[XrInterface.ControllerButton.L_THUMBSTICK_LEFT.ordinal()];
+        boolean dpadActive = buttons[XrInterface.ControllerButton.L_TRIGGER.ordinal()] && buttons[XrInterface.ControllerButton.L_GRIP.ordinal()];
+        state.dpad[0] = dpadActive && buttons[XrInterface.ControllerButton.L_THUMBSTICK_UP.ordinal()];
+        state.dpad[1] = dpadActive && buttons[XrInterface.ControllerButton.L_THUMBSTICK_RIGHT.ordinal()];
+        state.dpad[2] = dpadActive && buttons[XrInterface.ControllerButton.L_THUMBSTICK_DOWN.ordinal()];
+        state.dpad[3] = dpadActive && buttons[XrInterface.ControllerButton.L_THUMBSTICK_LEFT.ordinal()];
 
         state.thumbLX = axes[XrInterface.ControllerAxis.L_THUMBSTICK_X.ordinal()];
         state.thumbLY =-axes[XrInterface.ControllerAxis.L_THUMBSTICK_Y.ordinal()];
