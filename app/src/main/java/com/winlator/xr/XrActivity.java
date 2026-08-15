@@ -297,7 +297,7 @@ public class XrActivity extends XServerDisplayActivity {
     private void updateShortcuts(boolean[] buttons) {
         ControllerButton primaryGrip = mouseLeftHanded ? ControllerButton.L_GRIP : ControllerButton.R_GRIP;
         ControllerButton secondaryPress = !mouseLeftHanded ? ControllerButton.L_THUMBSTICK_PRESS : ControllerButton.R_THUMBSTICK_PRESS;
-        if (xrController.getButtonClicked(buttons, secondaryPress)) {
+        if (!gamepadEmulation && xrController.getButtonClicked(buttons, secondaryPress)) {
             if (buttons[primaryGrip.ordinal()]) {
                 isSBS = !isSBS;
             } else {
