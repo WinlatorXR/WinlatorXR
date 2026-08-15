@@ -249,12 +249,8 @@ public class XrActivity extends XServerDisplayActivity {
 
     private void updateXrApp(float[] axes, boolean[] buttons) {
         if (isUDP) {
-            try {
-                String data = xrAPI.encode(axes, buttons, 0) + xrAPI.getFlags();
-                xrAPI.send(data.getBytes(StandardCharsets.US_ASCII));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            String data = xrAPI.encode(axes, buttons, 0) + xrAPI.getFlags();
+            xrAPI.sendAsync(data.getBytes(StandardCharsets.US_ASCII));
         }
     }
 

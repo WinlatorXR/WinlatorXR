@@ -154,6 +154,16 @@ public class XrAPI implements XrInterface {
         }
     }
 
+    public void sendAsync(@NonNull byte[] bytes) {
+        new Thread(() -> {
+            try {
+                send(bytes);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
     public void updateImplementation() {
         if (impl != null) {
             return;
