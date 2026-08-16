@@ -29,11 +29,14 @@ import java.nio.charset.StandardCharsets;
 
 public class XrInput {
     private final XrActivity instance;
-    private final XrController xrController;
     private XrAPI xrAPI = null;
+    private XrController xrController = null;
 
     public XrInput(XrActivity activity) {
         instance = activity;
+    }
+
+    public void load() {
         xrController = new XrController();
 
         if (XrActivity.gamepadEmulation || XrActivity.wheelEmulation) {

@@ -82,6 +82,7 @@ public class XrActivity extends XServerDisplayActivity {
         mouseLeftHanded = prefs.getBoolean("use_xr_leftHanded", false);
         mouseLightgun = prefs.getBoolean("use_xr_lightgun", false);
         wheelEmulation = prefs.getBoolean("use_xr_wheel", false);
+        xrInput = new XrInput(instance);
     }
 
     @Override
@@ -94,7 +95,7 @@ public class XrActivity extends XServerDisplayActivity {
     public synchronized void onResume() {
         super.onResume();
         instance = this;
-        xrInput = new XrInput(instance);
+        xrInput.load();
         sendManufacturer(Build.MANUFACTURER.toUpperCase());
     }
 
