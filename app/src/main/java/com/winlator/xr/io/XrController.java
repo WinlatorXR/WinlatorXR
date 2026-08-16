@@ -167,8 +167,8 @@ public class XrController {
 
         state.thumbLX = dpadActive ? 0 : axes[XrInterface.ControllerAxis.L_THUMBSTICK_X.ordinal()];
         state.thumbLY = dpadActive ? 0 : -axes[XrInterface.ControllerAxis.L_THUMBSTICK_Y.ordinal()];
-        state.thumbRX = dpadActive ? 0 : axes[XrInterface.ControllerAxis.R_THUMBSTICK_X.ordinal()];
-        state.thumbRY = dpadActive ? 0 : -axes[XrInterface.ControllerAxis.R_THUMBSTICK_Y.ordinal()];
+        state.thumbRX = axes[XrInterface.ControllerAxis.R_THUMBSTICK_X.ordinal()];
+        state.thumbRY = -axes[XrInterface.ControllerAxis.R_THUMBSTICK_Y.ordinal()];
 
         float lenL = (float) Math.sqrt(state.thumbLX * state.thumbLX + state.thumbLY * state.thumbLY);
         float lenR = (float) Math.sqrt(state.thumbRX * state.thumbRX + state.thumbRY * state.thumbRY);
