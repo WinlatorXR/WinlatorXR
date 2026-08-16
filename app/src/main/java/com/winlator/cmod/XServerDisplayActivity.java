@@ -127,15 +127,15 @@ import com.winlator.cmod.xenvironment.components.NetworkInfoUpdateComponent;
 import com.winlator.cmod.xenvironment.components.PulseAudioComponent;
 import com.winlator.cmod.xenvironment.components.SysVSharedMemoryComponent;
 import com.winlator.cmod.xenvironment.components.XServerComponent;
-import com.winlator.xr.ModdingUtils;
-import com.winlator.xr.io.XrRenderer;
-import com.winlator.xr.ui.XrDialog;
 import com.winlator.cmod.xserver.Pointer;
 import com.winlator.cmod.xserver.Property;
 import com.winlator.cmod.xserver.ScreenInfo;
 import com.winlator.cmod.xserver.Window;
 import com.winlator.cmod.xserver.WindowManager;
 import com.winlator.cmod.xserver.XServer;
+import com.winlator.xr.io.XrRenderer;
+import com.winlator.xr.ui.XrDialog;
+import com.winlator.xr.utils.ModdingUtils;
 
 import org.json.JSONArray;
 import org.json.JSONException;

@@ -36,6 +36,7 @@ import com.winlator.xr.io.XrIO;
 import com.winlator.xr.io.XrRenderer;
 import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.xr.ui.XrKeyboard;
+import com.winlator.xr.utils.Device;
 
 public class XrActivity extends XServerDisplayActivity {
     private static XrActivity instance;

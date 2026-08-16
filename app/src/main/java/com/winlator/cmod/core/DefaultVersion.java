@@ -1,6 +1,6 @@
 package com.winlator.cmod.core;
 
-import com.winlator.xr.Device;
+import com.winlator.xr.utils.Device;
 
 public abstract class DefaultVersion {
     public static final String BOX86 = "0.4.2";
