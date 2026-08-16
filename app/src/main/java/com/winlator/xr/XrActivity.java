@@ -290,31 +290,33 @@ public class XrActivity extends XServerDisplayActivity {
     }
 
     private void updateXServer(float[] axes, boolean[] buttons) {
-        try (XLock lock = instance.getXServer().lock(XServer.Lockable.WINDOW_MANAGER, XServer.Lockable.INPUT_DEVICE)) {
-            xrAPI.consumeInputs(instance.getXServer());
-            if (gamepadEmulation) {
-                xrController.updateGamepad(axes, buttons);
+        new Thread(() -> {
+            try (XLock lock = instance.getXServer().lock(XServer.Lockable.WINDOW_MANAGER, XServer.Lockable.INPUT_DEVICE)) {
+                xrAPI.consumeInputs(instance.getXServer());
+                if (gamepadEmulation) {
+                    xrController.updateGamepad(axes, buttons);
+                }
+                if (!getVR()) {
+                    if (keysEmulation) {
+                        xrController.updateKeyboardButtons(buttons);
+                    }
+                    if (mouseEmulation) {
+                        xrController.updateMouseAxes(axes, isImmersive && isHeadTrackingAllowed);
+                        xrController.updateMouseState(buttons);
+                        xrController.updateMouseSnapturn(buttons, isImmersive ? 250 : 50);
+                        if (mouseLightgun && !isImmersive)
+                            xrController.updateMouseLightgun(axes, lastDistance);
+                    } else if (isImmersive && isHeadTrackingAllowed) {
+                        xrController.updateMouseAxes(axes, true);
+                        xrController.updateMouseState(new boolean[buttons.length]);
+                    }
+                    if (wheelEmulation) {
+                        xrController.updateWheelEmulation(axes);
+                    }
+                }
+                xrController.updateFinished(axes, buttons);
             }
-            if (!getVR()) {
-                if (keysEmulation) {
-                    xrController.updateKeyboardButtons(buttons);
-                }
-                if (mouseEmulation) {
-                    xrController.updateMouseAxes(axes, isImmersive && isHeadTrackingAllowed);
-                    xrController.updateMouseState(buttons);
-                    xrController.updateMouseSnapturn(buttons, isImmersive ? 250 : 50);
-                    if (mouseLightgun && !isImmersive)
-                        xrController.updateMouseLightgun(axes, lastDistance);
-                } else if (isImmersive && isHeadTrackingAllowed) {
-                    xrController.updateMouseAxes(axes, true);
-                    xrController.updateMouseState(new boolean[buttons.length]);
-                }
-                if (wheelEmulation) {
-                    xrController.updateWheelEmulation(axes);
-                }
-            }
-            xrController.updateFinished(axes, buttons);
-        }
+        }).start();
     }
 
     // Rendering
