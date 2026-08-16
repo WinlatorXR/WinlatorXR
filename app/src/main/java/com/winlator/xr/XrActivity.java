@@ -40,7 +40,7 @@ import com.winlator.xr.utils.Device;
 
 public class XrActivity extends XServerDisplayActivity {
     private static XrActivity instance;
-    private XrInput xrInput;
+    private static XrInput xrInput;
 
     // Configuration flags
     private static boolean isEnabled = false;
@@ -71,26 +71,24 @@ public class XrActivity extends XServerDisplayActivity {
         super.onCreate(savedInstanceState);
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         boolean usePassthrough = prefs.getBoolean("use_pt", true);
-        nativeSetUsePT(usePassthrough);
         boolean curvedScreen = prefs.getBoolean("use_cs", false);
-        nativeSetCurvedScreen(curvedScreen);
         int sharpening = prefs.getInt("sharpening_level", 0);
-        nativeSetSharpening(sharpening);
         gamepadEmulation = prefs.getBoolean("use_xr_gamepad", false);
         keysEmulation = prefs.getBoolean("use_xr_keys", true);
         mouseEmulation = prefs.getBoolean("use_xr_mouse", true);
         mouseLeftHanded = prefs.getBoolean("use_xr_leftHanded", false);
         mouseLightgun = prefs.getBoolean("use_xr_lightgun", false);
         wheelEmulation = prefs.getBoolean("use_xr_wheel", false);
-        xrInput = new XrInput(this);
-    }
 
-    @Override
-    public synchronized void onResume() {
-        super.onResume();
-        instance = this;
-        xrInput.load();
+        nativeSetUsePT(usePassthrough);
+        nativeSetCurvedScreen(curvedScreen);
+        nativeSetSharpening(sharpening);
         sendManufacturer(Build.MANUFACTURER.toUpperCase());
+
+        instance = this;
+        if (xrInput == null) {
+            xrInput = new XrInput();
+        }
     }
 
     @Override

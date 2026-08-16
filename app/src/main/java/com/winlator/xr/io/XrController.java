@@ -25,7 +25,6 @@ import android.view.KeyEvent;
 import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.contentdialog.NavigationDialog;
-import com.winlator.cmod.inputcontrols.ControllerManager;
 import com.winlator.cmod.inputcontrols.ExternalController;
 import com.winlator.cmod.inputcontrols.GamepadState;
 import com.winlator.cmod.xserver.Keyboard;

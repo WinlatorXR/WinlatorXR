@@ -29,15 +29,14 @@ import com.winlator.xr.ui.XrKeyboard;
 import java.nio.charset.StandardCharsets;
 
 public class XrInput {
-    private final XrActivity instance;
+    private final XrController xrController;
     private final XrHaptics xrHaptics;
 
     private XrAPI xrAPI = null;
-    private XrController xrController = null;
 
-    public XrInput(XrActivity activity) {
-        instance = activity;
-        xrHaptics = new XrHaptics(instance);
+    public XrInput() {
+        xrController = new XrController();
+        xrHaptics = new XrHaptics();
 
         if (XrActivity.gamepadEmulation || XrActivity.wheelEmulation) {
             ensureVirtualControllerAttached();
@@ -52,21 +51,18 @@ public class XrInput {
         }
     }
 
-    public void load() {
-        xrController = new XrController();
-    }
-
     public void unload() {
         xrHaptics.unload();
     }
 
     public void update() {
         // Get OpenXR data
+        XrActivity instance = XrActivity.getInstance();
         float[] axes = instance.getAxes();
         boolean[] buttons = instance.getButtons();
 
         // Communication between XR and Windows apps
-        updateXrAPI();
+        updateXrAPI(instance);
         xrHaptics.update(xrAPI);
 
         // Android UI input
@@ -85,7 +81,7 @@ public class XrInput {
         } else {
             updateShortcuts(buttons);
             updateXrApp(axes, buttons);
-            updateXServer(axes, buttons);
+            updateXServer(instance.getXServer(), axes, buttons);
         }
     }
 
@@ -108,7 +104,7 @@ public class XrInput {
         }
     }
 
-    private void updateXrAPI() {
+    private void updateXrAPI(XrActivity instance) {
         try {
             if (xrAPI == null) {
                 // Set the param to true and put a udp_debug folder in your Winlator D:\ drive
@@ -143,10 +139,10 @@ public class XrInput {
         }
     }
 
-    private void updateXServer(float[] axes, boolean[] buttons) {
+    private void updateXServer(XServer xServer, float[] axes, boolean[] buttons) {
         new Thread(() -> {
-            try (XLock lock = instance.getXServer().lock(XServer.Lockable.WINDOW_MANAGER, XServer.Lockable.INPUT_DEVICE)) {
-                xrAPI.consumeInputs(instance.getXServer());
+            try (XLock lock = xServer.lock(XServer.Lockable.WINDOW_MANAGER, XServer.Lockable.INPUT_DEVICE)) {
+                xrAPI.consumeInputs(xServer);
                 if (XrActivity.gamepadEmulation) {
                     xrController.updateGamepad(axes, buttons);
                 }

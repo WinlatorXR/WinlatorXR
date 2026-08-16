@@ -30,20 +30,18 @@ import com.winlator.xr.api.XrInterface;
 import java.util.Vector;
 
 public class XrHaptics {
-    private final XrActivity instance;
     private boolean isExternalHapticsRunning = false;
     private final float[] lastVibration = new float[2];
     private final Vector<HapticServiceClient> externalHapticsServiceClients = new Vector<>();
     private final XrInterface.AppInput[] haptics = {XrInterface.AppInput.L_HAPTICS, XrInterface.AppInput.R_HAPTICS};
 
-    public XrHaptics(XrActivity instance) {
-        this.instance = instance;
+    public XrHaptics() {
         Vector<Pair<String, String>> externalHapticsServiceDetails = new Vector<>();
         externalHapticsServiceDetails.add(Pair.create(HapticsConstants.BHAPTICS_PACKAGE, HapticsConstants.BHAPTICS_ACTION_FILTER));
         externalHapticsServiceDetails.add(Pair.create(HapticsConstants.FORCETUBE_PACKAGE, HapticsConstants.FORCETUBE_ACTION_FILTER));
         for (Pair<String, String> serviceDetail : externalHapticsServiceDetails) {
             Intent intent = new Intent(serviceDetail.second).setPackage(serviceDetail.first);
-            HapticServiceClient client = new HapticServiceClient(instance, (state, desc) -> {}, intent);
+            HapticServiceClient client = new HapticServiceClient(XrActivity.getInstance(), (state, desc) -> {}, intent);
             client.bindService();
             externalHapticsServiceClients.add(client);
         }
@@ -75,7 +73,7 @@ public class XrHaptics {
                     sendEvent[i] = value > 1 ? "shotgun_fire" : "pistol_fire";
                 }
                 // Controller haptics
-                instance.vibrateController(1, i, value);
+                XrActivity.getInstance().vibrateController(1, i, value);
                 xrAPI.setValue(haptic, value - 0.1f);
                 lastVibration[i] = value;
             } else {
