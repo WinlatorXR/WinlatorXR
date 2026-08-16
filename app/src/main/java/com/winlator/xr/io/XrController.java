@@ -19,15 +19,10 @@
 package com.winlator.xr.io;
 
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
-import android.util.Pair;
 import android.view.KeyEvent;
 
 import androidx.preference.PreferenceManager;
-
-import com.drbeef.externalhapticsservice.HapticsConstants;
-import com.drbeef.externalhapticsservice.HapticServiceClient;
 
 import com.winlator.cmod.contentdialog.NavigationDialog;
 import com.winlator.cmod.inputcontrols.ControllerManager;
@@ -37,12 +32,9 @@ import com.winlator.cmod.xserver.Keyboard;
 import com.winlator.cmod.xserver.Pointer;
 import com.winlator.cmod.xserver.XKeycode;
 import com.winlator.xr.XrActivity;
-import com.winlator.xr.api.XrAPI;
 import com.winlator.xr.api.XrInterface;
 import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.xr.ui.XrControllerDialog;
-
-import java.util.Vector;
 
 public class XrController {
     public enum Mapping {
@@ -63,34 +55,9 @@ public class XrController {
     private float mouseSpeed = 1;
     private final float[] smoothedMouse = new float[2];
 
-    // External haptics
-    private boolean isExternalHapticsRunning = false;
-    private final float[] lastVibration = new float[2];
-    private final Vector<HapticServiceClient> externalHapticsServiceClients = new Vector<>();
-    private final Vector<Pair<String, String>> externalHapticsServiceDetails = new Vector<>();
-
     public XrController() {
         instance = XrActivity.getInstance();
         mouseSpeed = PreferenceManager.getDefaultSharedPreferences(instance).getFloat("cursor_speed", 1.0f);
-
-        externalHapticsServiceDetails.add(Pair.create(HapticsConstants.BHAPTICS_PACKAGE, HapticsConstants.BHAPTICS_ACTION_FILTER));
-        externalHapticsServiceDetails.add(Pair.create(HapticsConstants.FORCETUBE_PACKAGE, HapticsConstants.FORCETUBE_ACTION_FILTER));
-        for (Pair<String, String> serviceDetail : externalHapticsServiceDetails) {
-            Intent intent = new Intent(serviceDetail.second).setPackage(serviceDetail.first);
-            HapticServiceClient client = new HapticServiceClient(instance, (state, desc) -> {}, intent);
-            client.bindService();
-            externalHapticsServiceClients.add(client);
-        }
-    }
-
-    public void unload() {
-        try {
-            for (HapticServiceClient externalHapticsServiceClient : externalHapticsServiceClients) {
-                externalHapticsServiceClient.stopBinding();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
     public boolean updateAndroidInput(boolean[] buttons) {
@@ -175,54 +142,6 @@ public class XrController {
         state.thumbRY = Math.max(-1.0f, Math.min(state.thumbRY * lenR, 1.0f));
 
         XrActivity.getInstance().getWinHandler().sendVirtualGamepadState(state);
-    }
-
-    public void updateHaptics(XrAPI xrAPI) {
-        // Define haptics
-        String[] sendEvent = {null, null};
-        XrInterface.AppInput[] haptics = {XrInterface.AppInput.L_HAPTICS, XrInterface.AppInput.R_HAPTICS};
-        for (int i = 0; i < haptics.length; i++) {
-            XrInterface.AppInput haptic = haptics[i];
-            float value = xrAPI.getValue(haptic);
-            if (value > 0.0f) {
-                // External haptics (scheme from Doom3Quest)
-                if (lastVibration[i] < value) {
-                    sendEvent[i] = value > 1 ? "shotgun_fire" : "pistol_fire";
-                }
-                // Controller haptics
-                instance.vibrateController(1, i, value);
-                xrAPI.setValue(haptic, value - 0.1f);
-                lastVibration[i] = value;
-            } else {
-                xrAPI.setValue(haptic, 0.0f);
-                lastVibration[i] = 0.0f;
-            }
-        }
-
-        // Update external haptics
-        for (HapticServiceClient externalHapticsServiceClient : externalHapticsServiceClients) {
-            if (externalHapticsServiceClient.hasService()) {
-                try {
-                    if (isExternalHapticsRunning != XrActivity.isUDP) {
-                        if (XrActivity.isUDP) {
-                            externalHapticsServiceClient.getHapticsService().hapticEnable();
-                        } else {
-                            externalHapticsServiceClient.getHapticsService().hapticDisable();
-                        }
-                    } else if (isExternalHapticsRunning) {
-                        for (int i = 0; i < haptics.length; i++) {
-                            if (sendEvent[i] != null) {
-                                externalHapticsServiceClient.getHapticsService().hapticEvent("Doom3Quest", sendEvent[i], i + 1, 0, 100, 0, 0);
-                            }
-                        }
-                        externalHapticsServiceClient.getHapticsService().hapticFrameTick();
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        isExternalHapticsRunning = XrActivity.isUDP;
     }
 
     public void updateKeyboardButtons(boolean[] buttons) {

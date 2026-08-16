@@ -31,6 +31,7 @@ public class XrInput {
     private final XrActivity instance;
     private XrAPI xrAPI = null;
     private XrController xrController = null;
+    private XrHaptics xrHaptics = null;
 
     public XrInput(XrActivity activity) {
         instance = activity;
@@ -38,6 +39,7 @@ public class XrInput {
 
     public void load() {
         xrController = new XrController();
+        xrHaptics = new XrHaptics(instance);
 
         if (XrActivity.gamepadEmulation || XrActivity.wheelEmulation) {
             XrController.ensureVirtualControllerAttached();
@@ -45,7 +47,7 @@ public class XrInput {
     }
 
     public void unload() {
-        xrController.unload();
+        xrHaptics.unload();
     }
 
     public void update() {
@@ -55,7 +57,7 @@ public class XrInput {
 
         // Communication between XR and Windows apps
         updateXrAPI();
-        xrController.updateHaptics(xrAPI);
+        xrHaptics.update(xrAPI);
 
         // Android UI input
         boolean blocking = false;
