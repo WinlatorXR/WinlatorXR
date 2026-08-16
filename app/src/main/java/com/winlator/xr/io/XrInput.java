@@ -27,12 +27,12 @@ import com.winlator.xr.ui.XrKeyboard;
 
 import java.nio.charset.StandardCharsets;
 
-public class XrIO {
+public class XrInput {
     private final XrActivity instance;
     private final XrController xrController;
     private XrAPI xrAPI = null;
 
-    public XrIO(XrActivity activity) {
+    public XrInput(XrActivity activity) {
         instance = activity;
         xrController = new XrController();
 

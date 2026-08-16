@@ -32,7 +32,7 @@ import androidx.preference.PreferenceManager;
 import com.winlator.cmod.R;
 import com.winlator.cmod.xserver.XKeycode;
 import com.winlator.cmod.XServerDisplayActivity;
-import com.winlator.xr.io.XrIO;
+import com.winlator.xr.io.XrInput;
 import com.winlator.xr.io.XrRenderer;
 import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.xr.ui.XrKeyboard;
@@ -40,7 +40,7 @@ import com.winlator.xr.utils.Device;
 
 public class XrActivity extends XServerDisplayActivity {
     private static XrActivity instance;
-    private XrIO xrio;
+    private XrInput xrInput;
 
     // Configuration flags
     private static boolean isEnabled = false;
@@ -86,7 +86,7 @@ public class XrActivity extends XServerDisplayActivity {
 
     @Override
     public synchronized void onPause() {
-        xrio.unload();
+        xrInput.unload();
         super.onPause();
     }
 
@@ -94,7 +94,7 @@ public class XrActivity extends XServerDisplayActivity {
     public synchronized void onResume() {
         super.onResume();
         instance = this;
-        xrio = new XrIO(instance);
+        xrInput = new XrInput(instance);
         sendManufacturer(Build.MANUFACTURER.toUpperCase());
     }
 
@@ -195,7 +195,7 @@ public class XrActivity extends XServerDisplayActivity {
     }
 
     public synchronized void updateFrame() {
-        xrio.update();
+        xrInput.update();
     }
 
     // Rendering
