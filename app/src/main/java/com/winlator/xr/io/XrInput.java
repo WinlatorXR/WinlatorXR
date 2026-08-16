@@ -18,6 +18,7 @@
  */
 package com.winlator.xr.io;
 
+import com.winlator.cmod.inputcontrols.ControllerManager;
 import com.winlator.cmod.xserver.XLock;
 import com.winlator.cmod.xserver.XServer;
 import com.winlator.xr.XrActivity;
@@ -29,21 +30,30 @@ import java.nio.charset.StandardCharsets;
 
 public class XrInput {
     private final XrActivity instance;
+    private final XrHaptics xrHaptics;
+
     private XrAPI xrAPI = null;
     private XrController xrController = null;
-    private XrHaptics xrHaptics = null;
 
     public XrInput(XrActivity activity) {
         instance = activity;
+        xrHaptics = new XrHaptics(instance);
+
+        if (XrActivity.gamepadEmulation || XrActivity.wheelEmulation) {
+            ensureVirtualControllerAttached();
+        }
+    }
+
+    public static void ensureVirtualControllerAttached() {
+        ControllerManager controllerManager = ControllerManager.getInstance();
+        controllerManager.scanForDevices();
+        if (!controllerManager.isSlotEnabled(0)) {
+            controllerManager.setSlotEnabled(0, true);
+        }
     }
 
     public void load() {
         xrController = new XrController();
-        xrHaptics = new XrHaptics(instance);
-
-        if (XrActivity.gamepadEmulation || XrActivity.wheelEmulation) {
-            XrController.ensureVirtualControllerAttached();
-        }
     }
 
     public void unload() {

@@ -32,6 +32,7 @@ import com.winlator.xr.XrActivity;
 import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.xr.io.XrController;
+import com.winlator.xr.io.XrInput;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -104,7 +105,7 @@ public class XrDialog extends ContentDialog {
             saveConfig(cbGamepad, "use_xr_gamepad", checked);
             XrActivity.gamepadEmulation = checked;
             if (checked && XrActivity.isActive()) {
-                XrController.ensureVirtualControllerAttached();
+                XrInput.ensureVirtualControllerAttached();
             }
         });
 

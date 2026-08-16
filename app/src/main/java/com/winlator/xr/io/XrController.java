@@ -310,14 +310,6 @@ public class XrController {
         mapping = null;
     }
 
-    public static void ensureVirtualControllerAttached() {
-        ControllerManager controllerManager = ControllerManager.getInstance();
-        controllerManager.scanForDevices();
-        if (!controllerManager.isSlotEnabled(0)) {
-            controllerManager.setSlotEnabled(0, true);
-        }
-    }
-
     public static byte getMapping(Context context, Mapping input) {
         if (mapping == null) {
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);

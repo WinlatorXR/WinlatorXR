@@ -86,12 +86,6 @@ public class XrActivity extends XServerDisplayActivity {
     }
 
     @Override
-    public synchronized void onPause() {
-        xrInput.unload();
-        super.onPause();
-    }
-
-    @Override
     public synchronized void onResume() {
         super.onResume();
         instance = this;
@@ -106,6 +100,8 @@ public class XrActivity extends XServerDisplayActivity {
     }
 
     public synchronized void closeSession() {
+        xrInput.unload();
+
         Intent intent = getBaseContext().getPackageManager()
                 .getLaunchIntentForPackage(getBaseContext().getPackageName());
         if (intent != null) {
