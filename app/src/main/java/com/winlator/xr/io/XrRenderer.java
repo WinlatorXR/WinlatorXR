@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.winlator.xr;
+package com.winlator.xr.io;
 
 import android.opengl.GLES20;
 import android.os.Build;
@@ -33,6 +33,7 @@ import com.winlator.cmod.widget.XServerView;
 import com.winlator.cmod.xserver.Drawable;
 import com.winlator.cmod.xserver.XLock;
 import com.winlator.cmod.xserver.XServer;
+import com.winlator.xr.XrActivity;
 import com.winlator.xr.api.XrFramesync;
 import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.xr.ui.XrKeyboard;

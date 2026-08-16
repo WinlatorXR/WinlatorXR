@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.winlator.xr;
+package com.winlator.xr.io;
 
 import android.content.Context;
 import android.content.Intent;
@@ -36,6 +36,7 @@ import com.winlator.cmod.inputcontrols.GamepadState;
 import com.winlator.cmod.xserver.Keyboard;
 import com.winlator.cmod.xserver.Pointer;
 import com.winlator.cmod.xserver.XKeycode;
+import com.winlator.xr.XrActivity;
 import com.winlator.xr.api.XrAPI;
 import com.winlator.xr.api.XrInterface;
 import com.winlator.xr.ui.XrContentDialog;

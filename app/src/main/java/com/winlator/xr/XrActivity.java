@@ -32,6 +32,8 @@ import androidx.preference.PreferenceManager;
 import com.winlator.cmod.R;
 import com.winlator.cmod.xserver.XKeycode;
 import com.winlator.cmod.XServerDisplayActivity;
+import com.winlator.xr.io.XrIO;
+import com.winlator.xr.io.XrRenderer;
 import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.xr.ui.XrKeyboard;
 

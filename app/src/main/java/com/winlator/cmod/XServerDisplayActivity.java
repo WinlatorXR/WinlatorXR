@@ -128,7 +128,7 @@ import com.winlator.cmod.xenvironment.components.PulseAudioComponent;
 import com.winlator.cmod.xenvironment.components.SysVSharedMemoryComponent;
 import com.winlator.cmod.xenvironment.components.XServerComponent;
 import com.winlator.xr.ModdingUtils;
-import com.winlator.xr.XrRenderer;
+import com.winlator.xr.io.XrRenderer;
 import com.winlator.xr.ui.XrDialog;
 import com.winlator.cmod.xserver.Pointer;
 import com.winlator.cmod.xserver.Property;

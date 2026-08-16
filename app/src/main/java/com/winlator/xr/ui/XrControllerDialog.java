@@ -32,7 +32,7 @@ import androidx.preference.PreferenceManager;
 import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.xserver.XKeycode;
-import com.winlator.xr.XrController;
+import com.winlator.xr.io.XrController;
 
 import java.util.ArrayList;
 import java.util.List;
