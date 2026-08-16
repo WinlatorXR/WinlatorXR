@@ -30,30 +30,23 @@ import android.content.SharedPreferences;
 import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.R;
-import com.winlator.cmod.XServerDisplayActivity;
-import com.winlator.xr.api.XrAPI;
-import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.cmod.xserver.XKeycode;
-import com.winlator.cmod.xserver.XLock;
-import com.winlator.cmod.xserver.XServer;
+import com.winlator.cmod.XServerDisplayActivity;
+import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.xr.ui.XrKeyboard;
-
-import static com.winlator.xr.api.XrInterface.AppInput;
-import static com.winlator.xr.api.XrInterface.ControllerButton;
-
-import java.nio.charset.StandardCharsets;
 
 public class XrActivity extends XServerDisplayActivity {
     private static XrActivity instance;
+    private XrIO xrio;
 
     // Configuration flags
     private static boolean isEnabled = false;
-    private static boolean isHeadTrackingAllowed = false;
+    public static boolean isHeadTrackingAllowed = false;
     public static boolean isImmersive = false;
-    private static boolean isAER = false;
+    public static boolean isAER = false;
     public static boolean isSBS = false;
     public static boolean isUDP = false;
-    private static boolean isVR = false;
+    public static boolean isVR = false;
     public static boolean gamepadEmulation;
     public static boolean keysEmulation;
     public static boolean mouseEmulation;
@@ -62,13 +55,9 @@ public class XrActivity extends XServerDisplayActivity {
     public static boolean wheelEmulation;
 
     // Rendering status
-    private static long lastActive = 0;
-    private static float lastDistance = 5;
-    public int lastMode3D = -1;
-
-    // XR input/output
-    private XrAPI xrAPI = null;
-    private XrController xrController = null;
+    public static long lastActive = 0;
+    public static float lastDistance = 5;
+    public static int lastMode3D = -1;
 
     static {
         System.loadLibrary("xr");
@@ -90,15 +79,11 @@ public class XrActivity extends XServerDisplayActivity {
         mouseLeftHanded = prefs.getBoolean("use_xr_leftHanded", false);
         mouseLightgun = prefs.getBoolean("use_xr_lightgun", false);
         wheelEmulation = prefs.getBoolean("use_xr_wheel", false);
-
-        if (gamepadEmulation || wheelEmulation) {
-            XrController.ensureVirtualControllerAttached();
-        }
     }
 
     @Override
     public synchronized void onPause() {
-        xrController.unload();
+        xrio.unload();
         super.onPause();
     }
 
@@ -106,7 +91,7 @@ public class XrActivity extends XServerDisplayActivity {
     public synchronized void onResume() {
         super.onResume();
         instance = this;
-        xrController = new XrController();
+        xrio = new XrIO(instance);
         sendManufacturer(Build.MANUFACTURER.toUpperCase());
     }
 
@@ -206,117 +191,8 @@ public class XrActivity extends XServerDisplayActivity {
         context.finish();
     }
 
-    public void updateFrame() {
-        // Get OpenXR data
-        float[] axes = instance.getAxes();
-        boolean[] buttons = instance.getButtons();
-
-        // Communication between XR and Windows apps
-        updateXrAPI();
-        xrController.updateHaptics(xrAPI);
-
-        // Android UI input
-        boolean blocking = false;
-        lastActive = System.currentTimeMillis();
-        if (XrKeyboard.isShown()) {
-            XrKeyboard.update(axes, buttons, lastDistance);
-            blocking = true;
-        } else if (!xrController.updateAndroidInput(buttons))
-            blocking = true;
-
-        // XR input
-        if (blocking) {
-            if (isUDP) xrController.updateXrCamera(buttons);
-            updateXrApp(axes, new boolean[buttons.length]);
-        } else {
-            updateShortcuts(buttons);
-            updateXrApp(axes, buttons);
-            updateXServer(axes, buttons);
-        }
-    }
-
-    private void updateShortcuts(boolean[] buttons) {
-        ControllerButton primaryGrip = mouseLeftHanded ? ControllerButton.L_GRIP : ControllerButton.R_GRIP;
-        ControllerButton secondaryPress = !mouseLeftHanded ? ControllerButton.L_THUMBSTICK_PRESS : ControllerButton.R_THUMBSTICK_PRESS;
-        if (!gamepadEmulation && xrController.getButtonClicked(buttons, secondaryPress)) {
-            if (buttons[primaryGrip.ordinal()]) {
-                isSBS = !isSBS;
-            } else {
-                isImmersive = !isImmersive;
-            }
-        }
-    }
-
-    private void updateXrApp(float[] axes, boolean[] buttons) {
-        if (isUDP) {
-            String data = xrAPI.encode(axes, buttons, 0) + xrAPI.getFlags();
-            xrAPI.sendAsync(data.getBytes(StandardCharsets.US_ASCII));
-        }
-    }
-
-    private void updateXrAPI() {
-        try {
-            if (xrAPI == null) {
-                // Set the param to true and put a udp_debug folder in your Winlator D:\ drive
-                // with a file named the IP on LAN to send XR data via UDP traffic to that IP.
-                xrAPI = new XrAPI(false);
-            }
-
-            // VR mode update
-            int vrMode = xrAPI.getIntValue(AppInput.MODE_VR);
-            isHeadTrackingAllowed = (vrMode == 0) || (vrMode == 3);
-            isUDP = vrMode > 0;
-            isVR = vrMode == 1;
-            getInstance().nativeSetUseVR(getVR());
-
-            if (isUDP) {
-                // Field of view adjustment
-                float fovx = xrAPI.getValue(AppInput.HMD_FOVX);
-                float fovy = xrAPI.getValue(AppInput.HMD_FOVY);
-                getInstance().nativeSetFoV(fovx, fovy);
-
-                // 3D mode update
-                lastMode3D = xrAPI.getIntValue(AppInput.MODE_3D);
-                if (lastMode3D >= 0) {
-                    isAER = lastMode3D == 2;
-                    isSBS = lastMode3D == 1;
-                }
-            } else {
-                xrAPI.updateImplementation();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void updateXServer(float[] axes, boolean[] buttons) {
-        new Thread(() -> {
-            try (XLock lock = instance.getXServer().lock(XServer.Lockable.WINDOW_MANAGER, XServer.Lockable.INPUT_DEVICE)) {
-                xrAPI.consumeInputs(instance.getXServer());
-                if (gamepadEmulation) {
-                    xrController.updateGamepad(axes, buttons);
-                }
-                if (!getVR()) {
-                    if (keysEmulation) {
-                        xrController.updateKeyboardButtons(buttons);
-                    }
-                    if (mouseEmulation) {
-                        xrController.updateMouseAxes(axes, isImmersive && isHeadTrackingAllowed);
-                        xrController.updateMouseState(buttons);
-                        xrController.updateMouseSnapturn(buttons, isImmersive ? 250 : 50);
-                        if (mouseLightgun && !isImmersive)
-                            xrController.updateMouseLightgun(axes, lastDistance);
-                    } else if (isImmersive && isHeadTrackingAllowed) {
-                        xrController.updateMouseAxes(axes, true);
-                        xrController.updateMouseState(new boolean[buttons.length]);
-                    }
-                    if (wheelEmulation) {
-                        xrController.updateWheelEmulation(axes);
-                    }
-                }
-                xrController.updateFinished(axes, buttons);
-            }
-        }).start();
+    public synchronized void updateFrame() {
+        xrio.update();
     }
 
     // Rendering
