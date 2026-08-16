@@ -30,6 +30,8 @@ import com.winlator.cmod.inputcontrols.GamepadState;
 import com.winlator.cmod.xserver.Keyboard;
 import com.winlator.cmod.xserver.Pointer;
 import com.winlator.cmod.xserver.XKeycode;
+import com.winlator.cmod.xserver.XLock;
+import com.winlator.cmod.xserver.XServer;
 import com.winlator.xr.XrActivity;
 import com.winlator.xr.api.XrInterface;
 import com.winlator.xr.ui.XrContentDialog;
@@ -48,6 +50,10 @@ public class XrController {
     private final float[] lastAxes = new float[XrInterface.ControllerAxis.values().length];
     private final boolean[] lastButtons = new boolean[XrInterface.ControllerButton.values().length];
     private long lastDialogShown = 0;
+    private long menuButtonPressTime = 0;
+    private long primaryButtonPressTime = 0;
+    private long startPulseEndTime = 0;
+    private long dpadComboStartTime = 0;
     private long lastMouseUpdate = 0;
     private short lastMouseX = 0;
     private short lastMouseY = 0;
@@ -67,9 +73,9 @@ public class XrController {
         XrInterface.ControllerButton primaryLeft = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_LEFT : XrInterface.ControllerButton.R_THUMBSTICK_LEFT;
         XrInterface.ControllerButton primaryRight = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_RIGHT : XrInterface.ControllerButton.R_THUMBSTICK_RIGHT;
 
-        // Pass the input to the Android UI
         XrContentDialog dialog = XrContentDialog.getFrontInstance();
         if (dialog != null) {
+            primaryButtonPressTime = 0;
             if (getButtonClicked(buttons, primaryPress)) instance.runOnUiThread(dialog::onBackPressed);
             if (getButtonClicked(buttons, primaryUp)) instance.runOnUiThread(() -> dialog.onKeyAction(KeyEvent.KEYCODE_DPAD_UP));
             if (getButtonClicked(buttons, primaryDown)) instance.runOnUiThread(() -> dialog.onKeyAction(KeyEvent.KEYCODE_DPAD_DOWN));
@@ -87,15 +93,31 @@ public class XrController {
             lastDialogShown = System.currentTimeMillis();
             instance.nativeSetUseVR(false);
             return false;
-        } else if (getButtonClicked(buttons, primaryPress)) {
-            instance.runOnUiThread(() -> new NavigationDialog(instance).show());
+        } else {
+            if (System.currentTimeMillis() - lastDialogShown < 500) {
+                System.arraycopy(buttons, 0, lastButtons, 0, buttons.length);
+                return false;
+            }
+
+            if (buttons[primaryPress.ordinal()]) {
+                if (primaryButtonPressTime == 0) primaryButtonPressTime = System.currentTimeMillis();
+                boolean trigger = XrActivity.gamepadEmulation || XrActivity.getVR() ? (System.currentTimeMillis() - primaryButtonPressTime > 1000) : getButtonClicked(buttons, primaryPress);
+                if (trigger) {
+                    primaryButtonPressTime = System.currentTimeMillis() + 5000;
+                    instance.runOnUiThread(() -> new NavigationDialog(instance).show());
+                    System.arraycopy(buttons, 0, lastButtons, 0, buttons.length);
+                    lastDialogShown = System.currentTimeMillis();
+
+                    if (XrActivity.gamepadEmulation) {
+                        try (XLock lock = XrActivity.getInstance().getXServer().lock(XServer.Lockable.WINDOW_MANAGER, XServer.Lockable.INPUT_DEVICE)) {
+                            updateGamepad(new float[XrInterface.ControllerAxis.values().length], new boolean[buttons.length]);
+                        }
+                    }
+                    return false;
+                }
+            } else primaryButtonPressTime = 0;
         }
 
-        // Block input shortly after dialog closed
-        if (System.currentTimeMillis() - lastDialogShown < 500) {
-            System.arraycopy(buttons, 0, lastButtons, 0, buttons.length);
-            return false;
-        }
         return true;
     }
 
@@ -107,31 +129,46 @@ public class XrController {
     public void updateGamepad(float[] axes, boolean[] buttons) {
         GamepadState state = new GamepadState();
 
+        if (buttons[XrInterface.ControllerButton.L_MENU.ordinal()]) {
+            if (menuButtonPressTime == 0) menuButtonPressTime = System.currentTimeMillis();
+        } else {
+            if (menuButtonPressTime > 0) {
+                if (System.currentTimeMillis() - menuButtonPressTime < 600) startPulseEndTime = System.currentTimeMillis() + 100;
+                menuButtonPressTime = 0;
+            }
+        }
+        boolean menuLongPress = menuButtonPressTime > 0 && (System.currentTimeMillis() - menuButtonPressTime) > 600;
+
+        boolean bothGripsPressed = buttons[XrInterface.ControllerButton.L_GRIP.ordinal()] && buttons[XrInterface.ControllerButton.R_GRIP.ordinal()];
+        if (bothGripsPressed) {
+            if (dpadComboStartTime == 0) dpadComboStartTime = System.currentTimeMillis();
+        } else dpadComboStartTime = 0;
+        boolean dpadActive = dpadComboStartTime > 0 && (System.currentTimeMillis() - dpadComboStartTime) > 600;
+
         state.setPressed(ExternalController.IDX_BUTTON_X, buttons[XrInterface.ControllerButton.L_X.ordinal()]);
         state.setPressed(ExternalController.IDX_BUTTON_Y, buttons[XrInterface.ControllerButton.L_Y.ordinal()]);
         state.setPressed(ExternalController.IDX_BUTTON_A, buttons[XrInterface.ControllerButton.R_A.ordinal()]);
         state.setPressed(ExternalController.IDX_BUTTON_B, buttons[XrInterface.ControllerButton.R_B.ordinal()]);
-        state.setPressed(ExternalController.IDX_BUTTON_L1, buttons[XrInterface.ControllerButton.L_GRIP.ordinal()]);
+        state.setPressed(ExternalController.IDX_BUTTON_L1, buttons[XrInterface.ControllerButton.L_GRIP.ordinal()] && !dpadActive);
         state.triggerL = axes[XrInterface.ControllerAxis.L_TRIGGER.ordinal()];
         state.setPressed(ExternalController.IDX_BUTTON_L2, state.triggerL > 0.5f);
         state.setPressed(ExternalController.IDX_BUTTON_L3, buttons[XrInterface.ControllerButton.L_THUMBSTICK_PRESS.ordinal()]);
-        state.setPressed(ExternalController.IDX_BUTTON_R1, buttons[XrInterface.ControllerButton.R_GRIP.ordinal()]);
+        state.setPressed(ExternalController.IDX_BUTTON_R1, buttons[XrInterface.ControllerButton.R_GRIP.ordinal()] && !dpadActive);
         state.triggerR = axes[XrInterface.ControllerAxis.R_TRIGGER.ordinal()];
         state.setPressed(ExternalController.IDX_BUTTON_R2, state.triggerR > 0.5f);
-        state.setPressed(ExternalController.IDX_BUTTON_R3, buttons[XrInterface.ControllerButton.R_TRIGGER.ordinal()] && buttons[XrInterface.ControllerButton.R_GRIP.ordinal()] && buttons[XrInterface.ControllerButton.R_THUMBSTICK_PRESS.ordinal()]);
-        state.setPressed(ExternalController.IDX_BUTTON_SELECT, buttons[XrInterface.ControllerButton.L_TRIGGER.ordinal()] && buttons[XrInterface.ControllerButton.L_GRIP.ordinal()] && buttons[XrInterface.ControllerButton.L_Y.ordinal()]);
-        state.setPressed(ExternalController.IDX_BUTTON_START, buttons[XrInterface.ControllerButton.R_TRIGGER.ordinal()] && buttons[XrInterface.ControllerButton.R_GRIP.ordinal()] && buttons[XrInterface.ControllerButton.R_B.ordinal()]);
+        state.setPressed(ExternalController.IDX_BUTTON_R3, buttons[XrInterface.ControllerButton.R_THUMBSTICK_PRESS.ordinal()]);
+        state.setPressed(ExternalController.IDX_BUTTON_SELECT, menuLongPress);
+        state.setPressed(ExternalController.IDX_BUTTON_START, System.currentTimeMillis() < startPulseEndTime);
 
-        boolean dpadActive = buttons[XrInterface.ControllerButton.L_TRIGGER.ordinal()] && buttons[XrInterface.ControllerButton.L_GRIP.ordinal()];
         state.dpad[0] = dpadActive && buttons[XrInterface.ControllerButton.L_THUMBSTICK_UP.ordinal()];
         state.dpad[1] = dpadActive && buttons[XrInterface.ControllerButton.L_THUMBSTICK_RIGHT.ordinal()];
         state.dpad[2] = dpadActive && buttons[XrInterface.ControllerButton.L_THUMBSTICK_DOWN.ordinal()];
         state.dpad[3] = dpadActive && buttons[XrInterface.ControllerButton.L_THUMBSTICK_LEFT.ordinal()];
 
-        state.thumbLX = axes[XrInterface.ControllerAxis.L_THUMBSTICK_X.ordinal()];
-        state.thumbLY =-axes[XrInterface.ControllerAxis.L_THUMBSTICK_Y.ordinal()];
-        state.thumbRX = axes[XrInterface.ControllerAxis.R_THUMBSTICK_X.ordinal()];
-        state.thumbRY =-axes[XrInterface.ControllerAxis.R_THUMBSTICK_Y.ordinal()];
+        state.thumbLX = dpadActive ? 0 : axes[XrInterface.ControllerAxis.L_THUMBSTICK_X.ordinal()];
+        state.thumbLY = dpadActive ? 0 : -axes[XrInterface.ControllerAxis.L_THUMBSTICK_Y.ordinal()];
+        state.thumbRX = dpadActive ? 0 : axes[XrInterface.ControllerAxis.R_THUMBSTICK_X.ordinal()];
+        state.thumbRY = dpadActive ? 0 : -axes[XrInterface.ControllerAxis.R_THUMBSTICK_Y.ordinal()];
 
         float lenL = (float) Math.sqrt(state.thumbLX * state.thumbLX + state.thumbLY * state.thumbLY);
         float lenR = (float) Math.sqrt(state.thumbRX * state.thumbRX + state.thumbRY * state.thumbRY);
