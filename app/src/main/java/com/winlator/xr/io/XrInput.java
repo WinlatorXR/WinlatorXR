@@ -88,7 +88,7 @@ public class XrInput {
     private void updateShortcuts(boolean[] buttons) {
         XrInterface.ControllerButton primaryGrip = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_GRIP : XrInterface.ControllerButton.R_GRIP;
         XrInterface.ControllerButton secondaryPress = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_PRESS : XrInterface.ControllerButton.R_THUMBSTICK_PRESS;
-        if (!XrActivity.gamepadEmulation && xrController.getButtonClicked(buttons, secondaryPress)) {
+        if (!XrActivity.gamepadEmulation && !XrActivity.getVR() && xrController.getButtonClicked(buttons, secondaryPress)) {
             if (buttons[primaryGrip.ordinal()]) {
                 XrActivity.isSBS = !XrActivity.isSBS;
             } else {
