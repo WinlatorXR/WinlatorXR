@@ -248,6 +248,7 @@ public class ControllerAssignmentDialog {
                     if (!ControllerManager.isGameController(device)) return;
                     controllerManager.assignDeviceToSlot(slotIndex, device);
                     dlg.setOnControllerInputListener(null);
+                    dlg.dismiss();
                     populateView();
                 });
             });
