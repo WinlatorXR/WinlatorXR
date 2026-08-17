@@ -256,6 +256,7 @@ JNIEXPORT jfloatArray JNICALL Java_com_winlator_xr_XrActivity_getAxes(JNIEnv *en
     XrVector3f lPosition = xr_module_renderer.Projections[0].pose.position;
     XrVector3f rPosition = xr_module_renderer.Projections[1].pose.position;
     XrVector3f angles = xr_module_renderer.HmdOrientation;
+    float yaw = xr_module_renderer.ConfigFloat[CONFIG_MENU_YAW];
 
     int count = 0;
     float data[64];
@@ -309,6 +310,7 @@ JNIEXPORT jfloatArray JNICALL Java_com_winlator_xr_XrActivity_getAxes(JNIEnv *en
     data[count++] = rgPose.orientation.w; //RG_QW
     data[count++] = xr_module_input.TriggerLeft; //L_TRIGGER
     data[count++] = xr_module_input.TriggerRight; //R_TRIGGER
+    data[count++] = yaw; //MENU_YAW
 
     jfloat values[count];
     memcpy(values, data, count * sizeof(float));

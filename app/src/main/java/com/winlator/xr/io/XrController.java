@@ -246,6 +246,7 @@ public class XrController {
         float y = axes[XrActivity.mouseLeftHanded ? XrInterface.ControllerAxis.L_Y.ordinal() : XrInterface.ControllerAxis.R_Y.ordinal()] - axes[XrInterface.ControllerAxis.HMD_Y.ordinal()];;
         float yaw = axes[XrActivity.mouseLeftHanded ? XrInterface.ControllerAxis.L_YAW.ordinal() : XrInterface.ControllerAxis.R_YAW.ordinal()];
         float pitch = axes[XrActivity.mouseLeftHanded ? XrInterface.ControllerAxis.L_PITCH.ordinal() : XrInterface.ControllerAxis.R_PITCH.ordinal()];
+        yaw -= axes[XrInterface.ControllerAxis.MENU_YAW.ordinal()];
         float cx = (float) instance.getXServer().windowManager.rootWindow.getWidth() / 2;
         float cy = (float) instance.getXServer().windowManager.rootWindow.getHeight() / 2;
         float aspect = (float) Math.pow(cx / cy, 0.15);

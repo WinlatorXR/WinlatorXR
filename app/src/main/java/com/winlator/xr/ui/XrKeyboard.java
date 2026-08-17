@@ -277,6 +277,7 @@ public class XrKeyboard extends ContentDialog {
         float y = axes[controller == 0 ? XrInterface.ControllerAxis.L_Y.ordinal() : XrInterface.ControllerAxis.R_Y.ordinal()] - axes[XrInterface.ControllerAxis.HMD_Y.ordinal()];;
         float yaw = axes[controller == 0 ? XrInterface.ControllerAxis.L_YAW.ordinal() : XrInterface.ControllerAxis.R_YAW.ordinal()];
         float pitch = axes[controller == 0 ? XrInterface.ControllerAxis.L_PITCH.ordinal() : XrInterface.ControllerAxis.R_PITCH.ordinal()];
+        yaw -= axes[XrInterface.ControllerAxis.MENU_YAW.ordinal()];
         float cx = (float) width / 2;
         float cy = (float) height / 2;
         float aspect = (float) Math.pow(cx / cy, 0.15);
