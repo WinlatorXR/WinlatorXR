@@ -51,6 +51,7 @@ public class XrActivity extends XServerDisplayActivity {
     public static boolean isUDP = false;
     public static boolean isVR = false;
     public static boolean gamepadEmulation;
+    public static boolean gamepadRadialToSquare;
     public static boolean keysEmulation;
     public static boolean mouseEmulation;
     public static boolean mouseLeftHanded;
@@ -74,6 +75,7 @@ public class XrActivity extends XServerDisplayActivity {
         boolean curvedScreen = prefs.getBoolean("use_cs", false);
         int sharpening = prefs.getInt("sharpening_level", 0);
         gamepadEmulation = prefs.getBoolean("use_xr_gamepad", false);
+        gamepadRadialToSquare = prefs.getBoolean("xr_gamepad_radial_to_square", true);
         keysEmulation = prefs.getBoolean("use_xr_keys", true);
         mouseEmulation = prefs.getBoolean("use_xr_mouse", true);
         mouseLeftHanded = prefs.getBoolean("use_xr_leftHanded", false);

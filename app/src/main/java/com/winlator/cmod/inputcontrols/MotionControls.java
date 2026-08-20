@@ -204,6 +204,8 @@ public class MotionControls implements SensorEventListener {
         CheckBox cbInvX = v.findViewById(R.id.cbInvertGyroX);
         CheckBox cbInvY = v.findViewById(R.id.cbInvertGyroY);
         CheckBox cbWheel = v.findViewById(R.id.cbWheelEmulation);
+        CheckBox cbRadialToSquare = v.findViewById(R.id.CBPlayerXRGamepadRadialToSquare);
+        TextView tvThumbstickType = v.findViewById(R.id.tvGamepadThumbstickType);
 
         Spinner spActivator = v.findViewById(R.id.spGyroTriggerButton);
 
@@ -228,6 +230,9 @@ public class MotionControls implements SensorEventListener {
             spActivator.setVisibility(View.GONE);
             rgMode.setVisibility(View.GONE);
 
+            tvThumbstickType.setVisibility(View.VISIBLE);
+            cbRadialToSquare.setVisibility(View.VISIBLE);
+
             if (XrActivity.isActive()) {
                 cbWheel.setChecked(XrActivity.wheelEmulation);
                 cbWheel.setEnabled(enabled);
@@ -241,8 +246,21 @@ public class MotionControls implements SensorEventListener {
                         XrInput.ensureVirtualControllerAttached();
                     }
                 });
+
+                cbRadialToSquare.setChecked(XrActivity.gamepadRadialToSquare);
             }
+        } else {
+            tvThumbstickType.setVisibility(View.GONE);
+            cbRadialToSquare.setVisibility(View.GONE);
         }
+
+        cbRadialToSquare.setChecked(prefs.getBoolean("xr_gamepad_radial_to_square", true));
+        cbRadialToSquare.setOnCheckedChangeListener((compoundButton, checked) -> {
+            SharedPreferences.Editor e = prefs.edit();
+            e.putBoolean("xr_gamepad_radial_to_square", checked);
+            e.apply();
+            XrActivity.gamepadRadialToSquare = checked;
+        });
 
         cbEnabled.setChecked(enabled);
         rgTarget.check(toLeft ? R.id.rbTargetLeft : R.id.rbTargetRight);
@@ -321,6 +339,7 @@ public class MotionControls implements SensorEventListener {
             e.putBoolean("invert_gyro_y", cbInvY.isChecked());
             e.putInt("gyro_trigger_button", MotionControlsUiUtils.getSelectedKeycodeFromSpinner(ctx, spActivator));
             e.putInt("gyro_mode", rgMode.getCheckedRadioButtonId() == R.id.rbHoldMode ? 0 : 1);
+            e.putBoolean("xr_gamepad_radial_to_square", cbRadialToSquare.isChecked());
             e.apply();
         });
 

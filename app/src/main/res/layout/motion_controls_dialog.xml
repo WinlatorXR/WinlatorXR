@@ -156,6 +156,21 @@
                     android:layout_height="wrap_content"
                     android:text="@string/invert_y"/>
 
+                <TextView
+                    android:id="@+id/tvGamepadThumbstickType"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/gamepad_thumbstick_type"
+                    android:textStyle="bold"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp"/>
+
+                <CheckBox
+                    android:id="@+id/CBPlayerXRGamepadRadialToSquare"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/gamepad_radial_to_square" />
+
             </LinearLayout>
 
             <!-- Right column: Tuning -->
