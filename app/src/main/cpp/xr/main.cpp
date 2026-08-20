@@ -29,6 +29,7 @@ std::vector<std::pair<int, int> > xr_locate_spaces;
 std::map<std::pair<int, int>, XrPosef> xr_poses;
 std::map<int, XrReferenceSpaceCreateInfo> xr_info;
 std::map<int, XrSpace> xr_spaces;
+XrVector3f xr_camera_offset = {};
 bool xr_initialized = false;
 bool xr_curvedScreen = false;
 bool xr_usePassthrough = false;
@@ -269,9 +270,9 @@ JNIEXPORT jfloatArray JNICALL Java_com_winlator_xr_XrActivity_getAxes(JNIEnv *en
     data[count++] = lPose.orientation.w; //L_QW
     data[count++] = lThumbstick.x; //L_THUMBSTICK_X
     data[count++] = lThumbstick.y; //L_THUMBSTICK_Y
-    data[count++] = lPose.position.x; //L_X
-    data[count++] = lPose.position.y; //L_Y
-    data[count++] = lPose.position.z; //L_Z
+    data[count++] = lPose.position.x - xr_camera_offset.x; //L_X
+    data[count++] = lPose.position.y - xr_camera_offset.y; //L_Y
+    data[count++] = lPose.position.z - xr_camera_offset.z; //L_Z
     data[count++] = XrQuaternionfEulerAngles(rPose.orientation).x; //R_PITCH
     data[count++] = XrQuaternionfEulerAngles(rPose.orientation).y; //R_YAW
     data[count++] = XrQuaternionfEulerAngles(rPose.orientation).z; //R_ROLL
@@ -281,9 +282,9 @@ JNIEXPORT jfloatArray JNICALL Java_com_winlator_xr_XrActivity_getAxes(JNIEnv *en
     data[count++] = rPose.orientation.w; //R_QW
     data[count++] = rThumbstick.x; //R_THUMBSTICK_X
     data[count++] = rThumbstick.y; //R_THUMBSTICK_Y
-    data[count++] = rPose.position.x; //R_X
-    data[count++] = rPose.position.y; //R_Y
-    data[count++] = rPose.position.z; //R_Z
+    data[count++] = rPose.position.x - xr_camera_offset.x; //R_X
+    data[count++] = rPose.position.y - xr_camera_offset.y; //R_Y
+    data[count++] = rPose.position.z - xr_camera_offset.z; //R_Z
     data[count++] = angles.x; //HMD_PITCH
     data[count++] = angles.y; //HMD_YAW
     data[count++] = angles.z; //HMD_ROLL
@@ -291,9 +292,9 @@ JNIEXPORT jfloatArray JNICALL Java_com_winlator_xr_XrActivity_getAxes(JNIEnv *en
     data[count++] = quat.y; //HMD_QY
     data[count++] = quat.z; //HMD_QZ
     data[count++] = quat.w; //HMD_QW
-    data[count++] = (lPosition.x + rPosition.x) * 0.5f; //HMD_X
-    data[count++] = (lPosition.y + rPosition.y) * 0.5f; //HMD_Y
-    data[count++] = (lPosition.z + rPosition.z) * 0.5f; //HMD_Z
+    data[count++] = (lPosition.x + rPosition.x) * 0.5f - xr_camera_offset.x; //HMD_X
+    data[count++] = (lPosition.y + rPosition.y) * 0.5f - xr_camera_offset.y; //HMD_Y
+    data[count++] = (lPosition.z + rPosition.z) * 0.5f - xr_camera_offset.z; //HMD_Z
     data[count++] = XrVector3fDistance(lPosition, rPosition); //HMD_IPD
     data[count++] = xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOVX]; //HMD_FOVX
     data[count++] = xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOVY]; //HMD_FOVY
@@ -445,6 +446,13 @@ Java_com_winlator_xr_XrActivity_increaseReferenceSpacesOffset(JNIEnv *env, jobje
     auto c = (float)cos(yaw);
     auto s = (float)sin(yaw);
 
+    XrPosef offset = {};
+    offset.position.x = -(x * c - z * s);
+    offset.position.y = -y;
+    offset.position.z = -(x * s + z * c);
+    offset.orientation.w = 1;
+    xr_camera_offset = XrVector3fAdd(xr_camera_offset, offset.position);
+
     for (auto it = xr_info.begin(); it != xr_info.end(); ++it) {
         int space = it->first;
         XrSpace output = {};
@@ -452,12 +460,6 @@ Java_com_winlator_xr_XrActivity_increaseReferenceSpacesOffset(JNIEnv *env, jobje
         if (space_info.referenceSpaceType == XR_REFERENCE_SPACE_TYPE_VIEW) {
             continue;
         }
-
-        XrPosef offset = {};
-        offset.position.x = -(x * c - z * s);
-        offset.position.y = -y;
-        offset.position.z = -(x * s + z * c);
-        offset.orientation.w = 1;
         space_info.poseInReferenceSpace = XrPosefMultiply(space_info.poseInReferenceSpace, offset);
 
         xrCreateReferenceSpace(xr_module_engine.Session, &space_info, &output);
