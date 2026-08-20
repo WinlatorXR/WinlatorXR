@@ -146,10 +146,10 @@ public class XrInput {
                 if (XrActivity.gamepadEmulation) {
                     xrController.updateGamepad(axes, buttons);
                 }
+                if (XrActivity.keysEmulation) {
+                    xrController.updateKeyboardButtons(buttons);
+                }
                 if (!XrActivity.getVR()) {
-                    if (XrActivity.keysEmulation) {
-                        xrController.updateKeyboardButtons(buttons);
-                    }
                     if (XrActivity.mouseEmulation) {
                         xrController.updateMouseAxes(axes, XrActivity.isImmersive && XrActivity.isHeadTrackingAllowed);
                         xrController.updateMouseState(buttons);
