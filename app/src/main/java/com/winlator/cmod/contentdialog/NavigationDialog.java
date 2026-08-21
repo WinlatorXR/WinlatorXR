@@ -24,11 +24,13 @@ import androidx.annotation.NonNull;
 import com.google.android.material.navigation.NavigationView;
 import com.winlator.cmod.R;
 import com.winlator.cmod.XServerDisplayActivity;
+import com.winlator.xr.XrActivity;
+import com.winlator.xr.io.XrRenderer;
 
 import java.util.Date;
 
 public class NavigationDialog extends ContentDialog {
-    private static final int STATUS_REFRESH_INTERVAL_MS = 10000;
+    private static final int STATUS_REFRESH_INTERVAL_MS = 1000;
 
     public NavigationDialog(@NonNull XServerDisplayActivity context) {
         super(context, R.layout.navigation_dialog);
@@ -99,6 +101,15 @@ public class NavigationDialog extends ContentDialog {
 
     private static String getStatusText(Context context) {
         StringBuilder status = new StringBuilder();
+
+        if (XrActivity.isVR && XrRenderer.vrWindowOnTop) {
+            if (XrActivity.adjustCameraHeight) {
+                status.append(context.getString(R.string.hint_camera_height)).append('\n');
+            } else {
+                status.append(context.getString(R.string.hint_camera_move)).append('\n');
+            }
+        }
+
         status.append(DateFormat.getTimeFormat(context).format(new Date()));
 
         Intent battery = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));

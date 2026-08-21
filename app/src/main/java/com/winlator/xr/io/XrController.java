@@ -89,7 +89,6 @@ public class XrController {
             if (getButtonClicked(buttons, XrInterface.ControllerButton.L_X)) instance.runOnUiThread(() -> dialog.onKeyAction(KeyEvent.KEYCODE_DPAD_DOWN));
             if (getButtonClicked(buttons, XrInterface.ControllerButton.R_B)) instance.runOnUiThread(() -> dialog.onKeyAction(KeyEvent.KEYCODE_DPAD_UP));
             if (getButtonClicked(buttons, XrInterface.ControllerButton.L_Y)) instance.runOnUiThread(() -> dialog.onKeyAction(KeyEvent.KEYCODE_DPAD_UP));
-            System.arraycopy(buttons, 0, lastButtons, 0, buttons.length);
             lastDialogShown = System.currentTimeMillis();
             instance.nativeSetUseVR(false);
             return false;
@@ -337,14 +336,24 @@ public class XrController {
         XrInterface.ControllerButton secondaryDown = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_DOWN : XrInterface.ControllerButton.R_THUMBSTICK_DOWN;
         XrInterface.ControllerButton secondaryLeft = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_LEFT : XrInterface.ControllerButton.R_THUMBSTICK_LEFT;
         XrInterface.ControllerButton secondaryRight = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_RIGHT : XrInterface.ControllerButton.R_THUMBSTICK_RIGHT;
+        XrInterface.ControllerButton secondaryPress = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_PRESS : XrInterface.ControllerButton.R_THUMBSTICK_PRESS;
 
-        float x = 0; float z = 0; float step = 0.025f;
-        if (buttons[secondaryUp.ordinal()]) z -= step;
-        if (buttons[secondaryDown.ordinal()]) z += step;
-        if (buttons[secondaryLeft.ordinal()]) x -= step;
-        if (buttons[secondaryRight.ordinal()]) x += step;
-        if ((Math.abs(x) > 0) || (Math.abs(z) > 0)) {
-            XrActivity.getInstance().increaseReferenceSpacesOffset(x, 0, z);
+        if (getButtonClicked(buttons, secondaryPress)) {
+            XrActivity.adjustCameraHeight = !XrActivity.adjustCameraHeight;
+        }
+
+        float x = 0; float y = 0; float z = 0; float step = 0.025f;
+        if (XrActivity.adjustCameraHeight) {
+            if (buttons[secondaryUp.ordinal()]) y += step;
+            if (buttons[secondaryDown.ordinal()]) y -= step;
+        } else {
+            if (buttons[secondaryUp.ordinal()]) z -= step;
+            if (buttons[secondaryDown.ordinal()]) z += step;
+            if (buttons[secondaryLeft.ordinal()]) x -= step;
+            if (buttons[secondaryRight.ordinal()]) x += step;
+        }
+        if ((Math.abs(x) > 0) || (Math.abs(y) > 0) || (Math.abs(z) > 0)) {
+            XrActivity.getInstance().increaseReferenceSpacesOffset(x, y, z);
         }
     }
 

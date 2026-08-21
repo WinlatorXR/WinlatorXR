@@ -78,6 +78,7 @@ public class XrInput {
         if (blocking) {
             if (XrActivity.isUDP) xrController.updateXrCamera(buttons);
             updateXrApp(axes, new boolean[buttons.length]);
+            xrController.updateFinished(axes, buttons);
         } else {
             updateShortcuts(buttons);
             updateXrApp(axes, buttons);

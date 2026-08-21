@@ -470,6 +470,8 @@
     <string name="thumbstick_right">Thumbstick right</string>
     <string name="thumbstick_up">Thumbstick up</string>
     <string name="thumbstick_down">Thumbstick down</string>
+    <string name="hint_camera_height">Use the thumbstick to adjust the camera height.\nPress the thumbstick to switch to camera position adjustment.\n</string>
+    <string name="hint_camera_move">Use the thumbstick to adjust the camera position.\nPress the thumbstick to switch to camera height adjustment.\n</string>
     <string name="autoclose">Automatically close the container when all windows are closed</string>
     <string name="trackir_plugin">TrackIR emulation plugin</string>
     <string name="reshade_plugin">3D rendering plugin</string>
