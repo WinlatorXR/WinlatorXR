@@ -279,7 +279,7 @@ public class ScreenEffectDialog extends ContentDialog {
                 KeyValueSet settings = new KeyValueSet(parts[1]);
                 sbBrightness.setValue(settings.getFloat("brightness", 0));
                 sbContrast.setValue(settings.getFloat("contrast", 1.0f));
-                sbGamma.setValue(settings.getFloat("gamma", 1.0f));
+                sbGamma.setValue(settings.getFloat("gamma", 0.0f));
                 cbEnableBloom.setChecked(settings.getBoolean("bloom", false));
                 cbEnableFakeReflections.setChecked(settings.getBoolean("fake_reflections", false));
                 cbEnableFXAA.setChecked(settings.getBoolean("fxaa", false));
@@ -306,7 +306,7 @@ public class ScreenEffectDialog extends ContentDialog {
     private void resetSettings() {
         sbBrightness.setValue(0);
         sbContrast.setValue(0);
-        sbGamma.setValue(1.0f);
+        sbGamma.setValue(0.0f);
         cbEnableBloom.setChecked(false);
         cbEnableFakeReflections.setChecked(false);
         cbEnableFXAA.setChecked(false);
@@ -390,7 +390,7 @@ public class ScreenEffectDialog extends ContentDialog {
         }
 
         // Apply or remove ColorEffect
-        if (brightness == 0 && contrast == 0 && gamma == 1.0f) {
+        if (brightness == 0 && contrast == 0 && gamma == 0) {
             Log.d(TAG, "No adjustments are applied. Removing ColorEffect if it exists.");
             renderer.getEffectComposer().removeEffect(colorEffect);
         } else {

@@ -67,7 +67,7 @@ public class ColorEffect extends Effect {
                     "    vec3 color = texelColor.rgb;",
                     "    color = clamp(color + brightness, 0.0, 1.0);", // Brightness adjustment
                     "    color = (color - 0.5) * clamp(contrast + 1.0, 0.5, 2.0) + 0.5;", // Contrast adjustment
-                    "    color = pow(color, vec3(1.0 / gamma));", // Gamma adjustment
+                    "    color = pow(color, vec3(1.0 - gamma * 0.1));", // Gamma adjustment
                     "    gl_FragColor = vec4(color, texelColor.a);", // Apply color adjustments
                     "}"
             });

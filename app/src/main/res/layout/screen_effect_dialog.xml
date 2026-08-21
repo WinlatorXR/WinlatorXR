@@ -13,7 +13,7 @@
                         android:id="@+id/SBContrast" android:layout_width="fill_parent" android:layout_height="30dp" android:background="@drawable/xr_selector" app:maxValue="100" app:minValue="-100" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/gamma" />
                     <com.winlator.cmod.widget.SeekBar
-                        android:id="@+id/SBGamma" android:layout_width="fill_parent" android:layout_height="30dp" android:background="@drawable/xr_selector" app:maxValue="3.0" app:minValue="0.5" app:step="0.01" />
+                        android:id="@+id/SBGamma" android:layout_width="fill_parent" android:layout_height="30dp" android:background="@drawable/xr_selector" app:maxValue="1.0" app:minValue="0.0" app:step="0.1" />
 
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8.0dip" android:text="@string/vkbasalt_sharpness_level" />
                     <com.winlator.cmod.widget.SeekBar
