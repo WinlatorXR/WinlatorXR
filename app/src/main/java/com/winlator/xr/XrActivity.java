@@ -51,7 +51,7 @@ public class XrActivity extends XServerDisplayActivity {
     public static boolean isSBS = false;
     public static boolean isUDP = false;
     public static boolean isVR = false;
-    public static boolean adjustCameraHeight;
+    public static boolean adjustCameraHeight = true;
     public static boolean gamepadEmulation;
     public static boolean gamepadRadialToSquare;
     public static boolean keysEmulation;
