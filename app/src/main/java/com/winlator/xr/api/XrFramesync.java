@@ -46,6 +46,10 @@ public class XrFramesync {
     private boolean framesyncMappingLow = false;
     private int lastFrameSync = 0;
 
+    private long lastTimestamp = 0;
+    private int lastFPS = 0;
+    private int currentFrames = 0;
+
     public XrFramesync(Context context) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         int size = prefs.getInt(KEY_FRAMESYNC_MAPPING, 0);
@@ -61,6 +65,10 @@ public class XrFramesync {
 
     public int getAerTargetFBO() {
         return aerTargetFBO;
+    }
+
+    public int getLastFPS() {
+        return lastFPS;
     }
 
     public void process(Drawable drawable, XrFramesyncCallback callback) {
@@ -107,6 +115,17 @@ public class XrFramesync {
                     r = framesyncMapping.indexOf(r) * step;
                 }
             }
+        }
+
+        // count FPS
+        if (lastFrameSync != r) {
+            currentFrames++;
+        }
+        long currentTimestamp = System.currentTimeMillis();
+        if (currentTimestamp > lastTimestamp + 1000) {
+            lastTimestamp = currentTimestamp;
+            lastFPS = currentFrames;
+            currentFrames = 0;
         }
 
         // apply the values

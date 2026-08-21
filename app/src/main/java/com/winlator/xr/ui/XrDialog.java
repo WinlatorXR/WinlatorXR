@@ -148,6 +148,7 @@ public class XrDialog extends ContentDialog {
             e.commit();
 
             XrActivity.isSBS = cbSBS.isChecked();
+            XrActivity.isPassthrough = cbPassthrough.isChecked();
             XrActivity.isImmersive = cbImmersiveMode.isChecked();
             XrActivity instance = XrActivity.getInstance();
             if (XrActivity.isActive()) {

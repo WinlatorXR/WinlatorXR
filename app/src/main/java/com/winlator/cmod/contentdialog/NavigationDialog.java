@@ -108,6 +108,10 @@ public class NavigationDialog extends ContentDialog {
             } else {
                 status.append(context.getString(R.string.hint_camera_move)).append('\n');
             }
+
+            if (!XrActivity.isPassthrough) {
+                status.append(XrActivity.getInstance().getLastFPS() + " FPS   ");
+            }
         }
 
         status.append(DateFormat.getTimeFormat(context).format(new Date()));

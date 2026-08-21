@@ -46,6 +46,7 @@ public class XrActivity extends XServerDisplayActivity {
     private static boolean isEnabled = false;
     public static boolean isHeadTrackingAllowed = false;
     public static boolean isImmersive = false;
+    public static boolean isPassthrough = false;
     public static boolean isAER = false;
     public static boolean isSBS = false;
     public static boolean isUDP = false;
@@ -72,9 +73,9 @@ public class XrActivity extends XServerDisplayActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        boolean usePassthrough = prefs.getBoolean("use_pt", true);
         boolean curvedScreen = prefs.getBoolean("use_cs", false);
         int sharpening = prefs.getInt("sharpening_level", 0);
+        isPassthrough = prefs.getBoolean("use_pt", true);
         gamepadEmulation = prefs.getBoolean("use_xr_gamepad", false);
         gamepadRadialToSquare = prefs.getBoolean("xr_gamepad_radial_to_square", true);
         keysEmulation = prefs.getBoolean("use_xr_keys", true);
@@ -83,7 +84,7 @@ public class XrActivity extends XServerDisplayActivity {
         mouseLightgun = prefs.getBoolean("use_xr_lightgun", false);
         wheelEmulation = prefs.getBoolean("use_xr_wheel", false);
 
-        nativeSetUsePT(usePassthrough);
+        nativeSetUsePT(isPassthrough);
         nativeSetCurvedScreen(curvedScreen);
         nativeSetSharpening(sharpening);
         sendManufacturer(Build.MANUFACTURER.toUpperCase());
@@ -120,6 +121,10 @@ public class XrActivity extends XServerDisplayActivity {
 
     public static boolean getImmersive() {
         return isImmersive && XrContentDialog.getFrontInstance() == null;
+    }
+
+    public int getLastFPS() {
+        return isVR && XrRenderer.vrWindowOnTop ? XrRenderer.getLastFPS() : (int) frameRating.getLastFPS();
     }
 
     public static boolean getAER() {

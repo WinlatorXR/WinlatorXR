@@ -49,7 +49,6 @@ public class XrRenderer extends GLRenderer {
 
     private long timestampHadWindow = Long.MAX_VALUE;
 
-    private boolean xrImmersive = false;
     private boolean xrFrameReady = false;
     private boolean xrFrameStarted = false;
     private final XrFramesync xrFramesync;
@@ -57,9 +56,16 @@ public class XrRenderer extends GLRenderer {
     public static boolean autoclose = true;
     public static boolean vrWindowOnTop = false;
 
+    private static XrRenderer instance = null;
+
     public XrRenderer(XServerView xServerView, XServer xServer) {
         super(xServerView, xServer);
         xrFramesync = new XrFramesync(xServerView.getContext());
+        instance = this;
+    }
+
+    public static int getLastFPS() {
+        return instance.xrFramesync.getLastFPS();
     }
 
     @Override
@@ -89,7 +95,7 @@ public class XrRenderer extends GLRenderer {
 
     @Override
     protected boolean preDrawable(ShaderMaterial material, Drawable drawable) {
-        if (XrActivity.isEnabled(null) && XrActivity.getVR() && xrFrameReady) {
+        if (XrActivity.isEnabled(null) && XrActivity.isVR && vrWindowOnTop && xrFrameReady) {
             xrFramesync.process(drawable, (r, g, b, a) -> XrActivity.getInstance().nativeSetFramesync(r, g, b, a));
             xrFrameReady = false;
             if (XrActivity.getAER()) {
@@ -104,11 +110,10 @@ public class XrRenderer extends GLRenderer {
     protected void preFrame() {
         super.preFrame();
 
-        xrImmersive = false;
         if (XrActivity.isEnabled(null)) {
             fullscreen = XrActivity.getVR();
-            xrImmersive = XrActivity.getImmersive() || fullscreen;
-            xrFrameReady = xrFrameStarted = XrActivity.getInstance().initFrame(xrImmersive,
+            xrFrameReady = xrFrameStarted = XrActivity.getInstance().initFrame(
+                    XrActivity.getImmersive() || XrActivity.getVR(),
                     XrActivity.getSBS(), XrActivity.getAER(), XrActivity.getDistance());
             XrActivity.getInstance().updateFrame();
             if (!XrActivity.getAER()) {
@@ -242,6 +247,7 @@ public class XrRenderer extends GLRenderer {
 
     @Override
     protected void renderWindows(ShaderMaterial material, boolean forceFullscreen) {
-        super.renderWindows(material, xrImmersive);
+        boolean fullscreen = (XrActivity.isVR && XrRenderer.vrWindowOnTop) || XrActivity.isImmersive;
+        super.renderWindows(material, fullscreen);
     }
 }

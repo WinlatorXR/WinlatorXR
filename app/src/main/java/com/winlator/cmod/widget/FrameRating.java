@@ -50,6 +50,10 @@ public class FrameRating extends FrameLayout implements Runnable {
         totalRAM = getTotalRAM();
         addView(view);
     }
+
+    public float getLastFPS() {
+        return lastFPS;
+    }
     
     private String getTotalRAM() {
         String totalRAM = "";

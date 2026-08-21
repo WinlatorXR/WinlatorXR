@@ -172,7 +172,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     private XServer xServer;
     private InputControlsManager inputControlsManager;
     private ImageFs imageFs;
-    private FrameRating frameRating = null;
+    protected FrameRating frameRating = null;
     private Runnable editInputControlsCallback;
     private Shortcut shortcut;
     private String graphicsDriver = Container.DEFAULT_GRAPHICS_DRIVER;
@@ -771,8 +771,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         return false;
     }
 
-
-    public float getLastFPS() {
+    public float getLastRedraws() {
         if (lastTime == 0) lastTime = SystemClock.elapsedRealtime();
         long time = SystemClock.elapsedRealtime();
         if (time >= lastTime + 500) {
@@ -1979,7 +1978,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             startTouchscreenTimeout();
         }
 
-        if (container != null && container.isShowFPS()) {
+        if (container != null) {
             frameRating = new FrameRating(this, container);
             frameRating.setVisibility(View.GONE);
             rootView.addView(frameRating);

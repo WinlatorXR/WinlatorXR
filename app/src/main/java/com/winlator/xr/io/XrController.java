@@ -303,7 +303,7 @@ public class XrController {
 
         // Limit cursor updates to the FPS (this prevents freezing)
         long timestamp = System.currentTimeMillis();
-        if (timestamp - lastMouseUpdate > 1000 / Math.max(instance.getLastFPS(), 1)) {
+        if (timestamp - lastMouseUpdate > 1000 / Math.max(instance.getLastRedraws(), 1)) {
             if ((lastMouseX != mouse.getX()) || (lastMouseY != mouse.getY())) {
                 lastMouseUpdate = timestamp;
                 lastMouseX = mouse.getX();
