@@ -40,13 +40,27 @@ public abstract class ImageFsInstaller {
         }
     }
 
+    private static String getAssetFile(Context context, String baseName) {
+        try {
+            String[] assets = context.getAssets().list("");
+            if (assets != null) {
+                for (String asset : assets) {
+                    if (asset.equals(baseName + ".txz") || asset.equals(baseName + ".tzst")) return asset;
+                }
+            }
+        } catch (IOException e) {}
+        return baseName + ".txz"; // Fallback
+    }
+
     public static void installWineFromAssets(final MainActivity activity) {
         String[] versions = activity.getResources().getStringArray(R.array.wine_entries);
         File rootDir = ImageFs.find(activity).getRootDir();
         for (String version : versions) {
             File outFile = new File(rootDir, "/opt/" + version);
             outFile.mkdirs();
-            TarCompressorUtils.extract(TarCompressorUtils.Type.XZ, activity, version + ".txz", outFile);
+            String assetFile = getAssetFile(activity, version);
+            TarCompressorUtils.Type type = assetFile.endsWith(".txz") ? TarCompressorUtils.Type.XZ : TarCompressorUtils.Type.ZSTD;
+            TarCompressorUtils.extract(type, activity, assetFile, outFile);
         }
     }
 
@@ -61,11 +75,13 @@ public abstract class ImageFsInstaller {
         dialog.show(R.string.installing_system_files);
         Executors.newSingleThreadExecutor().execute(() -> {
             clearRootDir(rootDir);
-            final byte compressionRatio = 22;
-            final long contentLength = (long)(FileUtils.getSize(activity, "imagefs.txz") * (100.0f / compressionRatio));
+            final String assetFile = getAssetFile(activity, "imagefs");
+            final TarCompressorUtils.Type type = assetFile.endsWith(".txz") ? TarCompressorUtils.Type.XZ : TarCompressorUtils.Type.ZSTD;
+            final byte compressionRatio = (type == TarCompressorUtils.Type.XZ) ? (byte)22 : (byte)20;
+            final long contentLength = (long)(FileUtils.getSize(activity, assetFile) * (100.0f / compressionRatio));
             AtomicLong totalSizeRef = new AtomicLong();
 
-            boolean success = TarCompressorUtils.extract(TarCompressorUtils.Type.XZ, activity, "imagefs.txz", rootDir, (file, size) -> {
+            boolean success = TarCompressorUtils.extract(type, activity, assetFile, rootDir, (file, size) -> {
                 if (size > 0) {
                     long totalSize = totalSizeRef.addAndGet(size);
                     final int progress = (int)(((float)totalSize / contentLength) * 100);
@@ -97,11 +113,13 @@ public abstract class ImageFsInstaller {
         dialog.show(R.string.installing_system_files);
         Executors.newSingleThreadExecutor().execute(() -> {
             clearRootDir(rootDir);
-            final byte compressionRatio = 24;
-            final long contentLength = (long)(FileUtils.getSize(activity, "imagefs.txz") * (100.0f / compressionRatio));
+            final String assetFile = getAssetFile(activity, "imagefs");
+            final TarCompressorUtils.Type type = assetFile.endsWith(".txz") ? TarCompressorUtils.Type.XZ : TarCompressorUtils.Type.ZSTD;
+            final byte compressionRatio = (type == TarCompressorUtils.Type.XZ) ? (byte)24 : (byte)20;
+            final long contentLength = (long)(FileUtils.getSize(activity, assetFile) * (100.0f / compressionRatio));
             AtomicLong totalSizeRef = new AtomicLong();
 
-            boolean success = TarCompressorUtils.extract(TarCompressorUtils.Type.XZ, activity, "imagefs.txz", rootDir, (file, size) -> {
+            boolean success = TarCompressorUtils.extract(type, activity, assetFile, rootDir, (file, size) -> {
                 if (size > 0) {
                     long totalSize = totalSizeRef.addAndGet(size);
                     final int progress = (int)(((float)totalSize / contentLength) * 100);

@@ -209,24 +209,54 @@ public class ContentsManager {
         }
 
         if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_WINE) {
-            File bin = new File(file, profile.wineBinPath);
-            File lib = new File(file, profile.wineLibPath);
-            File cp = new File(file, profile.winePrefixPack);
+            if (!profile.wineBinPath.isEmpty()) {
+                File bin = new File(file, profile.wineBinPath);
+                if (!bin.exists() || !bin.isDirectory()) {
+                    callback.onFailed(InstallFailedReason.ERROR_MISSINGFILES, null);
+                    return;
+                }
+            }
 
-            if (!bin.exists() || !bin.isDirectory() || !lib.exists() || !lib.isDirectory() || !cp.exists() || !cp.isFile()) {
-                callback.onFailed(InstallFailedReason.ERROR_MISSINGFILES, null);
-                return;
+            if (!profile.wineLibPath.isEmpty()) {
+                File lib = new File(file, profile.wineLibPath);
+                if (!lib.exists() || !lib.isDirectory()) {
+                    callback.onFailed(InstallFailedReason.ERROR_MISSINGFILES, null);
+                    return;
+                }
+            }
+
+            if (!profile.winePrefixPack.isEmpty()) {
+                File cp = new File(file, profile.winePrefixPack);
+                if (!cp.exists() || !cp.isFile()) {
+                    callback.onFailed(InstallFailedReason.ERROR_MISSINGFILES, null);
+                    return;
+                }
             }
         }
 
         if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_PROTON) {
-            File bin = new File(file, profile.protonBinPath);
-            File lib = new File(file, profile.protonLibPath);
-            File cp = new File(file, profile.protonPrefixPack);
+            if (!profile.protonBinPath.isEmpty()) {
+                File bin = new File(file, profile.protonBinPath);
+                if (!bin.exists() || !bin.isDirectory()) {
+                    callback.onFailed(InstallFailedReason.ERROR_MISSINGFILES, null);
+                    return;
+                }
+            }
 
-            if (!bin.exists() || !bin.isDirectory() || !lib.exists() || !lib.isDirectory() || !cp.exists() || !cp.isFile()) {
-                callback.onFailed(InstallFailedReason.ERROR_MISSINGFILES, null);
-                return;
+            if (!profile.protonLibPath.isEmpty()) {
+                File lib = new File(file, profile.protonLibPath);
+                if (!lib.exists() || !lib.isDirectory()) {
+                    callback.onFailed(InstallFailedReason.ERROR_MISSINGFILES, null);
+                    return;
+                }
+            }
+
+            if (!profile.protonPrefixPack.isEmpty()) {
+                File cp = new File(file, profile.protonPrefixPack);
+                if (!cp.exists() || !cp.isFile()) {
+                    callback.onFailed(InstallFailedReason.ERROR_MISSINGFILES, null);
+                    return;
+                }
             }
         }
 
@@ -256,38 +286,53 @@ public class ContentsManager {
         try {
             ContentProfile profile = new ContentProfile();
             JSONObject profileJSONObject = new JSONObject(FileUtils.readString(file));
-            String typeName = profileJSONObject.getString(ContentProfile.MARK_TYPE);
-            String verName = profileJSONObject.getString(ContentProfile.MARK_VERSION_NAME);
-            int verCode = profileJSONObject.getInt(ContentProfile.MARK_VERSION_CODE);
-            String desc = profileJSONObject.getString(ContentProfile.MARK_DESC);
-
-            JSONArray fileJSONArray = profileJSONObject.getJSONArray(ContentProfile.MARK_FILE_LIST);
-            List<ContentProfile.ContentFile> fileList = new ArrayList<>();
-            for (int i = 0; i < fileJSONArray.length(); i++) {
-                JSONObject contentFileJSONObject = fileJSONArray.getJSONObject(i);
-                ContentProfile.ContentFile contentFile = new ContentProfile.ContentFile();
-                contentFile.source = contentFileJSONObject.getString(ContentProfile.MARK_FILE_SOURCE);
-                contentFile.target = contentFileJSONObject.getString(ContentProfile.MARK_FILE_TARGET);
-                fileList.add(contentFile);
-            }
-            if (typeName.equals(ContentProfile.ContentType.CONTENT_TYPE_WINE.toString())) {
-                JSONObject wineJSONObject = profileJSONObject.getJSONObject(ContentProfile.MARK_WINE);
-                profile.wineLibPath = wineJSONObject.getString(ContentProfile.MARK_WINE_LIBPATH);
-                profile.wineBinPath = wineJSONObject.getString(ContentProfile.MARK_WINE_BINPATH);
-                profile.winePrefixPack = wineJSONObject.getString(ContentProfile.MARK_WINE_PREFIX_PACK);
-            }
-            if (typeName.equals(ContentProfile.ContentType.CONTENT_TYPE_PROTON.toString())) {
-                JSONObject protonJSONObject = profileJSONObject.getJSONObject(ContentProfile.MARK_PROTON);
-                profile.protonLibPath = protonJSONObject.getString(ContentProfile.MARK_PROTON_LIBPATH);
-                profile.protonBinPath = protonJSONObject.getString(ContentProfile.MARK_PROTON_BINPATH);
-                profile.protonPrefixPack = protonJSONObject.getString(ContentProfile.MARK_PROTON_PREFIX_PACK);
-            }
-
+            String typeName = profileJSONObject.optString(ContentProfile.MARK_TYPE, "");
             profile.type = ContentProfile.ContentType.getTypeByName(typeName);
-            profile.verName = verName;
-            profile.verCode = verCode;
-            profile.desc = desc;
+            if (profile.type == null) return null;
+
+            profile.verName = profileJSONObject.optString(ContentProfile.MARK_VERSION_NAME, "");
+            profile.verCode = profileJSONObject.optInt(ContentProfile.MARK_VERSION_CODE, 0);
+            profile.desc = profileJSONObject.optString(ContentProfile.MARK_DESC, "");
+
+            JSONArray fileJSONArray = profileJSONObject.optJSONArray(ContentProfile.MARK_FILE_LIST);
+            List<ContentProfile.ContentFile> fileList = new ArrayList<>();
+            if (fileJSONArray != null) {
+                for (int i = 0; i < fileJSONArray.length(); i++) {
+                    JSONObject contentFileJSONObject = fileJSONArray.getJSONObject(i);
+                    ContentProfile.ContentFile contentFile = new ContentProfile.ContentFile();
+                    contentFile.source = contentFileJSONObject.optString(ContentProfile.MARK_FILE_SOURCE, "");
+                    contentFile.target = contentFileJSONObject.optString(ContentProfile.MARK_FILE_TARGET, "");
+                    fileList.add(contentFile);
+                }
+            }
             profile.fileList = fileList;
+
+            if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_WINE) {
+                JSONObject wineJSONObject = profileJSONObject.optJSONObject(ContentProfile.MARK_WINE);
+                if (wineJSONObject != null) {
+                    profile.wineLibPath = wineJSONObject.optString(ContentProfile.MARK_WINE_LIBPATH, "");
+                    profile.wineBinPath = wineJSONObject.optString(ContentProfile.MARK_WINE_BINPATH, "");
+                    profile.winePrefixPack = wineJSONObject.optString(ContentProfile.MARK_WINE_PREFIX_PACK, "");
+                } else {
+                    profile.wineLibPath = profileJSONObject.optString(ContentProfile.MARK_WINE_LIBPATH, "");
+                    profile.wineBinPath = profileJSONObject.optString(ContentProfile.MARK_WINE_BINPATH, "");
+                    profile.winePrefixPack = profileJSONObject.optString(ContentProfile.MARK_WINE_PREFIX_PACK, "");
+                }
+            }
+
+            if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_PROTON) {
+                JSONObject protonJSONObject = profileJSONObject.optJSONObject(ContentProfile.MARK_PROTON);
+                if (protonJSONObject != null) {
+                    profile.protonLibPath = protonJSONObject.optString(ContentProfile.MARK_PROTON_LIBPATH, "");
+                    profile.protonBinPath = protonJSONObject.optString(ContentProfile.MARK_PROTON_BINPATH, "");
+                    profile.protonPrefixPack = protonJSONObject.optString(ContentProfile.MARK_PROTON_PREFIX_PACK, "");
+                } else {
+                    profile.protonLibPath = profileJSONObject.optString(ContentProfile.MARK_PROTON_LIBPATH, "");
+                    profile.protonBinPath = profileJSONObject.optString(ContentProfile.MARK_PROTON_BINPATH, "");
+                    profile.protonPrefixPack = profileJSONObject.optString(ContentProfile.MARK_PROTON_PREFIX_PACK, "");
+                }
+            }
+
             return profile;
         } catch (Exception e) {
             return null;
