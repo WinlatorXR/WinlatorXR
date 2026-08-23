@@ -24,6 +24,10 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
 
     companion object {
         const val EXTRA_APP_ID = "steam_app_id"
+        // pending obb copy (package + source dir), keyed by appId
+        private const val OBB_PREFS = "steam_obb_pending"
+        private const val WARN_PREFS = "steam_apk_warning"
+        private const val K_HIDE_APK_WARNING = "hide_apk_warning"
         private const val DOWNLOAD_THREADS = 24
         private const val COLOR_INSTALL   = 0xFF1565C0.toInt()
         private const val COLOR_CANCEL    = 0xFFCC3333.toInt()
@@ -43,6 +47,10 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
     private var lastOs = SteamDepotDownloader.OS_WINDOWS
     // True once the user manually taps a variant toggle — stops auto-defaulting on refresh.
     private var userPickedVariant = false
+
+    // obb copy state, see the OBB section further down
+    @Volatile private var obbCopyRunning = false
+    private var installReceiver: android.content.BroadcastReceiver? = null
 
     // auto retry state
     private val retryCounts = mutableMapOf<Int, Int>()
@@ -75,8 +83,19 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         loadGame()
     }
 
+    override fun onResume() {
+        super.onResume()
+        // installer was in front of us, so finish off any queued obb copy now
+        if (obbPrefs().contains("pkg_$appId")) {
+            registerInstallReceiver()
+            placePendingObb()
+        }
+    }
+
     override fun onDestroy() {
         SteamRepository.getInstance().removeListener(this)
+        installReceiver?.let { try { unregisterReceiver(it) } catch (_: Exception) {} }
+        installReceiver = null
         super.onDestroy()
     }
 
@@ -560,6 +579,16 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
             return
         }
 
+        // Android depots are just apk downloads, make sure the user knows what they're
+        // getting before anything lands on disk.
+        if (selectedOs == SteamDepotDownloader.OS_ANDROID && !apkWarningHidden()) {
+            showApkWarningDialog { startDownload(g, db, installedThisVariant) }
+            return
+        }
+        startDownload(g, db, installedThisVariant)
+    }
+
+    private fun startDownload(g: SteamGame, db: SteamDatabase, installedThisVariant: Boolean) {
         // -------------------------------------------------------------
         // Switching variants — remove the other variant that's installed first
         // so its files don't linger orphaned on disk.
@@ -675,31 +704,384 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
                 return@Thread
             }
 
-            val uri = try {
-                androidx.core.content.FileProvider.getUriForFile(this, "$packageName.tileprovider", apk)
-            } catch (e: Exception) {
-                ui.post { Toast.makeText(this, "Can't share APK: ${e.message}", Toast.LENGTH_LONG).show() }
-                return@Thread
+            // Only copy the obb after the apk is installed, a fresh install recreates
+            // Android/obb/<pkg> and wipes whatever was put there first.
+            val obbs = mutableListOf<File>()
+            collectObbs(dir, obbs)
+            val obbPkg = if (obbs.isEmpty()) null else archivePackageName(apk)
+            if (obbs.isNotEmpty() && obbPkg == null) {
+                obbLog("No package name from ${apk.name}, leaving ${obbs.size} obb file(s) alone")
             }
 
-            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, "application/vnd.android.package-archive")
-                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            ui.post {
-                try {
-                    startActivity(intent)
-                    if (apks.size > 1) {
+            startApkInstall(apk, dir, apks.size, obbPkg, obbs.size)
+        }.start()
+    }
+
+    /** Fire up the system installer and queue the obb copy for when it's done. */
+    private fun startApkInstall(apk: File, dir: File, apkCount: Int, obbPkg: String?, obbCount: Int) {
+        val uri = try {
+            androidx.core.content.FileProvider.getUriForFile(this, "$packageName.tileprovider", apk)
+        } catch (e: Exception) {
+            ui.post { Toast.makeText(this, "Can't share APK: ${e.message}", Toast.LENGTH_LONG).show() }
+            return
+        }
+
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package-archive")
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        ui.post {
+            try {
+                startActivity(intent)
+                when {
+                    obbPkg != null -> {
+                        armObbCopy(obbPkg, dir)
                         Toast.makeText(this,
-                            "This title ships extra split/OBB files — some VR games may need them placed manually.",
+                            "$obbCount OBB file(s) will be copied once the install finishes.",
                             Toast.LENGTH_LONG).show()
                     }
-                } catch (e: Exception) {
-                    Toast.makeText(this, "No installer available: ${e.message}", Toast.LENGTH_LONG).show()
+                    obbCount > 0 -> Toast.makeText(this,
+                        "Couldn't read the APK's package name, place the OBB data manually.",
+                        Toast.LENGTH_LONG).show()
+                    apkCount > 1 -> Toast.makeText(this,
+                        "This title ships extra split APKs — some VR games may need them placed manually.",
+                        Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this, "No installer available: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // OBB placement
+    // -------------------------------------------------------------------------
+    // Steam ships the obb next to the apk but games only read /sdcard/Android/obb/<pkg>/.
+    // Copy after the install (a fresh install wipes that dir) and name it
+    // main|patch.<versionCode>.<pkg>.obb using the installed version. The pending copy is
+    // kept in prefs so it survives the activity being recreated behind the installer.
+
+    private fun apkWarningHidden() =
+        getSharedPreferences(WARN_PREFS, android.content.Context.MODE_PRIVATE)
+            .getBoolean(K_HIDE_APK_WARNING, false)
+
+    /** What downloading an android depot does and, more to the point, doesn't do. */
+    private fun showApkWarningDialog(onUnderstood: () -> Unit) {
+        val pad = (resources.displayMetrics.density * 20).toInt()
+        val message = TextView(this).apply {
+            text = "This feature is NOT intended to enable you to play your APK files from Steam " +
+                "as is. It is purely intended as a means to downloading APK files available for " +
+                "games you already own and facilitating installing them. This feature is intended for " +
+                "people that are working on ways of getting these games working on unsupported " +
+                "headsets."
+        }
+        val dontShowAgain = CheckBox(this).apply {
+            text = "Do not show this message again"
+            setPadding(0, pad, 0, 0)
+        }
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(pad, pad, pad, pad)
+            addView(message)
+            addView(dontShowAgain)
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Before you download")
+            .setView(box)
+            .setPositiveButton("Understood") { _, _ ->
+                if (dontShowAgain.isChecked) {
+                    getSharedPreferences(WARN_PREFS, android.content.Context.MODE_PRIVATE)
+                        .edit().putBoolean(K_HIDE_APK_WARNING, true).apply()
+                }
+                onUnderstood()
+            }
+            .show()
+    }
+
+    private fun obbPrefs() = getSharedPreferences(OBB_PREFS, android.content.Context.MODE_PRIVATE)
+
+    /** Note down that [pkg] still needs its obb data out of [sourceDir]. */
+    private fun armObbCopy(pkg: String, sourceDir: File) {
+        obbPrefs().edit()
+            .putString("pkg_$appId", pkg)
+            .putString("dir_$appId", sourceDir.absolutePath)
+            .apply()
+        obbLog("Armed OBB copy for $pkg from ${sourceDir.absolutePath}")
+        registerInstallReceiver()
+    }
+
+    /** Catches the install if we're alive but not resumed when it finishes. */
+    private fun registerInstallReceiver() {
+        if (installReceiver != null) return
+        val receiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(ctx: android.content.Context?, intent: android.content.Intent?) {
+                val pkg = intent?.data?.schemeSpecificPart ?: return
+                if (pkg == obbPrefs().getString("pkg_$appId", null)) placePendingObb()
+            }
+        }
+        val filter = android.content.IntentFilter().apply {
+            addAction(android.content.Intent.ACTION_PACKAGE_ADDED)
+            addAction(android.content.Intent.ACTION_PACKAGE_REPLACED)
+            addDataScheme("package")
+        }
+        registerReceiver(receiver, filter)
+        installReceiver = receiver
+    }
+
+    /**
+     * Runs the queued copy if the package is there yet, does nothing otherwise. Safe to call
+     * on every resume, so tapping Install APK again also fixes a missing obb.
+     */
+    private fun placePendingObb() {
+        val prefs = obbPrefs()
+        val pkg = prefs.getString("pkg_$appId", null) ?: return
+        val dirPath = prefs.getString("dir_$appId", null) ?: return
+        if (!isPackageInstalled(pkg)) return   // not installed yet, or cancelled
+        if (obbCopyRunning || isFinishing) return
+        obbCopyRunning = true
+
+        val (dialog, message) = showObbProgress()
+        Thread {
+            val result = try {
+                placeObbFiles(pkg, File(dirPath)) { done, total ->
+                    ui.post { message.text = "Copying game data ${fmtBytes(done)} / ${fmtBytes(total)}" }
+                }
+            } catch (e: Exception) {
+                obbLog("OBB copy threw: $e")
+                ObbResult(0, e.message ?: e.toString())
+            }
+            ui.post {
+                obbCopyRunning = false
+                try { dialog.dismiss() } catch (_: Exception) {}
+                if (result.error != null) {
+                    if (!isFinishing) showObbFailureDialog(pkg, result.error)
+                    return@post
+                }
+                prefs.edit().remove("pkg_$appId").remove("dir_$appId").apply()
+                if (result.placed > 0) {
+                    if (isFinishing) {
+                        Toast.makeText(this, "Placed ${result.placed} OBB file(s) in Android/obb/$pkg",
+                            Toast.LENGTH_LONG).show()
+                    } else {
+                        offerToDeleteSources(result.placed, pkg, result.sources)
+                    }
                 }
             }
         }.start()
+    }
+
+    /** Copies are in place and checked, so the download folder's ones are just dead weight. */
+    private fun offerToDeleteSources(placed: Int, pkg: String, sources: List<File>) {
+        val total = sources.sumOf { it.length() }
+        if (sources.isEmpty() || total <= 0L) return
+        AlertDialog.Builder(this)
+            .setTitle("Game data copied")
+            .setMessage("Placed $placed file(s) in Android/obb/$pkg.\n\nThe originals in the " +
+                "download folder are still taking up ${fmtBytes(total)}. Delete them? The game " +
+                "keeps working, you'd just have to download it again to reinstall it later.")
+            .setPositiveButton("Delete") { _, _ -> deleteSources(sources) }
+            .setNegativeButton("Keep", null)
+            .show()
+    }
+
+    private fun deleteSources(sources: List<File>) {
+        Thread {
+            var freed = 0L
+            for (f in sources) {
+                val size = f.length()
+                if (f.delete()) freed += size else obbLog("Could not delete ${f.absolutePath}")
+            }
+            obbLog("Deleted source obb files, freed ${fmtBytes(freed)}")
+            val msg = "Freed ${fmtBytes(freed)}"
+            ui.post { Toast.makeText(this, msg, Toast.LENGTH_LONG).show() }
+        }.start()
+    }
+
+    private class ObbResult(val placed: Int, val error: String?, val sources: List<File> = emptyList())
+
+    /**
+     * Copies every .obb under [sourceDir] to /sdcard/Android/obb/[pkg]/ with the name the game
+     * expects. [pkg] has to be installed already so we can read its versionCode. Returns the
+     * file count, or a message if it went wrong.
+     */
+    private fun placeObbFiles(pkg: String, sourceDir: File, onProgress: (Long, Long) -> Unit): ObbResult {
+        val sources = mutableListOf<File>()
+        collectObbs(sourceDir, sources)
+        if (sources.isEmpty()) {
+            obbLog("No .obb files under ${sourceDir.absolutePath}")
+            return ObbResult(0, null)
+        }
+
+        val versionCode = installedVersionCode(pkg)
+        val destDir = File(android.os.Environment.getExternalStorageDirectory(), "Android/obb/$pkg")
+        if (!destDir.isDirectory && !destDir.mkdirs()) {
+            obbLog("mkdirs failed for ${destDir.absolutePath}")
+            return ObbResult(0, "Could not create ${destDir.absolutePath}")
+        }
+
+        // Depots ship these named the way they need to land, chunk files and all, so keep the
+        // name. Only build one when there's nothing to go on, ie a bare main.obb.
+        val seen = HashSet<String>()
+        val plan = ArrayList<Pair<File, File>>()
+        for (src in sources) {
+            val name = if (src.name.contains(pkg, ignoreCase = true) || versionCode <= 0) {
+                src.name
+            } else {
+                val kind = if (src.name.contains("patch", ignoreCase = true)) "patch" else "main"
+                "$kind.$versionCode.$pkg.obb"
+            }
+            if (!seen.add(name)) {
+                obbLog("Skipping ${src.absolutePath}, something else already claimed $name")
+                continue
+            }
+            plan.add(src to File(destDir, name))
+        }
+
+        val todo = plan.filterNot { (src, dest) -> dest.isFile && dest.length() == src.length() }
+        val totalBytes = todo.sumOf { it.first.length() }
+        val free = try { destDir.usableSpace } catch (_: Exception) { 0L }
+        if (totalBytes > 0L && free > 0L && free < totalBytes + 64L * 1024 * 1024) {
+            return ObbResult(0, "Not enough free space, ${fmtBytes(totalBytes)} needed, ${fmtBytes(free)} free")
+        }
+
+        var copied = 0L
+        for ((src, dest) in todo) {
+            obbLog("Copying ${src.absolutePath} -> ${dest.absolutePath} (${fmtBytes(src.length())})")
+            try {
+                copyFile(src, dest) { done -> onProgress(copied + done, totalBytes) }
+            } catch (e: Exception) {
+                obbLog("Copy failed: $e")
+                dest.delete()   // don't leave a half copied obb around, the game would load it
+                return ObbResult(0, "${dest.name}: ${e.message ?: e.toString()}")
+            }
+            copied += src.length()
+        }
+
+        // Check they're acutally still there, this is what the old code got wrong.
+        val bad = plan.filterNot { (src, dest) -> dest.isFile && dest.length() == src.length() }
+        if (bad.isNotEmpty()) {
+            val names = bad.joinToString(", ") { it.second.name }
+            obbLog("Verification failed in ${destDir.absolutePath}: $names")
+            return ObbResult(0, "$names is missing from ${destDir.absolutePath} after copying")
+        }
+        obbLog("Placed ${plan.size} OBB file(s) in ${destDir.absolutePath}")
+        return ObbResult(plan.size, null, plan.map { it.first })
+    }
+
+    private fun copyFile(src: File, dest: File, onBytes: (Long) -> Unit) {
+        java.io.FileInputStream(src).use { input ->
+            java.io.FileOutputStream(dest).use { output ->
+                val buf = ByteArray(1 shl 20)   // these run to several GB, 1MB chunks
+                var done = 0L
+                var reported = 0L
+                while (true) {
+                    val n = input.read(buf)
+                    if (n <= 0) break
+                    output.write(buf, 0, n)
+                    done += n
+                    if (done - reported >= 16L * 1024 * 1024) { reported = done; onBytes(done) }
+                }
+                output.flush()
+                output.fd.sync()
+                onBytes(done)
+            }
+        }
+    }
+
+    private fun collectObbs(dir: File, out: MutableList<File>) {
+        val files = dir.listFiles() ?: return
+        for (f in files) {
+            if (f.isDirectory) collectObbs(f, out)
+            else if (f.name.endsWith(".obb", ignoreCase = true)) out.add(f)
+        }
+    }
+
+    /** Package name off the apk file itself, no install needed. */
+    private fun archivePackageName(apk: File): String? = try {
+        packageManager.getPackageArchiveInfo(apk.absolutePath, 0)?.packageName
+    } catch (e: Exception) {
+        obbLog("getPackageArchiveInfo failed for ${apk.absolutePath}: $e")
+        null
+    }
+
+    private fun isPackageInstalled(pkg: String): Boolean = try {
+        packageManager.getPackageInfo(pkg, 0)
+        true
+    } catch (e: Exception) { false }
+
+    private fun installedVersionCode(pkg: String): Long = try {
+        val info = packageManager.getPackageInfo(pkg, 0)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) info.longVersionCode
+        else @Suppress("DEPRECATION") info.versionCode.toLong()
+    } catch (e: Exception) { -1L }
+
+    private fun showObbProgress(): Pair<AlertDialog, TextView> {
+        val message = TextView(this).apply {
+            setPadding(48, 48, 48, 48)
+            text = "Copying game data…"
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Placing game data")
+            .setView(message)
+            .setCancelable(false)
+            .create()
+        dialog.show()
+        return dialog to message
+    }
+
+    /** Say what broke and offer the permission screen. */
+    private fun showObbFailureDialog(pkg: String, error: String) {
+        val hasAccess = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R
+            || android.os.Environment.isExternalStorageManager()
+        // File access is decided when the process starts, so a permission granted while we were
+        // running doesn't apply until the app is opened again.
+        val advice = if (error.contains("EACCES") && hasAccess)
+            "Close WinlatorXR and open it again, then tap Install APK. File access only takes " +
+                "effect from the next start."
+        else
+            "The game reads its data from Android/obb/$pkg. If access was denied, grant " +
+                "WinlatorXR All-Files-Access and tap Install APK again."
+        AlertDialog.Builder(this)
+            .setTitle("Couldn't place game data")
+            .setMessage("$error\n\n$advice")
+            .setPositiveButton("Open settings") { _, _ -> openAllFilesAccessSettings() }
+            .setNegativeButton("Close", null)
+            .show()
+    }
+
+    private fun openAllFilesAccessSettings() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) return
+        try {
+            startActivity(android.content.Intent(
+                android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                android.net.Uri.parse("package:$packageName")))
+        } catch (_: Exception) {
+            try {
+                startActivity(android.content.Intent(
+                    android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+            } catch (_: Exception) {
+                Toast.makeText(this, "No All-Files-Access screen on this device", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun fmtBytes(bytes: Long): String = when {
+        bytes >= 1L shl 30 -> String.format(java.util.Locale.US, "%.1f GB", bytes / (1L shl 30).toDouble())
+        bytes >= 1L shl 20 -> String.format(java.util.Locale.US, "%.0f MB", bytes / (1L shl 20).toDouble())
+        else -> "$bytes B"
+    }
+
+    /** Seperate log next to the depot one, a missing obb leaves no other trace. */
+    private fun obbLog(msg: String) {
+        android.util.Log.i("SteamObb", msg)
+        try {
+            val dir = getExternalFilesDir(null) ?: return
+            java.io.FileWriter(File(dir, "steam_obb.txt"), true).use { w ->
+                val ts = java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())
+                w.write("[$ts] $msg\n")
+            }
+        } catch (_: Exception) {}
     }
 
     private fun collectApks(dir: File, out: MutableList<File>) {
