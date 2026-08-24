@@ -36,10 +36,10 @@ public class GLRenderer implements GLSurfaceView.Renderer, WindowManager.OnWindo
     public final VertexAttribute quadVertices = new VertexAttribute("position", 2);
     private final float[] tmpXForm1 = XForm.getInstance();
     protected final float[] tmpXForm2 = XForm.getInstance();
-    private final CursorMaterial cursorMaterial = new CursorMaterial();
+    protected final CursorMaterial cursorMaterial = new CursorMaterial();
     private final WindowMaterial windowMaterial = new WindowMaterial();
     public final ViewTransformation viewTransformation = new ViewTransformation();
-    private final Drawable rootCursorDrawable;
+    protected final Drawable rootCursorDrawable;
     protected final ArrayList<RenderableWindow> renderableWindows = new ArrayList<>();
     private String forceFullscreenWMClass = null;
     protected boolean fullscreen = false;
@@ -183,7 +183,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, WindowManager.OnWindo
         renderWindows(windowMaterial, false);
 
         // Render cursor if enabled
-        if (cursorVisible && !rootWindowDownsized) renderCursor();
+        if (isCursorVisible()) renderCursor();
 
         // Disable scissor test if magnifier is disabled and not in fullscreen mode
         if (!magnifierEnabled && !fullscreen) {
@@ -234,7 +234,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, WindowManager.OnWindo
         xServerView.requestRender();
     }
 
-    private void renderDrawable(Drawable drawable, int x, int y, ShaderMaterial material) {
+    protected void renderDrawable(Drawable drawable, int x, int y, ShaderMaterial material) {
         renderDrawable(drawable, x, y, material, false, 1, 1);
     }
 
@@ -299,7 +299,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, WindowManager.OnWindo
         quadVertices.disable();
     }
 
-    private void renderCursor() {
+    protected void renderCursor() {
         cursorMaterial.use();
         GLES20.glUniform2f(cursorMaterial.getUniformLocation("viewSize"), xServer.screenInfo.width, xServer.screenInfo.height);
         quadVertices.bind(cursorMaterial.programId);

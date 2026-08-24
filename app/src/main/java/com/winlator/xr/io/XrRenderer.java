@@ -69,6 +69,11 @@ public class XrRenderer extends GLRenderer {
     }
 
     @Override
+    public boolean isCursorVisible() {
+        return (XrActivity.isVR && !vrWindowOnTop) || super.isCursorVisible();
+    }
+
+    @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
         if (XrActivity.isEnabled(null)) {
             XrActivity activity = XrActivity.getInstance();
@@ -205,7 +210,6 @@ public class XrRenderer extends GLRenderer {
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
     }
 
-
     private void renderDialog() {
         bgrMaterial.use();
         GLES20.glUniform2f(bgrMaterial.getUniformLocation("viewSize"), xServer.screenInfo.width, xServer.screenInfo.height);
@@ -243,6 +247,25 @@ public class XrRenderer extends GLRenderer {
             }
         }
         quadVertices.disable();
+    }
+
+    @Override
+    protected void renderCursor() {
+        if (XrActivity.isVR && !vrWindowOnTop) {
+            cursorMaterial.use();
+            GLES20.glUniform2f(cursorMaterial.getUniformLocation("viewSize"), xServer.screenInfo.width, xServer.screenInfo.height);
+            quadVertices.bind(cursorMaterial.programId);
+
+            try (XLock lock = xServer.lock(XServer.Lockable.DRAWABLE_MANAGER)) {
+                short x = xServer.pointer.getClampedX();
+                short y = xServer.pointer.getClampedY();
+                renderDrawable(rootCursorDrawable, x, y, cursorMaterial);
+            }
+
+            quadVertices.disable();
+        } else {
+            super.renderCursor();
+        }
     }
 
     @Override
