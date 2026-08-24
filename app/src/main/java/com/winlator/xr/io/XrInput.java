@@ -153,10 +153,10 @@ public class XrInput {
                 if (!XrActivity.getVR()) {
                     if (XrActivity.mouseEmulation) {
                         xrController.updateMouseAxes(axes, XrActivity.isImmersive && XrActivity.isHeadTrackingAllowed);
-                        xrController.updateMouseState(buttons);
                         xrController.updateMouseSnapturn(buttons, XrActivity.isImmersive ? 250 : 50);
                         if (XrActivity.mouseLightgun && !XrActivity.isImmersive)
                             xrController.updateMouseLightgun(axes, XrActivity.lastDistance);
+                        xrController.updateMouseState(buttons);
                     } else if (XrActivity.isImmersive && XrActivity.isHeadTrackingAllowed) {
                         xrController.updateMouseAxes(axes, true);
                         xrController.updateMouseState(new boolean[buttons.length]);

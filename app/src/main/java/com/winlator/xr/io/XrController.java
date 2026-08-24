@@ -27,6 +27,7 @@ import androidx.preference.PreferenceManager;
 import com.winlator.cmod.contentdialog.NavigationDialog;
 import com.winlator.cmod.inputcontrols.ExternalController;
 import com.winlator.cmod.inputcontrols.GamepadState;
+import com.winlator.cmod.winhandler.MouseEventFlags;
 import com.winlator.cmod.xserver.Keyboard;
 import com.winlator.cmod.xserver.Pointer;
 import com.winlator.cmod.xserver.XKeycode;
@@ -57,8 +58,10 @@ public class XrController {
     private long lastMouseUpdate = 0;
     private short lastMouseX = 0;
     private short lastMouseY = 0;
-    private float mouseSpeed = 1;
+    private final float mouseSpeed;
     private final float[] smoothedMouse = new float[2];
+    private final float[] relativeMouseAccumulator = new float[2];
+    private boolean wasMouseRelative;
 
     public XrController() {
         instance = XrActivity.getInstance();
@@ -218,8 +221,19 @@ public class XrController {
         XrInterface.ControllerAxis mouseAxisX = XrActivity.mouseLeftHanded ? XrInterface.ControllerAxis.L_X : XrInterface.ControllerAxis.R_X;
         XrInterface.ControllerAxis mouseAxisY = XrActivity.mouseLeftHanded ? XrInterface.ControllerAxis.L_Y : XrInterface.ControllerAxis.R_Y;
 
+        // For relative mouse get actual position from the XServer
+        Pointer mouse = instance.getXServer().pointer;
+        if (XrActivity.mouseRelative && (mouse.getX() != lastMouseX || mouse.getY() != lastMouseY)) {
+            smoothedMouse[0] = mouse.getX() + 0.5f;
+            smoothedMouse[1] = mouse.getY() + 0.5f;
+            lastMouseX = mouse.getX();
+            lastMouseY = mouse.getY();
+        }
+
         // Mouse control with hand
         float f = 0.75f;
+        float startMouseX = smoothedMouse[0];
+        float startMouseY = smoothedMouse[1];
         float meter2px = instance.getXServer().screenInfo.width * 10.0f;
         float dx = (axes[mouseAxisX.ordinal()] - lastAxes[mouseAxisX.ordinal()]) * meter2px;
         float dy = (axes[mouseAxisY.ordinal()] - lastAxes[mouseAxisY.ordinal()]) * meter2px;
@@ -229,7 +243,6 @@ public class XrController {
         }
 
         // Mouse control with head
-        Pointer mouse = instance.getXServer().pointer;
         if (headMapping) {
             float angle2px = instance.getXServer().screenInfo.width * 0.05f / f;
             dx = getAngleDiff(lastAxes[XrInterface.ControllerAxis.HMD_YAW.ordinal()], axes[XrInterface.ControllerAxis.HMD_YAW.ordinal()]) * angle2px;
@@ -246,6 +259,8 @@ public class XrController {
         dy *= mouseSpeed;
         smoothedMouse[0] = smoothedMouse[0] * f + (mouse.getClampedX() + 0.5f + dx) * (1 - f);
         smoothedMouse[1] = smoothedMouse[1] * f + (mouse.getClampedY() + 0.5f - dy) * (1 - f);
+        relativeMouseAccumulator[0] += (smoothedMouse[0] - startMouseX);
+        relativeMouseAccumulator[1] += (smoothedMouse[1] - startMouseY);
     }
 
     public void updateMouseLightgun(float[] axes, float distance) {
@@ -277,9 +292,11 @@ public class XrController {
 
         // Apply snapturn to the input
         if (getButtonClicked(buttons, primaryLeft)) {
+            relativeMouseAccumulator[0] -= step;
             smoothedMouse[0] -= step;
         }
         if (getButtonClicked(buttons, primaryRight)) {
+            relativeMouseAccumulator[0] += step;
             smoothedMouse[0] += step;
         }
     }
@@ -292,25 +309,41 @@ public class XrController {
         XrInterface.ControllerButton primaryUp = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_UP : XrInterface.ControllerButton.R_THUMBSTICK_UP;
         XrInterface.ControllerButton primaryDown = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_DOWN : XrInterface.ControllerButton.R_THUMBSTICK_DOWN;
 
-        // Apply values
+        // Apply buttons
         currentButtons = buttons;
-        mouse.setX((int) smoothedMouse[0]);
-        mouse.setY((int) smoothedMouse[1]);
         mapButton(primaryTrigger, Pointer.Button.BUTTON_LEFT);
         mapButton(primaryGrip, Pointer.Button.BUTTON_RIGHT);
         mapButton(primaryUp, Pointer.Button.BUTTON_SCROLL_UP);
         mapButton(primaryDown, Pointer.Button.BUTTON_SCROLL_DOWN);
 
-        // Limit cursor updates to the FPS (this prevents freezing)
-        long timestamp = System.currentTimeMillis();
-        if (timestamp - lastMouseUpdate > 1000 / Math.max(instance.getLastRedraws(), 1)) {
-            if ((lastMouseX != mouse.getX()) || (lastMouseY != mouse.getY())) {
-                lastMouseUpdate = timestamp;
-                lastMouseX = mouse.getX();
-                lastMouseY = mouse.getY();
-                mouse.triggerOnPointerMove(lastMouseX, lastMouseY);
+        // Apply cursor position
+        if (XrActivity.mouseRelative) {
+            int dx = (int) relativeMouseAccumulator[0];
+            int dy = (int) relativeMouseAccumulator[1];
+            if (dx != 0 || dy != 0) {
+                if (wasMouseRelative) {
+                    instance.getWinHandler().mouseEvent(MouseEventFlags.MOVE, dx, dy, 0);
+                }
+                relativeMouseAccumulator[0] -= dx;
+                relativeMouseAccumulator[1] -= dy;
+            }
+        } else {
+            // Fast visual update
+            mouse.setX((int) smoothedMouse[0]);
+            mouse.setY((int) smoothedMouse[1]);
+
+            // Limit cursor updates to the FPS (this prevents freezing)
+            long timestamp = System.currentTimeMillis();
+            if (timestamp - lastMouseUpdate > 1000 / Math.max(instance.getLastRedraws(), 1)) {
+                if ((lastMouseX != mouse.getX()) || (lastMouseY != mouse.getY())) {
+                    lastMouseUpdate = timestamp;
+                    lastMouseX = mouse.getX();
+                    lastMouseY = mouse.getY();
+                    mouse.triggerOnPointerMove(lastMouseX, lastMouseY);
+                }
             }
         }
+        wasMouseRelative = XrActivity.mouseRelative;
     }
 
     public void updateWheelEmulation(float[] axes) {

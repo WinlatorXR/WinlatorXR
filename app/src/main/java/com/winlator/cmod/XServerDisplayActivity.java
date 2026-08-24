@@ -207,7 +207,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     PreloaderDialog preloaderDialog = null;
     private Runnable configChangedCallback = null;
     private boolean isPaused = false;
-    private boolean isRelativeMouseMovement;
+    protected boolean isRelativeMouseMovement;
 
     // Inside the XServerDisplayActivity class
     private SensorManager sensorManager;
@@ -2768,6 +2768,15 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
     public XServer getXServer() {
         return xServer;
+    }
+
+    public void setRelativeMouseMovement(boolean enabled) {
+        this.isRelativeMouseMovement = enabled;
+        if (xServer != null) xServer.setRelativeMouseMovement(enabled);
+    }
+
+    public boolean isRelativeMouseMovement() {
+        return isRelativeMouseMovement;
     }
 
     public WinHandler getWinHandler() {

@@ -58,6 +58,7 @@ public class XrActivity extends XServerDisplayActivity {
     public static boolean mouseEmulation;
     public static boolean mouseLeftHanded;
     public static boolean mouseLightgun;
+    public static boolean mouseRelative;
     public static boolean wheelEmulation;
 
     // Rendering status
@@ -82,7 +83,11 @@ public class XrActivity extends XServerDisplayActivity {
         mouseEmulation = prefs.getBoolean("use_xr_mouse", true);
         mouseLeftHanded = prefs.getBoolean("use_xr_leftHanded", false);
         mouseLightgun = prefs.getBoolean("use_xr_lightgun", false);
+        mouseRelative = prefs.getBoolean("use_xr_relative_mouse", false);
         wheelEmulation = prefs.getBoolean("use_xr_wheel", false);
+
+        if (mouseLightgun) mouseRelative = false;
+        setRelativeMouseMovement(mouseRelative);
 
         nativeSetUsePT(isPassthrough);
         nativeSetCurvedScreen(curvedScreen);
