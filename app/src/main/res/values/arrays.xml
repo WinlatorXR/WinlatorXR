@@ -51,6 +51,7 @@
         <item>sarek-dyasync-arm64ec-1.12.0</item>
         <item>2.3.1-arm64ec-gplasync</item>
         <item>2.7.1-1-gplasync-arm64ec-0</item>
+        <item>2.6.2-binsem-gplasync-arm64ec</item>
     </string-array>
     <string-array name="dxvk_version_entries_x64">
         <item>1.10.1</item>
@@ -58,6 +59,7 @@
         <item>1.12.-sarek-async-0</item>
         <item>2.4-24-gplasync</item>
         <item>2.6.2-gplasync-1</item>
+        <item>2.6.2-binsem-gplasync</item>
     </string-array>
     <string-array name="dxvk_max_device_memory_entries">
         <item>0 (Default)</item>
