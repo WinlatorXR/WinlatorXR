@@ -58,6 +58,7 @@ import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.navigation.NavigationView;
+import com.winlator.cmod.contentdialog.NavigationDialog;
 import com.winlator.cmod.settings.SettingsFragment;
 import com.winlator.xr.XrActivity;
 import com.winlator.cmod.box86_64.rc.RCFile;
@@ -1063,25 +1064,9 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     public void onBackPressed() {
         if (environment != null) {
             releasePointerCaptureIfNeeded("open-drawer/back");
-            if (!drawerLayout.isDrawerOpen(GravityCompat.START)) {
-                drawerLayout.openDrawer(GravityCompat.START);
-            } else {
-                drawerLayout.closeDrawers();
-            }
+            new NavigationDialog(this).show();
         }
     }
-
-    private void openXServerDrawer() {
-        if (environment != null) {
-            releasePointerCaptureIfNeeded("open-drawer/shortcut");
-            if (!drawerLayout.isDrawerOpen(GravityCompat.START)) {
-                drawerLayout.openDrawer(GravityCompat.START);
-            } else {
-                drawerLayout.closeDrawers();
-            }
-        }
-    }
-
 
     // Fields
     private static final String PREF_EXP_INPUT   = "drawer_exp_input";
@@ -2439,7 +2424,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         // Handle the PlayStation or Xbox Home button to open the drawer
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
             if (event.getKeyCode() == KeyEvent.KEYCODE_BUTTON_MODE || event.getKeyCode() == KeyEvent.KEYCODE_HOME) {
-                openXServerDrawer(); // Method to open the XServer drawer
+                new NavigationDialog(this).show();
                 return true; // Indicate the event was handled
             }
         }
