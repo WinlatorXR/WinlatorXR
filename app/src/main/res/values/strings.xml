@@ -268,6 +268,7 @@
     <string name="background">Background</string>
     <string name="max_device_memory">Max Device Memory</string>
     <string name="frame_rate">Frame Rate</string>
+    <string name="unlimited">Unlimited</string>
     <string name="configuration">Configuration</string>
     <string name="browse">Browse</string>
     <string name="magnifier">Magnifier</string>

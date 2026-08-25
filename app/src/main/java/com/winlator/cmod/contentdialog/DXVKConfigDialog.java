@@ -1,7 +1,6 @@
 package com.winlator.cmod.contentdialog;
 
 import android.content.Context;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -31,6 +30,7 @@ public class DXVKConfigDialog extends ContentDialog {
     public static final int DXVK_TYPE_NONE = 0;
     public static final int DXVK_TYPE_ASYNC = 1;
     public static final int DXVK_TYPE_GPLASYNC = 2;
+    private static final String UNLIMITED_FRAMERATE = "9999";
     private final ToggleButton swAsync;
     private final ToggleButton swAsyncCache;
     private final View llAsync;
@@ -65,8 +65,12 @@ public class DXVKConfigDialog extends ContentDialog {
 
         KeyValueSet config = parseConfig(anchor.getTag());
         AppUtils.setSpinnerSelectionFromIdentifier(sVersion, config.get("version"));
-        AppUtils.setSpinnerSelectionFromIdentifier(sFramerate, config.get("framerate"));
         AppUtils.setSpinnerSelectionFromNumber(sMaxDeviceMemory, config.get("maxDeviceMemory"));
+        if (config.get("framerate").compareTo(UNLIMITED_FRAMERATE) == 0) {
+            sFramerate.setSelection(sFramerate.getAdapter().getCount() - 1);
+        } else {
+            AppUtils.setSpinnerSelectionFromIdentifier(sFramerate, config.get("framerate"));
+        }
         swAsync.setChecked(config.get("async").equals("1"));
         swAsyncCache.setChecked(config.get("asyncCache").equals("1"));
 
@@ -85,8 +89,12 @@ public class DXVKConfigDialog extends ContentDialog {
         });
 
         setOnConfirmCallback(() -> {
+            if (sFramerate.getSelectedItem().toString().compareTo(context.getString(R.string.unlimited)) == 0) {
+                config.put("framerate", UNLIMITED_FRAMERATE);
+            } else {
+                config.put("framerate", StringUtils.parseNumber(sFramerate.getSelectedItem()));
+            }
             config.put("version", sVersion.getSelectedItem().toString());
-            config.put("framerate", StringUtils.parseNumber(sFramerate.getSelectedItem()));
             config.put("maxDeviceMemory", StringUtils.parseNumber(sMaxDeviceMemory.getSelectedItem()));
             config.put("async", ((swAsync.isChecked())&&(llAsync.getVisibility()==View.VISIBLE))?"1":"0");
             config.put("asyncCache", ((swAsyncCache.isChecked())&&(llAsyncCache.getVisibility()==View.VISIBLE))?"1":"0");

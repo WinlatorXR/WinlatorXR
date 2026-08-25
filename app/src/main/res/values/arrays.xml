@@ -106,6 +106,7 @@
         <item>100</item>
         <item>110</item>
         <item>120</item>
+        <item>@string/unlimited</item>
     </string-array>
     <string-array name="wincomponent_entries">
         <item>Builtin (Wine)</item>
