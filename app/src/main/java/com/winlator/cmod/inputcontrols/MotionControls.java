@@ -254,7 +254,7 @@ public class MotionControls implements SensorEventListener {
             cbRadialToSquare.setVisibility(View.GONE);
         }
 
-        cbRadialToSquare.setChecked(prefs.getBoolean("xr_gamepad_radial_to_square", true));
+        cbRadialToSquare.setChecked(prefs.getBoolean("xr_gamepad_radial_to_square", false));
         cbRadialToSquare.setOnCheckedChangeListener((compoundButton, checked) -> {
             SharedPreferences.Editor e = prefs.edit();
             e.putBoolean("xr_gamepad_radial_to_square", checked);

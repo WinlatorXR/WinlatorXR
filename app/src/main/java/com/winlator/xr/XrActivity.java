@@ -78,7 +78,7 @@ public class XrActivity extends XServerDisplayActivity {
         int sharpening = prefs.getInt("sharpening_level", 0);
         isPassthrough = prefs.getBoolean("use_pt", true);
         gamepadEmulation = prefs.getBoolean("use_xr_gamepad", false);
-        gamepadRadialToSquare = prefs.getBoolean("xr_gamepad_radial_to_square", true);
+        gamepadRadialToSquare = prefs.getBoolean("xr_gamepad_radial_to_square", false);
         keysEmulation = prefs.getBoolean("use_xr_keys", true);
         mouseEmulation = prefs.getBoolean("use_xr_mouse", true);
         mouseLeftHanded = prefs.getBoolean("use_xr_leftHanded", false);
