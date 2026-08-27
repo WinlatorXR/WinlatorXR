@@ -94,7 +94,7 @@ public class SplashInstallActivity extends Activity {
             Class<?> tarClass      = Class.forName("com.winlator.cmod.core.TarCompressorUtils");
             Class<?> tarTypeClass  = Class.forName("com.winlator.cmod.core.TarCompressorUtils$Type");
             Class<?> listenerClass = Class.forName("com.winlator.cmod.core.OnExtractFileListener");
-            Object   xzType        = tarTypeClass.getField("XZ").get(null);
+            Object   xzType        = tarTypeClass.getField("TZST").get(null);
 
             Object imageFs = imageFsClass.getMethod("find", Context.class).invoke(null, this);
             File rootDir   = (File) imageFsClass.getMethod("getRootDir").invoke(imageFs);
@@ -105,11 +105,11 @@ public class SplashInstallActivity extends Activity {
 
             // --- calculate expected uncompressed size (compression ratio ≈ 100/22) ---
             long rawSize       = (long) fileUtilsClass.getMethod("getSize", Context.class, String.class)
-                    .invoke(null, this, "imagefs.txz");
+                    .invoke(null, this, "imagefs.tzst");
             final long contentLength = (long) (rawSize * (100.0f / 22));
             AtomicLong totalSizeRef  = new AtomicLong();
 
-            // --- extract imagefs.txz with live progress via reflection proxy ---
+            // --- extract imagefs.tzst with live progress via reflection proxy ---
             Object progressListener = Proxy.newProxyInstance(
                     listenerClass.getClassLoader(),
                     new Class[]{listenerClass},
@@ -128,7 +128,7 @@ public class SplashInstallActivity extends Activity {
             Method extractWithListener = tarClass.getMethod("extract",
                     tarTypeClass, Context.class, String.class, File.class, listenerClass);
             boolean success = (boolean) extractWithListener.invoke(
-                    null, xzType, this, "imagefs.txz", rootDir, progressListener);
+                    null, xzType, this, "imagefs.tzst", rootDir, progressListener);
 
             if (!success) {
                 handler.post(() -> Toast.makeText(this,
