@@ -58,7 +58,6 @@
         <item>1.10.3</item>
         <item>1.12.-sarek-async-0</item>
         <item>2.4-24-gplasync</item>
-        <item>2.6.2-gplasync-1</item>
         <item>2.6.2-binsem-gplasync</item>
     </string-array>
     <string-array name="dxvk_max_device_memory_entries">

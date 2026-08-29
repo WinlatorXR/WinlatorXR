@@ -1192,9 +1192,20 @@ public class ContainerDetailFragment extends Fragment {
         int originalItemsResource = isArm64 ? R.array.graphics_driver_entries_arm64 : R.array.graphics_driver_entries_x64;
         String[] originalItems = context.getResources().getStringArray(originalItemsResource);
         List<String> itemList = new ArrayList<>(Arrays.asList(originalItems));
-        
+
+        // Preserve the current selection across the adapter rebuild. Spinner.setAdapter()
+        // resets the selection to index 0, and onItemSelected() fires asynchronously, so
+        // by the time this runs the previously-selected driver (e.g. Wrapper-v2) would
+        // otherwise be silently dropped back to the first entry.
+        Object currentSelection = spinner.getSelectedItem();
+        String currentIdentifier = currentSelection != null ? StringUtils.parseIdentifier(currentSelection) : null;
+
         // Set the adapter with the combined list
         spinner.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, itemList));
+
+        if (currentIdentifier != null) {
+            AppUtils.setSpinnerSelectionFromIdentifier(spinner, currentIdentifier);
+        }
     }
 
     public static void loadBox64VersionSpinner(Context context, Container container, ContentsManager manager, Spinner spinner, boolean isArm64EC) {
