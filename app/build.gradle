@@ -34,7 +34,7 @@ android {
         targetSdkVersion 28
 
         versionCode 24
-        versionName "dawn-20"
+        versionName "dawn-21"
 
         // External native build from Winlator
         externalNativeBuild {
