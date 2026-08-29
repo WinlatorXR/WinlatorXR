@@ -18,8 +18,6 @@ import android.os.Environment;
 import android.os.FileObserver;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -51,6 +49,7 @@ import com.winlator.cmod.contentdialog.ShortcutSettingsDialog;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.MSLink;
 import com.winlator.cmod.core.PreloaderDialog;
+import com.winlator.xr.utils.GoldbergEmu;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -592,6 +591,12 @@ public class ShortcutsFragment extends Fragment {
                         }
                     });
                 }
+                else if (itemId == R.id.shortcut_apply_goldberg) {
+                    GoldbergEmu.showApplyGoldbergDialog(getActivity(), shortcut);
+                }
+                else if (itemId == R.id.shortcut_revert_goldberg) {
+                    GoldbergEmu.showRevertGoldbergDialog(getActivity(), shortcut);
+                }
                 else if (itemId == R.id.shortcut_add_to_home_screen) {
                     if (shortcut.getExtra("uuid").equals(""))
                         shortcut.genUUID();
@@ -639,7 +644,44 @@ public class ShortcutsFragment extends Fragment {
 
 
 
+        private static final long GOLDBERG_HINT_DELAY_MS = 4500;
+
         private void runFromShortcut(Shortcut shortcut) {
+            // First launch of this shortcut: scan its game folder once for steam_api.dll (in
+            // case a fix might help) and cache the result, then launch. Every later launch just
+            // reuses that cached result instead of re-scanning.
+            if (shortcut.getExtra("goldbergScanned", "").isEmpty()) {
+                Executors.newSingleThreadExecutor().execute(() -> {
+                    List<File> dirs = new ArrayList<>();
+                    Activity activity = getActivity();
+                    File root = GoldbergEmu.resolveShortcutInstallDir(activity, shortcut);
+                    if (root != null && root.isDirectory()) GoldbergEmu.scanForSteamApiDirs(root, 0, dirs, new int[1]);
+                    GoldbergEmu.saveGoldbergScanResult(shortcut, dirs);
+                    if (activity != null) {
+                        activity.runOnUiThread(() -> launchAfterGoldbergHint(shortcut));
+                    }
+                });
+            } else {
+                launchAfterGoldbergHint(shortcut);
+            }
+        }
+
+        /**
+         * Shows the Goldberg hint (if applicable) and only then launches — with a short delay
+         * when a hint was actually shown. The container/XR launch that follows switches away
+         * from this screen immediately, which was swallowing the toast before it could be seen
+         * when both happened back-to-back with no gap.
+         */
+        private void launchAfterGoldbergHint(Shortcut shortcut) {
+            if (GoldbergEmu.maybeShowGoldbergHint(getContext(), shortcut)) {
+                new android.os.Handler(android.os.Looper.getMainLooper())
+                        .postDelayed(() -> launchShortcut(shortcut), GOLDBERG_HINT_DELAY_MS);
+            } else {
+                launchShortcut(shortcut);
+            }
+        }
+
+        private void launchShortcut(Shortcut shortcut) {
             Activity activity = getActivity();
 
             if (!XrActivity.isEnabled(getContext())) {

@@ -30,7 +30,8 @@ public class ContentProfile {
         CONTENT_TYPE_BOX64("Box64"),
         CONTENT_TYPE_WOWBOX64("WOWBox64"),
         CONTENT_TYPE_FEXCORE("FEXCore"),
-        CONTENT_TYPE_ADRENO_GPU_DRIVERS("Adreno GPU drivers");
+        CONTENT_TYPE_ADRENO_GPU_DRIVERS("Adreno GPU drivers"),
+        CONTENT_TYPE_GOLDBERG("Goldberg");
 
         final String typeName;
 

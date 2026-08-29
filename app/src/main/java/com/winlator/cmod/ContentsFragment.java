@@ -134,6 +134,7 @@ public class ContentsFragment extends Fragment {
                     case 5: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_WOWBOX64; break;
                     case 6: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_FEXCORE; break;
                     case 7: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS; break;
+                    case 8: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_GOLDBERG; break;
                 }
                 loadContentList();
             }
