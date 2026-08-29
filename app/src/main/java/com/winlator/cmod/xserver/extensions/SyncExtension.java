@@ -51,6 +51,33 @@ public class SyncExtension implements Extension {
         }
     }
 
+    /**
+     * Blocks the calling thread until the given SYNC fence is triggered by its client
+     * (e.g. a Present "wait-fence" signalling the client's GPU write to a pixmap is done).
+     * Returns immediately (true) if id is 0 (X11 "None") or already triggered.
+     * Returns false without blocking if the fence id is unknown or the wait times out,
+     * so a misbehaving/older client can never hang the compositor.
+     */
+    public boolean awaitFenceById(int id, long timeoutMillis) {
+        if (id == 0) return true;
+
+        long deadline = System.currentTimeMillis() + timeoutMillis;
+        while (System.currentTimeMillis() < deadline) {
+            synchronized (fences) {
+                int index = fences.indexOfKey(id);
+                if (index < 0) return true;
+                if (fences.valueAt(index)) return true;
+            }
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return false;
+    }
+
     private void createFence(XClient client, XInputStream inputStream, XOutputStream outputStream) throws IOException, XRequestError {
         synchronized (fences) {
             inputStream.skip(4);

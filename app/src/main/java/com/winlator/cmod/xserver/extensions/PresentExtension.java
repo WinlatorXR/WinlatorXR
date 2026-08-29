@@ -29,10 +29,19 @@ import java.io.IOException;
 public class PresentExtension implements Extension {
     public static final byte MAJOR_OPCODE = -103;
     private static final int FAKE_INTERVAL = 1000000 / 72;
+    private static final long WAIT_FENCE_TIMEOUT_MS = 33;
     public enum Kind {PIXMAP, MSC_NOTIFY}
     public enum Mode {COPY, FLIP, SKIP}
     private final SparseArray<Event> events = new SparseArray<>();
+    private final SparseArray<PendingIdle> pendingIdles = new SparseArray<>();
     private SyncExtension syncExtension;
+
+    private static class PendingIdle {
+        private Window window;
+        private Pixmap pixmap;
+        private int serial;
+        private int idleFence;
+    }
 
     private static abstract class ClientOpcodes {
         private static final byte QUERY_VERSION = 0;
@@ -112,7 +121,8 @@ public class PresentExtension implements Extension {
         inputStream.skip(8);
         short xOff = inputStream.readShort();
         short yOff = inputStream.readShort();
-        inputStream.skip(8);
+        inputStream.skip(4); // target-crtc, unused
+        int waitFence = inputStream.readInt();
         int idleFence = inputStream.readInt();
         inputStream.skip(client.getRemainingRequestLength());
 
@@ -125,13 +135,49 @@ public class PresentExtension implements Extension {
         Drawable content = window.getContent();
         if (content.visual.depth != pixmap.drawable.visual.depth) throw new BadMatch();
 
+        // The client's GPU write to this pixmap may still be in flight. Waiting on the
+        // real wait-fence here (instead of discarding it) is what makes a zero-copy flip
+        // safe below - without it the GL consumer can sample a buffer before the producer's
+        // write to it has actually completed on the GPU.
+        if (syncExtension != null) syncExtension.awaitFenceById(waitFence, WAIT_FENCE_TIMEOUT_MS);
+
+        boolean canFlip = xOff == 0 && yOff == 0
+                && pixmap.drawable.width == content.width && pixmap.drawable.height == content.height
+                && content.getTexture() instanceof GPUImage && pixmap.drawable.getTexture() instanceof GPUImage;
+
         long ust = System.nanoTime() / 1000;
         long msc = ust / FAKE_INTERVAL;
 
         synchronized (content.renderLock) {
-            content.copyArea((short)0, (short)0, xOff, yOff, pixmap.drawable.width, pixmap.drawable.height, pixmap.drawable);
-            sendIdleNotify(window, pixmap, serial, idleFence);
-            sendCompleteNotify(window, serial, Kind.PIXMAP, Mode.COPY, ust, msc);
+            if (canFlip) {
+                // Alias content directly onto the pixmap's own buffer - do NOT reassign
+                // pixmap.drawable's texture. The client keeps writing into this same
+                // physical buffer across every future reuse of this pixmap id; the server
+                // must never repoint what buffer a pixmap id refers to, only what the
+                // window's content currently displays.
+                content.setTexture(pixmap.drawable.getTexture());
+                content.getTexture().setNeedsUpdate(true);
+
+                sendCompleteNotify(window, serial, Kind.PIXMAP, Mode.FLIP, ust, msc);
+
+                // Defer idle-notify by one present cycle: `content` was still aliased onto
+                // the *previous* pixmap's buffer up until the line above, so that buffer
+                // isn't safe to hand back to the client until the compositor has had a full
+                // cycle to finish consuming it (i.e. until this window presents again).
+                PendingIdle previous = pendingIdles.get(windowId);
+                if (previous != null) sendIdleNotify(previous.window, previous.pixmap, previous.serial, previous.idleFence);
+
+                PendingIdle current = new PendingIdle();
+                current.window = window;
+                current.pixmap = pixmap;
+                current.serial = serial;
+                current.idleFence = idleFence;
+                pendingIdles.put(windowId, current);
+            } else {
+                content.copyArea((short)0, (short)0, xOff, yOff, pixmap.drawable.width, pixmap.drawable.height, pixmap.drawable);
+                sendIdleNotify(window, pixmap, serial, idleFence);
+                sendCompleteNotify(window, serial, Kind.PIXMAP, Mode.COPY, ust, msc);
+            }
         }
     }
 
