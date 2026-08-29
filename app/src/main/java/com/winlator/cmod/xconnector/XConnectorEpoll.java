@@ -10,6 +10,7 @@ import java.nio.ByteBuffer;
 public class XConnectorEpoll implements Runnable {
     private final ConnectionHandler connectionHandler;
     private final RequestHandler requestHandler;
+    private final String socketPath;
     private final int epollFd;
     private final int serverFd;
     private final int shutdownFd;
@@ -28,6 +29,7 @@ public class XConnectorEpoll implements Runnable {
     public XConnectorEpoll(UnixSocketConfig socketConfig, ConnectionHandler connectionHandler, RequestHandler requestHandler) {
         this.connectionHandler = connectionHandler;
         this.requestHandler = requestHandler;
+        this.socketPath = socketConfig.path;
 
         serverFd = createAFUnixSocket(socketConfig.path);
         if (serverFd < 0) {
@@ -54,7 +56,7 @@ public class XConnectorEpoll implements Runnable {
             throw new RuntimeException("Failed to add shutdown fd to epoll.");
         }
 
-        epollThread = new Thread(this);
+        epollThread = new Thread(this, "XConnectorEpoll-" + socketPath);
     }
 
     public synchronized void start() {
@@ -92,7 +94,7 @@ public class XConnectorEpoll implements Runnable {
             client.pollThread = new Thread(() -> {
                 connectionHandler.handleNewConnection(client);
                 while (client.connected && waitForSocketRead(client.clientSocket.fd, client.shutdownFd));
-            });
+            }, "XConnectorEpoll-Client-" + socketPath + "-" + fd);
             client.pollThread.start();
         }
         else connectionHandler.handleNewConnection(client);

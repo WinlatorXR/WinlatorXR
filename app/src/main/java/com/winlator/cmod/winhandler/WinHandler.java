@@ -788,7 +788,7 @@ public class WinHandler {
 
                 try { Thread.sleep(5); } catch (InterruptedException ignored) { break; }
             }
-        });
+        }, "WinHandler-RumblePoller");
         rumblePollerThread.start();
     }
 

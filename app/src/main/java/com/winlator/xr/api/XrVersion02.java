@@ -29,18 +29,30 @@ public class XrVersion02 extends XrVersion01 {
     @Override
     public void dataReceived(PortIntent intent, @NonNull String message) {
         if (intent == PortIntent.HMD_STATE) {
-            try {
-                String[] parts = message.split("\\s+");
-                for (int i = 0; i < Math.min(input.length, parts.length); i++) {
-                    float value = Float.parseFloat(parts[i]);
-                    if ((value > 0) || (i >= 2)) {
-                        input[i] = value;
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            parseAppInputValues(message);
         }
+    }
+
+    /**
+     * Tokenizes an HMD_STATE message once and fills {@link #input} from its leading
+     * AppInput values. Never throws (a malformed value is skipped, not fatal) so the
+     * returned token array is always safe to use. Subclasses that need the remainder
+     * of the message (e.g. trailing reference/action/locate space data) can continue
+     * parsing from {@link #input}.length onward without re-tokenizing the message
+     * themselves.
+     */
+    protected String[] parseAppInputValues(String message) {
+        String[] parts = message.split("\\s+");
+        int limit = Math.min(input.length, parts.length);
+        for (int i = 0; i < limit; i++) {
+            try {
+                float value = Float.parseFloat(parts[i]);
+                if ((value > 0) || (i >= 2)) {
+                    input[i] = value;
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+        return parts;
     }
 
     @Override

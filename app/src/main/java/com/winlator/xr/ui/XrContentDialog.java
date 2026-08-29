@@ -41,6 +41,7 @@ public class XrContentDialog extends Dialog {
     private int[] pixels;
     private Bitmap bitmap;
     private Bitmap bitmapCopy;
+    private boolean bitmapDirty;
     private Canvas canvas;
     private Drawable drawable;
     private static ArrayList<XrContentDialog> instances = new ArrayList<>();
@@ -72,8 +73,9 @@ public class XrContentDialog extends Dialog {
             counter = 0;
         }
         synchronized (this) {
-            if (bitmapCopy != null) {
+            if (bitmapCopy != null && bitmapDirty) {
                 drawable.drawBitmap(bitmapCopy);
+                bitmapDirty = false;
             }
         }
         return drawable;
@@ -130,6 +132,7 @@ public class XrContentDialog extends Dialog {
         synchronized (this) {
             if (bitmap != null) {
                 bitmapCopy = bitmap.copy(bitmap.getConfig(), true);
+                bitmapDirty = true;
             }
         }
     }

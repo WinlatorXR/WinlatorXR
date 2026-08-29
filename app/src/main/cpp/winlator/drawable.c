@@ -280,9 +280,7 @@ Java_com_winlator_cmod_xserver_Drawable_fromBitmap(JNIEnv *env, jclass obj, jobj
         return;
     }
 
-    for (int i = 0, size = info.width * info.height * 4; i < size; i++) {
-        memcpy(dataAddr + i, pixels + i, 4);
-    }
+    memcpy(dataAddr, pixels, (size_t)info.width * info.height * 4);
 
     AndroidBitmap_unlockPixels(env, bitmap);
 }

@@ -34,6 +34,8 @@ import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.Scanner;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class XrAPI implements XrInterface {
 
@@ -47,6 +49,13 @@ public class XrAPI implements XrInterface {
 
     private XrInterface impl = null;
     private final DatagramSocket socket = new DatagramSocket();
+
+    // Reused for sendAsync() instead of spawning a new OS thread every VR frame.
+    private final ExecutorService sendExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "XrAPI-Send");
+        t.setDaemon(true);
+        return t;
+    });
 
     private String debugIp = null;
     private final boolean debugMode;
@@ -155,13 +164,13 @@ public class XrAPI implements XrInterface {
     }
 
     public void sendAsync(@NonNull byte[] bytes) {
-        new Thread(() -> {
+        sendExecutor.execute(() -> {
             try {
                 send(bytes);
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }).start();
+        });
     }
 
     public void updateImplementation() {
@@ -219,7 +228,7 @@ public class XrAPI implements XrInterface {
                         } catch (Exception e) {
                             System.err.println("Error listening for UDP packets: " + e.getMessage());
                         }
-                    });
+                    }, "XrAPI-UDP-" + intent);
                     udpThread.setDaemon(true);
                     udpThread.start();
                 }

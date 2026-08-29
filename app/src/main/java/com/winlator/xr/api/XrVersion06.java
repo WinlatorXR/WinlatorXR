@@ -26,7 +26,6 @@ import com.winlator.xr.XrActivity;
 
 import java.util.ArrayList;
 import java.util.Locale;
-import java.util.Scanner;
 
 public class XrVersion06 extends XrVersion05 {
 
@@ -34,54 +33,58 @@ public class XrVersion06 extends XrVersion05 {
 
     @Override
     public void dataReceived(PortIntent intent, @NonNull String message) {
-        super.dataReceived(intent, message);
-        if (intent == PortIntent.HMD_STATE) {
-            // Skip AppInput data
-            XrActivity instance = XrActivity.getInstance();
-            Scanner sc = new Scanner(message);
-            for (int i = 0; i < input.length; i++) {
-                if (!sc.hasNext()) return;
-                sc.next();
-            }
+        if (intent != PortIntent.HMD_STATE) {
+            super.dataReceived(intent, message);
+            return;
+        }
 
-            // Process reference spaces
-            if (sc.hasNext()) {
-                int count = sc.nextInt();
+        // Single tokenization pass: parseAppInputValues() reads the leading AppInput
+        // values into `input`, and we continue reading the remaining tokens (reference/
+        // action/locate space data) from the same array instead of re-scanning the
+        // message from scratch.
+        String[] parts = parseAppInputValues(message);
+        XrActivity instance = XrActivity.getInstance();
+        int idx = input.length;
+        if (idx > parts.length) return;
+
+        // Process reference spaces
+        if (idx < parts.length) {
+            int count = Integer.parseInt(parts[idx++]);
+            for (int i = 0; i < count; i++) {
+                int space = Integer.parseInt(parts[idx++]);
+                int type = Integer.parseInt(parts[idx++]);
+                Pose p = parsePose(parts, idx);
+                idx += 7;
+                instance.updateReferenceSpace(space, type, p.x, p.y, p.z, p.qx, p.qy, p.qz, p.qw);
+            }
+        }
+
+        // Process action spaces
+        if (idx < parts.length) {
+            int count = Integer.parseInt(parts[idx++]);
+            for (int i = 0; i < count; i++) {
+                int space = Integer.parseInt(parts[idx++]);
+                int type = Integer.parseInt(parts[idx++]);
+                int grip = Integer.parseInt(parts[idx++]);
+                Pose p = parsePose(parts, idx);
+                idx += 7;
+                instance.updateActionSpace(space, type, grip, p.x, p.y, p.z, p.qx, p.qy, p.qz, p.qw);
+            }
+        }
+
+        // Process locate spaces
+        if (idx < parts.length) {
+            synchronized (spaces) {
+                spaces.clear();
+                int count = Integer.parseInt(parts[idx++]);
+                instance.clearLocateSpaces();
                 for (int i = 0; i < count; i++) {
-                    int space = sc.nextInt();
-                    int type = sc.nextInt();
-                    Pose p = parsePose(sc);
-                    instance.updateReferenceSpace(space, type, p.x, p.y, p.z, p.qx, p.qy, p.qz, p.qw);
+                    int a = Integer.parseInt(parts[idx++]);
+                    int b = Integer.parseInt(parts[idx++]);
+                    spaces.add(new Pair<>(a, b));
+                    instance.addLocateSpace(a, b);
                 }
             }
-
-            // Process action spaces
-            if (sc.hasNext()) {
-                int count = sc.nextInt();
-                for (int i = 0; i < count; i++) {
-                    int space = sc.nextInt();
-                    int type = sc.nextInt();
-                    int grip = sc.nextInt();
-                    Pose p = parsePose(sc);
-                    instance.updateActionSpace(space, type, grip, p.x, p.y, p.z, p.qx, p.qy, p.qz, p.qw);
-                }
-            }
-
-            // Process locate spaces
-            if (sc.hasNext()) {
-                synchronized (spaces) {
-                    spaces.clear();
-                    int count = sc.nextInt();
-                    instance.clearLocateSpaces();
-                    for (int i = 0; i < count; i++) {
-                        int a = sc.nextInt();
-                        int b = sc.nextInt();
-                        spaces.add(new Pair<>(a, b));
-                        instance.addLocateSpace(a, b);
-                    }
-                }
-            }
-            sc.close();
         }
     }
 
@@ -121,15 +124,15 @@ public class XrVersion06 extends XrVersion05 {
                 " " + binary + " " + poses);
     }
 
-    private Pose parsePose(Scanner sc) {
+    private Pose parsePose(String[] parts, int idx) {
         Pose output = new Pose();
-        output.x = sc.nextFloat();
-        output.y = sc.nextFloat();
-        output.z = sc.nextFloat();
-        output.qx = sc.nextFloat();
-        output.qy = sc.nextFloat();
-        output.qz = sc.nextFloat();
-        output.qw = sc.nextFloat();
+        output.x = Float.parseFloat(parts[idx]);
+        output.y = Float.parseFloat(parts[idx + 1]);
+        output.z = Float.parseFloat(parts[idx + 2]);
+        output.qx = Float.parseFloat(parts[idx + 3]);
+        output.qy = Float.parseFloat(parts[idx + 4]);
+        output.qz = Float.parseFloat(parts[idx + 5]);
+        output.qw = Float.parseFloat(parts[idx + 6]);
         return output;
     }
 }

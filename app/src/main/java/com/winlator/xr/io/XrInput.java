@@ -27,12 +27,21 @@ import com.winlator.xr.api.XrInterface;
 import com.winlator.xr.ui.XrKeyboard;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class XrInput {
     private final XrController xrController;
     private final XrHaptics xrHaptics;
 
     private XrAPI xrAPI = null;
+
+    // Reused for updateXServer() instead of spawning a new OS thread every VR frame.
+    private final ExecutorService xServerExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "XrInput-XServer");
+        t.setDaemon(true);
+        return t;
+    });
 
     public XrInput() {
         xrController = new XrController();
@@ -52,6 +61,7 @@ public class XrInput {
     }
 
     public void unload() {
+        xServerExecutor.shutdownNow();
         xrHaptics.unload();
     }
 
@@ -141,7 +151,7 @@ public class XrInput {
     }
 
     private void updateXServer(XServer xServer, float[] axes, boolean[] buttons) {
-        new Thread(() -> {
+        xServerExecutor.execute(() -> {
             try (XLock lock = xServer.lock(XServer.Lockable.WINDOW_MANAGER, XServer.Lockable.INPUT_DEVICE)) {
                 xrAPI.consumeInputs(xServer);
                 if (XrActivity.gamepadEmulation) {
@@ -167,6 +177,6 @@ public class XrInput {
                 }
                 xrController.updateFinished(axes, buttons);
             }
-        }).start();
+        });
     }
 }
