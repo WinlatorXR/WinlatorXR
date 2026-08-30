@@ -536,7 +536,7 @@ public class GoldbergEmu {
      * files that Goldberg would overwrite are preserved as "&lt;name&gt;.goldberg_orig" the
      * first time, so revertGoldberg() can restore them later.
      */
-    private static boolean applyContentToDir(Context context, ContentProfile profile, File targetDir) {
+    public static boolean applyContentToDir(Context context, ContentProfile profile, File targetDir) {
         if (profile.type != ContentProfile.ContentType.CONTENT_TYPE_GOLDBERG) return false;
         if (targetDir == null || !targetDir.isDirectory()) return false;
 

@@ -11,6 +11,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import com.winlator.cmod.R
+import com.winlator.cmod.contents.ContentProfile
+import com.winlator.cmod.contents.ContentsManager
+import com.winlator.xr.utils.GoldbergEmu
 import java.io.File
 import java.net.URL
 
@@ -28,6 +31,10 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         private const val OBB_PREFS = "steam_obb_pending"
         private const val WARN_PREFS = "steam_apk_warning"
         private const val K_HIDE_APK_WARNING = "hide_apk_warning"
+        private const val GOLDBERG_PREFS = "steam_goldberg_auto"
+        private const val K_AUTO_APPLY_GOLDBERG = "auto_apply"
+        private const val GOLDBERG_SCAN_MAX_DEPTH = 4
+        private const val GOLDBERG_SCAN_MAX_VISITED_DIRS = 4000
         private const val DOWNLOAD_THREADS = 24
         private const val COLOR_INSTALL   = 0xFF1565C0.toInt()
         private const val COLOR_CANCEL    = 0xFFCC3333.toInt()
@@ -72,6 +79,10 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
     private lateinit var versionRow: LinearLayout
     private lateinit var pcVariantBtn: Button
     private lateinit var androidVariantBtn: Button
+
+    // Auto-applies the Goldberg Steam fix (steam_api.dll swap) right after a PC install
+    // finishes — persisted globally so it carries over to every Steam store download.
+    private lateinit var autoGoldbergCheck: CheckBox
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -291,6 +302,11 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
 
                 resetRetryState()
 
+                if (lastOs == SteamDepotDownloader.OS_WINDOWS &&
+                    goldbergPrefs().getBoolean(K_AUTO_APPLY_GOLDBERG, false)) {
+                    applyGoldbergAutomatically(id)
+                }
+
                 ui.post {
 
                     progressBar.isIndeterminate = false
@@ -409,6 +425,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         updateVariantButtons()
 
         val androidSelected = selectedOs == SteamDepotDownloader.OS_ANDROID
+        autoGoldbergCheck.visibility = if (androidSelected) View.GONE else View.VISIBLE
         sizeText.text = when {
             androidSelected && g.androidDownloadable -> "~${fmtSize(g.androidSizeBytes)}  ·  APK"
             androidSelected                          -> "Android build not publicly available"
@@ -621,6 +638,79 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
 
         downloadHandle = SteamDepotDownloader.installApp(appId, applicationContext, DOWNLOAD_THREADS, selectedOs)
         StoreDownloadQueue.registerHandle(appId, downloadHandle)
+    }
+
+    // -------------------------------------------------------------------------
+    // Goldberg Steam fix (auto-apply)
+    // -------------------------------------------------------------------------
+
+    private fun goldbergPrefs() = getSharedPreferences(GOLDBERG_PREFS, android.content.Context.MODE_PRIVATE)
+
+    /**
+     * Auto-applies the Goldberg Steam fix right after a PC/Windows install finishes. Unlike
+     * the manual "Apply Goldberg Steam Fix" shortcut-menu flow, this needs no AppID prompt —
+     * it's already known here, since this whole screen is keyed off it.
+     */
+    private fun applyGoldbergAutomatically(id: Int) {
+        Thread {
+            val row = SteamRepository.getInstance().database.getGame(id) ?: return@Thread
+            if (row.installDir.isEmpty()) return@Thread
+            val installDir = File(row.installDir)
+            if (!installDir.isDirectory) return@Thread
+
+            val contentsManager = ContentsManager(applicationContext)
+            contentsManager.syncContents()
+            val installed = contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_GOLDBERG)
+                ?.filter { ContentsManager.getInstallDir(applicationContext, it).isDirectory }
+                ?: emptyList()
+
+            if (installed.isEmpty()) {
+                ui.post {
+                    Toast.makeText(this,
+                        "Auto Goldberg fix skipped: install a Goldberg profile from Downloader → Goldberg first.",
+                        Toast.LENGTH_LONG).show()
+                }
+                return@Thread
+            }
+            val profile = installed[0]
+
+            val targetDirs = mutableListOf<File>()
+            scanForSteamApiDirs(installDir, 0, targetDirs, intArrayOf(0))
+            if (targetDirs.isEmpty()) targetDirs.add(installDir)
+
+            var succeeded = 0
+            for (targetDir in targetDirs) {
+                if (!GoldbergEmu.applyContentToDir(applicationContext, profile, targetDir)) continue
+                val settingsDir = File(targetDir, "steam_settings")
+                settingsDir.mkdirs()
+                try {
+                    java.io.FileWriter(File(settingsDir, "steam_appid.txt")).use { it.write(id.toString()) }
+                } catch (_: Exception) {}
+                succeeded++
+            }
+
+            ui.post {
+                Toast.makeText(this,
+                    if (succeeded > 0) "Goldberg Steam fix auto-applied." else "Auto Goldberg fix failed.",
+                    Toast.LENGTH_SHORT).show()
+            }
+        }.start()
+    }
+
+    /** Same bounded recursive steam_api(64).dll scan the manual shortcut-menu flow uses. */
+    private fun scanForSteamApiDirs(dir: File, depth: Int, found: MutableList<File>, visited: IntArray) {
+        if (!dir.isDirectory || depth > GOLDBERG_SCAN_MAX_DEPTH) return
+        if (++visited[0] > GOLDBERG_SCAN_MAX_VISITED_DIRS) return
+
+        val children = dir.listFiles() ?: return
+        var hasApi = false
+        val subDirs = mutableListOf<File>()
+        for (f in children) {
+            if (f.isDirectory) subDirs.add(f)
+            else if (f.name.equals("steam_api.dll", true) || f.name.equals("steam_api64.dll", true)) hasApi = true
+        }
+        if (hasApi) found.add(dir)
+        for (sub in subDirs) scanForSteamApiDirs(sub, depth + 1, found, visited)
     }
 
     private fun onLaunchClicked() {
@@ -1219,6 +1309,19 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         versionRow.addView(pcVariantBtn)
         versionRow.addView(androidVariantBtn)
         info.addView(versionRow)
+
+        autoGoldbergCheck = CheckBox(this).apply {
+            text = "Auto-apply Goldberg Steam fix after install"
+            textSize = 12f
+            setTextColor(Color.parseColor("#AAAAAA"))
+            isChecked = goldbergPrefs().getBoolean(K_AUTO_APPLY_GOLDBERG, false)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            setOnCheckedChangeListener { _, checked ->
+                goldbergPrefs().edit().putBoolean(K_AUTO_APPLY_GOLDBERG, checked).apply()
+            }
+        }
+        info.addView(autoGoldbergCheck)
 
         statusText = TextView(this).apply {
             text = "Not installed"
