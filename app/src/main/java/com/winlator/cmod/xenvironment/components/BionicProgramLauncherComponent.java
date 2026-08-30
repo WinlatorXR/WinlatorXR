@@ -35,6 +35,7 @@ import com.winlator.cmod.sysvshm.SysVSharedMemory;
 import com.winlator.cmod.xconnector.UnixSocketConfig;
 import com.winlator.cmod.xconnector.XConnectorEpoll;
 import com.winlator.cmod.xenvironment.ImageFs;
+import com.winlator.xr.utils.Device;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -352,11 +353,23 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
 
         String evshimPath = imageFs.getLibDir() + "/libevshim.so";
 
+        // No SDL/imagefs dependency, so (unlike evshim) this can be preloaded straight
+        // from the APK's own bionic-ABI native lib dir without a tzst packaging step.
+        String kgslShimPath = context.getApplicationInfo().nativeLibraryDir + "/libkgsl_turnip_shim.so";
+
 
         if (new File(sysvPath).exists()) ld_preload += sysvPath;
 
 
         ld_preload += ":" + evshimPath;
+
+        // Confirmed a no-op no matter what (tries the real ioctl first), but scope it to
+        // Quest 3/3S by default anyway to keep it out of every other device's process.
+        // "force_kgsl_shim_all_devices" lets advanced users override the device gate.
+        boolean forceKgslShimAllDevices = preferences.getBoolean("force_kgsl_shim_all_devices", false);
+        boolean isQuest3 = Device.getDevice() == Device.HmdModel.QUEST_3;
+        if ((isQuest3 || forceKgslShimAllDevices) && new File(kgslShimPath).exists())
+            ld_preload += ":" + kgslShimPath;
 
         envVars.put("LD_PRELOAD", ld_preload);
 

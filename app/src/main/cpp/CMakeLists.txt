@@ -79,3 +79,15 @@ target_link_libraries(evshim PRIVATE # Or PUBLIC
 set_target_properties(evshim PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY
         "${CMAKE_CURRENT_SOURCE_DIR}/jniLibs/${ANDROID_ABI}")
+
+# ---- KGSL_TURNIP_SHIM (legacy GPUMEM_ALLOC_ID/FREE_ID -> GPUOBJ_* translation) ----
+add_library(kgsl_turnip_shim SHARED winlator/kgsl_turnip_shim.c)
+
+target_link_libraries(kgsl_turnip_shim PRIVATE
+        log
+        dl
+)
+
+set_target_properties(kgsl_turnip_shim PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY
+        "${CMAKE_CURRENT_SOURCE_DIR}/jniLibs/${ANDROID_ABI}")

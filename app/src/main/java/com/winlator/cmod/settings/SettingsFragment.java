@@ -393,6 +393,9 @@ public class SettingsFragment extends Fragment {
         final CheckBox cbShareClipboard = view.findViewById(R.id.CBShareAndroidClipboard);
         cbShareClipboard.setChecked(preferences.getBoolean("share_android_clipboard", false));
 
+        final CheckBox cbForceKgslShim = view.findViewById(R.id.CBForceKgslShim);
+        cbForceKgslShim.setChecked(preferences.getBoolean("force_kgsl_shim_all_devices", false));
+
         final CheckBox CBEnablePebLogs = view.findViewById(R.id.CBEnablePebLogs);
         CBEnablePebLogs.setChecked(preferences.getBoolean("enable_peb_logs", false));
 
@@ -432,6 +435,7 @@ public class SettingsFragment extends Fragment {
             editor.putBoolean("enable_file_provider", cbEnableFileProvider.isChecked());
             editor.putBoolean("open_with_android_browser", cbOpenInBrowser.isChecked());
             editor.putBoolean("share_android_clipboard", cbShareClipboard.isChecked());
+            editor.putBoolean("force_kgsl_shim_all_devices", cbForceKgslShim.isChecked());
             editor.putBoolean("enable_peb_logs", CBEnablePebLogs.isChecked());
 
 
