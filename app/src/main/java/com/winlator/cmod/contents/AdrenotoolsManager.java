@@ -267,10 +267,54 @@ public class AdrenotoolsManager {
         return name;
     }
     
+    // Some Turnip builds reference libc/platform symbols (C11 <threads.h> - only in bionic
+    // since API 30 - and libcutils' internal atrace_get_enabled_tags, never app-linkable on
+    // any API level) that older devices can't resolve, and fail to dlopen instead of loading -
+    // confirmed on a Pico Neo 3 (Android 10 / API 29), which silently fell back to the system
+    // driver. See turnip_compat_shim.c for the full list and per-symbol rationale. The isolated
+    // linker namespace adrenotools loads the driver into resolves DT_NEEDED entries against the
+    // driver's own directory (driverPath, i.e. ADRENOTOOLS_DRIVER_PATH), so patching an
+    // explicit DT_NEEDED for that shim, placed in the same directory, lets all of it resolve at
+    // relocation time in one pass. Gated behind a marker file so it only runs once per
+    // extracted driver, since patchelf --add-needed isn't idempotent (it doesn't check for an
+    // existing DT_NEEDED entry before adding another).
+    private void patchTurnipCompatIfNeeded(String driverPath, String libraryName) {
+        if (android.os.Build.VERSION.SDK_INT >= 30) return;
+
+        File driverDir = new File(driverPath);
+        File driverLib = new File(driverDir, libraryName);
+        if (!driverLib.exists()) return;
+
+        File patchedMarker = new File(driverDir, ".turnip_compat_patched");
+        if (patchedMarker.exists()) return;
+
+        String nativeLibraryDir = mContext.getApplicationInfo().nativeLibraryDir;
+        File shimSrc = new File(nativeLibraryDir, "libturnip_compat_shim.so");
+        File patchelfBin = new File(nativeLibraryDir, "libpatchelf_bin.so");
+        if (!shimSrc.exists() || !patchelfBin.exists()) return;
+
+        try {
+            File shimDst = new File(driverDir, "libturnip_compat_shim.so");
+            Files.copy(shimSrc.toPath(), shimDst.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            FileUtils.chmod(shimDst, 0755);
+
+            Process proc = new ProcessBuilder(patchelfBin.getAbsolutePath(), "--add-needed", "libturnip_compat_shim.so", driverLib.getAbsolutePath())
+                    .redirectErrorStream(true)
+                    .start();
+            int exit = proc.waitFor();
+            Log.d("AdrenotoolsManager", "patchelf --add-needed on " + driverLib.getName() + " exit=" + exit);
+
+            patchedMarker.createNewFile();
+        } catch (IOException | InterruptedException e) {
+            Log.e("AdrenotoolsManager", "Failed to patch turnip compat dependency", e);
+        }
+    }
+
     public void setDriverById(EnvVars envVars, ImageFs imagefs, String adrenotoolsDriverId) {
         if (extractDriverFromResources(adrenotoolsDriverId) || enumarateInstalledDrivers().contains(adrenotoolsDriverId)) {
             String driverPath = adrenotoolsContentDir.getAbsolutePath() + "/" + adrenotoolsDriverId + "/";
             if (!getLibraryName(adrenotoolsDriverId).equals("")) {
+                patchTurnipCompatIfNeeded(driverPath, getLibraryName(adrenotoolsDriverId));
                 envVars.put("ADRENOTOOLS_DRIVER_PATH", driverPath);
                 envVars.put("ADRENOTOOLS_HOOKS_PATH", imagefs.getLibDir());
                 envVars.put("ADRENOTOOLS_DRIVER_NAME", getLibraryName(adrenotoolsDriverId));

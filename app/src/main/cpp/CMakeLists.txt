@@ -91,3 +91,10 @@ target_link_libraries(kgsl_turnip_shim PRIVATE
 set_target_properties(kgsl_turnip_shim PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY
         "${CMAKE_CURRENT_SOURCE_DIR}/jniLibs/${ANDROID_ABI}")
+
+# ---- TURNIP_COMPAT_SHIM (libc/platform symbol gaps on older Android, needed by some Turnip builds) ----
+add_library(turnip_compat_shim SHARED winlator/turnip_compat_shim.c)
+
+set_target_properties(turnip_compat_shim PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY
+        "${CMAKE_CURRENT_SOURCE_DIR}/jniLibs/${ANDROID_ABI}")

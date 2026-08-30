@@ -67,7 +67,7 @@ public class Device {
 
     private static Device.HmdModel getPicoDevice() {
         return switch (Build.PRODUCT) {
-            case "Pico Neo 3", "Pico_Neo_3", "A7P10" -> HmdModel.PICO_NEO_3_LINK;
+            case "Pico Neo 3", "Pico_Neo_3", "A7P10", "A7H10" -> HmdModel.PICO_NEO_3_LINK;
             case "Pico 4", "Pico_4", "PICO 4", "PICO_4", "Pico A8110", "PICO A8110", "Pico_A8110", "PICOA8110", "A8110", "pheonix" -> HmdModel.PICO_4;
             case "PICO 4 Ultra", "Pico_A9210", "A9210", "sparrow" -> Device.HmdModel.PICO_4_ULTRA;
             default -> Device.HmdModel.PICO_UNKNOWN;
