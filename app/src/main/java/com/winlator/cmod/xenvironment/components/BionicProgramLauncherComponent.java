@@ -352,11 +352,17 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
 
         String evshimPath = imageFs.getLibDir() + "/libevshim.so";
 
+        // No SDL/imagefs dependency, so (unlike evshim) this can be preloaded straight
+        // from the APK's own bionic-ABI native lib dir without a tzst packaging step.
+        String kgslShimPath = context.getApplicationInfo().nativeLibraryDir + "/libkgsl_turnip_shim.so";
+
 
         if (new File(sysvPath).exists()) ld_preload += sysvPath;
 
 
         ld_preload += ":" + evshimPath;
+
+        if (new File(kgslShimPath).exists()) ld_preload += ":" + kgslShimPath;
 
         envVars.put("LD_PRELOAD", ld_preload);
 
