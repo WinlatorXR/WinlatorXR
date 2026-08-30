@@ -16,6 +16,15 @@
  * ioctl numbers/struct layouts below are transcribed from the upstream
  * msm_kgsl.h (KGSL_IOC_TYPE 0x09, GPUMEM_ALLOC_ID=0x34, FREE_ID=0x35,
  * GPUOBJ_ALLOC=0x45, GPUOBJ_FREE=0x46, GPUOBJ_INFO=0x47).
+ *
+ * Tested on-device (Quest 3, 2026-08-30, KGSL_SHIM_DEBUG=1): the legacy
+ * ALLOC_ID/FREE_ID ioctls succeed with no fallback ever triggering, so the
+ * "Quest 3 dropped the legacy KGSL ioctls" premise this was written for does
+ * not hold on this kernel - the shim is a confirmed no-op pass-through here.
+ * The static/noise corruption originally suspected to be this was actually
+ * a regression in the adrenotools-Turnip_v26.3.0_r9 build; switching to
+ * turnip25.1.0 fixed it outright. Left in place as defensive no-op code in
+ * case a different kernel build genuinely lacks the legacy path.
  */
 
 #define _GNU_SOURCE
