@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/shortcuts_menu_add_local_game"
+        android:icon="@drawable/icon_action_bar_add"
+        android:title="@string/add_local_game_files"
+        app:showAsAction="ifRoom" />
+</menu>

@@ -374,6 +374,36 @@ public abstract class FileUtils {
     }
 
 
+    /** Like getFilePathFromUriUsingSAF, but for a single-document Uri (e.g. from ACTION_OPEN_DOCUMENT) rather than a tree Uri. */
+    public static String getFilePathFromDocumentUri(Context context, Uri uri) {
+        String documentId;
+        try {
+            documentId = DocumentsContract.getDocumentId(uri);
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Invalid document URI: " + uri.toString(), e);
+            return null;
+        }
+
+        String[] split = documentId.split(":");
+        String type = split[0];
+        String path = split.length > 1 ? split[1] : "";
+
+        try {
+            path = URLDecoder.decode(path, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            Log.e(TAG, "Error decoding path: " + path, e);
+            return null;
+        }
+
+        if ("primary".equalsIgnoreCase(type)) {
+            return Environment.getExternalStorageDirectory() + "/" + path;
+        } else if ("raw".equalsIgnoreCase(type) && split.length > 1) {
+            return documentId.substring(4);
+        } else {
+            return "/mnt/media_rw/" + type + "/" + path;
+        }
+    }
+
     public static String getFilePathFromUri(Context context, Uri uri) {
         Log.d(TAG, "getFilePathFromUri called with URI: " + uri.toString());
         String filePath = getFilePathFromUriUsingSAF(context, uri);
