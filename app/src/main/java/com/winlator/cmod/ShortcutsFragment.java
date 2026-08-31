@@ -4,6 +4,7 @@ import static androidx.core.content.ContextCompat.getSystemService;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -16,8 +17,12 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.FileObserver;
+import android.provider.DocumentsContract;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -99,6 +104,162 @@ public class ShortcutsFragment extends Fragment {
         iconPickerLauncher.launch(intent);
     }
 
+    private final ActivityResultLauncher<Intent> localGamePickerLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    Uri uri = result.getData().getData();
+                    if (uri != null) handlePickedExeUri(uri);
+                }
+            });
+
+    /**
+     * Toast windows render broken/invisible under the Quest Navigator's panel compositor, so
+     * feedback for this flow is shown as a dialog over the Shortcuts screen instead.
+     */
+    private void showLocalGameMessage(String message) {
+        if (getContext() == null) return;
+        new AlertDialog.Builder(getContext())
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
+    private void openAddLocalGamePicker() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+
+        // EXTRA_INITIAL_URI needs a real SAF document Uri, not a file:// Uri (which most
+        // document picker implementations silently ignore, falling back to their default root).
+        Uri initialUri = DocumentsContract.buildDocumentUri(
+                "com.android.externalstorage.documents", "primary:" + Environment.DIRECTORY_DOWNLOADS);
+        intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, initialUri);
+
+        try {
+            localGamePickerLauncher.launch(intent);
+        } catch (ActivityNotFoundException e) {
+            showLocalGameMessage("No file picker app is available on this device.");
+        }
+    }
+
+    private void handlePickedExeUri(Uri uri) {
+        String path = FileUtils.getFilePathFromDocumentUri(getContext(), uri);
+        if (path == null) {
+            showLocalGameMessage("Could not resolve the selected file's location. Please pick a file from local storage.");
+            return;
+        }
+
+        if (!path.toLowerCase().endsWith(".exe")) {
+            showLocalGameMessage("Please select a .exe file.");
+            return;
+        }
+
+        File exeFile = new File(path);
+        if (!exeFile.isFile()) {
+            showLocalGameMessage("Selected file could not be found.");
+            return;
+        }
+
+        ArrayList<Container> containers = manager.getContainers();
+        if (containers.isEmpty()) {
+            new AlertDialog.Builder(getContext())
+                    .setTitle("No containers found")
+                    .setMessage("You need at least one container before adding a game shortcut. Create one now?")
+                    .setPositiveButton("Create Container", (dialog, which) -> openCreateContainer())
+                    .setNegativeButton("Cancel", null)
+                    .show();
+            return;
+        }
+
+        String[] containerNames = new String[containers.size()];
+        for (int i = 0; i < containers.size(); i++) containerNames[i] = containers.get(i).getName();
+
+        new AlertDialog.Builder(getContext())
+                .setTitle("Select a container for \"" + FileUtils.getBasename(exeFile.getName()) + "\"")
+                .setItems(containerNames, (dialog, which) -> createShortcutForExe(containers.get(which), exeFile))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void openCreateContainer() {
+        getParentFragmentManager().beginTransaction()
+                .setCustomAnimations(R.anim.slide_in_up, R.anim.slide_out_down, R.anim.slide_in_down, R.anim.slide_out_up)
+                .addToBackStack(null)
+                .replace(R.id.FLFragmentContainer, new ContainerDetailFragment())
+                .commit();
+    }
+
+    /** Maps an absolute Android path onto one of the container's configured Wine drives, picking the most specific match. */
+    private String resolveWindowsPathForContainer(Container container, String absPath) {
+        String bestDriveLetter = null;
+        String bestDrivePath = null;
+
+        for (String[] drive : container.drivesIterator()) {
+            String driveLetter = drive[0];
+            String drivePath = drive[1];
+            if (drivePath == null || drivePath.isEmpty()) continue;
+
+            String normalizedDrivePath = new File(drivePath).getAbsolutePath();
+            boolean matches = absPath.equals(normalizedDrivePath) || absPath.startsWith(normalizedDrivePath + "/");
+            if (matches && (bestDrivePath == null || normalizedDrivePath.length() > bestDrivePath.length())) {
+                bestDrivePath = normalizedDrivePath;
+                bestDriveLetter = driveLetter;
+            }
+        }
+
+        if (bestDriveLetter == null) return null;
+
+        String relative = absPath.substring(bestDrivePath.length());
+        if (relative.startsWith("/")) relative = relative.substring(1);
+        return bestDriveLetter.toUpperCase() + ":\\" + relative.replace("/", "\\");
+    }
+
+    private void createShortcutForExe(Container container, File exeFile) {
+        String winePath = resolveWindowsPathForContainer(container, exeFile.getAbsolutePath());
+        if (winePath == null) {
+            showLocalGameMessage("This file is outside \"" + container.getName() + "\"'s mapped drives (" +
+                    container.getDrives() + "). Move it under one of those folders, or add its folder as a drive in " +
+                    "the container's settings.");
+            return;
+        }
+
+        File desktopDir = container.getDesktopDir();
+        if (!desktopDir.exists() && !desktopDir.mkdirs()) {
+            showLocalGameMessage("Could not create the container's desktop directory.");
+            return;
+        }
+
+        String gameName = FileUtils.getBasename(exeFile.getName());
+        String safeName = gameName.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+        if (safeName.isEmpty()) safeName = "game";
+
+        File desktopFile = new File(desktopDir, safeName + ".desktop");
+        int suffix = 1;
+        while (desktopFile.exists()) {
+            desktopFile = new File(desktopDir, safeName + "_" + (suffix++) + ".desktop");
+        }
+
+        String escapedWinePath = winePath.replace("\\", "\\\\\\\\");
+        String content = "[Desktop Entry]\n" +
+                "Name=" + gameName + "\n" +
+                "Exec=wine " + escapedWinePath + "\n" +
+                "Type=Application\n" +
+                "StartupNotify=true\n" +
+                "Icon=\n" +
+                "StartupWMClass=" + exeFile.getName() + "\n\n" +
+                "[Extra Data]\n" +
+                "container_id:" + container.id + "\n";
+
+        if (FileUtils.writeString(desktopFile, content)) {
+            loadShortcutsList();
+            showLocalGameMessage("\"" + gameName + "\" added to " + container.getName() + ".");
+        } else {
+            Log.e("ShortcutsFragment", "Failed to write shortcut for local exe: " + desktopFile.getAbsolutePath());
+            showLocalGameMessage("Failed to create shortcut.");
+        }
+    }
+
     private void showIconPickerConfirmation(final Shortcut shortcut) {
         new AlertDialog.Builder(getContext())
                 .setTitle("Custom Icon")
@@ -143,7 +304,23 @@ public class ShortcutsFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(false);
+        setHasOptionsMenu(true);
+    }
+
+    @Override
+    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
+        menu.clear();
+        inflater.inflate(R.menu.shortcuts_menu, menu);
+        menu.findItem(R.id.shortcuts_menu_add_local_game).setVisible(currentTab == 0);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem menuItem) {
+        if (menuItem.getItemId() == R.id.shortcuts_menu_add_local_game) {
+            openAddLocalGamePicker();
+            return true;
+        }
+        return super.onOptionsItemSelected(menuItem);
     }
 
     @Override
