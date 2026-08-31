@@ -1,5 +1,10 @@
 package com.winlator.cmod.contents;
 
+import android.content.Context;
+
+import com.winlator.cmod.R;
+import com.winlator.cmod.core.PreloaderDialog;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -42,6 +47,55 @@ public class Downloader {
             return true;
         } catch (Exception e) {
             e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static boolean downloadFileWithProgress(String address, File file, PreloaderDialog preloaderDialog) {
+        Context context = preloaderDialog.getContext();
+        preloaderDialog.showOnUiThread(R.string.downloading_file);
+
+        try {
+            URL url = new URL(address);
+            URLConnection connection = url.openConnection();
+            connection.connect();
+
+            long totalBytes = connection.getContentLengthLong();
+            long downloadedBytes = 0;
+            long lastDisplayedMB = -1;
+
+            try (InputStream input = connection.getInputStream();
+                 OutputStream output = new FileOutputStream(file.getAbsolutePath())) {
+
+                byte[] data = new byte[8192];
+                int count;
+
+                while ((count = input.read(data)) != -1) {
+                    output.write(data, 0, count);
+                    downloadedBytes += count;
+
+                    long downloadedMB = downloadedBytes / (1024 * 1024);
+                    if (downloadedMB != lastDisplayedMB) {
+                        lastDisplayedMB = downloadedMB;
+
+                        final String progress;
+                        if (totalBytes > 0) {
+                            long totalMB = totalBytes / (1024 * 1024);
+                            progress = context.getString(R.string.downloading_file) + "\n" + downloadedMB + " MB / " + totalMB + " MB";
+                        } else {
+                            progress = context.getString(R.string.downloading_file) + "\n" + downloadedMB + " MB";
+                        }
+
+                        preloaderDialog.updateText(progress);
+                    }
+                }
+            }
+            preloaderDialog.close();
+            return true;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            preloaderDialog.close();
             return false;
         }
     }

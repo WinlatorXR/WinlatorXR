@@ -425,12 +425,10 @@ public class ContainersFragment extends Fragment {
                     case R.id.download_import:
                         File temp = new File(context.getCacheDir(), "container.tzst");
                         String url = container.getEmulator();
-                        preloaderDialog.show(R.string.downloading_file);
                         new Thread(() -> {
-                            Downloader.downloadFile(url, temp);
+                            Downloader.downloadFileWithProgress(url, temp, preloaderDialog);
                             runOnUiThreadSafe(() -> {
                                 currentTab = 0;
-                                preloaderDialog.close();
                                 tabLayout.selectTab(tabLayout.getTabAt(currentTab));
                                 importContainerArchive(Uri.fromFile(temp), () -> temp.delete());
                             });

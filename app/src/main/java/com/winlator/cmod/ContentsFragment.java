@@ -406,8 +406,6 @@ public class ContentsFragment extends Fragment {
             }
 
             holder.ibDownload.setOnClickListener(v -> {
-                preloaderDialog.show(R.string.downloading_file);
-
                 Intent intent = new Intent();
                 intent.setData(Uri.parse(profile.remoteUrl));
                 new Thread(() -> {
@@ -415,14 +413,13 @@ public class ContentsFragment extends Fragment {
                     File output = new File(getContext().getCacheDir(), "temp_" + timestamp);
 
                     try {
-                        if (Downloader.downloadFile(profile.remoteUrl, output)) {
+                        if (Downloader.downloadFileWithProgress(profile.remoteUrl, output, preloaderDialog)) {
                             if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME) {
                                 FileUtils.copy(output, runtimeFile);
                                 output.delete();
 
                                 getActivity().runOnUiThread(() -> {
                                     Toast.makeText(getContext(), R.string.runtime_toast, Toast.LENGTH_LONG).show();
-                                    preloaderDialog.close();
                                     loadContentList();
                                 });
                                 return;
@@ -485,19 +482,14 @@ public class ContentsFragment extends Fragment {
             }
             viewHolder.btMenu.setOnClickListener((v) -> {
                 if (adrenotoolsManager.isRemote(driver)) {
-                    preloaderDialog.show(R.string.downloading_file);
-
                     new Thread(() -> {
                         long timestamp = System.currentTimeMillis();
                         File output = new File(getContext().getCacheDir(), "temp_" + timestamp);
                         try {
-                            if (Downloader.downloadFile(adrenotoolsManager.getDriverUrl(driver), output)) {
+                            if (Downloader.downloadFileWithProgress(adrenotoolsManager.getDriverUrl(driver), output, preloaderDialog)) {
                                 adrenotoolsManager.installDriver(Uri.fromFile(output));
                             }
-                            getActivity().runOnUiThread(() -> {
-                                preloaderDialog.close();
-                                reload();
-                            });
+                            getActivity().runOnUiThread(() -> reload());
                         } catch (Exception e) {
                             //Expected to fail when the fragment is no longer visible
                         }

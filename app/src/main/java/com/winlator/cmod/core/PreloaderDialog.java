@@ -2,6 +2,7 @@ package com.winlator.cmod.core;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.Context;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.TextView;
@@ -31,12 +32,20 @@ public class PreloaderDialog {
         }
     }
 
+    public Context getContext() {
+        return activity;
+    }
+
     public synchronized void show(int textResId) {
         if (isShowing()) return;
         close();
         if (dialog == null) create();
         ((TextView)dialog.findViewById(R.id.TextView)).setText(textResId);
         dialog.show();
+    }
+
+    public void updateText(String text) {
+        activity.runOnUiThread(() -> ((TextView)dialog.findViewById(R.id.TextView)).setText(text));
     }
 
     public void showOnUiThread(final int textResId) {
