@@ -14,7 +14,6 @@ import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -52,6 +51,7 @@ public class ContentsFragment extends Fragment {
     private View emptyText;
     private AdrenotoolsManager adrenotoolsManager;
     private ContentsManager manager;
+    private PreloaderDialog preloaderDialog;
     private ContentProfile.ContentType currentContentType = ContentProfile.ContentType.CONTENT_TYPE_WINE;
     private Button btInstallContent;
 
@@ -60,6 +60,7 @@ public class ContentsFragment extends Fragment {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(false);
         adrenotoolsManager = new AdrenotoolsManager(getActivity());
+        preloaderDialog = new PreloaderDialog(getActivity());
         manager = new ContentsManager(getContext());
         manager.syncContents();
 
@@ -293,7 +294,6 @@ public class ContentsFragment extends Fragment {
             private final TextView tvVersionCode;
             private final ImageButton ibMenu;
             private final ImageButton ibDownload;
-            private final ProgressBar progressBar;
 
             public ViewHolder(@NonNull View view) {
                 super(view);
@@ -303,7 +303,6 @@ public class ContentsFragment extends Fragment {
                 tvVersionCode = view.findViewById(R.id.TVVersionCode);
                 ibMenu = view.findViewById(R.id.BTMenu);
                 ibDownload = view.findViewById(R.id.BTDownload);
-                progressBar = view.findViewById(R.id.Progress);
             }
         }
 
@@ -395,7 +394,6 @@ public class ContentsFragment extends Fragment {
                 });
                 selectionMenu.show();
             });
-            holder.ibDownload.setVisibility((profile.remoteUrl != null) && (holder.progressBar.getVisibility() == View.GONE) ? View.VISIBLE : View.GONE);
 
             if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME) {
                 if (runtimeFile.exists()) {
@@ -408,8 +406,7 @@ public class ContentsFragment extends Fragment {
             }
 
             holder.ibDownload.setOnClickListener(v -> {
-                holder.ibDownload.setVisibility(View.GONE);
-                holder.progressBar.setVisibility(View.VISIBLE);
+                preloaderDialog.show(R.string.downloading_file);
 
                 Intent intent = new Intent();
                 intent.setData(Uri.parse(profile.remoteUrl));
@@ -425,7 +422,7 @@ public class ContentsFragment extends Fragment {
 
                                 getActivity().runOnUiThread(() -> {
                                     Toast.makeText(getContext(), R.string.runtime_toast, Toast.LENGTH_LONG).show();
-                                    holder.progressBar.setVisibility(View.GONE);
+                                    preloaderDialog.close();
                                     loadContentList();
                                 });
                                 return;
@@ -433,8 +430,7 @@ public class ContentsFragment extends Fragment {
                             intent.setData(Uri.parse(output.getAbsolutePath()));
                         }
                         getActivity().runOnUiThread(() -> {
-                            holder.progressBar.setVisibility(View.GONE);
-                            holder.ibDownload.setVisibility(View.VISIBLE);
+                            preloaderDialog.close();
                             onActivityResult(MainActivity.OPEN_FILE_REQUEST_CODE, Activity.RESULT_OK, intent);
                         });
                     } catch (Exception e) {
@@ -458,14 +454,12 @@ public class ContentsFragment extends Fragment {
             private TextView tvName;
             private TextView tvVersion;
             private ImageButton btMenu;
-            private ProgressBar progressBar;
 
             public ViewHolder(View v) {
                 super(v);
                 tvName = v.findViewById(R.id.TVName);
                 tvVersion = v.findViewById(R.id.TVVersion);
                 btMenu = v.findViewById(R.id.BTMenu);
-                progressBar = v.findViewById(R.id.Progress);
             }
         }
 
@@ -491,8 +485,7 @@ public class ContentsFragment extends Fragment {
             }
             viewHolder.btMenu.setOnClickListener((v) -> {
                 if (adrenotoolsManager.isRemote(driver)) {
-                    viewHolder.btMenu.setVisibility(View.GONE);
-                    viewHolder.progressBar.setVisibility(View.VISIBLE);
+                    preloaderDialog.show(R.string.downloading_file);
 
                     new Thread(() -> {
                         long timestamp = System.currentTimeMillis();
@@ -502,8 +495,7 @@ public class ContentsFragment extends Fragment {
                                 adrenotoolsManager.installDriver(Uri.fromFile(output));
                             }
                             getActivity().runOnUiThread(() -> {
-                                viewHolder.progressBar.setVisibility(View.GONE);
-                                viewHolder.btMenu.setVisibility(View.VISIBLE);
+                                preloaderDialog.close();
                                 reload();
                             });
                         } catch (Exception e) {

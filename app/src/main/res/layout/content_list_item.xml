@@ -54,9 +54,4 @@
         style="@style/ListMenuButton"
         android:layout_marginStart="8dp"
         android:src="@drawable/icon_popup_menu_download" />
-    <ProgressBar
-        android:id="@+id/Progress"
-        style="@style/ListMenuButton"
-        android:layout_marginStart="8dp"
-        android:visibility="gone" />
 </LinearLayout>
