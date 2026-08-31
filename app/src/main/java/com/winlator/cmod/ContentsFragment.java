@@ -52,7 +52,7 @@ public class ContentsFragment extends Fragment {
     private AdrenotoolsManager adrenotoolsManager;
     private ContentsManager manager;
     private PreloaderDialog preloaderDialog;
-    private ContentProfile.ContentType currentContentType = ContentProfile.ContentType.CONTENT_TYPE_WINE;
+    private ArrayList<ContentProfile.ContentType> currentContentType = new ArrayList<>();
     private Button btInstallContent;
 
     @Override
@@ -63,6 +63,11 @@ public class ContentsFragment extends Fragment {
         preloaderDialog = new PreloaderDialog(getActivity());
         manager = new ContentsManager(getContext());
         manager.syncContents();
+
+        if (currentContentType.isEmpty()) {
+            currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_WINE);
+            currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_PROTON);
+        }
 
         // Initialize isDarkMode based on shared preferences or theme
         boolean isDarkMode = PreferenceManager.getDefaultSharedPreferences(getContext())
@@ -96,7 +101,7 @@ public class ContentsFragment extends Fragment {
 
         btInstallContent = layout.findViewById(R.id.BTInstallContent);
         btInstallContent.setOnClickListener(v -> {
-            if (currentContentType == ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS) {
+            if (currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS)) {
                 ContentDialog.confirm(getContext(), getString(R.string.install_drivers_message) + " " + getString(R.string.install_drivers_warning), () -> {
                     Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                     intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -126,16 +131,22 @@ public class ContentsFragment extends Fragment {
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
+                currentContentType.clear();
                 switch (tab.getPosition()) {
-                    case 0: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_WINE; break;
-                    case 1: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_RUNTIME; break;
-                    case 2: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_DXVK; break;
-                    case 3: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_VKD3D; break;
-                    case 4: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_BOX64; break;
-                    case 5: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_WOWBOX64; break;
-                    case 6: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_FEXCORE; break;
-                    case 7: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS; break;
-                    case 8: currentContentType = ContentProfile.ContentType.CONTENT_TYPE_GOLDBERG; break;
+                    case 0:
+                        currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_WINE);
+                        currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_PROTON);
+                        break;
+                    case 1:
+                        currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_RUNTIME);
+                        currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_GOLDBERG);
+                        break;
+                    case 2: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_DXVK); break;
+                    case 3: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_VKD3D); break;
+                    case 4: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_BOX64); break;
+                    case 5: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_WOWBOX64); break;
+                    case 6: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_FEXCORE); break;
+                    case 7: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS); break;
                 }
                 loadContentList();
             }
@@ -153,17 +164,9 @@ public class ContentsFragment extends Fragment {
         return layout;
     }
 
-    private void updateContentsListView() {
-        List<ContentProfile> profiles = manager.getProfiles(currentContentType);
-        if (profiles.isEmpty()) {
-            recyclerView.setVisibility(View.GONE);
-            emptyText.setVisibility(View.VISIBLE);
-        }
-    }
-
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        if (currentContentType == ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS) {
+        if (currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS)) {
             if (requestCode == MainActivity.OPEN_FILE_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
                 Uri uri = data.getData();
                 String driver = adrenotoolsManager.installDriver(uri);
@@ -220,9 +223,7 @@ public class ContentsFragment extends Fragment {
                             requireActivity().runOnUiThread(() -> {
                                 ContentDialog.alert(getContext(), R.string.content_installed_success, null);
                                 manager.syncContents();
-                                boolean flashAfter = currentContentType == profile.type;
-                                currentContentType = profile.type;
-                                if (flashAfter) loadContentList();
+                                reload();
                             });
                         }
                     }
@@ -238,7 +239,7 @@ public class ContentsFragment extends Fragment {
     }
 
     private void loadContentList() {
-        if (currentContentType == ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS) {
+        if (currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS)) {
             emptyText.setVisibility(View.GONE);
             recyclerView.setVisibility(View.VISIBLE);
             recyclerView.setAdapter(new DriversAdapter(adrenotoolsManager.enumarateInstalledDrivers()));

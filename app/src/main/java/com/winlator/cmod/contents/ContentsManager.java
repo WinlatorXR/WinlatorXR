@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class ContentsManager {
     public static final String PROFILE_NAME = "profile.json";
@@ -351,6 +352,17 @@ public class ContentsManager {
     public List<ContentProfile> getProfiles(ContentProfile.ContentType type) {
         if (profilesMap != null)
             return profilesMap.get(type);
+        return null;
+    }
+
+        public List<ContentProfile> getProfiles(ArrayList<ContentProfile.ContentType> types) {
+        if (profilesMap != null) {
+            ArrayList<ContentProfile> profiles = new ArrayList<>();
+            for (ContentProfile.ContentType type : types) {
+                profiles.addAll(Objects.requireNonNull(profilesMap.get(type)));
+            }
+            return profiles;
+        }
         return null;
     }
 
