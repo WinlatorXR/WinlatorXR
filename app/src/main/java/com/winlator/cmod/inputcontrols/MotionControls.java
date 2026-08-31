@@ -205,6 +205,8 @@ public class MotionControls implements SensorEventListener {
         CheckBox cbInvY = v.findViewById(R.id.cbInvertGyroY);
         CheckBox cbWheel = v.findViewById(R.id.cbWheelEmulation);
         CheckBox cbRadialToSquare = v.findViewById(R.id.CBPlayerXRGamepadRadialToSquare);
+        CheckBox cbRumblePassthrough = v.findViewById(R.id.CBPlayerXRRumblePassthrough);
+        TextView tvRumblePassthroughHeader = v.findViewById(R.id.TVRumblePassthroughHeader);
         TextView tvThumbstickType = v.findViewById(R.id.tvGamepadThumbstickType);
 
         Spinner spActivator = v.findViewById(R.id.spGyroTriggerButton);
@@ -232,6 +234,8 @@ public class MotionControls implements SensorEventListener {
 
             tvThumbstickType.setVisibility(View.VISIBLE);
             cbRadialToSquare.setVisibility(View.VISIBLE);
+            tvRumblePassthroughHeader.setVisibility(View.VISIBLE);
+            cbRumblePassthrough.setVisibility(View.VISIBLE);
 
             if (XrActivity.isActive()) {
                 cbWheel.setChecked(XrActivity.wheelEmulation);
@@ -252,6 +256,8 @@ public class MotionControls implements SensorEventListener {
         } else {
             tvThumbstickType.setVisibility(View.GONE);
             cbRadialToSquare.setVisibility(View.GONE);
+            tvRumblePassthroughHeader.setVisibility(View.GONE);
+            cbRumblePassthrough.setVisibility(View.GONE);
         }
 
         cbRadialToSquare.setChecked(prefs.getBoolean("xr_gamepad_radial_to_square", false));
@@ -260,6 +266,17 @@ public class MotionControls implements SensorEventListener {
             e.putBoolean("xr_gamepad_radial_to_square", checked);
             e.apply();
             XrActivity.gamepadRadialToSquare = checked;
+        });
+
+        cbRumblePassthrough.setChecked(prefs.getBoolean("use_xr_rumble_passthrough", false));
+        cbRumblePassthrough.setOnCheckedChangeListener((compoundButton, checked) -> {
+            SharedPreferences.Editor e = prefs.edit();
+            e.putBoolean("use_xr_rumble_passthrough", checked);
+            e.apply();
+            XrActivity.rumblePassthrough = checked;
+            if (checked && XrActivity.isActive()) {
+                XrInput.ensureVirtualControllerAttached();
+            }
         });
 
         cbEnabled.setChecked(enabled);

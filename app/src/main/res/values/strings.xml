@@ -455,6 +455,7 @@
     <string name="left_handed_mouse">Use left-handed mouse mapping</string>
     <string name="wheel_emulation">Use controllers as a wheel</string>
     <string name="controllers_as_gamepad">Use XR controllers as gamepad</string>
+    <string name="xr_rumble_passthrough">Rumble on XR controllers without gamepad mode</string>
     <string name="gamepad_radial_to_square">Gamepad radial to square mapping</string>
     <string name="gamepad_thumbstick_type">Joystick Deadzone Mode</string>
     <string name="controllers_as_keys">Use XR controllers as keys</string>

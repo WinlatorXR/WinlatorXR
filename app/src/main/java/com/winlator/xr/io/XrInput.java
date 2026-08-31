@@ -47,7 +47,7 @@ public class XrInput {
         xrController = new XrController();
         xrHaptics = new XrHaptics();
 
-        if (XrActivity.gamepadEmulation || XrActivity.wheelEmulation) {
+        if (XrActivity.gamepadEmulation || XrActivity.wheelEmulation || XrActivity.rumblePassthrough) {
             ensureVirtualControllerAttached();
         }
     }
@@ -156,6 +156,10 @@ public class XrInput {
                 xrAPI.consumeInputs(xServer);
                 if (XrActivity.gamepadEmulation) {
                     xrController.updateGamepad(axes, buttons);
+                } else if (XrActivity.rumblePassthrough) {
+                    // Keep the virtual XInput device "connected" so the guest sends rumble,
+                    // but with a neutral state so it never drives buttons/axes (those stay on mouse/keys).
+                    xrController.updateGamepad(new float[axes.length], new boolean[buttons.length]);
                 }
                 if (XrActivity.keysEmulation) {
                     xrController.updateKeyboardButtons(buttons);
