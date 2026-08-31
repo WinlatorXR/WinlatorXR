@@ -112,7 +112,7 @@ public class ContainersFragment extends Fragment {
         return frameLayout;
     }
 
-    private void loadContainersList() {
+    public void loadContainersList() {
         if (manager != null) {
             ArrayList<Container> containers;
             if (currentTab == 0) {

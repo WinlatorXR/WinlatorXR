@@ -52,6 +52,8 @@ import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.core.Callback;
 import com.winlator.cmod.core.PreloaderDialog;
+import com.winlator.cmod.core.WineInfo;
+import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.ContainerManager;
 import com.winlator.cmod.inputcontrols.ControllerManager;
 import com.winlator.cmod.saves.Save;
@@ -59,6 +61,9 @@ import com.winlator.cmod.saves.SaveManager;
 import com.winlator.cmod.settings.SettingsFragment;
 import com.winlator.cmod.store.StoreFragment;
 import com.winlator.cmod.xenvironment.ImageFsInstaller;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -78,6 +83,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public static final byte OPEN_FILE_REQUEST_CODE = 2;
     public static final byte EDIT_INPUT_CONTROLS_REQUEST_CODE = 3;
     public static final byte OPEN_DIRECTORY_REQUEST_CODE = 4;
+    private static final String PREF_AUTO_DEFAULT_CONTAINER_CREATED = "auto_default_container_created";
     private DrawerLayout drawerLayout;
     private GridLayout gridLayout;
     public final PreloaderDialog preloaderDialog = new PreloaderDialog(this);
@@ -164,13 +170,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             boolean waitingForPerms = requestAppPermissions();
             if (!waitingForPerms) {
                 ImageFsInstaller.installIfNeeded(this, () ->
-                        checkForAndInstallAssetContents(() -> {
-                            if (!allAccessFilesDialogDismissed
-                                    && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
-                                    && !Environment.isExternalStorageManager()) {
-                                showAllFilesAccessDialog();
-                            }
-                        }));
+                        checkForAndInstallAssetContents(this::onStorageAndAssetsReady));
             }
 
         }
@@ -487,16 +487,64 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         if (requestCode == PERMISSION_WRITE_EXTERNAL_STORAGE_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 ImageFsInstaller.installIfNeeded(this, () ->
-                        checkForAndInstallAssetContents(() -> {
-                            if (!allAccessFilesDialogDismissed
-                                    && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
-                                    && !Environment.isExternalStorageManager()) {
-                                showAllFilesAccessDialog();
-                            }
-                        }));
+                        checkForAndInstallAssetContents(this::onStorageAndAssetsReady));
             } else {
                 finish();
             }
+        }
+    }
+
+    /**
+     * Called once storage permissions are granted, the imagefs is installed, and bundled
+     * asset content has been unpacked. This is the earliest point at which a container can
+     * actually be created (extracting a container pattern file requires the imagefs/contents
+     * to be in place).
+     */
+    private void onStorageAndAssetsReady() {
+        if (!allAccessFilesDialogDismissed
+                && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                && !Environment.isExternalStorageManager()) {
+            showAllFilesAccessDialog();
+        }
+        autoCreateDefaultContainerIfNeeded();
+    }
+
+    /**
+     * Mirrors clicking "+" in the containers list and immediately hitting save with no
+     * changes: creates a single default container named after the bundled default Wine/Proton
+     * version. Runs once ever, guarded by a SharedPreferences flag, and only when the user has
+     * no containers yet.
+     */
+    private void autoCreateDefaultContainerIfNeeded() {
+        if (sharedPreferences.getBoolean(PREF_AUTO_DEFAULT_CONTAINER_CREATED, false)) return;
+        if (containerManager == null) return;
+
+        sharedPreferences.edit().putBoolean(PREF_AUTO_DEFAULT_CONTAINER_CREATED, true).apply();
+
+        containerManager.loadContainers();
+        if (!containerManager.getContainers().isEmpty()) return;
+
+        try {
+            String wineVersion = WineInfo.MAIN_WINE_VERSION.identifier();
+            JSONObject data = new JSONObject();
+            data.put("name", wineVersion);
+            data.put("wineVersion", wineVersion);
+            data.put("emulator", Container.DEFAULT_EMULATOR);
+            data.put("dxwrapperConfig", Container.DEFAULT_DXWRAPPERCONFIG);
+
+            ContentsManager contentsManager = new ContentsManager(this);
+            containerManager.createContainerAsync(data, contentsManager, (container) -> {
+                if (container == null) {
+                    Log.e("MainActivity", "Failed to auto-create default container");
+                    return;
+                }
+                Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.FLFragmentContainer);
+                if (currentFragment instanceof ContainersFragment) {
+                    ((ContainersFragment) currentFragment).loadContainersList();
+                }
+            });
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
     }
 
