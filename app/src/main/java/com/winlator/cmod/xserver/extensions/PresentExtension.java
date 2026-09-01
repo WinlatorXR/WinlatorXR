@@ -158,6 +158,14 @@ public class PresentExtension implements Extension {
                 content.setTexture(pixmap.drawable.getTexture());
                 content.getTexture().setNeedsUpdate(true);
 
+                // setTexture() doesn't run the drawable's onDrawListener the way
+                // drawImage()/copyArea() do, so the zero-copy flip path has to fire it
+                // itself - otherwise WindowManager's triggerOnUpdateWindowContent() never
+                // runs for flipped windows, and the frame counter it drives (used to
+                // throttle absolute-mouse updates to the content's own update rate) stalls.
+                Runnable onDrawListener = content.getOnDrawListener();
+                if (onDrawListener != null) onDrawListener.run();
+
                 sendCompleteNotify(window, serial, Kind.PIXMAP, Mode.FLIP, ust, msc);
 
                 // Defer idle-notify by one present cycle: `content` was still aliased onto
