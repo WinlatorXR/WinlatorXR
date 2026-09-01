@@ -815,7 +815,7 @@ public class WinHandler {
         if (amplitude <= 0) { stopVibration(slot, ctrl); return; }
         int a = Math.min(255, Math.round(amplitude / 65535f * 254f) + 1);
 
-        if (XrActivity.isActive() && XrActivity.gamepadEmulation) {
+        if (XrActivity.isActive() && (XrActivity.gamepadEmulation || XrActivity.rumblePassthrough)) {
             XrActivity.getInstance().vibrateController(10, 0, a);
             XrActivity.getInstance().vibrateController(10, 1, a);
             return;
