@@ -22,6 +22,7 @@
 #include <cstring>
 #include <map>
 #include <vector>
+#include <mutex>
 
 #include "openxr.h"
 
@@ -34,7 +35,18 @@ bool xr_initialized = false;
 bool xr_curvedScreen = false;
 bool xr_usePassthrough = false;
 int xr_sharpening = 0;
+int xr_edge_glow = 0;
+bool xr_smoothing = false;
 bool xr_vr = false;
+std::vector<uint8_t> xr_environment_pixels;
+std::mutex xr_environment_mutex;
+int xr_environment_width = 0;
+int xr_environment_height = 0;
+bool xr_environment_pending = false;
+bool xr_environment_enabled = false;
+// Separate from the above: that tracks whether a panorama is loaded at all, this is the
+// user switching it off without giving up their selection.
+bool xr_environment_visible = true;
 float xr_aspect = 0;
 float xr_fovx = 0;
 float xr_fovy = 0;
@@ -196,7 +208,7 @@ Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean imm
                                           jboolean sbs, jboolean aer, jfloat distance) {
     if (XrRendererInitFrame(&xr_module_engine, &xr_module_renderer)) {
         // Update controllers state
-        XrInputUpdate(&xr_module_engine, &xr_module_input);
+        XrInputUpdate(&xr_module_engine, &xr_module_input, xr_smoothing && !xr_vr);
 
         // Get poses for XrAPI
         updatePoses();
@@ -204,16 +216,35 @@ Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean imm
         // All spaces are located, we can lock the frame
         XrRendererLockFrame(&xr_module_engine, &xr_module_renderer);
 
+        // The panorama is decoded on a background thread but can only be uploaded with a
+        // current GL context, which is this thread. Drain any pending upload here.
+        {
+            std::lock_guard<std::mutex> lock(xr_environment_mutex);
+            if (xr_environment_pending) {
+                xr_environment_pending = false;
+                if (xr_environment_pixels.empty()) {
+                    XrRendererClearEnvironment(&xr_module_renderer);
+                } else {
+                    XrRendererSetEnvironment(&xr_module_engine, &xr_module_renderer,
+                                             xr_environment_pixels.data(),
+                                             xr_environment_width, xr_environment_height);
+                    std::vector<uint8_t>().swap(xr_environment_pixels);
+                }
+            }
+        }
+
         // Set render canvas
         xr_module_renderer.ConfigInt[CONFIG_VIEWPORT_CURVED] = !immersive && xr_curvedScreen;
         xr_module_renderer.ConfigInt[CONFIG_SHARPENING] = xr_sharpening;
+        xr_module_renderer.ConfigInt[CONFIG_ENVIRONMENT] = xr_environment_enabled && xr_environment_visible && !xr_vr;
+        xr_module_renderer.ConfigInt[CONFIG_EDGE_GLOW] = xr_edge_glow && !xr_vr;
         xr_module_renderer.ConfigFloat[CONFIG_CANVAS_DISTANCE] = distance;
         xr_module_renderer.ConfigFloat[CONFIG_CANVAS_SIZE] = xr_aspect;
         xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOV_SCALE] = 1.1f;
         if (xr_fovx > 1) xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOVX] = xr_fovx;
         if (xr_fovy > 1) xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOVY] = xr_fovy;
         xr_module_renderer.ConfigInt[CONFIG_PASSTHROUGH] =
-                !immersive && !xr_vr && xr_usePassthrough;
+                !immersive && !xr_vr && xr_usePassthrough && !xr_module_renderer.ConfigInt[CONFIG_ENVIRONMENT];
         xr_module_renderer.ConfigInt[CONFIG_IMMERSIVE] = immersive && !xr_vr;
         xr_module_renderer.ConfigInt[CONFIG_FRAMESYNC] = xr_vr;
         xr_module_renderer.ConfigInt[CONFIG_AER] = aer;
@@ -375,9 +406,76 @@ Java_com_winlator_xr_XrActivity_nativeSetSharpening(JNIEnv *env, jobject obj, ji
     xr_sharpening = level;
 }
 
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_nativeSetEdgeGlow(JNIEnv *env, jobject obj, jint intensity) {
+    xr_edge_glow = intensity < 0 ? 0 : (intensity > 100 ? 100 : intensity);
+}
+
 JNIEXPORT jboolean JNICALL
 Java_com_winlator_xr_XrActivity_nativeIsSharpeningSupported(JNIEnv *env, jobject obj) {
     return xr_module_engine.PlatformFlag[PLATFORM_EXTENSION_LAYER_SETTINGS];
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_winlator_xr_XrActivity_nativeIsEnvironmentSupported(JNIEnv *env, jobject obj) {
+    return xr_module_engine.PlatformFlag[PLATFORM_EXTENSION_EQUIRECT];
+}
+
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_nativeSetEnvironmentEnabled(JNIEnv *env, jobject obj,
+                                                            jboolean enabled) {
+    // Deliberately does not touch the uploaded panorama, so switching it back on is free.
+    xr_environment_visible = enabled;
+}
+
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_nativeSetEnvironment(JNIEnv *env, jobject obj, jbyteArray rgba,
+                                                     jint width, jint height) {
+    std::lock_guard<std::mutex> lock(xr_environment_mutex);
+    if (rgba == nullptr) {
+        std::vector<uint8_t>().swap(xr_environment_pixels);
+        xr_environment_width = 0;
+        xr_environment_height = 0;
+        xr_environment_enabled = false;
+        xr_environment_pending = true;
+        return;
+    }
+
+    jsize length = env->GetArrayLength(rgba);
+    if (length != (jsize) width * height * 4) {
+        ALOGE("Environment payload is %d bytes, expected %d for %dx%d", (int) length,
+              width * height * 4, width, height);
+        return;
+    }
+
+    xr_environment_pixels.resize((size_t) length);
+    env->GetByteArrayRegion(rgba, 0, length, (jbyte *) xr_environment_pixels.data());
+
+    // GL texture rows run bottom-up while the decoded bitmap is top-down, so the panorama
+    // reached the compositor vertically mirrored - sky underfoot. Reverse the rows on the
+    // way in. This is a vertical flip rather than a 180 degree rotation on purpose: the
+    // defect is only in the row order, and mirroring horizontally as well would leave any
+    // text or signage in the panorama reading backwards.
+    const size_t stride = (size_t) width * 4;
+    std::vector<uint8_t> scratch(stride);
+    for (int y = 0; y < height / 2; y++) {
+        uint8_t *top = xr_environment_pixels.data() + (size_t) y * stride;
+        uint8_t *bottom = xr_environment_pixels.data() + (size_t) (height - 1 - y) * stride;
+        memcpy(scratch.data(), top, stride);
+        memcpy(top, bottom, stride);
+        memcpy(bottom, scratch.data(), stride);
+    }
+
+    xr_environment_width = width;
+    xr_environment_height = height;
+    xr_environment_enabled = true;
+    xr_environment_pending = true;
+}
+
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_nativeSetPointerSmoothing(JNIEnv *env, jobject obj,
+                                                          jboolean enabled) {
+    xr_smoothing = enabled;
 }
 
 JNIEXPORT void JNICALL

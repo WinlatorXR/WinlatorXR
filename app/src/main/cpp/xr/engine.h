@@ -42,7 +42,7 @@ enum
 };
 enum
 {
-  XrMaxLayerCount = 3
+  XrMaxLayerCount = 5
 };
 enum
 {
@@ -58,6 +58,7 @@ enum XrPlatformFlag
   PLATFORM_EXTENSION_PERFORMANCE,
   PLATFORM_EXTENSION_REFRESHRATE,
   PLATFORM_EXTENSION_LAYER_SETTINGS,
+  PLATFORM_EXTENSION_EQUIRECT,
   PLATFORM_MAX
 };
 
@@ -66,6 +67,7 @@ typedef union
   XrCompositionLayerProjection projection;
   XrCompositionLayerQuad quad;
   XrCompositionLayerCylinderKHR cylinder;
+  XrCompositionLayerEquirect2KHR equirect;
   XrCompositionLayerPassthroughFB passthrough;
 } XrCompositorLayer;
 

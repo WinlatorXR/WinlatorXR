@@ -204,7 +204,7 @@ XrPosef XrInputGetPose(struct XrInput* input, int controller)
     return input->ControllerPose[controller].pose;
 }
 
-void XrInputUpdate(struct XrEngine* engine, struct XrInput* input)
+void XrInputUpdate(struct XrEngine* engine, struct XrInput* input, bool smoothing)
 {
     // sync action data
     XrActiveActionSet activeActionSet = {};
@@ -302,7 +302,29 @@ void XrInputUpdate(struct XrEngine* engine, struct XrInput* input)
         input->ControllerPose[i].type = XR_TYPE_SPACE_LOCATION;
         xrLocateSpace(spaces[i], engine->CurrentSpace,
                       (XrTime)(engine->PredictedDisplayTime), &input->ControllerPose[i]);
+
+        // Smoothing a pose the runtime could not actually locate would drag the controller
+        // back from wherever it was before tracking dropped, so the filter starts over.
+        const XrSpaceLocationFlags tracked = XR_SPACE_LOCATION_POSITION_VALID_BIT |
+                                             XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
+        if ((input->ControllerPose[i].locationFlags & tracked) != tracked)
+        {
+            XrOneEuroPoseReset(&input->PoseFilter[i]);
+            continue;
+        }
+
+        if (smoothing)
+        {
+            input->ControllerPose[i].pose = XrOneEuroPoseFilter(
+                    &input->PoseFilter[i], input->ControllerPose[i].pose,
+                    engine->PredictedDisplayTime);
+        }
+        else
+        {
+            XrOneEuroPoseReset(&input->PoseFilter[i]);
+        }
     }
+
 }
 
 void XrInputVibrate(struct XrInput* input, int duration, int chan, float intensity)

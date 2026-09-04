@@ -55,6 +55,46 @@
         android:background="@drawable/xr_selector"
         android:text="@string/use_pt" />
 
+    <CheckBox
+        android:id="@+id/CBDisableEnvironment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/xr_selector"
+        android:text="@string/disable_environment"
+        android:visibility="gone" />
+
+
+    <TextView
+        android:id="@+id/TVEnvironment"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/xr_environment" />
+
+    <LinearLayout
+        android:id="@+id/LLEnvironment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <Spinner
+            style="@style/ComboBox"
+            android:id="@+id/SEnvironment"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:spinnerMode="dialog" />
+
+        <ImageButton
+            style="@style/ListMenuButton"
+            android:id="@+id/BTImportEnvironment"
+            android:contentDescription="@string/xr_environment_import"
+            android:layout_marginRight="0dp"
+            android:src="@drawable/icon_add" />
+    </LinearLayout>
+
+
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"

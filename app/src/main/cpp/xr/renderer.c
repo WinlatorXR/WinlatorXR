@@ -27,6 +27,10 @@
 #include <jni.h>
 #include <stdbool.h>
 
+#if XR_USE_GRAPHICS_API_OPENGL_ES
+#include <GLES3/gl3.h>
+#endif
+
 #define DECL_PFN(pfn) PFN_##pfn pfn = NULL
 #define INIT_PFN(pfn) OXR(xrGetInstanceProcAddr(engine->Instance, #pfn, (PFN_xrVoidFunction*)(&pfn)))
 
@@ -50,6 +54,10 @@ void XrRendererInit(struct XrEngine* engine, struct XrRenderer* renderer)
     }
     memset(renderer, 0, sizeof(renderer));
     renderer->RecenterPending = true;
+    // The memset above only covers a pointer, so state that must start clean is set here.
+    renderer->EnvironmentCreated = false;
+    renderer->EnvironmentReady = false;
+    renderer->EdgeGlowRendered = false;
 
     if (engine->PlatformFlag[PLATFORM_EXTENSION_PASSTHROUGH])
     {
@@ -123,6 +131,7 @@ void XrRendererInit(struct XrEngine* engine, struct XrRenderer* renderer)
         renderer->InvertedViewPose[i][XrMaxFrameSync].position.y = 0;
         renderer->InvertedViewPose[i][XrMaxFrameSync].position.z = 0;
     }
+    XrEdgeGlowCreate(&renderer->EdgeGlow, engine->Session);
     renderer->PassthroughRunning = false;
     renderer->Initialized = true;
     renderer->FrameSync = 0;
@@ -145,6 +154,8 @@ void XrRendererDestroy(struct XrEngine* engine, struct XrRenderer* renderer)
     {
         XrFramebufferDestroy(&renderer->Framebuffer[i]);
     }
+    XrRendererClearEnvironment(renderer);
+    XrEdgeGlowDestroy(&renderer->EdgeGlow);
     free(renderer->Projections);
     renderer->Initialized = false;
 }
@@ -228,6 +239,7 @@ void XrRendererLockFrame(struct XrEngine* engine, struct XrRenderer* renderer) {
     renderer->ConfigFloat[CONFIG_VIEWPORT_FOVX] = ToDegrees(fovx);
     renderer->ConfigFloat[CONFIG_VIEWPORT_FOVY] = ToDegrees(fovy);
     renderer->HmdOrientation = XrQuaternionfEulerAngles(renderer->InvertedViewPose[0][renderer->FrameSync].orientation);
+    renderer->EdgeGlowRendered = false;
     renderer->LayerCount = 0;
     memset(renderer->Layers, 0, sizeof(XrCompositorLayer) * XrMaxLayerCount);
 }
@@ -244,16 +256,59 @@ void XrRendererBeginFrame(struct XrRenderer* renderer, int fbo_index)
     renderer->ConfigInt[CONFIG_CURRENT_FBO] = fbo_index;
 }
 
+/*
+ * Reduces the screen into the glow layer. This has to happen while the screen swapchain
+ * image is still acquired, so it runs from XrRendererEndFrame rather than from
+ * XrRendererFinishFrame where the rest of the layer work lives.
+ */
+static void XrRendererUpdateEdgeGlow(struct XrRenderer* renderer, int fbo_index)
+{
+    // Only the left eye is sampled: in AER mode the two eyes differ too little to be worth
+    // a second reduction, and a full projection layer (VR mode) leaves nothing to glow past.
+    if (fbo_index != 0) return;
+    if (renderer->ConfigInt[CONFIG_VR]) return;
+
+    int intensity = renderer->ConfigInt[CONFIG_EDGE_GLOW];
+    if (intensity <= 0) return;
+    if (!renderer->EdgeGlow.Initialized) return;
+
+#if XR_USE_GRAPHICS_API_OPENGL_ES
+    struct XrFramebuffer* framebuffer = &renderer->Framebuffer[fbo_index];
+    if (!framebuffer->Acquired) return;
+
+    // Matches the sub-rectangle XrRendererFinishFrame hands to the screen layer: the left
+    // half of the swapchain under SBS, all of it otherwise.
+    float scale_u = renderer->ConfigInt[CONFIG_SBS] ? 0.5f : 1.0f;
+
+    GLuint source = ((XrSwapchainImageOpenGLESKHR*)framebuffer->SwapchainImage)
+                            [framebuffer->SwapchainIndex].image;
+    XrEdgeGlowRender(&renderer->EdgeGlow, source, 0.0f, 0.0f, scale_u, 1.0f,
+                      (float)intensity / 100.0f);
+    XrFramebufferSetCurrent(framebuffer);
+    renderer->EdgeGlowRendered = true;
+#endif
+}
+
 void XrRendererEndFrame(struct XrRenderer* renderer)
 {
     int fbo_index = renderer->ConfigInt[CONFIG_CURRENT_FBO];
     if (fbo_index >= 0) {
+        XrRendererUpdateEdgeGlow(renderer, fbo_index);
         XrFramebufferRelease(&renderer->Framebuffer[fbo_index]);
     }
 }
 
 void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
 {
+    // A 360 panorama sits behind everything else. It is opaque, so passthrough wins where
+    // both are on: seeing the room is the more specific request, and an opaque sphere over
+    // it would only hide what the user asked to see. It is also pointless under a full
+    // projection layer (VR mode), which already covers the whole view.
+    bool environment = renderer->EnvironmentReady &&
+                       renderer->ConfigInt[CONFIG_ENVIRONMENT] &&
+                       !renderer->ConfigInt[CONFIG_VR] &&
+                       !renderer->ConfigInt[CONFIG_PASSTHROUGH];
+
     if (engine->PlatformFlag[PLATFORM_EXTENSION_PASSTHROUGH] && renderer->ConfigInt[CONFIG_PASSTHROUGH]) {
         if (renderer->PassthroughLayer != XR_NULL_HANDLE) {
             XrCompositionLayerPassthroughFB passthrough_layer = {XR_TYPE_COMPOSITION_LAYER_PASSTHROUGH_FB};
@@ -358,6 +413,76 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
     layer_settings.layerFlags = (sharpening_level >= 2) ? XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SHARPENING_BIT_FB
                                                         : XR_COMPOSITION_LAYER_SETTINGS_NORMAL_SHARPENING_BIT_FB;
     const void* layer_settings_chain = (engine->PlatformFlag[PLATFORM_EXTENSION_LAYER_SETTINGS] && sharpening_level > 0) ? &layer_settings : NULL;
+
+    if (environment)
+    {
+        // radius 0 means an infinite sphere, so only the centre matters: pin it to the
+        // head so the panorama always surrounds the viewer, but leave the orientation
+        // in CurrentSpace so a recenter rotates it along with the screen.
+        XrCompositionLayerEquirect2KHR equirect_layer = {};
+        equirect_layer.type = XR_TYPE_COMPOSITION_LAYER_EQUIRECT2_KHR;
+        equirect_layer.layerFlags = 0;
+        equirect_layer.space = engine->CurrentSpace;
+        equirect_layer.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
+        memset(&equirect_layer.subImage, 0, sizeof(XrSwapchainSubImage));
+        equirect_layer.subImage.swapchain = renderer->Environment.Handle;
+        equirect_layer.subImage.imageRect.offset.x = 0;
+        equirect_layer.subImage.imageRect.offset.y = 0;
+        equirect_layer.subImage.imageRect.extent.width = renderer->Environment.Width;
+        equirect_layer.subImage.imageRect.extent.height = renderer->Environment.Height;
+        equirect_layer.subImage.imageArrayIndex = 0;
+        equirect_layer.pose.orientation.w = 1.0f;
+        equirect_layer.pose.position = renderer->InvertedViewPose[0][frame].position;
+        equirect_layer.radius = 0.0f;
+        equirect_layer.centralHorizontalAngle = (float)(2.0 * M_PI);
+        equirect_layer.upperVerticalAngle = (float)(M_PI * 0.5);
+        equirect_layer.lowerVerticalAngle = (float)(-M_PI * 0.5);
+        renderer->Layers[renderer->LayerCount++].equirect = equirect_layer;
+    }
+
+    if (renderer->EdgeGlowRendered)
+    {
+        // The glow is coplanar with the screen and submitted first, so the screen simply
+        // paints over the middle of it. Compositor layers are ordered, not depth tested,
+        // which is why no separation offset is needed here.
+        if (renderer->ConfigInt[CONFIG_VIEWPORT_CURVED])
+        {
+            XrCompositionLayerCylinderKHR glow_layer = {};
+            glow_layer.type = XR_TYPE_COMPOSITION_LAYER_CYLINDER_KHR;
+            glow_layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+            glow_layer.space = engine->CurrentSpace;
+            glow_layer.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
+            memset(&glow_layer.subImage, 0, sizeof(XrSwapchainSubImage));
+            glow_layer.subImage.swapchain = renderer->EdgeGlow.Framebuffer.Handle;
+            glow_layer.subImage.imageRect.extent.width = XrEdgeGlowSize;
+            glow_layer.subImage.imageRect.extent.height = XrEdgeGlowSize;
+            glow_layer.subImage.imageArrayIndex = 0;
+            glow_layer.pose.orientation = rot;
+            glow_layer.pose.position = pos;
+            glow_layer.radius = radius;
+            glow_layer.centralAngle = (float)(M_PI * 0.5) * XrEdgeGlowSpread;
+            glow_layer.aspectRatio = 1;
+            renderer->Layers[renderer->LayerCount++].cylinder = glow_layer;
+        }
+        else
+        {
+            XrCompositionLayerQuad glow_layer = {};
+            glow_layer.type = XR_TYPE_COMPOSITION_LAYER_QUAD;
+            glow_layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+            glow_layer.space = engine->CurrentSpace;
+            glow_layer.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
+            memset(&glow_layer.subImage, 0, sizeof(XrSwapchainSubImage));
+            glow_layer.subImage.swapchain = renderer->EdgeGlow.Framebuffer.Handle;
+            glow_layer.subImage.imageRect.extent.width = XrEdgeGlowSize;
+            glow_layer.subImage.imageRect.extent.height = XrEdgeGlowSize;
+            glow_layer.subImage.imageArrayIndex = 0;
+            glow_layer.pose.orientation = rot;
+            glow_layer.pose.position = pos;
+            glow_layer.size.width = 4 * size * XrEdgeGlowSpread;
+            glow_layer.size.height = 4 * size * XrEdgeGlowSpread;
+            renderer->Layers[renderer->LayerCount++].quad = glow_layer;
+        }
+    }
 
     XrCompositionLayerProjectionView projection_layer_elements[2] = {};
     struct XrFramebuffer* framebuffer = &renderer->Framebuffer[0];
@@ -512,6 +637,72 @@ void XrRendererBindFramebuffer(struct XrRenderer* renderer)
     }
 }
 
+
+bool XrRendererSetEnvironment(struct XrEngine* engine, struct XrRenderer* renderer,
+                              const void* rgba, int width, int height)
+{
+    if (!engine->PlatformFlag[PLATFORM_EXTENSION_EQUIRECT] || (rgba == NULL))
+    {
+        return false;
+    }
+
+    // The panorama never changes once uploaded, so it lives in its own swapchain that
+    // is acquired and released exactly once. The compositor keeps sampling the last
+    // released image, which is what lets the layer cost us nothing per frame.
+    if (renderer->EnvironmentCreated &&
+        ((renderer->Environment.Width != width) || (renderer->Environment.Height != height)))
+    {
+        XrFramebufferDestroy(&renderer->Environment);
+        renderer->EnvironmentCreated = false;
+        renderer->EnvironmentReady = false;
+    }
+
+    if (!renderer->EnvironmentCreated)
+    {
+        if (!XrFramebufferCreate(&renderer->Environment, engine->Session, width, height))
+        {
+            ALOGE("Failed to create the %dx%d environment swapchain", width, height);
+            return false;
+        }
+        renderer->EnvironmentCreated = true;
+    }
+
+#if XR_USE_GRAPHICS_API_OPENGL_ES
+    // Acquiring rebinds the framebuffer and rewrites the viewport, so put back whatever the
+    // caller had: this runs mid-frame, before the screen framebuffer has been acquired.
+    GLint previous_framebuffer = 0;
+    GLint previous_viewport[4] = {};
+    GL(glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previous_framebuffer));
+    GL(glGetIntegerv(GL_VIEWPORT, previous_viewport));
+
+    XrFramebufferAcquire(&renderer->Environment);
+    GLuint texture = ((XrSwapchainImageOpenGLESKHR*)renderer->Environment.SwapchainImage)
+                             [renderer->Environment.SwapchainIndex].image;
+    GL(glBindTexture(GL_TEXTURE_2D, texture));
+    GL(glPixelStorei(GL_UNPACK_ALIGNMENT, 4));
+    GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, rgba));
+    GL(glBindTexture(GL_TEXTURE_2D, 0));
+    XrFramebufferRelease(&renderer->Environment);
+
+    GL(glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer));
+    GL(glViewport(previous_viewport[0], previous_viewport[1], previous_viewport[2], previous_viewport[3]));
+#endif
+
+
+    renderer->EnvironmentReady = true;
+    ALOGV("Uploaded a %dx%d environment panorama", width, height);
+    return true;
+}
+
+void XrRendererClearEnvironment(struct XrRenderer* renderer)
+{
+    renderer->EnvironmentReady = false;
+    if (renderer->EnvironmentCreated)
+    {
+        XrFramebufferDestroy(&renderer->Environment);
+        renderer->EnvironmentCreated = false;
+    }
+}
 
 void XrRendererRecenter(struct XrEngine* engine, struct XrRenderer* renderer)
 {

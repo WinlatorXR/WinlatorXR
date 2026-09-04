@@ -20,6 +20,7 @@
 #pragma once
 
 #include "engine.h"
+#include "edgeglow.h"
 #include "framebuffer.h"
 
 enum XrConfigFloat
@@ -55,6 +56,8 @@ enum XrConfigInt
     CONFIG_VIEWPORT_WIDTH,
     CONFIG_VIEWPORT_HEIGHT,
     CONFIG_SHARPENING,
+    CONFIG_ENVIRONMENT,
+    CONFIG_EDGE_GLOW,
     // render status
     CONFIG_CURRENT_FBO,
     CONFIG_FRAMESYNC_R,
@@ -75,6 +78,11 @@ struct XrRenderer {
     int ConfigInt[CONFIG_INT_MAX];
 
     struct XrFramebuffer Framebuffer[XrMaxNumEyes];
+    struct XrFramebuffer Environment;
+    bool EnvironmentCreated;
+    bool EnvironmentReady;
+    struct XrEdgeGlow EdgeGlow;
+    bool EdgeGlowRendered;
 
     float FovScale;
     int FrameSync;
@@ -103,6 +111,10 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
 
 void XrRendererBindFramebuffer(struct XrRenderer* renderer);
 void XrRendererRecenter(struct XrEngine* engine, struct XrRenderer* renderer);
+
+bool XrRendererSetEnvironment(struct XrEngine* engine, struct XrRenderer* renderer,
+                              const void* rgba, int width, int height);
+void XrRendererClearEnvironment(struct XrRenderer* renderer);
 
 void XrRendererHandleSessionStateChanges(struct XrEngine* engine, struct XrRenderer* renderer, XrSessionState state);
 void XrRendererHandleXrEvents(struct XrEngine* engine, struct XrRenderer* renderer);

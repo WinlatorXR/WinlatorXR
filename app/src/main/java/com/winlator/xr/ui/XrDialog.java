@@ -21,9 +21,11 @@ package com.winlator.xr.ui;
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.ListView;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.preference.PreferenceManager;
@@ -33,6 +35,7 @@ import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.xr.io.XrController;
 import com.winlator.xr.io.XrInput;
+import com.winlator.xr.utils.XrEnvironment;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,7 +51,16 @@ public class XrDialog extends ContentDialog {
         CheckBox cbCurvedScreen = findViewById(R.id.CBEnableCurvedScreen);
         CheckBox cbPassthrough = findViewById(R.id.CBEnablePassthrough);
         TextView tvToApplyClose = findViewById(R.id.TVToApplyClose);
-        hmdUI(activity, cbSBS, cbImmersiveMode, cbCurvedScreen, cbPassthrough, tvToApplyClose);
+        CheckBox cbDisableEnvironment = findViewById(R.id.CBDisableEnvironment);
+        // Passthrough already covers the space the environment would occupy, so the switch
+        // would do nothing visible while it is on.
+        hmdUI(activity, cbSBS, cbImmersiveMode, cbCurvedScreen, cbPassthrough, tvToApplyClose,
+                () -> setViewEnabled(cbDisableEnvironment, !cbPassthrough.isChecked()));
+        environmentToggleUI(activity, cbDisableEnvironment);
+        // The environment picker is Settings-only. Importing needs a document picker, which
+        // is unusable from inside a session, and the list is not something to manage mid-game.
+        findViewById(R.id.TVEnvironment).setVisibility(View.GONE);
+        findViewById(R.id.LLEnvironment).setVisibility(View.GONE);
 
         CheckBox cbMouseLeftHanded = findViewById(R.id.CBPlayerXRMouseLeftHanded);
         CheckBox cbMouseLightgun = findViewById(R.id.CBPlayerXRMouseLightgun);
@@ -130,6 +142,71 @@ public class XrDialog extends ContentDialog {
         });
     }
 
+    /**
+     * Populates the 360 environment picker from the panoramas in the environments folder.
+     * Hidden entirely when the runtime has no equirect2 support, since there is nothing the
+     * setting could do there. Settings-only: XrDialog hides the whole row instead.
+     */
+    public static void environmentUI(Activity activity, Spinner sEnvironment,
+                                     TextView tvEnvironment, View btImport, Runnable onImport) {
+        boolean supported = !XrActivity.isActive() ||
+                XrActivity.getInstance().nativeIsEnvironmentSupported();
+        if (!supported) {
+            sEnvironment.setVisibility(View.GONE);
+            tvEnvironment.setVisibility(View.GONE);
+            btImport.setVisibility(View.GONE);
+            return;
+        }
+
+        btImport.setOnClickListener(v -> onImport.run());
+
+        selectEnvironment(activity, sEnvironment, XrEnvironment.getSelected(activity));
+    }
+
+    /**
+     * Rebuilds the picker's contents and selects the named panorama, applying it if that is
+     * a change. Also used after an import, to show the file that was just added.
+     */
+    public static void selectEnvironment(Activity activity, Spinner sEnvironment, String name) {
+        List<String> files = XrEnvironment.list(activity);
+        List<String> labels = new ArrayList<>();
+        labels.add(activity.getString(R.string.xr_environment_none));
+        labels.addAll(files);
+
+        sEnvironment.setOnItemSelectedListener(null);
+        sEnvironment.setAdapter(new ArrayAdapter<>(activity,
+                android.R.layout.simple_spinner_dropdown_item, labels));
+        // Index 0 is "None", so a stored name maps to its position in the file list plus one.
+        sEnvironment.setSelection(files.indexOf(name) + 1);
+
+        sEnvironment.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String selected = position <= 0 ? "" : files.get(position - 1);
+                if (selected.equals(XrEnvironment.getSelected(activity))) return;
+                applySelection(activity, selected);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        // Spinner posts its selection callback rather than firing it inline, so apply the
+        // change here instead of depending on that timing. The guard above keeps the posted
+        // callback from repeating the work.
+        if (!name.equals(XrEnvironment.getSelected(activity))) {
+            applySelection(activity, name);
+        }
+    }
+
+    private static void applySelection(Activity activity, String name) {
+        XrEnvironment.setSelected(activity, name);
+        // Deliberately picking a panorama overrides a previous "Disable environment",
+        // otherwise choosing one from Settings would appear to do nothing.
+        if (!name.isEmpty()) XrEnvironment.setEnabled(activity, true);
+        XrEnvironment.apply(activity, name);
+    }
+
     public static List<String> getProfileNames(Activity activity) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
         List<String> names = new ArrayList<>();
@@ -138,7 +215,44 @@ public class XrDialog extends ContentDialog {
         return names;
     }
 
-    public static void hmdUI(Activity activity, CheckBox cbSBS, CheckBox cbImmersiveMode, CheckBox cbCurvedScreen, CheckBox cbPassthrough, TextView tvToApplyClose) {
+    /**
+     * The in-session switch for the 360 environment. Only shown once a panorama has actually
+     * been chosen in Settings, since with nothing selected there is nothing to switch off.
+     * Unlike picking "None" it leaves the selection alone, so it can be switched back on.
+     */
+    public static void environmentToggleUI(Activity activity, CheckBox cbDisableEnvironment) {
+        boolean supported = !XrActivity.isActive() ||
+                XrActivity.getInstance().nativeIsEnvironmentSupported();
+        boolean selected = !XrEnvironment.getSelected(activity).isEmpty();
+        if (!supported || !selected) {
+            cbDisableEnvironment.setVisibility(View.GONE);
+            return;
+        }
+
+        cbDisableEnvironment.setVisibility(View.VISIBLE);
+        cbDisableEnvironment.setChecked(!XrEnvironment.isEnabled(activity));
+        cbDisableEnvironment.setOnCheckedChangeListener(
+                (compoundButton, checked) -> XrEnvironment.setEnabled(activity, !checked));
+    }
+
+    /**
+     * Greys out the environment picker. Used when passthrough already owns the space behind
+     * the screen, so the setting would have no visible effect if it were changed.
+     */
+    public static void setEnvironmentEnabled(Spinner sEnvironment, TextView tvEnvironment,
+                                             View btImport, boolean enabled) {
+        setViewEnabled(sEnvironment, enabled);
+        setViewEnabled(tvEnvironment, enabled);
+        setViewEnabled(btImport, enabled);
+    }
+
+    /** Disables a control and dims it, since setEnabled alone is easy to miss. */
+    public static void setViewEnabled(View view, boolean enabled) {
+        view.setEnabled(enabled);
+        view.setAlpha(enabled ? 1.0f : 0.4f);
+    }
+
+    public static void hmdUI(Activity activity, CheckBox cbSBS, CheckBox cbImmersiveMode, CheckBox cbCurvedScreen, CheckBox cbPassthrough, TextView tvToApplyClose, Runnable onChanged) {
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(activity);
         boolean isImmersive = XrActivity.isImmersive;
 
@@ -172,7 +286,7 @@ public class XrDialog extends ContentDialog {
 
             boolean warn = (XrActivity.isImmersive != isImmersive) && XrActivity.isActive();
             tvToApplyClose.setVisibility(warn ? View.VISIBLE : View.GONE);
-            cbPassthrough.setEnabled(!XrActivity.isImmersive);
+            if (onChanged != null) onChanged.run();
         };
 
         // Apply changes immediately
@@ -180,6 +294,9 @@ public class XrDialog extends ContentDialog {
         cbImmersiveMode.setOnCheckedChangeListener((compoundButton, b) -> applyAll.run());
         cbCurvedScreen.setOnCheckedChangeListener((compoundButton, b) -> applyAll.run());
         cbPassthrough.setOnCheckedChangeListener((compoundButton, b) -> applyAll.run());
+
+        // Settle whatever depends on these before the user has touched anything.
+        if (onChanged != null) onChanged.run();
     }
 
     private static void loadConfig(CheckBox cb, String key, boolean defValue, boolean curValue) {

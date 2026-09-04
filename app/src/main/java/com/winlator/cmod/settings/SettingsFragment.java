@@ -44,6 +44,7 @@ import com.winlator.cmod.midi.MidiManager;
 import com.winlator.cmod.xenvironment.ImageFsInstaller;
 import com.winlator.xr.ui.XrControllerDialog;
 import com.winlator.xr.ui.XrDialog;
+import com.winlator.xr.utils.XrEnvironment;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -79,6 +80,7 @@ public class SettingsFragment extends Fragment {
     boolean isDarkMode;
 
     private static final int REQUEST_CODE_FRONTEND_EXPORT_PATH = 1002;
+    private static final int REQUEST_CODE_IMPORT_PANORAMA = 1003;
     private static final int REQUEST_CODE_INSTALL_SOUNDFONT = 1001;
 
     @Override
@@ -164,7 +166,21 @@ public class SettingsFragment extends Fragment {
         CheckBox cbCurvedScreen = view.findViewById(R.id.CBEnableCurvedScreen);
         CheckBox cbPassthrough = view.findViewById(R.id.CBEnablePassthrough);
         TextView tvToApplyClose = view.findViewById(R.id.TVToApplyClose);
-        XrDialog.hmdUI(getActivity(), cbSBS, cbImmersiveMode, cbCurvedScreen, cbPassthrough, tvToApplyClose);
+        // The in-session environment switch belongs to the XR menu; Settings has the picker,
+        // where "None" does the same job.
+        view.findViewById(R.id.CBDisableEnvironment).setVisibility(View.GONE);
+        Spinner sEnvironment = view.findViewById(R.id.SEnvironment);
+        TextView tvEnvironment = view.findViewById(R.id.TVEnvironment);
+        View btImportEnvironment = view.findViewById(R.id.BTImportEnvironment);
+        // Passthrough takes precedence over the environment, so grey the picker out while it
+        // is on rather than let the setting look like it does nothing.
+        XrDialog.hmdUI(getActivity(), cbSBS, cbImmersiveMode, cbCurvedScreen, cbPassthrough, tvToApplyClose,
+                () -> XrDialog.setEnvironmentEnabled(sEnvironment, tvEnvironment, btImportEnvironment,
+                        !cbPassthrough.isChecked()));
+        XrDialog.environmentUI(getActivity(), sEnvironment, tvEnvironment, btImportEnvironment,
+                () -> ContentDialog.confirm(getContext(),
+                        getString(R.string.xr_environment_import_message),
+                        () -> openFile(REQUEST_CODE_IMPORT_PANORAMA, "image/*")));
 
         // Tab switcher
         TabLayout tabLayout = view.findViewById(R.id.TabLayout);
@@ -592,9 +608,13 @@ public class SettingsFragment extends Fragment {
 
 
     private void openFile(int requestCode) {
+        openFile(requestCode, "*/*");
+    }
+
+    private void openFile(int requestCode, String mimeType) {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("*/*");
+        intent.setType(mimeType);
 
         // Start activity for result based on the provided request code
         getActivity().startActivityFromFragment(this, intent, requestCode);
@@ -750,6 +770,23 @@ public class SettingsFragment extends Fragment {
                         TextView tvFrontendExportPath = getView().findViewById(R.id.TVFrontendExportPath);
                         tvFrontendExportPath.setText(fullPath != null ? fullPath : uri.toString());
                         break;
+
+                    // Case for importing a 360 panorama
+                    case REQUEST_CODE_IMPORT_PANORAMA: {
+                        String imported = XrEnvironment.importFrom(getContext(), uri);
+                        if (imported == null) {
+                            AppUtils.showToast(getContext(), R.string.xr_environment_import_failed);
+                        } else {
+                            AppUtils.showToast(getContext(), R.string.xr_environment_imported);
+                            View root = getView();
+                            if (root != null) {
+                                // Show and select what was just imported.
+                                XrDialog.selectEnvironment(getActivity(),
+                                        root.findViewById(R.id.SEnvironment), imported);
+                            }
+                        }
+                        break;
+                    }
 
                     // Case for installing a SoundFont
                     case REQUEST_CODE_INSTALL_SOUNDFONT:

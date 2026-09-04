@@ -99,6 +99,22 @@ public class ScreenEffectDialog extends ContentDialog {
         }
 
 
+        // Edge glow (VR-only). Costs a 64x64 reduction of the screen per frame plus one
+        // extra compositor layer, so it stays off unless the user asks for it.
+        View llEdgeGlow = findViewById(R.id.LLEdgeGlow);
+        SeekBar sbEdgeGlow = findViewById(R.id.SBEdgeGlow);
+        if (XrActivity.isActive()) {
+            sbEdgeGlow.setValue(preferences.getInt("edge_glow_level", 0));
+            sbEdgeGlow.setOnValueChangeListener((seekBar, value) -> {
+                int intensity = Math.round(value);
+                preferences.edit().putInt("edge_glow_level", intensity).apply();
+                if (XrActivity.isActive()) XrActivity.getInstance().nativeSetEdgeGlow(intensity);
+            });
+        } else {
+            llEdgeGlow.setVisibility(View.GONE);
+        }
+
+
         GLRenderer renderer = activity.getXServerView().getRenderer();
         if (renderer == null) {
             Log.e(TAG, "Renderer is null in ScreenEffectDialog initialization!");

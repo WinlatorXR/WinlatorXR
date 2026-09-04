@@ -37,6 +37,7 @@ import com.winlator.xr.XrActivity;
 import com.winlator.xr.api.XrFramesync;
 import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.xr.ui.XrKeyboard;
+import com.winlator.xr.utils.XrEnvironment;
 
 import javax.microedition.khronos.opengles.GL10;
 
@@ -90,6 +91,7 @@ public class XrRenderer extends GLRenderer {
             int gpuLevel = activity.getContainer().getGpuLevel();
             int refresh = activity.getContainer().getRefreshRate();
             activity.init(width, height, refresh, cpuLevel, gpuLevel);
+            XrEnvironment.apply(activity, XrEnvironment.getSelected(activity));
             height = width; ////Use square resolution
             GLES20.glViewport(0, 0, width, height);
             magnifierEnabled = false;

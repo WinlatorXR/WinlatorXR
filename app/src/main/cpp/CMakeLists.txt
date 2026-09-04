@@ -30,10 +30,12 @@ target_link_libraries(winlator
 # Add XR shared library
 add_library(xr SHARED
         xr/engine.c
+        xr/edgeglow.c
         xr/framebuffer.c
         xr/input.c
         xr/main.cpp
         xr/math.c
+        xr/oneeuro.c
         xr/renderer.c
 )
 

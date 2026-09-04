@@ -207,6 +207,7 @@ public class MotionControls implements SensorEventListener {
         CheckBox cbRadialToSquare = v.findViewById(R.id.CBPlayerXRGamepadRadialToSquare);
         CheckBox cbRumblePassthrough = v.findViewById(R.id.CBPlayerXRRumblePassthrough);
         TextView tvRumblePassthroughHeader = v.findViewById(R.id.TVRumblePassthroughHeader);
+        CheckBox cbPointerSmoothing = v.findViewById(R.id.CBPointerSmoothing);
         TextView tvThumbstickType = v.findViewById(R.id.tvGamepadThumbstickType);
 
         Spinner spActivator = v.findViewById(R.id.spGyroTriggerButton);
@@ -236,6 +237,7 @@ public class MotionControls implements SensorEventListener {
             cbRadialToSquare.setVisibility(View.VISIBLE);
             tvRumblePassthroughHeader.setVisibility(View.VISIBLE);
             cbRumblePassthrough.setVisibility(View.VISIBLE);
+            cbPointerSmoothing.setVisibility(View.VISIBLE);
 
             if (XrActivity.isActive()) {
                 cbWheel.setChecked(XrActivity.wheelEmulation);
@@ -258,6 +260,7 @@ public class MotionControls implements SensorEventListener {
             cbRadialToSquare.setVisibility(View.GONE);
             tvRumblePassthroughHeader.setVisibility(View.GONE);
             cbRumblePassthrough.setVisibility(View.GONE);
+            cbPointerSmoothing.setVisibility(View.GONE);
         }
 
         cbRadialToSquare.setChecked(prefs.getBoolean("xr_gamepad_radial_to_square", false));
@@ -276,6 +279,19 @@ public class MotionControls implements SensorEventListener {
             XrActivity.rumblePassthrough = checked;
             if (checked && XrActivity.isActive()) {
                 XrInput.ensureVirtualControllerAttached();
+            }
+        });
+
+        // Off by default: the filter trades a little latency for steadiness and the right
+        // balance depends on the headset, so it is opt-in until judged on device.
+        cbPointerSmoothing.setChecked(prefs.getBoolean("use_xr_smoothing", false));
+        cbPointerSmoothing.setOnCheckedChangeListener((compoundButton, checked) -> {
+            SharedPreferences.Editor e = prefs.edit();
+            e.putBoolean("use_xr_smoothing", checked);
+            e.apply();
+            XrActivity.pointerSmoothing = checked;
+            if (XrActivity.isActive()) {
+                XrActivity.getInstance().nativeSetPointerSmoothing(checked);
             }
         });
 

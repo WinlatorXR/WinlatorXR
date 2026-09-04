@@ -23,6 +23,18 @@
 #include <string.h>
 #include <unistd.h>
 
+static bool XrEngineHasExtension(const XrExtensionProperties* available, uint32_t count, const char* name)
+{
+    for (uint32_t i = 0; i < count; i++)
+    {
+        if (strcmp(available[i].extensionName, name) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 void XrEngineInit(struct XrEngine* engine, void* system, const char* name, int version) {
     if (engine->Initialized)
         return;
@@ -69,7 +81,8 @@ void XrEngineInit(struct XrEngine* engine, void* system, const char* name, int v
     }
 #endif
 
-    // Enable compositor layer settings (sharpening) if the runtime supports it
+    // Enable optional extensions the runtime advertises: compositor layer settings
+    // (sharpening) and equirect2 (the 360 environment layer).
     uint32_t available_count = 0;
     if ((xrEnumerateInstanceExtensionProperties(NULL, 0, &available_count, NULL) == XR_SUCCESS) && (available_count > 0)) {
         XrExtensionProperties* available = calloc(available_count, sizeof(XrExtensionProperties));
@@ -78,18 +91,20 @@ void XrEngineInit(struct XrEngine* engine, void* system, const char* name, int v
                 available[i].type = XR_TYPE_EXTENSION_PROPERTIES;
             }
             if (xrEnumerateInstanceExtensionProperties(NULL, available_count, &available_count, available) == XR_SUCCESS) {
-                for (uint32_t i = 0; i < available_count; i++) {
-                    if (strcmp(available[i].extensionName, XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME) == 0) {
-                        engine->PlatformFlag[PLATFORM_EXTENSION_LAYER_SETTINGS] = true;
-                        extensions[count++] = XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME;
-                        break;
-                    }
+                if (XrEngineHasExtension(available, available_count, XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME)) {
+                    engine->PlatformFlag[PLATFORM_EXTENSION_LAYER_SETTINGS] = true;
+                    extensions[count++] = XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME;
+                }
+                if (XrEngineHasExtension(available, available_count, XR_KHR_COMPOSITION_LAYER_EQUIRECT2_EXTENSION_NAME)) {
+                    engine->PlatformFlag[PLATFORM_EXTENSION_EQUIRECT] = true;
+                    extensions[count++] = XR_KHR_COMPOSITION_LAYER_EQUIRECT2_EXTENSION_NAME;
                 }
             }
             free(available);
         }
     }
     ALOGV("XR_FB_composition_layer_settings %s", engine->PlatformFlag[PLATFORM_EXTENSION_LAYER_SETTINGS] ? "enabled" : "not supported");
+    ALOGV("XR_KHR_composition_layer_equirect2 %s", engine->PlatformFlag[PLATFORM_EXTENSION_EQUIRECT] ? "enabled" : "not supported");
 
     // Create the OpenXR instance.
     XrApplicationInfo app_info;

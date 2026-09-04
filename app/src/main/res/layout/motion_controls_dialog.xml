@@ -188,6 +188,14 @@
                     android:text="@string/xr_rumble_passthrough"
                     android:visibility="gone" />
 
+                <CheckBox
+                    android:id="@+id/CBPointerSmoothing"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/smooth_pointer"
+                    android:visibility="gone" />
+
+
             </LinearLayout>
 
             <!-- Right column: Tuning -->

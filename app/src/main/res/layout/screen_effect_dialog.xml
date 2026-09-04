@@ -44,6 +44,17 @@
                             app:sbMinValue="0"
                             app:sbStep="50" />
                     </LinearLayout>
+                    <LinearLayout android:id="@+id/LLEdgeGlow" android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="wrap_content">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8.0dip" android:text="@string/use_edge_glow" />
+                        <com.winlator.cmod.widget.SeekBar
+                            android:id="@+id/SBEdgeGlow"
+                            android:layout_width="fill_parent"
+                            android:layout_height="30dp"
+                            android:background="@drawable/xr_selector"
+                            app:sbMaxValue="100"
+                            app:sbMinValue="0"
+                            app:sbStep="10" />
+                    </LinearLayout>
                 </LinearLayout>
                 <TextView android:background="#ffffffff" android:text="@string/color_adjustment" style="@style/FieldSetLabel" android:id="@+id/LBLColorAdjustment" />
             </FrameLayout>

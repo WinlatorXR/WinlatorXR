@@ -60,6 +60,7 @@ public class XrActivity extends XServerDisplayActivity {
     public static boolean mouseLeftHanded;
     public static boolean mouseLightgun;
     public static boolean mouseRelative;
+    public static boolean pointerSmoothing;
     public static boolean wheelEmulation;
 
     // Rendering status
@@ -77,6 +78,7 @@ public class XrActivity extends XServerDisplayActivity {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         boolean curvedScreen = prefs.getBoolean("use_cs", false);
         int sharpening = prefs.getInt("sharpening_level", 0);
+        int edgeGlow = prefs.getInt("edge_glow_level", 0);
         isPassthrough = prefs.getBoolean("use_pt", true);
         gamepadEmulation = prefs.getBoolean("use_xr_gamepad", false);
         gamepadRadialToSquare = prefs.getBoolean("xr_gamepad_radial_to_square", false);
@@ -86,6 +88,7 @@ public class XrActivity extends XServerDisplayActivity {
         mouseLeftHanded = prefs.getBoolean("use_xr_leftHanded", false);
         mouseLightgun = prefs.getBoolean("use_xr_lightgun", false);
         mouseRelative = prefs.getBoolean("use_xr_relative_mouse", false);
+        pointerSmoothing = prefs.getBoolean("use_xr_smoothing", false);
         wheelEmulation = prefs.getBoolean("use_xr_wheel", false);
 
         if (mouseLightgun) mouseRelative = false;
@@ -94,6 +97,9 @@ public class XrActivity extends XServerDisplayActivity {
         nativeSetUsePT(isPassthrough);
         nativeSetCurvedScreen(curvedScreen);
         nativeSetSharpening(sharpening);
+        nativeSetEdgeGlow(edgeGlow);
+        nativeSetPointerSmoothing(pointerSmoothing);
+        nativeSetEnvironmentEnabled(prefs.getBoolean("xr_environment_enabled", true));
         sendManufacturer(Build.MANUFACTURER.toUpperCase());
 
         instance = this;
@@ -227,6 +233,11 @@ public class XrActivity extends XServerDisplayActivity {
     public native void nativeSetCurvedScreen(boolean enabled);
     public native void nativeSetUsePT(boolean enabled);
     public native void nativeSetSharpening(int level);
+    public native void nativeSetEdgeGlow(int intensity);
+    public native void nativeSetPointerSmoothing(boolean enabled);
+    public native boolean nativeIsEnvironmentSupported();
+    public native void nativeSetEnvironment(byte[] rgba, int width, int height);
+    public native void nativeSetEnvironmentEnabled(boolean enabled);
     public native boolean nativeIsSharpeningSupported();
     public native void nativeSetUseVR(boolean enabled);
     public native void nativeSetFramesync(int r, int g, int b, int a);
