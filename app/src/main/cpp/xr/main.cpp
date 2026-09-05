@@ -37,6 +37,11 @@ bool xr_usePassthrough = false;
 int xr_sharpening = 0;
 int xr_edge_glow = 0;
 bool xr_vr = false;
+// xr_vr tracks whether the VR path is live this frame, so it drops out while a dialog is
+// up or the VR window is not on top. This one stays set for as long as the XrAPI title
+// reports VR mode, which is what the cosmetic layers have to key off: a native VR game
+// has no frame time to spare for them even while its menu is up.
+bool xr_vr_app = false;
 std::vector<uint8_t> xr_environment_pixels;
 std::mutex xr_environment_mutex;
 int xr_environment_width = 0;
@@ -235,8 +240,11 @@ Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean imm
         // Set render canvas
         xr_module_renderer.ConfigInt[CONFIG_VIEWPORT_CURVED] = !immersive && xr_curvedScreen;
         xr_module_renderer.ConfigInt[CONFIG_SHARPENING] = xr_sharpening;
-        xr_module_renderer.ConfigInt[CONFIG_ENVIRONMENT] = xr_environment_enabled && xr_environment_visible;
-        xr_module_renderer.ConfigInt[CONFIG_EDGE_GLOW] = xr_edge_glow;
+        // Neither is visible under a full projection layer anyway, and both cost frame time
+        // an XrAPI VR title cannot spare, so they stay off for the whole of such a session.
+        xr_module_renderer.ConfigInt[CONFIG_ENVIRONMENT] =
+                !xr_vr_app && xr_environment_enabled && xr_environment_visible;
+        xr_module_renderer.ConfigInt[CONFIG_EDGE_GLOW] = xr_vr_app ? 0 : xr_edge_glow;
         xr_module_renderer.ConfigFloat[CONFIG_CANVAS_DISTANCE] = distance;
         xr_module_renderer.ConfigFloat[CONFIG_CANVAS_SIZE] = xr_aspect;
         xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOV_SCALE] = 1.1f;
@@ -480,6 +488,11 @@ Java_com_winlator_xr_XrActivity_nativeSetPointerSmoothing(JNIEnv *env, jobject o
 JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_nativeSetUseVR(JNIEnv *env, jobject obj, jboolean enabled) {
     xr_vr = enabled;
+}
+
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_nativeSetVRApp(JNIEnv *env, jobject obj, jboolean enabled) {
+    xr_vr_app = enabled;
 }
 
 JNIEXPORT void JNICALL

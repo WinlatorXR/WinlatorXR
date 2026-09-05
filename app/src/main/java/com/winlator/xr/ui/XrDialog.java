@@ -55,7 +55,8 @@ public class XrDialog extends ContentDialog {
         // Passthrough already covers the space the environment would occupy, so the switch
         // would do nothing visible while it is on.
         hmdUI(activity, cbSBS, cbImmersiveMode, cbCurvedScreen, cbPassthrough, tvToApplyClose,
-                () -> setViewEnabled(cbDisableEnvironment, !cbPassthrough.isChecked()));
+                () -> setViewEnabled(cbDisableEnvironment,
+                        !cbPassthrough.isChecked() && !isVRGameRunning()));
         environmentToggleUI(activity, cbDisableEnvironment);
         // The environment picker is Settings-only. Importing needs a document picker, which
         // is unusable from inside a session, and the list is not something to manage mid-game.
@@ -255,6 +256,15 @@ public class XrDialog extends ContentDialog {
         cbDisableEnvironment.setChecked(!XrEnvironment.isEnabled(activity));
         cbDisableEnvironment.setOnCheckedChangeListener(
                 (compoundButton, checked) -> XrEnvironment.setEnabled(activity, !checked));
+
+        // A native VR title renders a full projection layer over the panorama and has no
+        // frame time to spare compositing one, so it is forced off for the whole session.
+        // Say so rather than leaving a switch that would appear to do nothing.
+        if (isVRGameRunning()) {
+            cbDisableEnvironment.setText(activity.getString(R.string.xr_not_available_in_vr,
+                    activity.getString(R.string.disable_environment)));
+            setUnavailableInVR(cbDisableEnvironment);
+        }
     }
 
     /**
@@ -269,6 +279,24 @@ public class XrDialog extends ContentDialog {
         // Remove also depends on something being selected, so let that decide once the row
         // itself is enabled again.
         updateRemoveEnabled(sEnvironment, btRemove);
+    }
+
+    /**
+     * Whether an XrAPI title is currently in VR mode. Unlike {@link XrActivity#getVR()} this
+     * stays true while a dialog is up, which is exactly when the settings below are read.
+     */
+    public static boolean isVRGameRunning() {
+        return XrActivity.isActive() && XrActivity.isVR;
+    }
+
+    /**
+     * Disables a control that a running VR game has taken over. Dims it less than
+     * {@link #setViewEnabled}: the label has to explain itself, and at 0.4 the text is hard
+     * to read on a panel a couple of metres away.
+     */
+    public static void setUnavailableInVR(View view) {
+        view.setEnabled(false);
+        view.setAlpha(0.8f);
     }
 
     /** Disables a control and dims it, since setEnabled alone is easy to miss. */

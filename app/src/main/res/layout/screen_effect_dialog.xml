@@ -45,7 +45,7 @@
                             app:sbStep="50" />
                     </LinearLayout>
                     <LinearLayout android:id="@+id/LLEdgeGlow" android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="wrap_content">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8.0dip" android:text="@string/use_edge_glow" />
+                        <TextView android:id="@+id/TVEdgeGlow" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8.0dip" android:text="@string/use_edge_glow" />
                         <com.winlator.cmod.widget.SeekBar
                             android:id="@+id/SBEdgeGlow"
                             android:layout_width="fill_parent"

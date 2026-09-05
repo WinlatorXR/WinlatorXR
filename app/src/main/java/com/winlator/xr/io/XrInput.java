@@ -129,6 +129,10 @@ public class XrInput {
             XrActivity.isUDP = vrMode > 0;
             XrActivity.isVR = vrMode == 1;
             instance.nativeSetUseVR(XrActivity.getVR());
+            // Unlike getVR(), this stays true across menus and window focus changes, so the
+            // environment and edge glow do not come back mid-game and cost frames a native
+            // VR title has none to spare.
+            instance.nativeSetVRApp(XrActivity.isVR);
 
             if (XrActivity.isUDP) {
                 // Field of view adjustment

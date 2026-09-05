@@ -17,6 +17,7 @@ import com.winlator.cmod.R;
 import com.winlator.cmod.XServerDisplayActivity;
 import com.winlator.cmod.core.AppUtils;
 import com.winlator.xr.XrActivity;
+import com.winlator.xr.ui.XrDialog;
 import com.winlator.cmod.core.KeyValueSet;
 import com.winlator.cmod.renderer.GLRenderer;
 import com.winlator.cmod.renderer.effects.BloomEffect;
@@ -102,16 +103,26 @@ public class ScreenEffectDialog extends ContentDialog {
         // Edge glow (VR-only). Costs a 64x64 reduction of the screen per frame plus one
         // extra compositor layer, so it stays off unless the user asks for it.
         View llEdgeGlow = findViewById(R.id.LLEdgeGlow);
+        TextView tvEdgeGlow = findViewById(R.id.TVEdgeGlow);
         SeekBar sbEdgeGlow = findViewById(R.id.SBEdgeGlow);
-        if (XrActivity.isActive()) {
+        if (!XrActivity.isActive()) {
+            llEdgeGlow.setVisibility(View.GONE);
+        } else if (XrDialog.isVRGameRunning()) {
+            // The glow reduces the screen once per frame and adds a compositor layer, and a
+            // native VR title covers it with a full projection layer anyway, so it is forced
+            // off for the whole session. Show the stored level, but do not pretend it applies.
+            tvEdgeGlow.setText(activity.getString(R.string.xr_not_available_in_vr,
+                    activity.getString(R.string.use_edge_glow)));
+            sbEdgeGlow.setValue(preferences.getInt("edge_glow_level", 0));
+            XrDialog.setUnavailableInVR(tvEdgeGlow);
+            XrDialog.setUnavailableInVR(sbEdgeGlow);
+        } else {
             sbEdgeGlow.setValue(preferences.getInt("edge_glow_level", 0));
             sbEdgeGlow.setOnValueChangeListener((seekBar, value) -> {
                 int intensity = Math.round(value);
                 preferences.edit().putInt("edge_glow_level", intensity).apply();
                 if (XrActivity.isActive()) XrActivity.getInstance().nativeSetEdgeGlow(intensity);
             });
-        } else {
-            llEdgeGlow.setVisibility(View.GONE);
         }
 
 
