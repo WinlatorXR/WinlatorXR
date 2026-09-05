@@ -204,7 +204,7 @@ XrPosef XrInputGetPose(struct XrInput* input, int controller)
     return input->ControllerPose[controller].pose;
 }
 
-void XrInputUpdate(struct XrEngine* engine, struct XrInput* input, bool smoothing)
+void XrInputUpdate(struct XrEngine* engine, struct XrInput* input)
 {
     // sync action data
     XrActiveActionSet activeActionSet = {};
@@ -313,7 +313,7 @@ void XrInputUpdate(struct XrEngine* engine, struct XrInput* input, bool smoothin
             continue;
         }
 
-        if (smoothing)
+        if (input->Smoothing)
         {
             input->ControllerPose[i].pose = XrOneEuroPoseFilter(
                     &input->PoseFilter[i], input->ControllerPose[i].pose,

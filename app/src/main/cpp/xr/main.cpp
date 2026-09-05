@@ -36,7 +36,6 @@ bool xr_curvedScreen = false;
 bool xr_usePassthrough = false;
 int xr_sharpening = 0;
 int xr_edge_glow = 0;
-bool xr_smoothing = false;
 bool xr_vr = false;
 std::vector<uint8_t> xr_environment_pixels;
 std::mutex xr_environment_mutex;
@@ -208,7 +207,7 @@ Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean imm
                                           jboolean sbs, jboolean aer, jfloat distance) {
     if (XrRendererInitFrame(&xr_module_engine, &xr_module_renderer)) {
         // Update controllers state
-        XrInputUpdate(&xr_module_engine, &xr_module_input, xr_smoothing && !xr_vr);
+        XrInputUpdate(&xr_module_engine, &xr_module_input);
 
         // Get poses for XrAPI
         updatePoses();
@@ -236,15 +235,15 @@ Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean imm
         // Set render canvas
         xr_module_renderer.ConfigInt[CONFIG_VIEWPORT_CURVED] = !immersive && xr_curvedScreen;
         xr_module_renderer.ConfigInt[CONFIG_SHARPENING] = xr_sharpening;
-        xr_module_renderer.ConfigInt[CONFIG_ENVIRONMENT] = xr_environment_enabled && xr_environment_visible && !xr_vr;
-        xr_module_renderer.ConfigInt[CONFIG_EDGE_GLOW] = xr_edge_glow && !xr_vr;
+        xr_module_renderer.ConfigInt[CONFIG_ENVIRONMENT] = xr_environment_enabled && xr_environment_visible;
+        xr_module_renderer.ConfigInt[CONFIG_EDGE_GLOW] = xr_edge_glow;
         xr_module_renderer.ConfigFloat[CONFIG_CANVAS_DISTANCE] = distance;
         xr_module_renderer.ConfigFloat[CONFIG_CANVAS_SIZE] = xr_aspect;
         xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOV_SCALE] = 1.1f;
         if (xr_fovx > 1) xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOVX] = xr_fovx;
         if (xr_fovy > 1) xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOVY] = xr_fovy;
         xr_module_renderer.ConfigInt[CONFIG_PASSTHROUGH] =
-                !immersive && !xr_vr && xr_usePassthrough && !xr_module_renderer.ConfigInt[CONFIG_ENVIRONMENT];
+                !immersive && !xr_vr && xr_usePassthrough;
         xr_module_renderer.ConfigInt[CONFIG_IMMERSIVE] = immersive && !xr_vr;
         xr_module_renderer.ConfigInt[CONFIG_FRAMESYNC] = xr_vr;
         xr_module_renderer.ConfigInt[CONFIG_AER] = aer;
@@ -475,7 +474,7 @@ Java_com_winlator_xr_XrActivity_nativeSetEnvironment(JNIEnv *env, jobject obj, j
 JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_nativeSetPointerSmoothing(JNIEnv *env, jobject obj,
                                                           jboolean enabled) {
-    xr_smoothing = enabled;
+    xr_module_input.Smoothing = enabled;
 }
 
 JNIEXPORT void JNICALL

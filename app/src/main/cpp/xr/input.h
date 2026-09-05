@@ -83,6 +83,7 @@ struct XrInput {
     float TriggerRight;
     XrSpaceLocation ControllerPose[4];
     struct XrOneEuroPose PoseFilter[4];
+    bool Smoothing;
     XrActionStateVector2f JoystickState[2];
     float VibrationChannelDuration[2];
     float VibrationChannelIntensity[2];
@@ -95,7 +96,7 @@ void XrInputInit(struct XrEngine* engine, struct XrInput* input);
 uint32_t XrInputGetButtonState(struct XrInput* input, int controller);
 XrVector2f XrInputGetJoystickState(struct XrInput* input, int controller);
 XrPosef XrInputGetPose(struct XrInput* input, int controller);
-void XrInputUpdate(struct XrEngine* engine, struct XrInput* input, bool smoothing);
+void XrInputUpdate(struct XrEngine* engine, struct XrInput* input);
 void XrInputVibrate(struct XrInput* input, int duration, int chan, float intensity);
 
 XrAction XrInputCreateAction(XrActionSet output_set, XrActionType type, const char* name,

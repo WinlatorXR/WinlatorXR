@@ -148,26 +148,40 @@ public class XrDialog extends ContentDialog {
      * setting could do there. Settings-only: XrDialog hides the whole row instead.
      */
     public static void environmentUI(Activity activity, Spinner sEnvironment,
-                                     TextView tvEnvironment, View btImport, Runnable onImport) {
+                                     TextView tvEnvironment, View btImport, View btRemove,
+                                     Runnable onImport) {
         boolean supported = !XrActivity.isActive() ||
                 XrActivity.getInstance().nativeIsEnvironmentSupported();
         if (!supported) {
             sEnvironment.setVisibility(View.GONE);
             tvEnvironment.setVisibility(View.GONE);
             btImport.setVisibility(View.GONE);
+            btRemove.setVisibility(View.GONE);
             return;
         }
 
         btImport.setOnClickListener(v -> onImport.run());
+        btRemove.setOnClickListener(v -> {
+            String selected = XrEnvironment.getSelected(activity);
+            if (selected.isEmpty()) return;
+            ContentDialog.confirm(activity,
+                    activity.getString(R.string.xr_environment_remove_message, selected), () -> {
+                XrEnvironment.delete(activity, selected);
+                // The removed panorama cannot stay selected, so fall back to None, which also
+                // clears it from a running session.
+                selectEnvironment(activity, sEnvironment, btRemove, "");
+            });
+        });
 
-        selectEnvironment(activity, sEnvironment, XrEnvironment.getSelected(activity));
+        selectEnvironment(activity, sEnvironment, btRemove, XrEnvironment.getSelected(activity));
     }
 
     /**
      * Rebuilds the picker's contents and selects the named panorama, applying it if that is
      * a change. Also used after an import, to show the file that was just added.
      */
-    public static void selectEnvironment(Activity activity, Spinner sEnvironment, String name) {
+    public static void selectEnvironment(Activity activity, Spinner sEnvironment, View btRemove,
+                                         String name) {
         List<String> files = XrEnvironment.list(activity);
         List<String> labels = new ArrayList<>();
         labels.add(activity.getString(R.string.xr_environment_none));
@@ -178,10 +192,12 @@ public class XrDialog extends ContentDialog {
                 android.R.layout.simple_spinner_dropdown_item, labels));
         // Index 0 is "None", so a stored name maps to its position in the file list plus one.
         sEnvironment.setSelection(files.indexOf(name) + 1);
+        updateRemoveEnabled(sEnvironment, btRemove);
 
         sEnvironment.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                updateRemoveEnabled(sEnvironment, btRemove);
                 String selected = position <= 0 ? "" : files.get(position - 1);
                 if (selected.equals(XrEnvironment.getSelected(activity))) return;
                 applySelection(activity, selected);
@@ -197,6 +213,12 @@ public class XrDialog extends ContentDialog {
         if (!name.equals(XrEnvironment.getSelected(activity))) {
             applySelection(activity, name);
         }
+    }
+
+    /** There is nothing to remove while "None" is picked, or while the row is greyed out. */
+    private static void updateRemoveEnabled(Spinner sEnvironment, View btRemove) {
+        if (btRemove == null) return;
+        setViewEnabled(btRemove, sEnvironment.isEnabled() && sEnvironment.getSelectedItemPosition() > 0);
     }
 
     private static void applySelection(Activity activity, String name) {
@@ -240,10 +262,13 @@ public class XrDialog extends ContentDialog {
      * the screen, so the setting would have no visible effect if it were changed.
      */
     public static void setEnvironmentEnabled(Spinner sEnvironment, TextView tvEnvironment,
-                                             View btImport, boolean enabled) {
+                                             View btImport, View btRemove, boolean enabled) {
         setViewEnabled(sEnvironment, enabled);
         setViewEnabled(tvEnvironment, enabled);
         setViewEnabled(btImport, enabled);
+        // Remove also depends on something being selected, so let that decide once the row
+        // itself is enabled again.
+        updateRemoveEnabled(sEnvironment, btRemove);
     }
 
     /** Disables a control and dims it, since setEnabled alone is easy to miss. */

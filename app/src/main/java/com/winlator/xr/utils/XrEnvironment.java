@@ -89,21 +89,44 @@ public class XrEnvironment {
     }
 
     /**
-     * Copies a picked image into the environments folder, so the user can add panoramas
-     * without going near Android/data by hand. Returns the name it was stored under, or
-     * null if it is not a format we can decode.
+     * The file name a picked image would be stored under, or null if it is not a format we
+     * accept. Lets the caller check for a clash before anything is written to disk.
      */
-    public static String importFrom(Context context, Uri uri) {
+    public static String nameFor(Context context, Uri uri) {
         String name = FileUtils.getUriFileName(context, uri);
         if (name == null || name.trim().isEmpty()) name = "panorama.jpg";
         // Whatever the picker reports is a display name, not a path, but it can still carry
         // characters that are not legal in a file name.
         name = name.trim().replaceAll("[\\/:*?\"<>|]", "_");
-        if (!isSupported(name)) return null;
+        return isSupported(name) ? name : null;
+    }
 
-        File destination = uniqueFile(getDirectory(context), name);
-        if (!FileUtils.copy(context, uri, destination)) {
-            destination.delete();
+    /** Whether a panorama of that name is already installed. */
+    public static boolean exists(Context context, String name) {
+        return name != null && new File(getDirectory(context), name).isFile();
+    }
+
+    /**
+     * Copies a picked image into the environments folder, so the user can add panoramas
+     * without going near Android/data by hand. Returns the name it was stored under, or
+     * null if it is not a format we can decode. When a panorama of the same name is already
+     * installed, replace overwrites it in place; otherwise the import is stored alongside it
+     * under a numbered name.
+     */
+    public static String importFrom(Context context, Uri uri, boolean replace) {
+        String name = nameFor(context, uri);
+        if (name == null) return null;
+
+        File directory = getDirectory(context);
+        File destination = new File(directory, name);
+        if (destination.exists() && !replace) destination = uniqueFile(directory, name);
+
+        // Copy to a temporary file first, so replacing a panorama with something undecodable
+        // cannot destroy the one that was already there. The temporary name carries no image
+        // extension, so a leftover never shows up in the picker.
+        File temp = new File(directory, ".import-" + System.currentTimeMillis());
+        if (!FileUtils.copy(context, uri, temp)) {
+            temp.delete();
             return null;
         }
 
@@ -111,13 +134,26 @@ public class XrEnvironment {
         // show up in the picker as a panorama that would silently fail to load.
         BitmapFactory.Options bounds = new BitmapFactory.Options();
         bounds.inJustDecodeBounds = true;
-        BitmapFactory.decodeFile(destination.getAbsolutePath(), bounds);
+        BitmapFactory.decodeFile(temp.getAbsolutePath(), bounds);
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
-            destination.delete();
+            temp.delete();
             return null;
         }
 
+        destination.delete();
+        if (!temp.renameTo(destination)) {
+            temp.delete();
+            return null;
+        }
         return destination.getName();
+    }
+
+    /** Deletes an installed panorama. The name must be one that {@link #list} returned. */
+    public static boolean delete(Context context, String name) {
+        if (name == null || name.isEmpty() || !isSupported(name)) return false;
+        // Names come from the folder listing, but never let one walk out of the folder.
+        if (name.contains("/") || name.contains("\\")) return false;
+        return new File(getDirectory(context), name).delete();
     }
 
     private static File uniqueFile(File directory, String name) {

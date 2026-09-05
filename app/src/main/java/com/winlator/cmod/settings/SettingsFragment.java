@@ -172,12 +172,14 @@ public class SettingsFragment extends Fragment {
         Spinner sEnvironment = view.findViewById(R.id.SEnvironment);
         TextView tvEnvironment = view.findViewById(R.id.TVEnvironment);
         View btImportEnvironment = view.findViewById(R.id.BTImportEnvironment);
+        View btRemoveEnvironment = view.findViewById(R.id.BTRemoveEnvironment);
         // Passthrough takes precedence over the environment, so grey the picker out while it
         // is on rather than let the setting look like it does nothing.
         XrDialog.hmdUI(getActivity(), cbSBS, cbImmersiveMode, cbCurvedScreen, cbPassthrough, tvToApplyClose,
                 () -> XrDialog.setEnvironmentEnabled(sEnvironment, tvEnvironment, btImportEnvironment,
-                        !cbPassthrough.isChecked()));
+                        btRemoveEnvironment, !cbPassthrough.isChecked()));
         XrDialog.environmentUI(getActivity(), sEnvironment, tvEnvironment, btImportEnvironment,
+                btRemoveEnvironment,
                 () -> ContentDialog.confirm(getContext(),
                         getString(R.string.xr_environment_import_message),
                         () -> openFile(REQUEST_CODE_IMPORT_PANORAMA, "image/*")));
@@ -773,17 +775,15 @@ public class SettingsFragment extends Fragment {
 
                     // Case for importing a 360 panorama
                     case REQUEST_CODE_IMPORT_PANORAMA: {
-                        String imported = XrEnvironment.importFrom(getContext(), uri);
-                        if (imported == null) {
-                            AppUtils.showToast(getContext(), R.string.xr_environment_import_failed);
+                        String name = XrEnvironment.nameFor(getContext(), uri);
+                        // Importing the same file twice used to quietly stack up "panorama (2)"
+                        // copies of an image that is already installed; ask instead.
+                        if (name != null && XrEnvironment.exists(getContext(), name)) {
+                            ContentDialog.confirm(getContext(),
+                                    getString(R.string.xr_environment_import_duplicate, name),
+                                    () -> importPanorama(uri, true));
                         } else {
-                            AppUtils.showToast(getContext(), R.string.xr_environment_imported);
-                            View root = getView();
-                            if (root != null) {
-                                // Show and select what was just imported.
-                                XrDialog.selectEnvironment(getActivity(),
-                                        root.findViewById(R.id.SEnvironment), imported);
-                            }
+                            importPanorama(uri, false);
                         }
                         break;
                     }
@@ -806,6 +806,28 @@ public class SettingsFragment extends Fragment {
                         break;
                 }
             }
+        }
+    }
+
+    /** Copies a picked panorama in and shows it in the picker. */
+    private void importPanorama(Uri uri, boolean replace) {
+        String imported = XrEnvironment.importFrom(getContext(), uri, replace);
+        if (imported == null) {
+            AppUtils.showToast(getContext(), R.string.xr_environment_import_failed);
+            return;
+        }
+
+        AppUtils.showToast(getContext(), R.string.xr_environment_imported);
+        View root = getView();
+        if (root != null) {
+            // Show and select what was just imported.
+            XrDialog.selectEnvironment(getActivity(), root.findViewById(R.id.SEnvironment),
+                    root.findViewById(R.id.BTRemoveEnvironment), imported);
+        }
+        // Replacing the panorama that is already selected leaves the name unchanged, so
+        // nothing above would reload the new image into a running session.
+        if (imported.equals(XrEnvironment.getSelected(getContext()))) {
+            XrEnvironment.apply(getContext(), imported);
         }
     }
 

@@ -90,8 +90,14 @@
             style="@style/ListMenuButton"
             android:id="@+id/BTImportEnvironment"
             android:contentDescription="@string/xr_environment_import"
-            android:layout_marginRight="0dp"
             android:src="@drawable/icon_add" />
+
+        <ImageButton
+            style="@style/ListMenuButton"
+            android:id="@+id/BTRemoveEnvironment"
+            android:contentDescription="@string/xr_environment_remove"
+            android:layout_marginRight="0dp"
+            android:src="@drawable/icon_remove" />
     </LinearLayout>
 
 
