@@ -75,8 +75,14 @@ public class ModdingUtils {
     }
 
     public static void updateReshade(Context context, File dst, boolean useReshade, boolean forceDXGI) {
+        // A folder that cannot be listed is one there is nothing to do in: a shortcut generated
+        // to run a job points at cmd.exe, whose folder resolves to nothing here, and the recursion
+        // below walks into whatever the game's own folder holds.
+        File[] files = dst != null ? dst.listFiles() : null;
+        if (files == null) return;
+
         boolean hasExe = false;
-        for (File file : dst.listFiles()) {
+        for (File file : files) {
             if (file.getAbsolutePath().endsWith(".exe"))
                 hasExe = true;
             if (!file.isDirectory())

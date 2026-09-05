@@ -1653,7 +1653,8 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         // Setup reshade
         if (shortcut != null) {
             try {
-                File dst = ModdingUtils.getLocalExeFile(imageFs, shortcut.getFullExecutable(), shortcut.container).getParentFile();
+                File exeFile = ModdingUtils.getLocalExeFile(imageFs, shortcut.getFullExecutable(), shortcut.container);
+                File dst = exeFile != null ? exeFile.getParentFile() : null;
                 int reshade = Integer.parseInt(shortcut.getExtra("useReshade", "0"));
                 if (reshade < 3) {
                     ModdingUtils.updateReshade(this, dst, reshade > 0, reshade > 1);

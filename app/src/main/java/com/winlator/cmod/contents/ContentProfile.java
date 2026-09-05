@@ -31,7 +31,8 @@ public class ContentProfile {
         CONTENT_TYPE_WOWBOX64("WOWBox64"),
         CONTENT_TYPE_FEXCORE("FEXCore"),
         CONTENT_TYPE_ADRENO_GPU_DRIVERS("Adreno GPU drivers"),
-        CONTENT_TYPE_GOLDBERG("Goldberg");
+        CONTENT_TYPE_GOLDBERG("Goldberg"),
+        CONTENT_TYPE_INSTALLER("Installer");
 
         final String typeName;
 
@@ -71,4 +72,16 @@ public class ContentProfile {
     public String protonBinPath;
     public String protonPrefixPack;
     public String remoteUrl;
+    /**
+     * File name of an installer sitting in the runtimes or installers directory. Set for the
+     * entries the user added from local storage, which have no contents.json profile behind
+     * them and so no remoteUrl to derive an extension from.
+     */
+    public String localFileName;
+    /**
+     * Absolute host path of a demo or offline installer that lives outside the app, in the
+     * user's Download folder. Such an entry is a reference: the file runs where it sits, beside
+     * the data files it needs, and is never copied into the installers directory.
+     */
+    public String localFilePath;
 }

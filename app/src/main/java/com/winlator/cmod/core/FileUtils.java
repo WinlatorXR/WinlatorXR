@@ -283,7 +283,9 @@ public abstract class FileUtils {
     public static boolean copy(Context context, Uri uri, File dest) {
         try (InputStream inputStream = context.getContentResolver().openInputStream(uri);
              OutputStream outputStream = new FileOutputStream(dest)) {
-            byte[] buffer = new byte[1024];
+            // Offline game installers run to several GB, so this reads in blocks rather than
+            // making a syscall per kilobyte.
+            byte[] buffer = new byte[64 * 1024];
             int length;
 
             while ((length = inputStream.read(buffer)) > 0)

@@ -7,6 +7,7 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.DocumentsContract;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -39,7 +40,8 @@ import com.winlator.cmod.contents.Downloader;
 import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.PreloaderDialog;
-import com.winlator.cmod.store.LudashiLaunchBridge;
+import com.winlator.cmod.core.StringUtils;
+import com.winlator.cmod.contents.ContentInstaller;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -111,11 +113,21 @@ public class ContentsFragment extends Fragment {
                 return;
             }
 
-            ContentDialog.confirm(getContext(), getString(R.string.do_you_want_to_install_content) + " " + getString(R.string.pls_make_sure_content_trustworthy) + " "
-                    + getString(R.string.content_suffix_is_wcp_packed_xz_zst), () -> {
+            final boolean installers = currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER);
+
+            String message = getString(R.string.do_you_want_to_install_content) + " " + getString(R.string.pls_make_sure_content_trustworthy) + " ";
+            if (installers) message += getString(R.string.select_demo_or_offline_installer);
+            else message += currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_RUNTIME)
+                    ? getString(R.string.content_suffix_is_wcp_or_runtime_installer)
+                    : getString(R.string.content_suffix_is_wcp_packed_xz_zst);
+
+            ContentDialog.confirm(getContext(), message, () -> {
                 Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 intent.setType("*/*");
+                // An installer is taken from the Download folder, which is the D: drive a
+                // container gets by default, so open the picker there.
+                if (installers) intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, ContentInstaller.downloadsDocumentUri());
                 getActivity().startActivityFromFragment(this, intent, MainActivity.OPEN_FILE_REQUEST_CODE);
             });
         });
@@ -147,6 +159,7 @@ public class ContentsFragment extends Fragment {
                     case 5: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_WOWBOX64); break;
                     case 6: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_FEXCORE); break;
                     case 7: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS); break;
+                    case 8: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER); break;
                 }
                 loadContentList();
             }
@@ -174,6 +187,32 @@ public class ContentsFragment extends Fragment {
                     ((DriversAdapter)recyclerView.getAdapter()).addItem(driver);
             }
             return;
+        }
+
+        // A demo or offline installer is not packed content and is not copied in either: the
+        // entry is a reference to the file where the user keeps it.
+        if (requestCode == MainActivity.OPEN_FILE_REQUEST_CODE && resultCode == Activity.RESULT_OK
+                && currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER)
+                && data.getData() != null) {
+            ContentInstaller.addLocalInstaller(getContext(), data.getData(), () -> {
+                manager.syncContents();
+                loadContentList();
+            });
+            return;
+        }
+
+        // A runtime installer is a plain .exe/.msi, not a packed .wcp, so it is copied into the
+        // runtimes directory rather than being handed to the content extractor.
+        if (requestCode == MainActivity.OPEN_FILE_REQUEST_CODE && resultCode == Activity.RESULT_OK
+                && currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_RUNTIME)) {
+            String name = ContentInstaller.queryDisplayName(getContext(), data.getData());
+            if (name != null && ContentsManager.isInstaller(name)) {
+                ContentInstaller.installLocalRuntime(getActivity(), data.getData(), name, () -> {
+                    manager.syncContents();
+                    loadContentList();
+                });
+                return;
+            }
         }
 
         if (requestCode == MainActivity.OPEN_FILE_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
@@ -245,8 +284,12 @@ public class ContentsFragment extends Fragment {
             recyclerView.setAdapter(new DriversAdapter(adrenotoolsManager.enumarateInstalledDrivers()));
             btInstallContent.setText(R.string.install_drivers);
             return;
+        } else if (currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER)) {
+            btInstallContent.setText(R.string.add_installer);
+            ((TextView) emptyText).setText(R.string.no_installers_to_display);
         } else {
             btInstallContent.setText(R.string.install_content);
+            ((TextView) emptyText).setText(R.string.no_items_to_display_contents);
         }
 
         List<ContentProfile> profiles = manager.getProfiles(currentContentType);
@@ -335,33 +378,59 @@ public class ContentsFragment extends Fragment {
             };
             holder.ivIcon.setBackground(getContext().getDrawable(iconId));
 
-            File runtimesDir = new File("/data/user/0/com.winlator.cmod/files/imagefs/", "runtimes");
-            if (!runtimesDir.exists()) {
-                runtimesDir.mkdir();
-            }
-            String runtimeName = profile.verName;
-            if ((profile.remoteUrl != null) && (profile.remoteUrl.lastIndexOf('.') > 0)) {
-                runtimeName = runtimeName + profile.remoteUrl.substring(profile.remoteUrl.lastIndexOf('.'));
-            }
-            File runtimeFile = new File(runtimesDir, runtimeName);
+            final boolean isInstaller = profile.type == ContentProfile.ContentType.CONTENT_TYPE_INSTALLER;
+            final File localFile = isInstaller
+                    ? ContentsManager.getInstallerFile(getContext(), profile)
+                    : ContentsManager.getRuntimeFile(getContext(), profile);
 
-            holder.tvVersionName.setText(getContext().getString(R.string.version) + ": " + profile.verName);
-            holder.tvVersionCode.setText(getContext().getString(R.string.version_code) + ": " + profile.verCode);
+            if (isInstaller) {
+                // An installer has no version behind it, so the file is the identity -- and a
+                // listed one that has not been fetched yet has no size to report.
+                holder.tvVersionName.setText(profile.localFileName != null ? profile.localFileName : profile.verName);
+                String subtitle = localFile.exists()
+                        ? StringUtils.formatBytes(localFile.length())
+                        : getString(R.string.not_downloaded_yet);
+                // One of the user's own files is worth locating, since it is listed from wherever
+                // they keep it rather than from a folder of ours.
+                if (profile.localFilePath != null && localFile.getParentFile() != null)
+                    subtitle += " · " + localFile.getParentFile().getName();
+                holder.tvVersionCode.setText(subtitle);
+            }
+            else {
+                holder.tvVersionName.setText(getContext().getString(R.string.version) + ": " + profile.verName);
+                holder.tvVersionCode.setText(getContext().getString(R.string.version_code) + ": " + profile.verCode);
+            }
             holder.ibMenu.setVisibility(profile.remoteUrl == null ? View.VISIBLE : View.GONE);
             holder.ibMenu.setOnClickListener(v -> {
                 PopupMenu selectionMenu = new PopupMenu(getContext(), holder.ibMenu);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
                     selectionMenu.setForceShowIcon(true);
 
-                if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME) {
+                if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME || isInstaller) {
                     selectionMenu.inflate(R.menu.content_popup_runtime_menu);
                     selectionMenu.setOnMenuItemClickListener(item -> {
                         int itemId = item.getItemId();
                         if (itemId == R.id.content_install) {
-                            LudashiLaunchBridge.addToLauncher(getActivity(), ShortcutsFragment.HIDDEN_SHORTCUT, runtimeFile.getAbsolutePath());
+                            ContentInstaller.runInstaller(getActivity(), localFile);
                         } else if (itemId == R.id.remove_content) {
-                            ContentDialog.confirm(getContext(), R.string.do_you_want_to_remove_this_content, () -> {
-                                runtimeFile.delete();
+                            // An entry that only references a file of the user's takes nothing
+                            // with it but the reference; the installer stays in their Download
+                            // folder, as do the data files beside it.
+                            final boolean referenced = profile.localFilePath != null;
+                            List<File> companions = isInstaller && !referenced ? ContentInstaller.companionFiles(localFile) : new ArrayList<>();
+                            String message = referenced
+                                    ? getString(R.string.remove_installer_reference, localFile.getName())
+                                    : getString(R.string.do_you_want_to_remove_this_content);
+                            if (!companions.isEmpty())
+                                message += "\n\n" + companions.size() + " data file(s) belonging to it will go too.";
+
+                            ContentDialog.confirm(getContext(), message, () -> {
+                                if (referenced) ContentsManager.getInstallerReferenceFile(getContext(), profile).delete();
+                                else localFile.delete();
+                                for (File companion : companions) companion.delete();
+                                // Locally added entries only exist as a file, so the profile list
+                                // has to be rebuilt for them to disappear.
+                                manager.syncContents();
                                 loadContentList();
                             });
                         }
@@ -396,8 +465,10 @@ public class ContentsFragment extends Fragment {
                 selectionMenu.show();
             });
 
-            if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME) {
-                if (runtimeFile.exists()) {
+            // Both kinds are a single file that is either here or still to be fetched, so the row
+            // offers whichever of the two actions applies.
+            if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME || isInstaller) {
+                if (localFile.exists()) {
                     holder.ibDownload.setVisibility(View.GONE);
                     holder.ibMenu.setVisibility(View.VISIBLE);
                 } else {
@@ -415,12 +486,17 @@ public class ContentsFragment extends Fragment {
 
                     try {
                         if (Downloader.downloadFileWithProgress(profile.remoteUrl, output, preloaderDialog)) {
-                            if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME) {
-                                FileUtils.copy(output, runtimeFile);
+                            // Neither is packed content: the download is the file itself, so it
+                            // goes straight to where the install action will look for it.
+                            if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME || isInstaller) {
+                                FileUtils.copy(output, localFile);
                                 output.delete();
 
                                 getActivity().runOnUiThread(() -> {
-                                    Toast.makeText(getContext(), R.string.runtime_toast, Toast.LENGTH_LONG).show();
+                                    preloaderDialog.close();
+                                    Toast.makeText(getContext(),
+                                        isInstaller ? R.string.installer_toast : R.string.runtime_toast,
+                                        Toast.LENGTH_LONG).show();
                                     loadContentList();
                                 });
                                 return;

@@ -52,8 +52,12 @@ import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.contentdialog.ShortcutSettingsDialog;
 import com.winlator.cmod.core.FileUtils;
+import com.winlator.cmod.core.GameUninstaller;
+import com.winlator.cmod.core.GuestScriptRunner;
 import com.winlator.cmod.core.MSLink;
 import com.winlator.cmod.core.PreloaderDialog;
+import com.winlator.cmod.core.RedistInstaller;
+import com.winlator.cmod.core.StringUtils;
 import com.winlator.xr.utils.GoldbergEmu;
 
 import java.io.BufferedReader;
@@ -73,6 +77,16 @@ public class ShortcutsFragment extends Fragment {
     private TextView emptyTextView;
     private ContainerManager manager;
     private Shortcut currentShortcut;
+    /**
+     * The shortcut whose game is being uninstalled in a container session we are waiting on.
+     *
+     * It is written down rather than held in a field: starting a session in VR finishes this
+     * activity, so by the time the user is back this fragment is a new one and a field would
+     * have gone with the old.
+     */
+    private static final String PENDING_UNINSTALL_PREFS = "pending_uninstall";
+    private static final String PENDING_UNINSTALL_PATH = "shortcut_path";
+    private static final String PENDING_UNINSTALL_CONTAINER = "container_id";
 
     private ArrayList<FileObserver> fileObservers = new ArrayList<>();
     private PreloaderDialog preloaderDialog;
@@ -180,6 +194,144 @@ public class ShortcutsFragment extends Fragment {
                 .setItems(containerNames, (dialog, which) -> createShortcutForExe(containers.get(which), exeFile))
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    /**
+     * Removing a shortcut leaves the game itself installed, which is right when the shortcut was
+     * the mistake and wrong when the game was. The choice is put to the user rather than guessed
+     * at, with the harmless option first.
+     */
+    private void showRemoveShortcutDialog(final Shortcut shortcut) {
+        String[] options = {
+            getString(R.string.remove_shortcut_only),
+            getString(R.string.remove_shortcut_and_game)
+        };
+
+        new AlertDialog.Builder(getContext())
+                .setTitle(getString(R.string.remove_shortcut_title, shortcut.name))
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) removeShortcut(shortcut);
+                    else confirmUninstallGame(shortcut);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void removeShortcut(Shortcut shortcut) {
+        boolean desktopDeleted = safeDelete(shortcut.file);
+        boolean lnkDeleted = deletePairedLnkForShortcut(shortcut);
+        safeDelete(shortcut.iconFile);
+
+        if (desktopDeleted) {
+            disableShortcutOnScreen(requireContext(), shortcut);
+            loadShortcutsList();
+        }
+
+        String msg;
+        if (desktopDeleted) {
+            msg = lnkDeleted
+                    ? "Shortcut and paired .lnk removed."
+                    : "Shortcut removed. (No paired .lnk found or could not delete.)";
+        } else {
+            msg = "Failed to remove the shortcut. Please try again.";
+        }
+        Toast.makeText(getContext(), msg, Toast.LENGTH_SHORT).show();
+    }
+
+    /**
+     * Uninstalls through whatever the game left behind to be uninstalled with, and falls back to
+     * deleting its folder for one that was copied in and so has no uninstaller.
+     */
+    private void confirmUninstallGame(final Shortcut shortcut) {
+        GameUninstaller.UninstallEntry entry =
+                GameUninstaller.findUninstallEntry(getContext(), shortcut.container, shortcut);
+        // A game whose entry is missing, or recorded against a path that does not read back the
+        // same, still has its uninstaller sitting in its folder.
+        if (entry == null) entry = GameUninstaller.findUninstallerInFolder(getContext(), shortcut.container, shortcut);
+
+        if (entry != null) {
+            final GameUninstaller.UninstallEntry uninstallEntry = entry;
+            String name = uninstallEntry.displayName != null ? uninstallEntry.displayName : shortcut.name;
+            new AlertDialog.Builder(getContext())
+                    .setTitle(R.string.uninstall_game_title)
+                    .setMessage(getString(R.string.uninstall_game_message, name))
+                    .setPositiveButton(R.string.uninstall, (dialog, which) -> {
+                        // The uninstaller runs in its own container session, so whether it
+                        // succeeded is only known once the user is back: the shortcut is left
+                        // alone until they say so.
+                        getContext().getSharedPreferences(PENDING_UNINSTALL_PREFS, Context.MODE_PRIVATE)
+                                .edit()
+                                .putString(PENDING_UNINSTALL_PATH, shortcut.file.getAbsolutePath())
+                                .putInt(PENDING_UNINSTALL_CONTAINER, shortcut.container.id)
+                                .apply();
+                        GameUninstaller.runUninstaller(getActivity(), shortcut.container, uninstallEntry);
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+            return;
+        }
+
+        confirmDeleteInstallDir(shortcut);
+    }
+
+    /**
+     * The last resort for a game with no uninstaller: deleting its folder. It is spelled out in
+     * full -- the path, its size, and anything else that would be left pointing at it -- because
+     * nothing here can be undone.
+     */
+    private void confirmDeleteInstallDir(final Shortcut shortcut) {
+        File installDir = GameUninstaller.findInstallDir(getContext(), shortcut.container, shortcut);
+        if (installDir == null) {
+            showLocalGameMessage(getString(R.string.no_uninstaller_and_unsafe_to_delete));
+            return;
+        }
+
+        List<Shortcut> others = GameUninstaller.shortcutsInside(
+                getContext(), shortcut.container, installDir, shortcut);
+
+        // Walking a game's folder takes long enough to be worth keeping off the UI thread.
+        Executors.newSingleThreadExecutor().execute(() -> {
+            long size = GameUninstaller.folderSize(installDir);
+
+            Activity activity = getActivity();
+            if (activity == null) return;
+
+            // Named by the path the game knows itself by, so it can be checked at a glance.
+            String winPath = GuestScriptRunner.toWinPath(getContext(), shortcut.container, installDir);
+            String message = getString(R.string.delete_install_dir_message,
+                    winPath != null ? winPath : installDir.getAbsolutePath(), StringUtils.formatBytes(size));
+            if (!others.isEmpty()) {
+                StringBuilder names = new StringBuilder();
+                for (Shortcut other : others) names.append("\n• ").append(other.name);
+                message += "\n\n" + getString(R.string.delete_install_dir_other_shortcuts, names.toString());
+            }
+
+            final String text = message;
+            activity.runOnUiThread(() -> new AlertDialog.Builder(getContext())
+                    .setTitle(R.string.delete_install_dir_title)
+                    .setMessage(text)
+                    .setPositiveButton(R.string.delete_folder, (dialog, which) -> deleteInstallDir(shortcut, installDir))
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show());
+        });
+    }
+
+    /** Deleting a game's folder can run to gigabytes, so it does not happen on the UI thread. */
+    private void deleteInstallDir(final Shortcut shortcut, final File installDir) {
+        preloaderDialog.showOnUiThread(R.string.deleting_game_folder);
+
+        Executors.newSingleThreadExecutor().execute(() -> {
+            boolean deleted = FileUtils.delete(installDir);
+
+            Activity activity = getActivity();
+            if (activity == null) return;
+
+            activity.runOnUiThread(() -> {
+                preloaderDialog.close();
+                if (deleted) removeShortcut(shortcut);
+                else showLocalGameMessage(getString(R.string.delete_install_dir_failed, installDir.getName()));
+            });
+        });
     }
 
     private void openCreateContainer() {
@@ -305,6 +457,31 @@ public class ShortcutsFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        // Back from an uninstaller session. Nothing out here can tell whether it did the job, so
+        // the shortcut goes on the user's word rather than on a guess.
+        SharedPreferences pending = getContext().getSharedPreferences(PENDING_UNINSTALL_PREFS, Context.MODE_PRIVATE);
+        String path = pending.getString(PENDING_UNINSTALL_PATH, null);
+        int containerId = pending.getInt(PENDING_UNINSTALL_CONTAINER, 0);
+        if (path == null) return;
+        pending.edit().clear().apply();
+
+        File shortcutFile = new File(path);
+        Container container = manager != null ? manager.getContainerById(containerId) : null;
+        if (container == null || !shortcutFile.isFile()) return;
+
+        final Shortcut shortcut = new Shortcut(container, shortcutFile);
+        new AlertDialog.Builder(getContext())
+                .setTitle(R.string.uninstall_finished_title)
+                .setMessage(getString(R.string.uninstall_finished_message, shortcut.name))
+                .setPositiveButton(R.string.remove_shortcut, (dialog, which) -> removeShortcut(shortcut))
+                .setNegativeButton(R.string.keep_shortcut, null)
+                .show();
     }
 
     @Override
@@ -723,31 +900,7 @@ public class ShortcutsFragment extends Fragment {
                     (new ShortcutSettingsDialog(ShortcutsFragment.this, shortcut)).show();
                 }
                 else if (itemId == R.id.shortcut_remove) {
-                    ContentDialog.confirm(context, R.string.do_you_want_to_remove_this_shortcut, () -> {
-                        boolean desktopDeleted  = safeDelete(shortcut.file);
-                        boolean iconDeleted     = safeDelete(shortcut.iconFile);
-                        boolean lnkDeleted      = deletePairedLnkForShortcut(shortcut);
-
-                        if (desktopDeleted) {
-                            disableShortcutOnScreen(requireContext(), shortcut);
-                            loadShortcutsList();
-                        }
-
-                        String msg;
-                        if (desktopDeleted) {
-                            if (lnkDeleted) {
-                                msg = "Shortcut and paired .lnk removed.";
-                            } else {
-                                msg = "Shortcut removed." + (shortcut.file != null
-                                        ? " (No paired .lnk found or could not delete.)"
-                                        : "");
-                            }
-                        } else {
-                            msg = "Failed to remove the shortcut. Please try again.";
-                        }
-
-                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
-                    });
+                    showRemoveShortcutDialog(shortcut);
                 }
                 else if (itemId == R.id.shortcut_clone_to_container) {
                     // Use the ContainerManager to get the list of containers
@@ -781,6 +934,9 @@ public class ShortcutsFragment extends Fragment {
                 }
                 else if (itemId == R.id.shortcut_export_to_frontend) {
                     exportShortcutToFrontend(shortcut);
+                }
+                else if (itemId == R.id.shortcut_install_redist) {
+                    RedistInstaller.showDialog(getActivity(), shortcut);
                 }
                 else if (itemId == R.id.shortcut_properties) {
                     showShortcutProperties(shortcut);

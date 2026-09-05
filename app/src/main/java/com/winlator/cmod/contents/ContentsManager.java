@@ -10,22 +10,29 @@ import androidx.annotation.NonNull;
 import com.winlator.cmod.core.EvshimPatcher;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.TarCompressorUtils;
+import com.winlator.cmod.xenvironment.ImageFs;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
 public class ContentsManager {
     public static final String PROFILE_NAME = "profile.json";
+    /** Suffix of the file that records where a locally added installer lives. */
+    public static final String INSTALLER_REFERENCE_SUFFIX = ".installerref";
     public static final String REMOTE_PROFILES = "https://raw.githubusercontent.com/WinlatorXR/Winlator-Contents/refs/heads/main/contents.json";
     public static final String[] DXVK_TRUST_FILES = {"${system32}/d3d8.dll", "${system32}/d3d9.dll", "${system32}/d3d10.dll", "${system32}/d3d10_1.dll",
             "${system32}/d3d10core.dll", "${system32}/d3d11.dll", "${system32}/dxgi.dll", "${syswow64}/d3d8.dll", "${syswow64}/d3d9.dll", "${syswow64}/d3d10.dll",
@@ -166,6 +173,185 @@ public class ContentsManager {
                 }
             }
         }
+
+        syncLocalRuntimes();
+        syncLocalInstallers();
+    }
+
+    /**
+     * Surfaces installers the user dropped into the runtimes directory themselves, so a runtime
+     * does not have to be listed in contents.json to be installable into a container.
+     */
+    private void syncLocalRuntimes() {
+        List<ContentProfile> runtimes = profilesMap.get(ContentProfile.ContentType.CONTENT_TYPE_RUNTIME);
+        if (runtimes == null) return;
+
+        File[] files = getRuntimesDir(context).listFiles(File::isFile);
+        if (files == null) return;
+
+        for (File file : files) {
+            boolean known = false;
+            for (ContentProfile profile : runtimes) {
+                if (getRuntimeFile(context, profile).getName().equals(file.getName())) {
+                    known = true;
+                    break;
+                }
+            }
+            if (known) continue;
+
+            ContentProfile profile = new ContentProfile();
+            profile.type = ContentProfile.ContentType.CONTENT_TYPE_RUNTIME;
+            profile.verName = FileUtils.getBasename(file.getName());
+            profile.verCode = 0;
+            profile.localFileName = file.getName();
+            runtimes.add(profile);
+            Log.d("ContentsManager", "Local runtime found: " + file.getName());
+        }
+    }
+
+    /**
+     * Surfaces the demos and offline installers the installers directory knows about, so one the
+     * user added from local storage does not have to be listed in contents.json to appear.
+     *
+     * Two kinds live there. A downloaded one is the file itself. One the user added from local
+     * storage is only a reference file naming where it sits in the Download folder: an offline
+     * installer that keeps its payload in separate data files, as GOG's do, has to run beside
+     * them, and copying a multi-gigabyte set in to achieve that would only duplicate it.
+     */
+    private void syncLocalInstallers() {
+        List<ContentProfile> installers = profilesMap.get(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER);
+        if (installers == null) return;
+
+        File[] files = getInstallersDir(context).listFiles(File::isFile);
+        if (files == null) return;
+        // A reference file is named after the path it holds, so the listing is put in order by
+        // what the user sees rather than by what the directory happens to hold.
+        List<ContentProfile> found = new ArrayList<>();
+
+        for (File file : files) {
+            File target = file;
+            String referencePath = null;
+
+            if (file.getName().endsWith(INSTALLER_REFERENCE_SUFFIX)) {
+                byte[] content = FileUtils.read(file);
+                if (content == null) continue;
+                referencePath = new String(content, StandardCharsets.UTF_8).trim();
+
+                // A reference whose file has since been moved or deleted is skipped rather than
+                // cleaned up, so putting the file back brings its entry back with it.
+                target = new File(referencePath);
+                if (!target.isFile()) {
+                    Log.d("ContentsManager", "Installer reference points at a missing file: " + referencePath);
+                    continue;
+                }
+            }
+            if (!isInstaller(target.getName())) continue;
+
+            // A downloaded entry already owns its file, so it must not be listed a second time.
+            boolean known = false;
+            for (ContentProfile profile : installers) {
+                if (getInstallerFile(context, profile).equals(target)) {
+                    known = true;
+                    break;
+                }
+            }
+            if (known) continue;
+
+            ContentProfile profile = new ContentProfile();
+            profile.type = ContentProfile.ContentType.CONTENT_TYPE_INSTALLER;
+            profile.verName = FileUtils.getBasename(target.getName());
+            profile.verCode = 0;
+            profile.localFileName = target.getName();
+            profile.localFilePath = referencePath;
+            found.add(profile);
+            Log.d("ContentsManager", "Local installer found: " + target.getAbsolutePath());
+        }
+
+        found.sort((a, b) -> a.localFileName.compareToIgnoreCase(b.localFileName));
+        installers.addAll(found);
+    }
+
+    /**
+     * Records a demo or offline installer held elsewhere on the device as an entry, by writing a
+     * reference file naming it into the installers directory. The file itself stays where it is.
+     */
+    public static boolean addInstallerReference(Context context, File installer) {
+        String path = installer.getAbsolutePath();
+        return FileUtils.writeString(installerReferenceFile(context, path), path);
+    }
+
+    /**
+     * The reference file behind a locally added entry, which is all that removing it takes: the
+     * installer belongs to the user's Download folder, not to this app.
+     */
+    public static File getInstallerReferenceFile(Context context, ContentProfile profile) {
+        return installerReferenceFile(context, profile.localFilePath);
+    }
+
+    /**
+     * A reference file is named after the path it holds rather than after the installer, so two
+     * same-named installers in different folders each keep their own entry, and adding the same
+     * one twice replaces its reference instead of listing it again.
+     */
+    private static File installerReferenceFile(Context context, String path) {
+        StringBuilder name = new StringBuilder();
+        try {
+            for (byte b : MessageDigest.getInstance("MD5").digest(path.getBytes(StandardCharsets.UTF_8)))
+                name.append(String.format("%02x", b));
+        }
+        catch (NoSuchAlgorithmException e) {
+            name.append(Integer.toHexString(path.hashCode()));
+        }
+        return new File(getInstallersDir(context), name + INSTALLER_REFERENCE_SUFFIX);
+    }
+
+    /** Whether a file is something a container can be asked to run, rather than data beside it. */
+    public static boolean isInstaller(String name) {
+        String lower = name.toLowerCase(Locale.ENGLISH);
+        return lower.endsWith(".exe") || lower.endsWith(".msi");
+    }
+
+    public static File getRuntimesDir(Context context) {
+        File dir = new File(ImageFs.find(context).getRootDir(), "runtimes");
+        if (!dir.isDirectory()) dir.mkdirs();
+        return dir;
+    }
+
+    public static File getInstallersDir(Context context) {
+        File dir = new File(ImageFs.find(context).getRootDir(), "installers");
+        if (!dir.isDirectory()) dir.mkdirs();
+        return dir;
+    }
+
+    /**
+     * The on-disk file for a demo or offline installer: where it was downloaded to, or where the
+     * user keeps it if the entry is a reference to a file of their own.
+     */
+    public static File getInstallerFile(Context context, ContentProfile profile) {
+        if (profile.localFilePath != null) return new File(profile.localFilePath);
+        return new File(getInstallersDir(context), localFileName(profile));
+    }
+
+    /**
+     * The on-disk installer for a Runtime profile, whether it was downloaded from contents.json
+     * or added from local storage.
+     */
+    public static File getRuntimeFile(Context context, ContentProfile profile) {
+        return new File(getRuntimesDir(context), localFileName(profile));
+    }
+
+    /**
+     * The name an entry has on disk. A file the user added carries its own; one that came from
+     * contents.json is named after the profile, with the extension taken from its URL.
+     */
+    private static String localFileName(ContentProfile profile) {
+        String name = profile.localFileName;
+        if (name == null) {
+            name = profile.verName;
+            int dotIndex = profile.remoteUrl != null ? profile.remoteUrl.lastIndexOf('.') : -1;
+            if (dotIndex > 0) name += profile.remoteUrl.substring(dotIndex);
+        }
+        return name;
     }
 
     public void extraContentFile(Uri uri, OnInstallFinishedCallback callback) {
