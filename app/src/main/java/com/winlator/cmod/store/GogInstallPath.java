@@ -21,6 +21,23 @@ public final class GogInstallPath {
     }
 
     /**
+     * The folder a recorded gog_dir_ value names, or null when there is none.
+     *
+     * The value is not always the same shape: the installers record the folder's name alone while
+     * the download queue records the full path of the folder the executable was found in, which
+     * for a game whose executable sits under bin\ or similar is a folder inside the game's own.
+     * Both are taken back to the folder the store made, since deleting anything narrower would
+     * leave most of the game behind.
+     */
+    public static File resolveInstallDir(Context ctx, String value) {
+        if (value == null || value.isEmpty()) return null;
+        if (!value.startsWith("/")) return getInstallDir(ctx, value);
+
+        StoreGameInstall install = StoreGameInstall.find(ctx, new File(value));
+        return install != null ? install.installDir : new File(value);
+    }
+
+    /**
      * Returns the Wine Z: path for a game exe.
      * Z: = {filesDir}/imagefs, so strip that prefix and replace / with \.
      * e.g. .../imagefs/gog_games/Game/game.exe → Z:\gog_games\Game\game.exe

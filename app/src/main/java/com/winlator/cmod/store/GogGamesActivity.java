@@ -492,7 +492,11 @@ public class GogGamesActivity extends NavActivity {
                 .setPositiveButton("Uninstall", (d, w) -> {
                     String dir = prefs.getString("gog_dir_" + g.gameId, null);
                     new Thread(() -> {
-                        if (dir != null) StoreGridUi.deleteDir(new File(dir));
+                        // What is recorded is a folder name as often as it is a path, so it is
+                        // resolved rather than taken for a path -- deleting a bare name deletes
+                        // nothing, and the game would have stayed installed.
+                        File installDir = GogInstallPath.resolveInstallDir(this, dir);
+                        if (installDir != null) StoreGridUi.deleteDir(installDir);
                         LudashiLaunchBridge.deleteShortcut(this, g.title);
                         prefs.edit()
                                 .remove("gog_dir_" + g.gameId)

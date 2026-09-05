@@ -80,6 +80,9 @@
     <string name="delete_install_dir_message">This game has no uninstaller, so the only way to remove it is deleting the folder it is installed in and the %2$s in it:\n\n%1$s\n\nThis cannot be undone, and anything the game saved inside it goes too. Check the folder is the game\'s own before going ahead.</string>
     <string name="delete_install_dir_other_shortcuts">These shortcuts also point into that folder and will stop working:%1$s</string>
     <string name="delete_install_dir_failed">\"%1$s\" could not be deleted.</string>
+    <string name="uninstall_store_game_title">Uninstall the game files?</string>
+    <string name="uninstall_store_game_message">\"%1$s\" was installed from the %2$s store, which keeps a game\'s files outside any one container so that every container can play the same copy:\n\n%3$s (%4$s)\n\nDeleting them removes the game from every container, not only this one, and cannot be undone. Anything the game saved inside its folder goes too.</string>
+    <string name="uninstall_store_game_other_shortcuts">These shortcuts point at the same files and will be removed as well:%1$s</string>
     <string name="delete_folder">Delete folder</string>
     <string name="deleting_game_folder">Deleting the game\'s folder…</string>
     <string name="do_you_want_to_remove_this_controller">Do you want to remove this controller?</string>
