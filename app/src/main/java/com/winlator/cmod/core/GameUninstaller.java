@@ -5,6 +5,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.winlator.cmod.container.Container;
+import com.winlator.cmod.container.ContainerManager;
 import com.winlator.cmod.container.Shortcut;
 
 import java.io.File;
@@ -227,6 +228,17 @@ public abstract class GameUninstaller {
         File target = MSLink.getLocalFile(container.getRootDir(), ".wine", container.drivesIterator(), file);
         if (target == null) Log.w(TAG, "Could not read the target of " + shortcut.path);
         return target != null ? target : file;
+    }
+
+    /**
+     * The same across every container, for a folder that belongs to none of them: a game the
+     * store installed sits on Z: and can have a shortcut in each container that plays it.
+     */
+    public static List<Shortcut> shortcutsInside(Context context, ContainerManager manager, File installDir, Shortcut except) {
+        List<Shortcut> shortcuts = new ArrayList<>();
+        for (Container container : manager.getContainers())
+            shortcuts.addAll(shortcutsInside(context, container, installDir, except));
+        return shortcuts;
     }
 
     /** The other shortcuts that would be left pointing at nothing if a folder went. */

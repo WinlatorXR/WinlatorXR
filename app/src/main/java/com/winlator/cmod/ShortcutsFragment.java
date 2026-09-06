@@ -58,6 +58,7 @@ import com.winlator.cmod.core.MSLink;
 import com.winlator.cmod.core.PreloaderDialog;
 import com.winlator.cmod.core.RedistInstaller;
 import com.winlator.cmod.core.StringUtils;
+import com.winlator.cmod.store.StoreGameInstall;
 import com.winlator.xr.utils.GoldbergEmu;
 
 import java.io.BufferedReader;
@@ -271,7 +272,92 @@ public class ShortcutsFragment extends Fragment {
             return;
         }
 
+        // A game one of the stores downloaded has no uninstaller either, but where its files are
+        // is known rather than guessed at, so it is removed the way the store removes it.
+        StoreGameInstall storeInstall = StoreGameInstall.find(getContext(),
+                GameUninstaller.resolveExecutable(getContext(), shortcut.container, shortcut));
+        if (storeInstall != null) {
+            confirmDeleteStoreInstall(shortcut, storeInstall);
+            return;
+        }
+
         confirmDeleteInstallDir(shortcut);
+    }
+
+    /**
+     * The stores install onto Z:, outside every container, so one download serves each container
+     * that has a shortcut to it. Removing one is put to the user as what it really is -- taking
+     * the game away from all of them -- and the shortcuts left over in the others go with it.
+     */
+    private void confirmDeleteStoreInstall(final Shortcut shortcut, final StoreGameInstall install) {
+        final List<Shortcut> others = GameUninstaller.shortcutsInside(
+                getContext(), manager, install.installDir, shortcut);
+
+        // Walking a game folder takes long enough to be worth keeping off the UI thread.
+        Executors.newSingleThreadExecutor().execute(() -> {
+            long size = GameUninstaller.folderSize(install.installDir);
+
+            Activity activity = getActivity();
+            if (activity == null) return;
+
+            String winPath = GuestScriptRunner.toWinPath(getContext(), shortcut.container, install.installDir);
+            String message = getString(R.string.uninstall_store_game_message,
+                    shortcut.name, install.storeName,
+                    winPath != null ? winPath : install.installDir.getAbsolutePath(),
+                    StringUtils.formatBytes(size));
+            if (!others.isEmpty()) {
+                StringBuilder names = new StringBuilder();
+                for (Shortcut other : others)
+                    names.append("\n• ").append(other.name)
+                         .append(" (").append(other.container.getName()).append(")");
+                message += "\n\n" + getString(R.string.uninstall_store_game_other_shortcuts, names.toString());
+            }
+
+            final String text = message;
+            activity.runOnUiThread(() -> new AlertDialog.Builder(getContext())
+                    .setTitle(R.string.uninstall_store_game_title)
+                    .setMessage(text)
+                    .setPositiveButton(R.string.uninstall, (dialog, which) -> deleteStoreInstall(shortcut, install, others))
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show());
+        });
+    }
+
+    /** Deletes the game the store installed, then every shortcut that pointed into it. */
+    private void deleteStoreInstall(final Shortcut shortcut, final StoreGameInstall install,
+                                    final List<Shortcut> others) {
+        preloaderDialog.showOnUiThread(R.string.deleting_game_folder);
+        // The work outlives this fragment being torn down, and the store's records are the
+        // application's rather than this screen's.
+        final Context context = requireContext().getApplicationContext();
+
+        Executors.newSingleThreadExecutor().execute(() -> {
+            boolean deleted = FileUtils.delete(install.installDir);
+            // A store page goes by its own record of what is installed rather than by the disk,
+            // so it keeps offering to launch a game whose files are gone until that record goes.
+            if (deleted) install.forget(context);
+
+            Activity activity = getActivity();
+            if (activity == null) return;
+
+            activity.runOnUiThread(() -> {
+                preloaderDialog.close();
+                if (!deleted) {
+                    showLocalGameMessage(getString(R.string.delete_install_dir_failed, install.installDir.getName()));
+                    return;
+                }
+                for (Shortcut other : others) deleteShortcutFiles(other);
+                removeShortcut(shortcut);
+            });
+        });
+    }
+
+    /** The files a shortcut is made of, for the ones being removed alongside a game. */
+    private void deleteShortcutFiles(Shortcut shortcut) {
+        boolean deleted = safeDelete(shortcut.file);
+        deletePairedLnkForShortcut(shortcut);
+        safeDelete(shortcut.iconFile);
+        if (deleted) disableShortcutOnScreen(requireContext(), shortcut);
     }
 
     /**

@@ -489,8 +489,10 @@ public class GogGameDetailActivity extends NavActivity {
         if (dirName == null) return;
         AlertDialog progress = showUninstallProgress();
         new Thread(() -> {
-            File installPath = new File(dirName);
-            deleteDir(installPath);
+            // What is recorded is a folder name as often as it is a path, so it is resolved
+            // rather than taken for a path -- deleting a bare name deletes nothing.
+            File installPath = GogInstallPath.resolveInstallDir(this, dirName);
+            if (installPath != null) deleteDir(installPath);
             LudashiLaunchBridge.deleteShortcut(this, title);
             prefs.edit()
                 .remove("gog_dir_" + gameId)
