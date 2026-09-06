@@ -14,6 +14,7 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
@@ -21,6 +22,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public abstract class WineUtils {
+    /** Where Wine's mountmgr reads each drive's type from when it creates the drive devices. */
+    private static final String DRIVE_TYPES_KEY = "Software\\Wine\\Drives";
+    private static final String DRIVE_TYPE_NETWORK = "network";
+
     public static void createDosdevicesSymlinks(Container container) {
         String dosdevicesPath = (new File(container.getRootDir(), ".wine/dosdevices")).getPath();
         File[] files = (new File(dosdevicesPath)).listFiles();
@@ -38,6 +43,73 @@ public abstract class WineUtils {
             }
             FileUtils.symlink(path, dosdevicesPath+"/"+drive[0].toLowerCase(Locale.ENGLISH)+":");
         }
+
+        applyDriveTypes(container);
+    }
+
+    /**
+     * Tells Wine which of the container's drives are removable media.
+     *
+     * A drive with no entry under HKLM\Software\Wine\Drives is a local fixed disk as far as
+     * GetDriveType is concerned, and an installer bootstrapper unpacks itself into the writable
+     * fixed drive with the most free space -- InstallShield's {GUID} and ~GLH*.TMP folders at a
+     * drive root, and MSI's ROOTDRIVE, documented as "the local drive that can be written to
+     * having the most free space". A USB drive mapped into a container is almost always the
+     * emptiest drive Wine can see, so installing anything at all into C: sprayed thousands of
+     * scratch files over the root of it.
+     *
+     * Marking those drives as network shares takes them out of that scan -- a network drive is
+     * only picked during an administrative install -- while leaving them as readable and
+     * writable as they were. Wine's other non-fixed type, floppy, would take them out of it
+     * too, but removable devices go through media-presence checks that a drive holding a game
+     * library has no reason to be subject to.
+     *
+     * Called from {@link #createDosdevicesSymlinks(Container)} rather than on its own, since a
+     * launch that published the drives without their types would bring the junk straight back.
+     */
+    private static void applyDriveTypes(Container container) {
+        File systemRegFile = new File(container.getRootDir(), ".wine/system.reg");
+        // Nothing to configure until the prefix exists: a system.reg written here would leave
+        // wineboot with a registry that looks initialised and is not.
+        if (!systemRegFile.isFile()) return;
+
+        // Only the letters the container maps are worth looking at, and each one costs a pass
+        // over system.reg. An entry left behind on a letter that is no longer mapped names a
+        // drive Wine does not create a device for, so it is inert until the letter is mapped
+        // again -- and mapping it is what brings it back through here.
+        HashMap<String, String> driveTypes = new HashMap<>();
+        for (String[] drive : container.drivesIterator()) {
+            if (drive[0].isEmpty()) continue;
+            String path = (new File(drive[1])).getAbsolutePath();
+            driveTypes.put(drive[0].toLowerCase(Locale.ENGLISH)+":", isRemovableVolumePath(path) ? DRIVE_TYPE_NETWORK : null);
+        }
+        if (driveTypes.isEmpty()) return;
+
+        try (WineRegistryEditor registryEditor = new WineRegistryEditor(systemRegFile)) {
+            for (String name : driveTypes.keySet()) {
+                String wanted = driveTypes.get(name);
+                String current = registryEditor.getStringValue(DRIVE_TYPES_KEY, name);
+
+                if (wanted == null) {
+                    // A drive that has moved back onto internal storage would otherwise keep the
+                    // type it was given while it was a USB drive.
+                    if (DRIVE_TYPE_NETWORK.equals(current)) registryEditor.removeValue(DRIVE_TYPES_KEY, name);
+                }
+                else if (!wanted.equals(current)) registryEditor.setStringValue(DRIVE_TYPES_KEY, name, wanted);
+            }
+        }
+    }
+
+    /**
+     * Whether a mapped path lives on a removable volume -- a USB drive or an SD card -- rather
+     * than on the device's own storage. A physical volume is mounted under its own volume id,
+     * either as /storage/1A2B-3C4D or as the raw /mnt/media_rw mount the folder picker hands
+     * back for one; the primary emulated volume and the app's private storage are neither.
+     */
+    private static boolean isRemovableVolumePath(String path) {
+        if (path.startsWith("/mnt/media_rw/")) return true;
+        if (!path.startsWith("/storage/")) return false;
+        return !path.startsWith("/storage/emulated/") && !path.startsWith("/storage/self/");
     }
 
     private static void setWindowMetrics(WineRegistryEditor registryEditor) {
