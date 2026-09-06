@@ -216,6 +216,26 @@ public class XrController {
         mapKey(secondaryRight, getMapping(context, Mapping.THUMBSTICK_RIGHT));
     }
 
+    /**
+     * Releases every key the controller mapping is able to press.
+     *
+     * Key mapping is edge-triggered (see {@link #mapKey}), but while the XR menu is up the XServer
+     * update is skipped entirely and lastButtons keeps following the physical controller, so the
+     * release edge of anything held at summon time is consumed with nothing listening and the key
+     * stays down in the container for good. Gamepad emulation has no such problem because it pushes
+     * an absolute state every frame and cuts input by pushing a neutral one; keys need the releases
+     * sent explicitly. Keyboard.setKeyRelease ignores keys that are not currently pressed, so this
+     * is safe to call unconditionally.
+     */
+    public void releaseKeyboardButtons() {
+        Context context = XrActivity.getInstance();
+        Keyboard keyboard = instance.getXServer().keyboard;
+        keyboard.setKeyRelease(XKeycode.KEY_ESC.id);
+        for (Mapping input : Mapping.values()) {
+            keyboard.setKeyRelease(getMapping(context, input));
+        }
+    }
+
     public void updateMouseAxes(float[] axes, boolean headMapping) {
         // Get OpenXR input
         XrInterface.ControllerAxis mouseAxisX = XrActivity.mouseLeftHanded ? XrInterface.ControllerAxis.L_X : XrInterface.ControllerAxis.R_X;
