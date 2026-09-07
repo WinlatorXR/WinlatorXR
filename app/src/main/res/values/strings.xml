@@ -344,11 +344,11 @@
     <string name="pls_make_sure_content_trustworthy">Contents contain executable files. Unsafe executable files may compromise your data or device security. Before installing, PLEASE make sure that the additional content you are installing is trustworthy.</string>
     <string name="content_suffix_is_wcp_packed_xz_zst">The content files have the .wcp extension and are compressed using either xz or zst formats.</string>
     <string name="content_suffix_is_wcp_or_runtime_installer">Select a .wcp content file, or a runtime installer (.exe or .msi) to add from local storage.</string>
-    <string name="demos_and_offline_installers">Demos and offline installers</string>
+    <string name="installers">Installers</string>
     <string name="installer_toast">Installer downloaded into\n Z:\\installers. Use its menu to install it into a container.</string>
     <string name="add_installer">Add Installer</string>
-    <string name="select_demo_or_offline_installer">Select a demo or offline installer (.exe or .msi) from your Download folder. Nothing is copied: it is run where it sits, so any data files it comes with, such as the .bin parts of a GOG offline installer, only have to stay in the same folder as it.</string>
-    <string name="no_installers_to_display">No demos or offline installers added yet!</string>
+    <string name="select_installer">Select an installer (.exe or .msi) from your Download folder. Nothing is copied: it is run where it sits, so any data files it comes with, such as the .bin parts of a GOG offline installer, only have to stay in the same folder as it.</string>
+    <string name="no_installers_to_display">No installers added yet!</string>
     <string name="not_downloaded_yet">Not downloaded yet</string>
     <string name="installer_added">\"%1$s\" added. Use its menu to run it in a container.</string>
     <string name="installer_not_local_file">Could not work out where that file is stored. Please pick one from your Download folder.</string>

@@ -116,7 +116,7 @@ public class ContentsFragment extends Fragment {
             final boolean installers = currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER);
 
             String message = getString(R.string.do_you_want_to_install_content) + " " + getString(R.string.pls_make_sure_content_trustworthy) + " ";
-            if (installers) message += getString(R.string.select_demo_or_offline_installer);
+            if (installers) message += getString(R.string.select_installer);
             else message += currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_RUNTIME)
                     ? getString(R.string.content_suffix_is_wcp_or_runtime_installer)
                     : getString(R.string.content_suffix_is_wcp_packed_xz_zst);
