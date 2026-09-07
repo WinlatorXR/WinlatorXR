@@ -606,7 +606,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         this.graphicsDriverConfig = GraphicsDriverConfigDialog.parseGraphicsDriverConfig(graphicsDriverConfig);
 
         if (dxwrapper.equals("dxvk") || dxwrapper.equals("vkd3d")) {
-            this.dxwrapperConfig = DXVKConfigDialog.parseConfig(dxwrapperConfig);
+            this.dxwrapperConfig = DXVKConfigDialog.parseConfig(dxwrapperConfig, wineInfo.isArm64EC());
         }
 
 

@@ -25,7 +25,7 @@ public class Container {
     public static final String DEFAULT_AUDIO_DRIVER = "pulseaudio";
     public static final String DEFAULT_EMULATOR = "FEXCore";
     public static final String DEFAULT_DXWRAPPER = "dxvk";
-    public static final String DEFAULT_DXWRAPPERCONFIG = "version=" + DefaultVersion.DXVK + ",framerate=0,maxDeviceMemory=0,async=1,asyncCache=1" + ",vkd3dVersion=" + DefaultVersion.VKD3D + ",vkd3dLevel=12_1";
+    public static final String DEFAULT_DXWRAPPERCONFIG = defaultDXWrapperConfig(false);
     public static final String DEFAULT_GRAPHICSDRIVERCONFIG = "version=" + DefaultVersion.WRAPPER + ";blacklistedExtensions=" + ";maxDeviceMemory=0" + ";adrenotoolsTurnip=1" + ";frameSync=Never";
     public static final String DEFAULT_DDRAWRAPPER = "dd7to9-v1.7";
     public static final String DEFAULT_WINCOMPONENTS = "direct3d=1,directsound=0,directmusic=0,directshow=0,directplay=0,xaudio=0,vcrun2005=1,vcrun2010=1,wmdecoder=1";
@@ -147,6 +147,15 @@ public class Container {
     public String getDDrawWrapper() { return ddrawrapper; }
 
     public void setDDrawWrapper(String ddrawrapper) { this.ddrawrapper = ddrawrapper; }
+
+    /**
+     * The default DXWrapper config for a new container. DXVK builds are architecture-specific, so
+     * the arch of the container's Wine version decides which default applies. VKD3D 2.12-0 is
+     * listed for both architectures, so it needs no split.
+     */
+    public static String defaultDXWrapperConfig(boolean arm64ec) {
+        return "version=" + DefaultVersion.dxvk(arm64ec) + ",framerate=0,maxDeviceMemory=0,async=1,asyncCache=1" + ",vkd3dVersion=" + DefaultVersion.VKD3D + ",vkd3dLevel=12_1";
+    }
 
     public String getDXWrapperConfig() {
         return dxwrapperConfig;

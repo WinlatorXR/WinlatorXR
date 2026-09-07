@@ -1144,6 +1144,14 @@ public class ContainerDetailFragment extends Fragment {
                 loadBox64VersionSpinner(context, container, contentsManager, sBox64Version, wineInfo.isArm64EC());
                 cbWoW64Mode.setEnabled(true); // Always allow user to toggle WoW64 mode
                 updateArchitecture(wineInfo);
+                // The default DXVK version is architecture-specific, and the tag was seeded with
+                // the x86_64 default before this listener first ran, so re-seed it on every
+                // selection. In edit mode the container's saved config stands.
+                if (!isEditMode()) {
+                    View vDXWrapperConfig = view.findViewById(R.id.BTDXWrapperConfig);
+                    if (vDXWrapperConfig != null)
+                        vDXWrapperConfig.setTag(Container.defaultDXWrapperConfig(wineInfo.isArm64EC()));
+                }
                 updateGraphicsDriverSpinner(context, sGraphicsDriver);
             }
             @Override

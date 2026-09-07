@@ -26,7 +26,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class DXVKConfigDialog extends ContentDialog {
-    public static final String DEFAULT_CONFIG = "version="+DefaultVersion.DXVK+",framerate=0,maxDeviceMemory=0,async=0,asyncCache=0";
+    public static final String DEFAULT_CONFIG = defaultConfig(false);
     public static final int DXVK_TYPE_NONE = 0;
     public static final int DXVK_TYPE_ASYNC = 1;
     public static final int DXVK_TYPE_GPLASYNC = 2;
@@ -63,7 +63,7 @@ public class DXVKConfigDialog extends ContentDialog {
         contentsManager.syncContents();
         loadDxvkVersionSpinner(contentsManager, sVersion, isArm64);
 
-        KeyValueSet config = parseConfig(anchor.getTag());
+        KeyValueSet config = parseConfig(anchor.getTag(), isArm64);
         AppUtils.setSpinnerSelectionFromIdentifier(sVersion, config.get("version"));
         AppUtils.setSpinnerSelectionFromNumber(sMaxDeviceMemory, config.get("maxDeviceMemory"));
         if (config.get("framerate").compareTo(UNLIMITED_FRAMERATE) == 0) {
@@ -134,8 +134,17 @@ public class DXVKConfigDialog extends ContentDialog {
         return dxvkType;
     }
 
+    /** Fallback config for a container that has never had one saved. */
+    public static String defaultConfig(boolean arm64ec) {
+        return "version=" + DefaultVersion.dxvk(arm64ec) + ",framerate=0,maxDeviceMemory=0,async=0,asyncCache=0";
+    }
+
     public static KeyValueSet parseConfig(Object config) {
-        String data = config != null && !config.toString().isEmpty() ? config.toString() : DEFAULT_CONFIG;
+        return parseConfig(config, false);
+    }
+
+    public static KeyValueSet parseConfig(Object config, boolean arm64ec) {
+        String data = config != null && !config.toString().isEmpty() ? config.toString() : defaultConfig(arm64ec);
         return new KeyValueSet(data);
     }
 

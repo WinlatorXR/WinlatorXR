@@ -506,16 +506,16 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 && !Environment.isExternalStorageManager()) {
             showAllFilesAccessDialog();
         }
-        autoCreateDefaultContainerIfNeeded();
+        autoCreateDefaultContainersIfNeeded();
     }
 
     /**
      * Mirrors clicking "+" in the containers list and immediately hitting save with no
-     * changes: creates a single default container named after the bundled default Wine/Proton
-     * version. Runs once ever, guarded by a SharedPreferences flag, and only when the user has
-     * no containers yet.
+     * changes, done once for each bundled Wine/Proton version (x86_64 and arm64ec), naming
+     * each container after the Wine version it was created with. Runs once ever, guarded by a
+     * SharedPreferences flag, and only when the user has no containers yet.
      */
-    private void autoCreateDefaultContainerIfNeeded() {
+    private void autoCreateDefaultContainersIfNeeded() {
         if (sharedPreferences.getBoolean(PREF_AUTO_DEFAULT_CONTAINER_CREATED, false)) return;
         if (containerManager == null) return;
 
@@ -524,24 +524,35 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         containerManager.loadContainers();
         if (!containerManager.getContainers().isEmpty()) return;
 
+        String[] wineVersions = getResources().getStringArray(R.array.wine_entries);
+        createDefaultContainer(wineVersions, 0, new ContentsManager(this));
+    }
+
+    /**
+     * Creates the default container for wineVersions[index], then chains to the next one.
+     * Creation is sequential because container ids come from ContainerManager's in-memory
+     * counter, which overlapping creations would hand out twice.
+     */
+    private void createDefaultContainer(String[] wineVersions, int index, ContentsManager contentsManager) {
+        if (index >= wineVersions.length) return;
+        final String wineVersion = wineVersions[index];
+
         try {
-            String wineVersion = WineInfo.MAIN_WINE_VERSION.identifier();
             JSONObject data = new JSONObject();
             data.put("name", wineVersion);
             data.put("wineVersion", wineVersion);
             data.put("emulator", Container.DEFAULT_EMULATOR);
-            data.put("dxwrapperConfig", Container.DEFAULT_DXWRAPPERCONFIG);
+            data.put("dxwrapperConfig", Container.defaultDXWrapperConfig(WineInfo.fromIdentifier(this, contentsManager, wineVersion).isArm64EC()));
 
-            ContentsManager contentsManager = new ContentsManager(this);
             containerManager.createContainerAsync(data, contentsManager, (container) -> {
-                if (container == null) {
-                    Log.e("MainActivity", "Failed to auto-create default container");
-                    return;
-                }
+                if (container == null) Log.e("MainActivity", "Failed to auto-create default container for " + wineVersion);
+
                 Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.FLFragmentContainer);
                 if (currentFragment instanceof ContainersFragment) {
                     ((ContainersFragment) currentFragment).loadContainersList();
                 }
+
+                createDefaultContainer(wineVersions, index + 1, contentsManager);
             });
         } catch (JSONException e) {
             e.printStackTrace();

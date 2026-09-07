@@ -18,8 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class VKD3DConfigDialog extends ContentDialog {
-    public static final String DEFAULT_CONFIG = DXVKConfigDialog.DEFAULT_CONFIG +
-            ",vkd3dVersion=" + DefaultVersion.VKD3D + ",vkd3dLevel=12_1";
+    public static final String DEFAULT_CONFIG = defaultConfig(false);
     public static final String[] VKD3D_FEATURE_LEVEL = {"12_0", "12_1", "12_2", "11_1", "11_0", "10_1", "10_0", "9_3", "9_2", "9_1"};
     private final Context context;
 
@@ -41,7 +40,7 @@ public class VKD3DConfigDialog extends ContentDialog {
         sFeatureLevel.setAdapter(adapter);
 
         // Retrieve and apply previously saved config values
-        KeyValueSet config = parseConfig(anchor.getTag());
+        KeyValueSet config = parseConfig(anchor.getTag(), isArm64);
         setSpinnerSelectionByIdentifier(sVersion, config.get("vkd3dVersion"));
         AppUtils.setSpinnerSelectionFromIdentifier(sFeatureLevel, config.get("vkd3dLevel"));
 
@@ -54,8 +53,17 @@ public class VKD3DConfigDialog extends ContentDialog {
         });
     }
 
+    /** Fallback config for a container that has never had one saved. */
+    public static String defaultConfig(boolean arm64ec) {
+        return DXVKConfigDialog.defaultConfig(arm64ec) + ",vkd3dVersion=" + DefaultVersion.VKD3D + ",vkd3dLevel=12_1";
+    }
+
     public static KeyValueSet parseConfig(Object config) {
-        String data = config != null && !config.toString().isEmpty() ? config.toString() : DEFAULT_CONFIG;
+        return parseConfig(config, false);
+    }
+
+    public static KeyValueSet parseConfig(Object config, boolean arm64ec) {
+        String data = config != null && !config.toString().isEmpty() ? config.toString() : defaultConfig(arm64ec);
         return new KeyValueSet(data);
     }
 
