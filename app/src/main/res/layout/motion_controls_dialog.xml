@@ -233,13 +233,11 @@
                         android:text="100%"/>
                 </LinearLayout>
 
-                <androidx.appcompat.widget.AppCompatSeekBar
+                <com.winlator.cmod.widget.SeekBar
                     android:id="@+id/sbGyroXSensitivity"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:max="200"
-                    android:progressTint="@color/seekbar_blue"
-                    android:thumbTint="@color/seekbar_blue"/>
+                    android:layout_width="fill_parent"
+                    android:layout_height="30dp"
+                    android:background="@drawable/xr_selector" />
 
                 <!-- Y Sensitivity -->
                 <LinearLayout
@@ -262,13 +260,11 @@
                         android:text="100%"/>
                 </LinearLayout>
 
-                <androidx.appcompat.widget.AppCompatSeekBar
+                <com.winlator.cmod.widget.SeekBar
                     android:id="@+id/sbGyroYSensitivity"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:max="200"
-                    android:progressTint="@color/seekbar_blue"
-                    android:thumbTint="@color/seekbar_blue"/>
+                    android:layout_width="fill_parent"
+                    android:layout_height="30dp"
+                    android:background="@drawable/xr_selector" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -298,13 +294,11 @@
                         android:text="90%"/>
                 </LinearLayout>
 
-                <androidx.appcompat.widget.AppCompatSeekBar
+                <com.winlator.cmod.widget.SeekBar
                     android:id="@+id/sbGyroSmoothing"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:max="100"
-                    android:progressTint="@color/seekbar_blue"
-                    android:thumbTint="@color/seekbar_blue"/>
+                    android:layout_width="fill_parent"
+                    android:layout_height="30dp"
+                    android:background="@drawable/xr_selector" />
 
                 <!-- Deadzone -->
                 <LinearLayout
@@ -327,13 +321,11 @@
                         android:text="5%"/>
                 </LinearLayout>
 
-                <androidx.appcompat.widget.AppCompatSeekBar
+                <com.winlator.cmod.widget.SeekBar
                     android:id="@+id/sbGyroDeadzone"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:max="100"
-                    android:progressTint="@color/seekbar_blue"
-                    android:thumbTint="@color/seekbar_blue" />
+                    android:layout_width="fill_parent"
+                    android:layout_height="30dp"
+                    android:background="@drawable/xr_selector" />
 
             </LinearLayout>
         </LinearLayout>

@@ -16,7 +16,6 @@ import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.widget.RadioGroup;
-import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -27,6 +26,7 @@ import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.ContentDialog;
+import com.winlator.cmod.widget.SeekBar;
 import com.winlator.cmod.winhandler.WinHandler;
 import com.winlator.xr.XrActivity;
 import com.winlator.xr.io.XrInput;
@@ -195,6 +195,8 @@ public class MotionControls implements SensorEventListener {
         SeekBar sbYSens = v.findViewById(R.id.sbGyroYSensitivity);
         SeekBar sbSmooth = v.findViewById(R.id.sbGyroSmoothing);
         SeekBar sbDead   = v.findViewById(R.id.sbGyroDeadzone);
+        sbXSens.setMaxValue(200);
+        sbYSens.setMaxValue(200);
 
         TextView tvXSens = v.findViewById(R.id.tvGyroXSensitivity);
         TextView tvYSens = v.findViewById(R.id.tvGyroYSensitivity);
@@ -297,14 +299,14 @@ public class MotionControls implements SensorEventListener {
 
         cbEnabled.setChecked(enabled);
         rgTarget.check(toLeft ? R.id.rbTargetLeft : R.id.rbTargetRight);
-        sbXSens.setProgress(Math.round(xSens * 100f));
-        sbYSens.setProgress(Math.round(ySens * 100f));
-        sbSmooth.setProgress(Math.round(smooth * 100f));
-        sbDead.setProgress(Math.round(dead * 100f));
-        tvXSens.setText(ctx.getString(R.string.percent_fmt, sbXSens.getProgress()));
-        tvYSens.setText(ctx.getString(R.string.percent_fmt, sbYSens.getProgress()));
-        tvSmooth.setText(ctx.getString(R.string.percent_fmt, sbSmooth.getProgress()));
-        tvDead.setText(ctx.getString(R.string.percent_fmt, sbDead.getProgress()));
+        sbXSens.setValue(Math.round(xSens * 100f));
+        sbYSens.setValue(Math.round(ySens * 100f));
+        sbSmooth.setValue(Math.round(smooth * 100f));
+        sbDead.setValue(Math.round(dead * 100f));
+        tvXSens.setText(ctx.getString(R.string.percent_fmt, (int)sbXSens.getValue()));
+        tvYSens.setText(ctx.getString(R.string.percent_fmt, (int)sbYSens.getValue()));
+        tvSmooth.setText(ctx.getString(R.string.percent_fmt, (int)sbSmooth.getValue()));
+        tvDead.setText(ctx.getString(R.string.percent_fmt, (int)sbDead.getValue()));
         cbInvX.setChecked(invX);
         cbInvY.setChecked(invY);
         MotionControlsUiUtils.selectKeycodeInSpinner(ctx, spActivator, savedKey);
@@ -329,10 +331,10 @@ public class MotionControls implements SensorEventListener {
             boolean en = cbEnabled.isChecked();
             winHandler.setGyroToLeftStick(rgTarget.getCheckedRadioButtonId() == R.id.rbTargetLeft);
             winHandler.setGyroEnabled(en);
-            winHandler.setGyroSensitivityX(sbXSens.getProgress() / 100f);
-            winHandler.setGyroSensitivityY(sbYSens.getProgress() / 100f);
-            winHandler.setSmoothingFactor(sbSmooth.getProgress() / 100f);
-            winHandler.setGyroDeadzone(sbDead.getProgress() / 100f);
+            winHandler.setGyroSensitivityX(sbXSens.getValue() / 100f);
+            winHandler.setGyroSensitivityY(sbYSens.getValue() / 100f);
+            winHandler.setSmoothingFactor(sbSmooth.getValue() / 100f);
+            winHandler.setGyroDeadzone(sbDead.getValue() / 100f);
             winHandler.setInvertGyroX(cbInvX.isChecked());
             winHandler.setInvertGyroY(cbInvY.isChecked());
             winHandler.setGyroTriggerButton(MotionControlsUiUtils.getSelectedKeycodeFromSpinner(ctx, spActivator));
@@ -347,10 +349,18 @@ public class MotionControls implements SensorEventListener {
             cbWheel.setEnabled(c);
         });
         rgTarget.setOnCheckedChangeListener((g, id) -> pushAll.run());
-        sbXSens.setOnSeekBarChangeListener(simple(p -> { tvXSens.setText(ctx.getString(R.string.percent_fmt, p)); pushAll.run(); }));
-        sbYSens.setOnSeekBarChangeListener(simple(p -> { tvYSens.setText(ctx.getString(R.string.percent_fmt, p)); pushAll.run(); }));
-        sbSmooth.setOnSeekBarChangeListener(simple(p -> { tvSmooth.setText(ctx.getString(R.string.percent_fmt, p)); pushAll.run(); }));
-        sbDead.setOnSeekBarChangeListener(simple(p -> { tvDead.setText(ctx.getString(R.string.percent_fmt, p)); pushAll.run(); }));
+        sbXSens.setOnValueChangeListener((seekBar, value) -> {
+            tvXSens.setText(ctx.getString(R.string.percent_fmt, (int)value)); pushAll.run();
+        });
+        sbYSens.setOnValueChangeListener((seekBar, value) -> {
+            tvYSens.setText(ctx.getString(R.string.percent_fmt, (int)value)); pushAll.run();
+        });
+        sbSmooth.setOnValueChangeListener((seekBar, value) -> {
+            tvSmooth.setText(ctx.getString(R.string.percent_fmt, (int)value)); pushAll.run();
+        });
+        sbDead.setOnValueChangeListener((seekBar, value) -> {
+            tvDead.setText(ctx.getString(R.string.percent_fmt, (int)value)); pushAll.run();
+        });
         cbInvX.setOnCheckedChangeListener((b, c) -> pushAll.run());
         cbInvY.setOnCheckedChangeListener((b, c) -> pushAll.run());
         spActivator.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
@@ -364,10 +374,10 @@ public class MotionControls implements SensorEventListener {
             SharedPreferences.Editor e = prefs.edit();
             e.putBoolean("gyro_enabled", cbEnabled.isChecked());
             e.putBoolean("gyro_to_left_stick", rgTarget.getCheckedRadioButtonId() == R.id.rbTargetLeft);
-            e.putFloat("gyro_x_sensitivity", sbXSens.getProgress() / 100f);
-            e.putFloat("gyro_y_sensitivity", sbYSens.getProgress() / 100f);
-            e.putFloat("gyro_smoothing", sbSmooth.getProgress() / 100f);
-            e.putFloat("gyro_deadzone", sbDead.getProgress() / 100f);
+            e.putFloat("gyro_x_sensitivity", sbXSens.getValue() / 100f);
+            e.putFloat("gyro_y_sensitivity", sbYSens.getValue() / 100f);
+            e.putFloat("gyro_smoothing", sbSmooth.getValue() / 100f);
+            e.putFloat("gyro_deadzone", sbDead.getValue() / 100f);
             e.putBoolean("invert_gyro_x", cbInvX.isChecked());
             e.putBoolean("invert_gyro_y", cbInvY.isChecked());
             e.putInt("gyro_trigger_button", MotionControlsUiUtils.getSelectedKeycodeFromSpinner(ctx, spActivator));
@@ -401,14 +411,6 @@ public class MotionControls implements SensorEventListener {
         h.setInvertGyroX      (prefs.getBoolean("invert_gyro_x", false));
         h.setInvertGyroY      (prefs.getBoolean("invert_gyro_y", false));
         h.setGyroDeadzone     (prefs.getFloat("gyro_deadzone", 0.05f));
-    }
-
-    private static SeekBar.OnSeekBarChangeListener simple(java.util.function.IntConsumer onChange) {
-        return new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { onChange.accept(progress); }
-            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-            @Override public void onStopTrackingTouch(SeekBar seekBar) {}
-        };
     }
 
     /** Spinner <-> keycode helpers. */
