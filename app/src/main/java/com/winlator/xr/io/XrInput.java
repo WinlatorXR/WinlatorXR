@@ -35,6 +35,7 @@ public class XrInput {
     private final XrHaptics xrHaptics;
 
     private XrAPI xrAPI = null;
+    private boolean wasBlocking = false;
 
     // Reused for updateXServer() instead of spawning a new OS thread every VR frame.
     private final ExecutorService xServerExecutor = Executors.newSingleThreadExecutor(r -> {
@@ -86,6 +87,11 @@ public class XrInput {
 
         // XR input
         if (blocking) {
+            // The XR menu cuts controller input to the container. Gamepad emulation gets that for
+            // free by pushing a neutral absolute state, but key emulation is edge-triggered, so
+            // whatever was held when the menu came up has to be released explicitly here or it
+            // stays down in the container even after the menu is closed.
+            if (!wasBlocking && XrActivity.keysEmulation) releaseXServerKeys(instance.getXServer());
             if (XrActivity.isUDP) xrController.updateXrCamera(buttons);
             updateXrApp(axes, new boolean[buttons.length]);
             xrController.updateFinished(axes, buttons);
@@ -94,6 +100,17 @@ public class XrInput {
             updateXrApp(axes, buttons);
             updateXServer(instance.getXServer(), axes, buttons);
         }
+        wasBlocking = blocking;
+    }
+
+    private void releaseXServerKeys(XServer xServer) {
+        // Queued on the same executor as updateXServer so it lands after any key press still in
+        // flight from the frame the menu was summoned on.
+        xServerExecutor.execute(() -> {
+            try (XLock lock = xServer.lock(XServer.Lockable.WINDOW_MANAGER, XServer.Lockable.INPUT_DEVICE)) {
+                xrController.releaseKeyboardButtons();
+            }
+        });
     }
 
     private void updateShortcuts(boolean[] buttons) {
