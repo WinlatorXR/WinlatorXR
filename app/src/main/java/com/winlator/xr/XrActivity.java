@@ -240,6 +240,7 @@ public class XrActivity extends XServerDisplayActivity {
     public native void nativeSetEnvironmentEnabled(boolean enabled);
     public native boolean nativeIsSharpeningSupported();
     public native void nativeSetUseVR(boolean enabled);
+    public native void nativeSetVRApp(boolean enabled);
     public native void nativeSetFramesync(int r, int g, int b, int a);
     public native void sendManufacturer(String manufacturer);
 
