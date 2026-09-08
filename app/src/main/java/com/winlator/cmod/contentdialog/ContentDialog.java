@@ -254,6 +254,11 @@ public class ContentDialog extends XrContentDialog {
     }
 
     public static void showSingleChoiceList(Context context, int titleResId, final String[] items, Callback<Integer> callback) {
+        showSingleChoiceList(context, context.getString(titleResId), items, callback);
+    }
+
+    /** The same, for a title that names what is being chosen for rather than only what it is. */
+    public static void showSingleChoiceList(Context context, String title, final String[] items, Callback<Integer> callback) {
         ContentDialog dialog = new ContentDialog(context);
         dialog.getContentView().findViewById(R.id.BTConfirm).setVisibility(View.GONE);
 
@@ -267,7 +272,7 @@ public class ContentDialog extends XrContentDialog {
             dialog.dismiss();
         });
 
-        dialog.setTitle(titleResId);
+        dialog.setTitle(title);
         dialog.show();
     }
 

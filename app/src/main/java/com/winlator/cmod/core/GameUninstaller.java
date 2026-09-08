@@ -197,6 +197,11 @@ public abstract class GameUninstaller {
         File exeFile = resolveExecutable(context, container, shortcut);
         if (exeFile == null) return null;
 
+        // A game that came out of a .zip sits on Z: rather than in any container, and the folder
+        // it was unpacked into holds it and nothing else, so that folder is what removing it takes.
+        File extraction = ZipExtractor.containingExtraction(context, exeFile);
+        if (extraction != null) return extraction;
+
         File driveC = new File(container.getRootDir(), ".wine/drive_c");
         String drivePath = driveC.getAbsolutePath();
         if (!exeFile.getAbsolutePath().startsWith(drivePath + "/")) return null;

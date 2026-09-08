@@ -40,7 +40,11 @@ import com.winlator.cmod.contents.Downloader;
 import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.PreloaderDialog;
+import com.winlator.cmod.core.GameUninstaller;
+import com.winlator.cmod.core.ShortcutCreator;
 import com.winlator.cmod.core.StringUtils;
+import com.winlator.cmod.core.ZipExtractor;
+import com.winlator.cmod.core.ZipImport;
 import com.winlator.cmod.contents.ContentInstaller;
 
 import java.io.File;
@@ -194,7 +198,7 @@ public class ContentsFragment extends Fragment {
         if (requestCode == MainActivity.OPEN_FILE_REQUEST_CODE && resultCode == Activity.RESULT_OK
                 && currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER)
                 && data.getData() != null) {
-            ContentInstaller.addLocalInstaller(getContext(), data.getData(), () -> {
+            ContentInstaller.addLocalInstaller(getActivity(), data.getData(), () -> {
                 manager.syncContents();
                 loadContentList();
             });
@@ -206,6 +210,14 @@ public class ContentsFragment extends Fragment {
         if (requestCode == MainActivity.OPEN_FILE_REQUEST_CODE && resultCode == Activity.RESULT_OK
                 && currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_RUNTIME)) {
             String name = ContentInstaller.queryDisplayName(getContext(), data.getData());
+
+            // A zipped one is unpacked onto Z: and listed from there instead: what comes out of
+            // an archive usually needs the rest of what came out of it sitting beside it.
+            if (ZipImport.isZip(name)) {
+                addRuntimeFromZip(data.getData());
+                return;
+            }
+
             if (name != null && ContentsManager.isInstaller(name)) {
                 ContentInstaller.installLocalRuntime(getActivity(), data.getData(), name, () -> {
                     manager.syncContents();
@@ -275,6 +287,109 @@ public class ContentsFragment extends Fragment {
                 AppUtils.showToast(getContext(), R.string.unable_to_import_profile);
             }
         }
+    }
+
+    /**
+     * Unpacks a zipped runtime or installer, and does whatever the archive turns out to want.
+     *
+     * On the Installers tab that is not known in advance -- an archive there is as likely to hold
+     * a game as an installer -- so the user is asked, and game files get a Games tab shortcut
+     * rather than an entry here. The Runtime tab holds nothing but runtime installers, so it does
+     * not ask.
+     */
+    private void addFromZip(File zip, boolean asInstaller) {
+        if (asInstaller) {
+            ZipImport.startAsking(getActivity(), zip, (role, executable, extractedDir) -> {
+                if (role == ZipExtractor.Role.GAME) ShortcutCreator.createForExecutable(getActivity(), executable, null);
+                else addExtractedEntry(executable, true);
+            });
+            return;
+        }
+
+        ZipImport.start(getActivity(), zip, ZipExtractor.Role.INSTALLER,
+                (role, executable, extractedDir) -> addExtractedEntry(executable, false));
+    }
+
+    /**
+     * Lists the program that came out of an archive, referenced where it was unpacked rather than
+     * copied into the runtimes or installers folder: an installer lifted out of an archive on its
+     * own would leave behind the data files it was packed with, which is exactly what it needs
+     * beside it to run.
+     */
+    private void addExtractedEntry(File executable, boolean asInstaller) {
+        boolean added = asInstaller
+                ? ContentsManager.addInstallerReference(getContext(), executable)
+                : ContentsManager.addRuntimeReference(getContext(), executable);
+
+        if (!added) {
+            ContentDialog.alert(getContext(), R.string.install_failed, null);
+            return;
+        }
+
+        manager.syncContents();
+        loadContentList();
+        ContentDialog.alert(getContext(), getString(R.string.installer_added, executable.getName()), null);
+    }
+
+    /** The .zip a runtime was picked as, which has to be a file on the device to be unpacked. */
+    private void addRuntimeFromZip(Uri uri) {
+        String path = FileUtils.getFilePathFromDocumentUri(getContext(), uri);
+        if (path == null) {
+            ContentDialog.alert(getContext(), R.string.installer_not_local_file, null);
+            return;
+        }
+        addFromZip(new File(path), false);
+    }
+
+    /**
+     * Removing a runtime or installer entry, which takes a different amount with it depending on
+     * what the entry is: a downloaded file is the app's to delete, one of the user's own files is
+     * only unlisted, and one that came out of an archive takes the unpacked folder with it, since
+     * that folder exists for nothing else.
+     */
+    private void confirmRemoveLocalEntry(ContentProfile profile, File localFile, boolean isInstaller) {
+        final boolean referenced = profile.localFilePath != null;
+        final File extraction = referenced ? ZipExtractor.containingExtraction(getContext(), localFile) : null;
+        final List<File> companions = isInstaller && !referenced
+                ? ContentInstaller.companionFiles(localFile) : new ArrayList<>();
+
+        if (extraction != null) {
+            // An unpacked archive can run to gigabytes, so how much goes is worth saying, and
+            // walking it for that is worth keeping off the UI thread.
+            Executors.newSingleThreadExecutor().execute(() -> {
+                long size = GameUninstaller.folderSize(extraction);
+
+                Activity activity = getActivity();
+                if (activity == null) return;
+
+                String message = getString(R.string.remove_extracted_installer, localFile.getName(),
+                        "Z:\\" + ZipExtractor.EXTRACTED_DIR_NAME + "\\" + extraction.getName(),
+                        StringUtils.formatBytes(size));
+                activity.runOnUiThread(() -> ContentDialog.confirm(getContext(), message, () -> {
+                    ContentsManager.getReferenceFile(getContext(), profile).delete();
+                    FileUtils.delete(extraction);
+                    manager.syncContents();
+                    loadContentList();
+                }));
+            });
+            return;
+        }
+
+        String message = referenced
+                ? getString(R.string.remove_installer_reference, localFile.getName())
+                : getString(R.string.do_you_want_to_remove_this_content);
+        if (!companions.isEmpty())
+            message += "\n\n" + companions.size() + " data file(s) belonging to it will go too.";
+
+        ContentDialog.confirm(getContext(), message, () -> {
+            if (referenced) ContentsManager.getReferenceFile(getContext(), profile).delete();
+            else localFile.delete();
+            for (File companion : companions) companion.delete();
+            // Locally added entries only exist as a file, so the profile list has to be rebuilt
+            // for them to disappear.
+            manager.syncContents();
+            loadContentList();
+        });
     }
 
     private void loadContentList() {
@@ -411,28 +526,13 @@ public class ContentsFragment extends Fragment {
                     selectionMenu.setOnMenuItemClickListener(item -> {
                         int itemId = item.getItemId();
                         if (itemId == R.id.content_install) {
-                            ContentInstaller.runInstaller(getActivity(), localFile);
+                            // An entry whose file is still an archive -- one downloaded as a .zip,
+                            // or one the user chose to keep -- is unpacked first, and what comes
+                            // out of it is listed as an entry of its own.
+                            if (ZipImport.isZip(localFile)) addFromZip(localFile, isInstaller);
+                            else ContentInstaller.runInstaller(getActivity(), localFile);
                         } else if (itemId == R.id.remove_content) {
-                            // An entry that only references a file of the user's takes nothing
-                            // with it but the reference; the installer stays in their Download
-                            // folder, as do the data files beside it.
-                            final boolean referenced = profile.localFilePath != null;
-                            List<File> companions = isInstaller && !referenced ? ContentInstaller.companionFiles(localFile) : new ArrayList<>();
-                            String message = referenced
-                                    ? getString(R.string.remove_installer_reference, localFile.getName())
-                                    : getString(R.string.do_you_want_to_remove_this_content);
-                            if (!companions.isEmpty())
-                                message += "\n\n" + companions.size() + " data file(s) belonging to it will go too.";
-
-                            ContentDialog.confirm(getContext(), message, () -> {
-                                if (referenced) ContentsManager.getInstallerReferenceFile(getContext(), profile).delete();
-                                else localFile.delete();
-                                for (File companion : companions) companion.delete();
-                                // Locally added entries only exist as a file, so the profile list
-                                // has to be rebuilt for them to disappear.
-                                manager.syncContents();
-                                loadContentList();
-                            });
+                            confirmRemoveLocalEntry(profile, localFile, isInstaller);
                         }
                         return true;
                     });
@@ -494,6 +594,13 @@ public class ContentsFragment extends Fragment {
 
                                 getActivity().runOnUiThread(() -> {
                                     preloaderDialog.close();
+                                    // A download that turns out to be an archive holds the
+                                    // program rather than being it, so it is unpacked before it
+                                    // can be listed as something to run.
+                                    if (ZipImport.isZip(localFile)) {
+                                        addFromZip(localFile, isInstaller);
+                                        return;
+                                    }
                                     Toast.makeText(getContext(),
                                         isInstaller ? R.string.installer_toast : R.string.runtime_toast,
                                         Toast.LENGTH_LONG).show();
