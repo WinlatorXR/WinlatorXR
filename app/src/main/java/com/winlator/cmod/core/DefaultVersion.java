@@ -8,7 +8,7 @@ public abstract class DefaultVersion {
     public static final String FEXCORE = "2605";
     public static final String WRAPPER = switch(Device.getDevice()) {
         case PICO_4_ULTRA, QUEST_2, PICO_NEO_3_LINK, PICO_4 -> "adrenotools-Turnip_v26.3.0_r9";
-        case QUEST_3 -> "adrenotools-v819.2_Quest3_Pico4Ultra";
+        case QUEST_3 -> "Turnip_Adreno_Driver_T26_(@Mr_Purple_666)";
         default -> "System";
     };
 
