@@ -21,6 +21,26 @@
         android:textSize="16sp"
         android:paddingBottom="8dp" />
 
+    <TextView
+        android:id="@+id/target_path"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Target: "
+        android:textSize="16sp"
+        android:textIsSelectable="true"
+        android:paddingBottom="8dp" />
+
+    <!-- Only shown for a shortcut that runs the game through a .lnk, where the path above is the
+         .lnk rather than the game. -->
+    <TextView
+        android:id="@+id/target_link_path"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:textIsSelectable="true"
+        android:paddingBottom="8dp"
+        android:visibility="gone" />
+
     <Button
         android:id="@+id/reset_properties"
         android:layout_width="match_parent"

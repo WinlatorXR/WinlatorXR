@@ -844,4 +844,25 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="shortcut_will_be_created">A shortcut for \"%1$s\" will be added to the Games tab, set to run in %2$s.</string>
     <string name="shortcut_created">\"%1$s\" added to %2$s. It is on the Games tab.</string>
     <string name="shortcut_create_failed">The shortcut could not be created.</string>
+
+    <!-- Copying a game off a mapped drive onto Z:, so it is read from internal storage. -->
+    <string name="copy_to_internal_menu">Copy Game to Internal Storage</string>
+    <string name="copy_to_internal_message">This game is played from %1$s, which is slower to read than internal storage: it will load slowly and can stutter part way through a level.\n\nIts folder will be copied to %2$s and this shortcut pointed at the copy. That needs %3$s of free space.\n\nYour own files are left where they are, so you can delete them yourself once the game runs well from the copy.</string>
+    <string name="copy_to_internal_confirm">Copy</string>
+    <string name="copy_to_internal_measuring">Measuring the game folder…</string>
+    <string name="copy_to_internal_copying">Copying…</string>
+    <string name="copy_to_internal_not_enough_space">There is not enough room to copy this game. It needs %1$s and only %2$s is free.</string>
+    <string name="copy_to_internal_already_there">This game has already been copied to %1$s.\n\nPoint the shortcut at what is already there, or copy it across again and replace it?</string>
+    <string name="copy_to_internal_copy_again">Copy Again</string>
+    <string name="copy_to_internal_use_existing">Use Existing</string>
+    <string name="copy_to_internal_failed">\"%1$s\" could not be copied:\n\n%2$s</string>
+    <string name="copy_to_internal_done">\"%1$s\" is now played from %2$s. Your own copy of the game has been left untouched.</string>
+    <string name="copy_to_internal_repoint_failed">The game was copied to %1$s, but the shortcut could not be pointed at it, so it still runs from where it was.</string>
+    <!-- What a shortcut runs, on its Properties dialog. -->
+    <string name="properties_target">Target: %1$s</string>
+    <string name="properties_target_unknown">unknown — this shortcut names no program</string>
+    <string name="properties_target_link">Points at: %1$s</string>
+    <string name="properties_target_link_unreadable">could not be read</string>
+
+    <string name="copy_to_internal_nothing_to_copy">This shortcut has no game folder to copy. Either it is already on internal storage, or its program sits loose in a drive\'s top folder rather than in a folder of its own.</string>
 </resources>

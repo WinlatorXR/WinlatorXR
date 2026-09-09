@@ -52,6 +52,7 @@ import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.contentdialog.ShortcutSettingsDialog;
 import com.winlator.cmod.core.FileUtils;
+import com.winlator.cmod.core.GameCopier;
 import com.winlator.cmod.core.GameUninstaller;
 import com.winlator.cmod.core.GuestScriptRunner;
 import com.winlator.cmod.core.MSLink;
@@ -72,6 +73,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.Executors;
 
 public class ShortcutsFragment extends Fragment {
@@ -920,6 +922,11 @@ public class ShortcutsFragment extends Fragment {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) listItemMenu.setForceShowIcon(true);
 
             listItemMenu.inflate(R.menu.shortcut_popup_menu);
+            // Only a game the shortcut plays off a mapped drive has anywhere faster to be moved
+            // to, so the rest are not offered a copy they would gain nothing from.
+            listItemMenu.getMenu().findItem(R.id.shortcut_copy_to_internal)
+                    .setVisible(GameCopier.canCopy(context, shortcut));
+
             listItemMenu.setOnMenuItemClickListener((menuItem) -> {
                 int itemId = menuItem.getItemId();
                 if (itemId == R.id.shortcut_settings) {
@@ -946,6 +953,9 @@ public class ShortcutsFragment extends Fragment {
                             }
                         }
                     });
+                }
+                else if (itemId == R.id.shortcut_copy_to_internal) {
+                    GameCopier.start(getActivity(), shortcut, () -> loadShortcutsList());
                 }
                 else if (itemId == R.id.shortcut_apply_goldberg) {
                     GoldbergEmu.showApplyGoldbergDialog(getActivity(), shortcut);
@@ -1221,6 +1231,8 @@ public class ShortcutsFragment extends Fragment {
             playCountTextView.setText("Number of times played: " + playCount);
             playtimeTextView.setText("Playtime: " + playtimeFormatted);
 
+            showTargetPath(dialog, shortcut);
+
             Button resetPropertiesButton = dialog.findViewById(R.id.reset_properties);
 
             resetPropertiesButton.setOnClickListener(v -> {
@@ -1232,9 +1244,35 @@ public class ShortcutsFragment extends Fragment {
             dialog.show();
         }
 
+        /**
+         * What the shortcut actually runs, which is not otherwise shown anywhere.
+         *
+         * A shortcut a game's own installer made runs it through a .lnk on the desktop, so the
+         * path it carries names that .lnk and says nothing about where the game is. The .lnk
+         * names the game, so it is read and shown underneath.
+         */
+        private void showTargetPath(ContentDialog dialog, Shortcut shortcut) {
+            TextView targetTextView = dialog.findViewById(R.id.target_path);
+            TextView linkTextView = dialog.findViewById(R.id.target_link_path);
 
+            String path = shortcut.path;
+            targetTextView.setText(getString(R.string.properties_target,
+                    path.isEmpty() ? getString(R.string.properties_target_unknown) : path));
 
+            if (!path.toLowerCase(Locale.ENGLISH).endsWith(".lnk")) return;
 
+            File target = GameUninstaller.resolveExecutable(getContext(), shortcut.container, shortcut);
+            // The path the game knows itself by where there is one, since that is what the rest
+            // of the app talks in, and where it sits on the device otherwise.
+            String winPath = target != null
+                    ? GuestScriptRunner.toWinPath(getContext(), shortcut.container, target) : null;
+            String shown = winPath != null ? winPath
+                    : target != null ? target.getAbsolutePath()
+                    : getString(R.string.properties_target_link_unreadable);
+
+            linkTextView.setText(getString(R.string.properties_target_link, shown));
+            linkTextView.setVisibility(View.VISIBLE);
+        }
     }
 
     private ShortcutInfo buildScreenShortCut(String shortLabel, String longLabel, int containerId, String shortcutPath, Icon icon, String uuid) {
