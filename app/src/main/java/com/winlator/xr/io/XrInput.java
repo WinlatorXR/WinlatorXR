@@ -87,13 +87,9 @@ public class XrInput {
 
         // XR input
         if (blocking) {
-            // The XR menu cuts controller input to the container. Gamepad emulation gets that for
-            // free by pushing a neutral absolute state, but key emulation is edge-triggered, so
-            // whatever was held when the menu came up has to be released explicitly here or it
-            // stays down in the container even after the menu is closed.
             if (!wasBlocking && XrActivity.keysEmulation) releaseXServerKeys(instance.getXServer());
             if (XrActivity.isUDP) xrController.updateXrCamera(buttons);
-            updateXrApp(axes, new boolean[buttons.length]);
+            updateXrApp(filteredAxes(axes), new boolean[buttons.length]);
             xrController.updateFinished(axes, buttons);
         } else {
             updateShortcuts(buttons);
@@ -203,5 +199,17 @@ public class XrInput {
                 xrController.updateFinished(axes, buttons);
             }
         });
+    }
+
+    private float[] filteredAxes(float[] axes) {
+        float[] output = new float[axes.length];
+        System.arraycopy(axes, 0, output, 0, axes.length);
+        output[XrInterface.ControllerAxis.L_THUMBSTICK_X.ordinal()] = 0;
+        output[XrInterface.ControllerAxis.L_THUMBSTICK_Y.ordinal()] = 0;
+        output[XrInterface.ControllerAxis.L_TRIGGER.ordinal()] = 0;
+        output[XrInterface.ControllerAxis.R_THUMBSTICK_X.ordinal()] = 0;
+        output[XrInterface.ControllerAxis.R_THUMBSTICK_Y.ordinal()] = 0;
+        output[XrInterface.ControllerAxis.R_TRIGGER.ordinal()] = 0;
+        return output;
     }
 }

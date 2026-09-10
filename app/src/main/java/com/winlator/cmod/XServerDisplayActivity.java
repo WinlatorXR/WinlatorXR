@@ -510,11 +510,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 || preferences.getBoolean("enable_box86_64_logs", false);
         boolean useReshade = XrActivity.isEnabled(this) &&(shortcut != null) &&
                 (Integer.parseInt(shortcut.getExtra("useReshade", "0")) > 0);
-        Menu advancedMenu = ((NavigationView)findViewById(R.id.NavigationAdvanced)).getMenu();
-        advancedMenu.findItem(R.id.main_menu_logs).setVisible(enableLogs);
-        advancedMenu.findItem(R.id.main_menu_logs).setEnabled(enableLogs);
-        advancedMenu.findItem(R.id.main_menu_reshade).setVisible(useReshade);
-        advancedMenu.findItem(R.id.main_menu_reshade).setEnabled(useReshade);
 
         firstTimeBoot = container.getExtra("appVersion").isEmpty();
 
@@ -1420,6 +1415,13 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 return true;
 
             case R.id.main_menu_advanced:
+                Menu advancedMenu = ((NavigationView)findViewById(R.id.NavigationAdvanced)).getMenu();
+                advancedMenu.findItem(R.id.main_menu_logs).setVisible(enableLogs);
+                advancedMenu.findItem(R.id.main_menu_logs).setEnabled(enableLogs);
+                advancedMenu.findItem(R.id.main_menu_reshade).setVisible(useReshade);
+                advancedMenu.findItem(R.id.main_menu_reshade).setEnabled(useReshade);
+                advancedMenu.findItem(R.id.main_menu_camera).setVisible(XrActivity.isVR);
+                advancedMenu.findItem(R.id.main_menu_camera).setEnabled(XrActivity.isVR);
                 new NavigationAdvDialog(this).show();
                 drawerLayout.closeDrawers();
                 return true;

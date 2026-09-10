@@ -102,16 +102,8 @@ public class NavigationDialog extends ContentDialog {
     private static String getStatusText(Context context) {
         StringBuilder status = new StringBuilder();
 
-        if (XrActivity.isVR && XrRenderer.vrWindowOnTop) {
-            if (XrActivity.adjustCameraHeight) {
-                status.append(context.getString(R.string.hint_camera_height)).append('\n');
-            } else {
-                status.append(context.getString(R.string.hint_camera_move)).append('\n');
-            }
-
-            if (!XrActivity.isPassthrough) {
-                status.append(XrActivity.getInstance().getLastFPS() + " FPS   ");
-            }
+        if (XrActivity.isVR && XrRenderer.vrWindowOnTop && !XrActivity.isPassthrough) {
+            status.append(XrActivity.getInstance().getLastFPS() + " FPS   ");
         }
 
         status.append(DateFormat.getTimeFormat(context).format(new Date()));

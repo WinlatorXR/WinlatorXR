@@ -30,6 +30,7 @@ import android.content.SharedPreferences;
 import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.R;
+import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.xserver.XKeycode;
 import com.winlator.cmod.XServerDisplayActivity;
 import com.winlator.xr.io.XrInput;
@@ -51,7 +52,7 @@ public class XrActivity extends XServerDisplayActivity {
     public static boolean isSBS = false;
     public static boolean isUDP = false;
     public static boolean isVR = false;
-    public static boolean adjustCameraHeight = true;
+    public static boolean adjustCamera = false;
     public static boolean gamepadEmulation;
     public static boolean gamepadRadialToSquare;
     public static boolean rumblePassthrough;
@@ -182,6 +183,10 @@ public class XrActivity extends XServerDisplayActivity {
                 break;
             case R.id.main_menu_task_manager:
                 getWinHandler().exec("taskmgr.exe");
+                break;
+            case R.id.main_menu_camera:
+                adjustCamera = true;
+                ContentDialog.info(this, R.string.hint_camera_adjust, dialogInterface -> adjustCamera = false);
                 break;
             case R.id.main_menu_reshade:
                 isImmersive = false;

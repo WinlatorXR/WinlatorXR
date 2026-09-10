@@ -188,6 +188,22 @@ public class ContentDialog extends XrContentDialog {
         dialog.show();
     }
 
+    public static void info(Context context, int msgResId, OnDismissListener dismiss) {
+        ContentDialog dialog = new ContentDialog(context);
+        dialog.setMessage(msgResId);
+        dialog.setOnDismissListener(dismiss);
+        dialog.findViewById(R.id.BTCancel).setVisibility(View.GONE);
+        dialog.show();
+    }
+
+    public static void info(Context context, String msgResId, OnDismissListener dismiss) {
+        ContentDialog dialog = new ContentDialog(context);
+        dialog.setMessage(msgResId);
+        dialog.setOnDismissListener(dismiss);
+        dialog.findViewById(R.id.BTCancel).setVisibility(View.GONE);
+        dialog.show();
+    }
+
     public static ContentDialog message(Context context, String msg) {
         ContentDialog dialog = new ContentDialog(context);
         dialog.setMessage(msg);

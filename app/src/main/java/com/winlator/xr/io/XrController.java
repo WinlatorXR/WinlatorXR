@@ -379,21 +379,17 @@ public class XrController {
     }
 
     public void updateXrCamera(boolean[] buttons) {
+        XrInterface.ControllerButton primaryUp = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_UP : XrInterface.ControllerButton.R_THUMBSTICK_UP;
+        XrInterface.ControllerButton primaryDown = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_DOWN : XrInterface.ControllerButton.R_THUMBSTICK_DOWN;
         XrInterface.ControllerButton secondaryUp = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_UP : XrInterface.ControllerButton.R_THUMBSTICK_UP;
         XrInterface.ControllerButton secondaryDown = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_DOWN : XrInterface.ControllerButton.R_THUMBSTICK_DOWN;
         XrInterface.ControllerButton secondaryLeft = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_LEFT : XrInterface.ControllerButton.R_THUMBSTICK_LEFT;
         XrInterface.ControllerButton secondaryRight = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_RIGHT : XrInterface.ControllerButton.R_THUMBSTICK_RIGHT;
-        XrInterface.ControllerButton secondaryPress = !XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_PRESS : XrInterface.ControllerButton.R_THUMBSTICK_PRESS;
-
-        if (getButtonClicked(buttons, secondaryPress)) {
-            XrActivity.adjustCameraHeight = !XrActivity.adjustCameraHeight;
-        }
 
         float x = 0; float y = 0; float z = 0; float step = 0.025f;
-        if (XrActivity.adjustCameraHeight) {
-            if (buttons[secondaryUp.ordinal()]) y += step;
-            if (buttons[secondaryDown.ordinal()]) y -= step;
-        } else {
+        if (XrActivity.adjustCamera) {
+            if (buttons[primaryUp.ordinal()]) y += step;
+            if (buttons[primaryDown.ordinal()]) y -= step;
             if (buttons[secondaryUp.ordinal()]) z -= step;
             if (buttons[secondaryDown.ordinal()]) z += step;
             if (buttons[secondaryLeft.ordinal()]) x -= step;
