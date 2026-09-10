@@ -69,6 +69,13 @@ public class XrActivity extends XServerDisplayActivity {
     public static float lastDistance = 5;
     public static int lastMode3D = -1;
 
+    // How near and far the screen is allowed to sit. The magnifier steps through this range a
+    // metre at a time and the thumbstick sweeps it continuously; they share the bounds so the
+    // two controls cannot take the screen anywhere the other cannot bring it back from.
+    public static final float MIN_DISTANCE = 0.5f;
+    public static final float MAX_DISTANCE = 7.0f;
+    private static final String PREF_SCREEN_DISTANCE = "xr_screen_distance";
+
     static {
         System.loadLibrary("xr");
     }
@@ -91,6 +98,7 @@ public class XrActivity extends XServerDisplayActivity {
         mouseRelative = prefs.getBoolean("use_xr_relative_mouse", false);
         pointerSmoothing = prefs.getBoolean("use_xr_smoothing", false);
         wheelEmulation = prefs.getBoolean("use_xr_wheel", false);
+        lastDistance = prefs.getFloat(PREF_SCREEN_DISTANCE, lastDistance);
 
         if (mouseLightgun) mouseRelative = false;
         setRelativeMouseMovement(mouseRelative);
@@ -159,6 +167,13 @@ public class XrActivity extends XServerDisplayActivity {
         return lastDistance;
     }
 
+    /** Remembers where the user left the screen, for the magnifier and the thumbstick alike. */
+    public void saveScreenDistance() {
+        PreferenceManager.getDefaultSharedPreferences(this).edit()
+                .putFloat(PREF_SCREEN_DISTANCE, lastDistance)
+                .apply();
+    }
+
     public static boolean isActive() {
         return Math.abs(System.currentTimeMillis() - lastActive) < 5000;
     }
@@ -177,9 +192,10 @@ public class XrActivity extends XServerDisplayActivity {
                 break;
             case R.id.main_menu_magnifier:
                 lastDistance -= 1.0f;
-                if (lastDistance < 0.5f) {
-                    lastDistance = 7.0f;
+                if (lastDistance < MIN_DISTANCE) {
+                    lastDistance = MAX_DISTANCE;
                 }
+                saveScreenDistance();
                 break;
             case R.id.main_menu_task_manager:
                 getWinHandler().exec("taskmgr.exe");

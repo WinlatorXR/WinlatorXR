@@ -24,6 +24,7 @@ import com.winlator.cmod.xserver.XServer;
 import com.winlator.xr.XrActivity;
 import com.winlator.xr.api.XrAPI;
 import com.winlator.xr.api.XrInterface;
+import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.xr.ui.XrKeyboard;
 
 import java.nio.charset.StandardCharsets;
@@ -31,8 +32,34 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class XrInput {
+    // Metres per second at full deflection, and how far the thumb has to move before any of it
+    // counts - the stick is shared with mouse and gamepad emulation, so a resting thumb must
+    // not creep the screen.
+    private static final float SCREEN_DISTANCE_RATE = 3.0f;
+    private static final float SCREEN_DISTANCE_DEADZONE = 0.25f;
+
+    // A tick on the hand that took the grip, once on press and once on release.
+    private static final int SCREEN_DISTANCE_HAPTIC_MILLIS = 40;
+    private static final float SCREEN_DISTANCE_HAPTIC_INTENSITY = 0.35f;
+
+    // The whole stick is taken while the grip is held, both axes, so nothing leaks into the
+    // menu behind the screen being moved.
+    private static final XrInterface.ControllerButton[] LEFT_STICK_BUTTONS = {
+            XrInterface.ControllerButton.L_THUMBSTICK_LEFT,
+            XrInterface.ControllerButton.L_THUMBSTICK_RIGHT,
+            XrInterface.ControllerButton.L_THUMBSTICK_UP,
+            XrInterface.ControllerButton.L_THUMBSTICK_DOWN};
+    private static final XrInterface.ControllerButton[] RIGHT_STICK_BUTTONS = {
+            XrInterface.ControllerButton.R_THUMBSTICK_LEFT,
+            XrInterface.ControllerButton.R_THUMBSTICK_RIGHT,
+            XrInterface.ControllerButton.R_THUMBSTICK_UP,
+            XrInterface.ControllerButton.R_THUMBSTICK_DOWN};
+
     private final XrController xrController;
     private final XrHaptics xrHaptics;
+
+    private boolean screenDistanceAdjusting = false;
+    private long lastDistanceNanos = 0;
 
     private XrAPI xrAPI = null;
     private boolean wasBlocking = false;
@@ -71,6 +98,7 @@ public class XrInput {
         XrActivity instance = XrActivity.getInstance();
         float[] axes = instance.getAxes();
         boolean[] buttons = instance.getButtons();
+        updateScreenDistance(instance, axes, buttons);
 
         // Communication between XR and Windows apps
         updateXrAPI(instance);
@@ -107,6 +135,75 @@ public class XrInput {
                 xrController.releaseKeyboardButtons();
             }
         });
+    }
+
+    /**
+     * Thumbstick control over the screen distance, which is the same value the magnifier menu
+     * item steps through - this just sweeps it continuously instead of a metre at a time.
+     *
+     * Only the primary hand adjusts, but with the menu up neither grip reaches it: XrController
+     * reads a grip as a menu left or right, and grip now means "the screen", so a hand that is
+     * not adjusting must not be steering the selector either. The adjusting hand additionally
+     * loses its thumbstick, which would otherwise scroll the menu the screen is moving behind;
+     * the other hand keeps its stick, so the menu can still be navigated throughout.
+     */
+    private void updateScreenDistance(XrActivity instance, float[] axes, boolean[] buttons) {
+        boolean menuShown = XrContentDialog.getFrontInstance() != null;
+        boolean left = XrActivity.mouseLeftHanded;
+        int grip = (left ? XrInterface.ControllerButton.L_GRIP
+                         : XrInterface.ControllerButton.R_GRIP).ordinal();
+        boolean adjusting = menuShown && buttons[grip];
+
+        long now = System.nanoTime();
+        float elapsed = (screenDistanceAdjusting && (lastDistanceNanos > 0))
+                ? (now - lastDistanceNanos) / 1_000_000_000.0f : 0.0f;
+        lastDistanceNanos = now;
+
+        if (adjusting) {
+            // Nothing moves until the stick is pushed, so without this there is no sign the
+            // grip took it.
+            if (!screenDistanceAdjusting) tickScreenDistance(instance, left);
+
+            // A stall between frames must not turn one nudge into a full sweep.
+            if (elapsed > 0.1f) elapsed = 0.1f;
+
+            float push = axes[(left ? XrInterface.ControllerAxis.L_THUMBSTICK_Y
+                                    : XrInterface.ControllerAxis.R_THUMBSTICK_Y).ordinal()];
+            if (Math.abs(push) > SCREEN_DISTANCE_DEADZONE) {
+                // Rescaled past the deadzone so it starts from a standstill rather than jumping
+                // to a quarter speed the moment the thumb crosses the threshold.
+                push -= Math.signum(push) * SCREEN_DISTANCE_DEADZONE;
+                push /= (1.0f - SCREEN_DISTANCE_DEADZONE);
+                XrActivity.lastDistance = Math.max(XrActivity.MIN_DISTANCE, Math.min(
+                        XrActivity.MAX_DISTANCE,
+                        XrActivity.lastDistance + push * SCREEN_DISTANCE_RATE * elapsed));
+            }
+
+            for (XrInterface.ControllerButton consumed : left ? LEFT_STICK_BUTTONS : RIGHT_STICK_BUTTONS) {
+                buttons[consumed.ordinal()] = false;
+            }
+            axes[(left ? XrInterface.ControllerAxis.L_THUMBSTICK_X
+                       : XrInterface.ControllerAxis.R_THUMBSTICK_X).ordinal()] = 0;
+            axes[(left ? XrInterface.ControllerAxis.L_THUMBSTICK_Y
+                       : XrInterface.ControllerAxis.R_THUMBSTICK_Y).ordinal()] = 0;
+        } else if (screenDistanceAdjusting) {
+            // Written out on release rather than every frame it is held, and ticked again to
+            // say so.
+            instance.saveScreenDistance();
+            tickScreenDistance(instance, left);
+        }
+        screenDistanceAdjusting = adjusting;
+
+        if (menuShown) {
+            buttons[XrInterface.ControllerButton.L_GRIP.ordinal()] = false;
+            buttons[XrInterface.ControllerButton.R_GRIP.ordinal()] = false;
+        }
+    }
+
+    /** Short enough to read as a click rather than a buzz, on the hand holding the grip. */
+    private void tickScreenDistance(XrActivity instance, boolean left) {
+        instance.vibrateController(SCREEN_DISTANCE_HAPTIC_MILLIS, left ? 0 : 1,
+                SCREEN_DISTANCE_HAPTIC_INTENSITY);
     }
 
     private void updateShortcuts(boolean[] buttons) {
