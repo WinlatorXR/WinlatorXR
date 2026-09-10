@@ -33,6 +33,8 @@ public class ContentsManager {
     public static final String PROFILE_NAME = "profile.json";
     /** Suffix of the file that records where a locally added installer lives. */
     public static final String INSTALLER_REFERENCE_SUFFIX = ".installerref";
+    /** The same, for a runtime installer that has to stay in the folder it was unpacked into. */
+    public static final String RUNTIME_REFERENCE_SUFFIX = ".runtimeref";
     public static final String REMOTE_PROFILES = "https://raw.githubusercontent.com/WinlatorXR/Winlator-Contents/refs/heads/main/contents.json";
     public static final String[] DXVK_TRUST_FILES = {"${system32}/d3d8.dll", "${system32}/d3d9.dll", "${system32}/d3d10.dll", "${system32}/d3d10_1.dll",
             "${system32}/d3d10core.dll", "${system32}/d3d11.dll", "${system32}/dxgi.dll", "${syswow64}/d3d8.dll", "${syswow64}/d3d9.dll", "${syswow64}/d3d10.dll",
@@ -181,6 +183,10 @@ public class ContentsManager {
     /**
      * Surfaces installers the user dropped into the runtimes directory themselves, so a runtime
      * does not have to be listed in contents.json to be installable into a container.
+     *
+     * As with the installers below, an entry is either the file itself or a reference file naming
+     * where it sits: a runtime that came out of a .zip is left in the folder it was unpacked into,
+     * since it may well need what was unpacked beside it.
      */
     private void syncLocalRuntimes() {
         List<ContentProfile> runtimes = profilesMap.get(ContentProfile.ContentType.CONTENT_TYPE_RUNTIME);
@@ -190,9 +196,30 @@ public class ContentsManager {
         if (files == null) return;
 
         for (File file : files) {
+            File target = file;
+            String referencePath = null;
+
+            if (file.getName().endsWith(RUNTIME_REFERENCE_SUFFIX)) {
+                byte[] content = FileUtils.read(file);
+                if (content == null) continue;
+                referencePath = new String(content, StandardCharsets.UTF_8).trim();
+
+                // A reference whose file has since been moved or deleted is skipped rather than
+                // cleaned up, so putting the file back brings its entry back with it.
+                target = new File(referencePath);
+                if (!target.isFile()) {
+                    Log.d("ContentsManager", "Runtime reference points at a missing file: " + referencePath);
+                    continue;
+                }
+            }
+
+            // Anything else in the folder is not something a container can be asked to run: an
+            // archive still waiting to be unpacked, or a reference file belonging to an entry.
+            if (!isInstaller(target.getName())) continue;
+
             boolean known = false;
             for (ContentProfile profile : runtimes) {
-                if (getRuntimeFile(context, profile).getName().equals(file.getName())) {
+                if (getRuntimeFile(context, profile).equals(target)) {
                     known = true;
                     break;
                 }
@@ -201,11 +228,12 @@ public class ContentsManager {
 
             ContentProfile profile = new ContentProfile();
             profile.type = ContentProfile.ContentType.CONTENT_TYPE_RUNTIME;
-            profile.verName = FileUtils.getBasename(file.getName());
+            profile.verName = FileUtils.getBasename(target.getName());
             profile.verCode = 0;
-            profile.localFileName = file.getName();
+            profile.localFileName = target.getName();
+            profile.localFilePath = referencePath;
             runtimes.add(profile);
-            Log.d("ContentsManager", "Local runtime found: " + file.getName());
+            Log.d("ContentsManager", "Local runtime found: " + target.getAbsolutePath());
         }
     }
 
@@ -277,15 +305,24 @@ public class ContentsManager {
      */
     public static boolean addInstallerReference(Context context, File installer) {
         String path = installer.getAbsolutePath();
-        return FileUtils.writeString(installerReferenceFile(context, path), path);
+        return FileUtils.writeString(referenceFile(context, ContentProfile.ContentType.CONTENT_TYPE_INSTALLER, path), path);
+    }
+
+    /**
+     * The same for a runtime installer, which is what a .zip on the Runtime tab leaves behind: it
+     * has to be run from the folder it was unpacked into, so it is referenced rather than copied.
+     */
+    public static boolean addRuntimeReference(Context context, File runtime) {
+        String path = runtime.getAbsolutePath();
+        return FileUtils.writeString(referenceFile(context, ContentProfile.ContentType.CONTENT_TYPE_RUNTIME, path), path);
     }
 
     /**
      * The reference file behind a locally added entry, which is all that removing it takes: the
-     * installer belongs to the user's Download folder, not to this app.
+     * installer belongs to wherever the user keeps it, not to this app.
      */
-    public static File getInstallerReferenceFile(Context context, ContentProfile profile) {
-        return installerReferenceFile(context, profile.localFilePath);
+    public static File getReferenceFile(Context context, ContentProfile profile) {
+        return referenceFile(context, profile.type, profile.localFilePath);
     }
 
     /**
@@ -293,7 +330,7 @@ public class ContentsManager {
      * same-named installers in different folders each keep their own entry, and adding the same
      * one twice replaces its reference instead of listing it again.
      */
-    private static File installerReferenceFile(Context context, String path) {
+    private static File referenceFile(Context context, ContentProfile.ContentType type, String path) {
         StringBuilder name = new StringBuilder();
         try {
             for (byte b : MessageDigest.getInstance("MD5").digest(path.getBytes(StandardCharsets.UTF_8)))
@@ -302,7 +339,10 @@ public class ContentsManager {
         catch (NoSuchAlgorithmException e) {
             name.append(Integer.toHexString(path.hashCode()));
         }
-        return new File(getInstallersDir(context), name + INSTALLER_REFERENCE_SUFFIX);
+
+        return type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME
+                ? new File(getRuntimesDir(context), name + RUNTIME_REFERENCE_SUFFIX)
+                : new File(getInstallersDir(context), name + INSTALLER_REFERENCE_SUFFIX);
     }
 
     /** Whether a file is something a container can be asked to run, rather than data beside it. */
@@ -333,10 +373,11 @@ public class ContentsManager {
     }
 
     /**
-     * The on-disk installer for a Runtime profile, whether it was downloaded from contents.json
-     * or added from local storage.
+     * The on-disk installer for a Runtime profile: where it was downloaded to, where the user
+     * dropped it, or where it was unpacked to if the entry is a reference to a file of their own.
      */
     public static File getRuntimeFile(Context context, ContentProfile profile) {
+        if (profile.localFilePath != null) return new File(profile.localFilePath);
         return new File(getRuntimesDir(context), localFileName(profile));
     }
 
@@ -346,12 +387,55 @@ public class ContentsManager {
      */
     private static String localFileName(ContentProfile profile) {
         String name = profile.localFileName;
-        if (name == null) {
-            name = profile.verName;
-            int dotIndex = profile.remoteUrl != null ? profile.remoteUrl.lastIndexOf('.') : -1;
-            if (dotIndex > 0) name += profile.remoteUrl.substring(dotIndex);
-        }
+        if (name == null) name = profile.verName + extensionOf(profile.remoteUrl);
         return name;
+    }
+
+    /**
+     * The extension a download keeps, taken from the last path segment of its URL.
+     *
+     * It has to be that segment rather than the whole URL, because a URL has dots that are not
+     * extensions: a link ending in a bare name would otherwise be read as having one -- everything
+     * from the dot in "github.com" onwards -- and a link carrying a query string would take that
+     * with it. What a downloaded file ends up called decides how it is treated afterwards, .zip
+     * above all, so a wrong answer here is not cosmetic.
+     *
+     * @return the extension including its dot, or "" when the URL names none worth having
+     */
+    private static String extensionOf(String url) {
+        if (url == null) return "";
+
+        // Anything from a ? or # on belongs to the request, not to the file.
+        int end = url.length();
+        int query = url.indexOf('?');
+        int fragment = url.indexOf('#');
+        if (query >= 0) end = Math.min(end, query);
+        if (fragment >= 0) end = Math.min(end, fragment);
+
+        // A URL with no path at all names no file, and the dots it does have are the host's.
+        int schemeEnd = url.indexOf("://");
+        if (schemeEnd >= 0) {
+            int pathStart = url.indexOf('/', schemeEnd + 3);
+            if (pathStart < 0 || pathStart >= end) return "";
+        }
+
+        String segment = url.substring(url.lastIndexOf('/', end - 1) + 1, end);
+        int dot = segment.lastIndexOf('.');
+        // A dot at the start is the whole of a hidden file's name rather than an extension.
+        if (dot <= 0) return "";
+
+        // A version in the last segment -- ".../wine-9.0" -- has a dot without having an
+        // extension, so what follows one has to look like an extension to be taken as one.
+        String extension = segment.substring(dot + 1);
+        if (extension.isEmpty() || extension.length() > 6) return "";
+
+        boolean hasLetter = false;
+        for (int i = 0; i < extension.length(); i++) {
+            char c = extension.charAt(i);
+            if (!Character.isLetterOrDigit(c)) return "";
+            hasLetter |= Character.isLetter(c);
+        }
+        return hasLetter ? "." + extension : "";
     }
 
     public void extraContentFile(Uri uri, OnInstallFinishedCallback callback) {

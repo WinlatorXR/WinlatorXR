@@ -343,20 +343,20 @@
     <string name="do_you_want_to_install_content">Do you want to install additional content?</string>
     <string name="pls_make_sure_content_trustworthy">Contents contain executable files. Unsafe executable files may compromise your data or device security. Before installing, PLEASE make sure that the additional content you are installing is trustworthy.</string>
     <string name="content_suffix_is_wcp_packed_xz_zst">The content files have the .wcp extension and are compressed using either xz or zst formats.</string>
-    <string name="content_suffix_is_wcp_or_runtime_installer">Select a .wcp content file, or a runtime installer (.exe or .msi) to add from local storage.</string>
+    <string name="content_suffix_is_wcp_or_runtime_installer">Select a .wcp content file, or a runtime installer (.exe, .msi, or a .zip holding one) to add from local storage.</string>
     <string name="installers">Installers</string>
     <string name="installer_toast">Installer downloaded into\n Z:\\installers. Use its menu to install it into a container.</string>
     <string name="add_installer">Add Installer</string>
-    <string name="select_installer">Select an installer (.exe or .msi) from your Download folder. Nothing is copied: it is run where it sits, so any data files it comes with, such as the .bin parts of a GOG offline installer, only have to stay in the same folder as it.</string>
+    <string name="select_installer">Select an installer (.exe or .msi) from your Download folder. Nothing is copied: it is run where it sits, so any data files it comes with, such as the .bin parts of a GOG offline installer, only have to stay in the same folder as it.\n\nA .zip holding an installer can be selected too. That one is extracted first, into Z:\\extracted, and the installer inside it is listed from there.</string>
     <string name="no_installers_to_display">No installers added yet!</string>
     <string name="not_downloaded_yet">Not downloaded yet</string>
     <string name="installer_added">\"%1$s\" added. Use its menu to run it in a container.</string>
     <string name="installer_not_local_file">Could not work out where that file is stored. Please pick one from your Download folder.</string>
-    <string name="installer_must_be_in_downloads">An installer has to be in your Download folder (%1$s), or a folder inside it, since that is the folder a container can reach. Move it there and add it again.</string>
-    <string name="installer_must_be_exe_or_msi">Please select the installer itself (.exe or .msi). Data files beside it, such as the .bin parts of a GOG offline installer, are picked up on their own when it runs.</string>
+    <string name="installer_must_be_in_downloads">An installer has to be somewhere a container can reach: your Download folder (%1$s), a folder inside it, or Z:\\extracted, where a .zip is unpacked to. Move it into one of those and add it again.</string>
+    <string name="installer_must_be_exe_or_msi">Please select the installer itself (.exe or .msi), or a .zip holding one. Data files beside it, such as the .bin parts of a GOG offline installer, are picked up on their own when it runs.</string>
     <string name="installer_file_not_found">The selected file could not be found.</string>
     <string name="installer_out_of_reach">\"%1$s\" is outside the drives \"%2$s\" can reach (%3$s). Move it into one of those folders, or add its folder as a drive in the container\'s settings.</string>
-    <string name="remove_installer_reference">Remove \"%1$s\" from this list? The file stays in your Download folder, along with anything beside it.</string>
+    <string name="remove_installer_reference">Remove \"%1$s\" from this list? The file stays where it is, along with anything beside it.</string>
     <string name="installing_content">Installing Content…</string>
     <string name="unable_to_install_content">Unable to install content.</string>
     <string name="install_failed">Install Failed</string>
@@ -811,4 +811,58 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="charging">charging</string>
 
 
+
+    <!-- Extracting a .zip that was picked or downloaded, before anything in it can be run. -->
+    <string name="zip_file_not_found">\"%1$s\" could not be found.</string>
+    <string name="zip_needs_extraction">This is a compressed archive, so it has to be extracted before anything inside it can be run.\n\nIt will be unpacked into %1$s, which every container can reach, and needs %2$s of free space.</string>
+    <string name="zip_already_extracted">This archive has already been extracted to %1$s.\n\nCarry on with the files that are already there, or unpack it again and replace them?</string>
+    <string name="zip_extract">Extract</string>
+    <string name="zip_extract_again">Extract Again</string>
+    <string name="zip_use_existing">Use Existing</string>
+    <string name="zip_reading_archive">Reading archive…</string>
+    <string name="zip_extracting">Extracting…</string>
+    <string name="zip_looking_for_programs">Looking for programs…</string>
+    <string name="zip_cannot_be_read">\"%1$s\" could not be read. It may be an incomplete download, or not a .zip at all.</string>
+    <string name="zip_not_enough_space">There is not enough room to extract this archive. It needs %1$s and only %2$s is free.</string>
+    <string name="zip_extract_failed">\"%1$s\" could not be extracted:\n\n%2$s</string>
+    <string name="zip_no_executable_inside">No .exe was found in \"%1$s\". The files are still unpacked at %2$s if you want to look through them yourself.</string>
+    <string name="zip_no_installer_inside">No installer (.exe or .msi) was found in \"%1$s\". The files are still unpacked at %2$s if you want to look through them yourself.</string>
+    <string name="zip_kind_title">What is in %1$s?</string>
+    <string name="zip_kind_installer">An installer to run in a container</string>
+    <string name="zip_kind_game">Game files — add a shortcut to the Games tab</string>
+    <string name="zip_choose_installer_title">Which program in %1$s is the installer?</string>
+    <string name="zip_choose_game_title">Which program in %1$s is the game?</string>
+    <string name="zip_delete_archive_title">Delete the archive?</string>
+    <string name="zip_delete_archive">\"%3$s\" is unpacked and ready, so \"%1$s\" is no longer needed. Deleting it frees %2$s.</string>
+    <string name="zip_delete_archive_confirm">Delete Archive</string>
+    <string name="zip_keep_archive">Keep It</string>
+    <string name="remove_extracted_installer">Remove \"%1$s\" from this list? The folder it was extracted into, %2$s (%3$s), will be deleted with it.</string>
+
+    <!-- Making a Games tab shortcut for a program that is already on disk. -->
+    <string name="shortcut_needs_a_container">A shortcut has to belong to a container, and there are none yet. Create one on the Containers tab first.</string>
+    <string name="shortcut_choose_container">Add a shortcut for \"%1$s\" — which container should it run in?</string>
+    <string name="shortcut_will_be_created">A shortcut for \"%1$s\" will be added to the Games tab, set to run in %2$s.</string>
+    <string name="shortcut_created">\"%1$s\" added to %2$s. It is on the Games tab.</string>
+    <string name="shortcut_create_failed">The shortcut could not be created.</string>
+
+    <!-- Copying a game off a mapped drive onto Z:, so it is read from internal storage. -->
+    <string name="copy_to_internal_menu">Copy Game to Internal Storage</string>
+    <string name="copy_to_internal_message">This game is played from %1$s, which is slower to read than internal storage: it will load slowly and can stutter part way through a level.\n\nIts folder will be copied to %2$s and this shortcut pointed at the copy. That needs %3$s of free space.\n\nYour own files are left where they are, so you can delete them yourself once the game runs well from the copy.</string>
+    <string name="copy_to_internal_confirm">Copy</string>
+    <string name="copy_to_internal_measuring">Measuring the game folder…</string>
+    <string name="copy_to_internal_copying">Copying…</string>
+    <string name="copy_to_internal_not_enough_space">There is not enough room to copy this game. It needs %1$s and only %2$s is free.</string>
+    <string name="copy_to_internal_already_there">This game has already been copied to %1$s.\n\nPoint the shortcut at what is already there, or copy it across again and replace it?</string>
+    <string name="copy_to_internal_copy_again">Copy Again</string>
+    <string name="copy_to_internal_use_existing">Use Existing</string>
+    <string name="copy_to_internal_failed">\"%1$s\" could not be copied:\n\n%2$s</string>
+    <string name="copy_to_internal_done">\"%1$s\" is now played from %2$s. Your own copy of the game has been left untouched.</string>
+    <string name="copy_to_internal_repoint_failed">The game was copied to %1$s, but the shortcut could not be pointed at it, so it still runs from where it was.</string>
+    <!-- What a shortcut runs, on its Properties dialog. -->
+    <string name="properties_target">Target: %1$s</string>
+    <string name="properties_target_unknown">unknown — this shortcut names no program</string>
+    <string name="properties_target_link">Points at: %1$s</string>
+    <string name="properties_target_link_unreadable">could not be read</string>
+
+    <string name="copy_to_internal_nothing_to_copy">This shortcut has no game folder to copy. Either it is already on internal storage, or its program sits loose in a drive\'s top folder rather than in a folder of its own.</string>
 </resources>

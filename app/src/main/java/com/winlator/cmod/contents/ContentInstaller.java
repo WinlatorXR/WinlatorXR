@@ -14,6 +14,10 @@ import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.GuestScriptRunner;
 import com.winlator.cmod.core.PreloaderDialog;
+import com.winlator.cmod.core.ShortcutCreator;
+import com.winlator.cmod.core.ZipExtractor;
+import com.winlator.cmod.core.ZipImport;
+import com.winlator.cmod.xenvironment.ImageFs;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -79,31 +83,49 @@ public class ContentInstaller {
      * beside it -- the .bin parts of a GOG one, say -- stay where the installer expects them and
      * are not duplicated into the app's storage.
      *
-     * Only the Download folder is accepted because that is the folder a container reaches as D:
-     * by default, which is what lets the installer be run from there at all.
+     * Where it may sit is limited to the folders a container reaches without being reconfigured,
+     * which is what lets it be run from there at all: the Download folder, which is D: by default,
+     * and the image root, which is Z: in every container and is where a .zip is unpacked to.
      */
-    public static void addLocalInstaller(Context context, Uri uri, Runnable onSuccess) {
-        String path = FileUtils.getFilePathFromDocumentUri(context, uri);
+    public static void addLocalInstaller(Activity activity, Uri uri, Runnable onSuccess) {
+        String path = FileUtils.getFilePathFromDocumentUri(activity, uri);
         if (path == null) {
-            ContentDialog.alert(context, R.string.installer_not_local_file, null);
+            ContentDialog.alert(activity, R.string.installer_not_local_file, null);
             return;
         }
 
-        File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-        File installer = new File(path);
-        String downloadsPath = downloadsDir.getAbsolutePath();
-        if (!installer.getAbsolutePath().startsWith(downloadsPath + "/")) {
+        File picked = new File(path);
+        if (!picked.isFile()) {
+            ContentDialog.alert(activity, R.string.installer_file_not_found, null);
+            return;
+        }
+
+        // A .zip cannot be run from the archive either way, so it is unpacked onto Z: first. What
+        // it turns out to hold decides the rest: an installer is listed here to be run in a
+        // container, while game files are already installed by virtue of being unpacked and only
+        // need a shortcut to the game.
+        if (ZipImport.isZip(picked)) {
+            ZipImport.startAsking(activity, picked, (role, executable, extractedDir) -> {
+                if (role == ZipExtractor.Role.GAME) ShortcutCreator.createForExecutable(activity, executable, null);
+                else addInstallerReference(activity, executable, onSuccess);
+            });
+            return;
+        }
+
+        if (!ContentsManager.isInstaller(picked.getName())) {
+            ContentDialog.alert(activity, R.string.installer_must_be_exe_or_msi, null);
+            return;
+        }
+
+        addInstallerReference(activity, picked, onSuccess);
+    }
+
+    /** Lists an installer where it sits, once it is somewhere a container can actually get at it. */
+    private static void addInstallerReference(Context context, File installer, Runnable onSuccess) {
+        if (!isReachableByContainers(context, installer)) {
+            String downloadsPath = Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
             ContentDialog.alert(context, context.getString(R.string.installer_must_be_in_downloads, downloadsPath), null);
-            return;
-        }
-
-        if (!ContentsManager.isInstaller(installer.getName())) {
-            ContentDialog.alert(context, R.string.installer_must_be_exe_or_msi, null);
-            return;
-        }
-
-        if (!installer.isFile()) {
-            ContentDialog.alert(context, R.string.installer_file_not_found, null);
             return;
         }
 
@@ -114,6 +136,21 @@ public class ContentInstaller {
 
         onSuccess.run();
         ContentDialog.alert(context, context.getString(R.string.installer_added, installer.getName()), null);
+    }
+
+    /**
+     * Whether a file of the user's is somewhere every container reaches without being reconfigured:
+     * the Download folder, which is D: by default, or the image root, which is Z: in all of them
+     * and is where an archive is unpacked to.
+     */
+    private static boolean isReachableByContainers(Context context, File file) {
+        String path = file.getAbsolutePath();
+        String downloads = Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
+        if (path.startsWith(downloads + "/")) return true;
+
+        String imageFs = ImageFs.find(context).getRootDir().getAbsolutePath();
+        return path.startsWith(imageFs + "/");
     }
 
     /**
