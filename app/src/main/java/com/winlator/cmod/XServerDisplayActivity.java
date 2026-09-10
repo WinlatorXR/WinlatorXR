@@ -508,7 +508,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         enableLogs = preferences.getBoolean("enable_wine_debug", false)
                 || preferences.getBoolean("enable_box86_64_logs", false);
-        boolean useReshade = XrActivity.isEnabled(this) &&(shortcut != null) &&
+        useReshade = XrActivity.isEnabled(this) &&(shortcut != null) &&
                 (Integer.parseInt(shortcut.getExtra("useReshade", "0")) > 0);
 
         firstTimeBoot = container.getExtra("appVersion").isEmpty();
@@ -1076,6 +1076,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
     private LayoutAnimationController navLayoutAnim;
 
+    private boolean useReshade = false;
     private boolean enableLogs = false;
     private boolean allowMagnifier = true;
 
