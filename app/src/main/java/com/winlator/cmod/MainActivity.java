@@ -704,6 +704,25 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
 
+    /** Opens the Downloader on its Installers tab and goes straight to adding an installer. */
+    public void showAddInstaller() {
+        NavigationView navigation = findViewById(R.id.NavigationView);
+        MenuItem item = navigation.getMenu().findItem(R.id.main_menu_contents);
+
+        // Remembered as the last tab because onResume restores that one, and the file picker
+        // returning resumes this activity: left as Games, it would be switched back mid-flow.
+        PreferenceManager.getDefaultSharedPreferences(this).edit()
+                .putString("tab_last", item.getTitle().toString())
+                .commit();
+        navigation.setCheckedItem(R.id.main_menu_contents);
+
+        ContentsFragment fragment = new ContentsFragment();
+        Bundle args = new Bundle();
+        args.putBoolean(ContentsFragment.ARG_ADD_INSTALLER, true);
+        fragment.setArguments(args);
+        show(fragment, false);
+    }
+
     private boolean show(Fragment fragment, boolean reverse) {
         FragmentManager fragmentManager = getSupportFragmentManager();
         Fragment currentFragment = fragmentManager.findFragmentById(R.id.FLFragmentContainer);

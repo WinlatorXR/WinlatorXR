@@ -524,10 +524,30 @@ public class ShortcutsFragment extends Fragment {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem menuItem) {
         if (menuItem.getItemId() == R.id.shortcuts_menu_add_local_game) {
-            openAddLocalGamePicker();
+            showAddGameDialog();
             return true;
         }
         return super.onOptionsItemSelected(menuItem);
+    }
+
+    /**
+     * A game arrives either as files that are already installed, or as an installer that still
+     * has to be run in a container, and only the user knows which one they have.
+     */
+    private void showAddGameDialog() {
+        String[] options = {
+            getString(R.string.add_local_game_files),
+            getString(R.string.run_game_installer)
+        };
+
+        new AlertDialog.Builder(getContext())
+                .setTitle(R.string.add_game)
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) openAddLocalGamePicker();
+                    else if (getActivity() instanceof MainActivity) ((MainActivity) getActivity()).showAddInstaller();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     @Override

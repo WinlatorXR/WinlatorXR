@@ -53,6 +53,10 @@ import java.util.List;
 import java.util.concurrent.Executors;
 
 public class ContentsFragment extends Fragment {
+    /** Argument that opens the fragment on the Installers tab with the add-installer prompt up. */
+    public static final String ARG_ADD_INSTALLER = "add_installer";
+    private static final int INSTALLERS_TAB = 8;
+
     private RecyclerView recyclerView;
     private View emptyText;
     private AdrenotoolsManager adrenotoolsManager;
@@ -106,35 +110,7 @@ public class ContentsFragment extends Fragment {
         emptyText = layout.findViewById(R.id.TVEmptyText);
 
         btInstallContent = layout.findViewById(R.id.BTInstallContent);
-        btInstallContent.setOnClickListener(v -> {
-            if (currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS)) {
-                ContentDialog.confirm(getContext(), getString(R.string.install_drivers_message) + " " + getString(R.string.install_drivers_warning), () -> {
-                    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                    intent.addCategory(Intent.CATEGORY_OPENABLE);
-                    intent.setType("*/*");
-                    getActivity().startActivityFromFragment(this, intent, MainActivity.OPEN_FILE_REQUEST_CODE);
-                });
-                return;
-            }
-
-            final boolean installers = currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER);
-
-            String message = getString(R.string.do_you_want_to_install_content) + " " + getString(R.string.pls_make_sure_content_trustworthy) + " ";
-            if (installers) message += getString(R.string.select_installer);
-            else message += currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_RUNTIME)
-                    ? getString(R.string.content_suffix_is_wcp_or_runtime_installer)
-                    : getString(R.string.content_suffix_is_wcp_packed_xz_zst);
-
-            ContentDialog.confirm(getContext(), message, () -> {
-                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.setType("*/*");
-                // An installer is taken from the Download folder, which is the D: drive a
-                // container gets by default, so open the picker there.
-                if (installers) intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, ContentInstaller.downloadsDocumentUri());
-                getActivity().startActivityFromFragment(this, intent, MainActivity.OPEN_FILE_REQUEST_CODE);
-            });
-        });
+        btInstallContent.setOnClickListener(v -> promptInstallContent());
 
         recyclerView = layout.findViewById(R.id.RecyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(recyclerView.getContext()));
@@ -176,9 +152,48 @@ public class ContentsFragment extends Fragment {
                 onTabSelected(tab);
             }
         });
-        tabLayout.getTabAt(0).select();
+        // Sent here from the Games tab to add an installer, so it opens on that tab and goes
+        // straight to picking one. The flag is used up, so a recreated view does not ask again.
+        Bundle args = getArguments();
+        if (args != null && args.getBoolean(ARG_ADD_INSTALLER)) {
+            args.remove(ARG_ADD_INSTALLER);
+            tabLayout.getTabAt(INSTALLERS_TAB).select();
+            promptInstallContent();
+        }
+        else tabLayout.getTabAt(0).select();
 
         return layout;
+    }
+
+    /** What the install button does, which depends on the tab it is pressed on. */
+    private void promptInstallContent() {
+        if (currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS)) {
+            ContentDialog.confirm(getContext(), getString(R.string.install_drivers_message) + " " + getString(R.string.install_drivers_warning), () -> {
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("*/*");
+                getActivity().startActivityFromFragment(this, intent, MainActivity.OPEN_FILE_REQUEST_CODE);
+            });
+            return;
+        }
+
+        final boolean installers = currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER);
+
+        String message = getString(R.string.do_you_want_to_install_content) + " " + getString(R.string.pls_make_sure_content_trustworthy) + " ";
+        if (installers) message += getString(R.string.select_installer);
+        else message += currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_RUNTIME)
+                ? getString(R.string.content_suffix_is_wcp_or_runtime_installer)
+                : getString(R.string.content_suffix_is_wcp_packed_xz_zst);
+
+        ContentDialog.confirm(getContext(), message, () -> {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("*/*");
+            // An installer is taken from the Download folder, which is the D: drive a
+            // container gets by default, so open the picker there.
+            if (installers) intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, ContentInstaller.downloadsDocumentUri());
+            getActivity().startActivityFromFragment(this, intent, MainActivity.OPEN_FILE_REQUEST_CODE);
+        });
     }
 
     @Override

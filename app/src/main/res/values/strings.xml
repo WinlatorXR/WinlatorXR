@@ -14,6 +14,8 @@
     <string name="store">Store</string>
     <string name="shortcuts">Shortcuts</string>
     <string name="add_local_game_files">Add Local Game Files</string>
+    <string name="add_game">Add Game</string>
+    <string name="run_game_installer">Run a Game Installer</string>
     <string name="containers">Containers</string>
     <string name="container_list">Container list</string>
     <string name="input_controls">Input Controls</string>
