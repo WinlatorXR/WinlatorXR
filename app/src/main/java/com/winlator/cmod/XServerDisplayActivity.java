@@ -135,7 +135,7 @@ import com.winlator.cmod.xserver.Window;
 import com.winlator.cmod.xserver.WindowManager;
 import com.winlator.cmod.xserver.XServer;
 import com.winlator.xr.io.XrRenderer;
-import com.winlator.xr.ui.StartupDialog;
+import com.winlator.xr.ui.XrStartupDialog;
 import com.winlator.xr.ui.XrDialog;
 import com.winlator.xr.utils.ModdingUtils;
 
@@ -207,7 +207,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     private String lc_all = "";
     private String vkbasaltConfig = "";
     private PreloaderDialog preloaderDialog = null;
-    private StartupDialog startupDialog = null;
+    private XrStartupDialog startupDialog = null;
     private Runnable configChangedCallback = null;
     private boolean isPaused = false;
     protected boolean isRelativeMouseMovement;
@@ -305,7 +305,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
 
         preloaderDialog = new PreloaderDialog(this);
-        startupDialog = new StartupDialog(this);
+        startupDialog = new XrStartupDialog(this);
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
 
 

@@ -26,8 +26,8 @@ import android.widget.TextView;
 import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.ContentDialog;
 
-public class StartupDialog extends ContentDialog {
-    public StartupDialog(Activity activity) {
+public class XrStartupDialog extends ContentDialog {
+    public XrStartupDialog(Activity activity) {
         super(activity, R.layout.preloader_dialog);
         setCanceledOnTouchOutside(false);
         setCancelable(false);
