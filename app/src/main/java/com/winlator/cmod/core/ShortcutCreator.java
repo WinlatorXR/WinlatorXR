@@ -3,13 +3,16 @@ package com.winlator.cmod.core;
 import android.app.Activity;
 import android.content.Context;
 import android.util.Log;
+import android.widget.TextView;
 
 import com.winlator.cmod.R;
 import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.ContainerManager;
+import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.contentdialog.ContentDialog;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -45,6 +48,12 @@ public abstract class ShortcutCreator {
 
         if (containers.size() == 1) {
             final Container only = containers.get(0);
+            // A container that already has this game says so instead, which asks the same
+            // question and more besides, so the two are never both shown.
+            if (!existingShortcutsFor(activity, only, exeFile).isEmpty()) {
+                create(activity, only, exeFile, onCreated);
+                return;
+            }
             ContentDialog.confirm(activity, activity.getString(R.string.shortcut_will_be_created,
                     gameName, only.getName()), () -> create(activity, only, exeFile, onCreated));
             return;
@@ -58,8 +67,62 @@ public abstract class ShortcutCreator {
                 which -> create(activity, containers.get(which), exeFile, onCreated));
     }
 
-    /** Writes the desktop entry, and says what happened. */
+    /**
+     * Writes the desktop entry, and says what happened.
+     *
+     * A container that already has a shortcut for this program is asked about first. The same
+     * game in two containers is a normal thing to want, and so is a second shortcut in one of
+     * them -- one set up differently for a different way of playing -- so the answer is the
+     * user's rather than something to refuse or to do silently.
+     */
     public static void create(Activity activity, Container container, File exeFile, Runnable onCreated) {
+        List<Shortcut> existing = existingShortcutsFor(activity, container, exeFile);
+        if (!existing.isEmpty()) {
+            StringBuilder names = new StringBuilder();
+            for (Shortcut shortcut : existing) names.append("\n• ").append(shortcut.name);
+
+            ContentDialog dialog = new ContentDialog(activity);
+            dialog.setTitle(FileUtils.getBasename(exeFile.getName()));
+            dialog.setMessage(activity.getString(R.string.shortcut_already_exists,
+                    container.getName(), names.toString()));
+            ((TextView)dialog.findViewById(R.id.BTConfirm)).setText(R.string.shortcut_create_another);
+            dialog.setOnConfirmCallback(() -> writeAndReport(activity, container, exeFile, onCreated));
+            dialog.show();
+            return;
+        }
+
+        writeAndReport(activity, container, exeFile, onCreated);
+    }
+
+    /**
+     * The shortcuts in a container that already run this exact program.
+     *
+     * Matched on what a shortcut runs rather than on its name: a shortcut can be renamed to
+     * anything, and two shortcuts for one game may well have been given different names on
+     * purpose. A .lnk names its program only indirectly, so it is followed first.
+     */
+    private static List<Shortcut> existingShortcutsFor(Context context, Container container, File exeFile) {
+        List<Shortcut> existing = new ArrayList<>();
+
+        File[] files = container.getDesktopDir().listFiles((dir, name) -> name.endsWith(".desktop"));
+        if (files == null) return existing;
+
+        String exePath = exeFile.getAbsolutePath();
+        for (File file : files) {
+            try {
+                Shortcut shortcut = new Shortcut(container, file);
+                File target = GameUninstaller.resolveExecutable(context, container, shortcut);
+                if (target != null && target.getAbsolutePath().equals(exePath)) existing.add(shortcut);
+            }
+            catch (Exception e) {
+                Log.w(TAG, "Skipping unreadable shortcut " + file, e);
+            }
+        }
+        return existing;
+    }
+
+    /** Puts the shortcut on disk, having settled that it is wanted. */
+    private static void writeAndReport(Activity activity, Container container, File exeFile, Runnable onCreated) {
         // The container's own C:, its mapped drives, and Z: -- the image root, which is where an
         // extracted archive lands and is the same folder in every container.
         String winePath = GuestScriptRunner.toWinPath(activity, container, exeFile);

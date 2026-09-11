@@ -59,6 +59,7 @@ import com.winlator.cmod.core.MSLink;
 import com.winlator.cmod.core.PreloaderDialog;
 import com.winlator.cmod.core.RedistInstaller;
 import com.winlator.cmod.core.ShortcutCreator;
+import com.winlator.cmod.core.ShortcutSource;
 import com.winlator.cmod.core.StringUtils;
 import com.winlator.cmod.core.ZipExtractor;
 import com.winlator.cmod.core.ZipImport;
@@ -72,6 +73,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Executors;
@@ -365,7 +367,7 @@ public class ShortcutsFragment extends Fragment {
     }
 
     /** The files a shortcut is made of, for the ones being removed alongside a game. */
-    private void deleteShortcutFiles(Shortcut shortcut) {
+    void deleteShortcutFiles(Shortcut shortcut) {
         boolean deleted = safeDelete(shortcut.file);
         deletePairedLnkForShortcut(shortcut);
         safeDelete(shortcut.iconFile);
@@ -562,7 +564,8 @@ public class ShortcutsFragment extends Fragment {
             public void onTabSelected(TabLayout.Tab tab) {
                 View[] tabs = {
                         frameLayout.findViewById(R.id.LLTabShortcuts),
-                        frameLayout.findViewById(R.id.LLTabSaves)
+                        frameLayout.findViewById(R.id.LLTabSaves),
+                        frameLayout.findViewById(R.id.LLTabZDrive)
                 };
 
                 currentTab = tab.getPosition();
@@ -573,6 +576,9 @@ public class ShortcutsFragment extends Fragment {
                         tabs[i].setVisibility(View.GONE);
                     }
                 }
+                // The Z: tab reads the disk, so it is filled in when it is opened rather than kept
+                // up to date behind the user.
+                if (currentTab == 2) refreshZDriveTab();
                 requireActivity().invalidateOptionsMenu();
             }
 
@@ -587,6 +593,17 @@ public class ShortcutsFragment extends Fragment {
         });
         tabLayout.selectTab(tabLayout.getTabAt(0));
         return frameLayout;
+    }
+
+    /**
+     * Fills in the Z: Drive tab, which lists the games installed outside every container.
+     *
+     * It is a child fragment of this screen rather than a screen of its own, and it is created
+     * whether or not its tab is the one showing, so the scan waits until the user asks for it.
+     */
+    private void refreshZDriveTab() {
+        Fragment fragment = getChildFragmentManager().findFragmentById(R.id.LLTabZDrive);
+        if (fragment instanceof ZDriveFragment) ((ZDriveFragment)fragment).refresh();
     }
 
     private Container findContainerForFile(File file) {
@@ -823,7 +840,16 @@ public class ShortcutsFragment extends Fragment {
             return an.compareToIgnoreCase(bn);
         });
 
-        recyclerView.setAdapter(new ShortcutsAdapter(shortcuts));
+        // Where each game sits -- a store, a mapped drive, or Z: -- is read once here rather than
+        // row by row, since resolving a shortcut reads what is on disk and rows are bound while
+        // the list is being scrolled.
+        HashMap<Shortcut, String> sources = new HashMap<>();
+        for (Shortcut shortcut : shortcuts) {
+            String source = ShortcutSource.labelFor(getContext(), shortcut.container, shortcut);
+            if (source != null) sources.put(shortcut, source);
+        }
+
+        recyclerView.setAdapter(new ShortcutsAdapter(shortcuts, sources));
         emptyTextView.setVisibility(shortcuts.isEmpty() ? View.VISIBLE : View.GONE);
 
         // ---- quarantine report ----
@@ -847,6 +873,9 @@ public class ShortcutsFragment extends Fragment {
     private class ShortcutsAdapter extends RecyclerView.Adapter<ShortcutsAdapter.ViewHolder> {
         private final List<Shortcut> data;
 
+        /** Where each shortcut's game is installed, for the ones that could be placed. */
+        private final HashMap<Shortcut, String> sources;
+
         private class ViewHolder extends RecyclerView.ViewHolder {
             private final ImageButton menuButton;
             private final ImageButton imageView;
@@ -864,8 +893,9 @@ public class ShortcutsFragment extends Fragment {
             }
         }
 
-        public ShortcutsAdapter(List<Shortcut> data) {
+        public ShortcutsAdapter(List<Shortcut> data, HashMap<Shortcut, String> sources) {
             this.data = data;
+            this.sources = sources;
         }
 
         @NonNull
@@ -891,7 +921,11 @@ public class ShortcutsFragment extends Fragment {
                 holder.imageView.setImageResource(R.mipmap.ic_launcher_foreground); // Create a default icon drawable
             }
             holder.imageView.setOnClickListener(v -> showIconPickerConfirmation(item));            holder.title.setText(item.name);
-            holder.subtitle.setText(item.container.getName());
+            // The container plays the game; the source says where the game itself is, which is not
+            // the same thing and is the only difference between two rows for the same title.
+            String source = sources.get(item);
+            holder.subtitle.setText(source == null ? item.container.getName()
+                    : getString(R.string.shortcut_subtitle_with_source, item.container.getName(), source));
             holder.menuButton.setOnClickListener((v) -> showListItemMenu(v, item));
             holder.innerArea.setOnClickListener((v) -> runFromShortcut(item));
 

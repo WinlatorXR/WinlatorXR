@@ -8,6 +8,7 @@ import com.winlator.cmod.xenvironment.ImageFs;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -87,6 +88,37 @@ public final class StoreGameInstall {
             return end == -1 ? null : new StoreGameInstall(store, new File(path.substring(0, end)));
         }
         return null;
+    }
+
+    /**
+     * The store game a folder <i>is</i>, rather than the one a file sits inside.
+     *
+     * {@link #find} answers for a path within a game -- the executable a shortcut runs -- which
+     * is how a shortcut reaches its files. A folder listed straight off Z: is the game itself,
+     * one level below the store's root, and has no such path to be found from.
+     */
+    public static StoreGameInstall forInstallDir(Context context, File dir) {
+        if (dir == null || dir.getParentFile() == null) return null;
+
+        File imageFs = ImageFs.find(context).getRootDir();
+        for (Store store : Store.values())
+            if (dir.getParentFile().equals(new File(imageFs, store.folder))) return new StoreGameInstall(store, dir);
+        return null;
+    }
+
+    /**
+     * Every store's folder on Z:, against the name of the store that owns it.
+     *
+     * {@link #find} answers the question the other way round -- which store a path belongs to --
+     * which is all that removing a game needs. Listing what is on Z: starts from nothing at all,
+     * so it needs the folders themselves, and which folder is whose is the stores' own business
+     * rather than something for another class to keep a second copy of.
+     */
+    public static Map<File, String> installRoots(Context context) {
+        File imageFs = ImageFs.find(context).getRootDir();
+        Map<File, String> roots = new LinkedHashMap<>();
+        for (Store store : Store.values()) roots.put(new File(imageFs, store.folder), store.label);
+        return roots;
     }
 
     /**

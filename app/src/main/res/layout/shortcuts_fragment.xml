@@ -30,6 +30,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/saves" />
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/z_drive" />
         </com.google.android.material.tabs.TabLayout>
 
         <LinearLayout
@@ -62,6 +67,13 @@
             android:name="com.winlator.cmod.SavesFragment"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
+
+        <fragment
+            android:id="@+id/LLTabZDrive"
+            android:name="com.winlator.cmod.ZDriveFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
 
     </LinearLayout>
 </FrameLayout>

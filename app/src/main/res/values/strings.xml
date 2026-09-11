@@ -843,6 +843,9 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="shortcut_choose_container">Add a shortcut for \"%1$s\" — which container should it run in?</string>
     <string name="shortcut_will_be_created">A shortcut for \"%1$s\" will be added to the Games tab, set to run in %2$s.</string>
     <string name="shortcut_created">\"%1$s\" added to %2$s. It is on the Games tab.</string>
+    <string name="shortcut_subtitle_with_source">%1$s • %2$s</string>
+    <string name="shortcut_already_exists">%1$s already has a shortcut for this game:%2$s\n\nCreate another one?</string>
+    <string name="shortcut_create_another">Create Another</string>
     <string name="shortcut_create_failed">The shortcut could not be created.</string>
 
     <!-- Copying a game off a mapped drive onto Z:, so it is read from internal storage. -->
@@ -865,4 +868,25 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="properties_target_link_unreadable">could not be read</string>
 
     <string name="copy_to_internal_nothing_to_copy">This shortcut has no game folder to copy. Either it is already on internal storage, or its program sits loose in a drive\'s top folder rather than in a folder of its own.</string>
+
+    <!-- The Z: Drive tab: games installed outside every container, with or without a shortcut. -->
+    <string name="z_drive">Z: Drive</string>
+    <string name="no_items_to_display_z_drive">Nothing is installed on Z: yet.\n\nGames copied to internal storage, unpacked from an archive, or downloaded by a store are kept here, outside every container, and show up on this tab.</string>
+    <string name="z_drive_source_copied">Copied to internal storage</string>
+    <string name="z_drive_source_extracted">Unpacked from an archive</string>
+    <string name="z_drive_subtitle">%1$s • %2$s • %3$s</string>
+    <string name="z_drive_no_shortcut">no shortcut</string>
+    <string name="z_drive_one_shortcut">shortcut in %1$s</string>
+    <string name="z_drive_many_shortcuts">%1$d shortcuts</string>
+    <string name="z_drive_create_shortcut">Create Shortcut</string>
+    <string name="z_drive_properties">Properties</string>
+    <string name="z_drive_properties_location">Folder: %1$s</string>
+    <string name="z_drive_properties_source">Installed by: %1$s</string>
+    <string name="z_drive_properties_size">Size: %1$s</string>
+    <string name="z_drive_properties_no_shortcuts">No shortcut points at this game, so it can only be started by giving it one.</string>
+    <string name="z_drive_properties_shortcuts">Played by:</string>
+    <string name="z_drive_no_executable">There is no program in \"%1$s\" to point a shortcut at. Its folder is %2$s.</string>
+    <string name="z_drive_delete">Delete from Z:</string>
+    <string name="z_drive_delete_title">Delete this game?</string>
+    <string name="z_drive_delete_message">\"%1$s\" (%2$s) will be deleted from %3$s.\n\nNothing on Z: belongs to any one container, so this takes the game away from all of them, and it cannot be undone. Only the folder on Z: goes: any copy of the game you keep elsewhere is left alone.</string>
 </resources>
