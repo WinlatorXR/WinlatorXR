@@ -400,7 +400,7 @@ public class EpicGamesActivity extends NavActivity {
     private void launchEpic(EpicGame g) {
         String exe = prefs.getString("epic_exe_" + g.appName, null);
         if (exe == null) { openDetailScreen(g); return; }
-        LudashiLaunchBridge.addToLauncher(this, g.title, exe);
+        LudashiLaunchBridge.addToLauncher(this, g.title, exe, null, g.artCover, g.artSquare);
     }
 
     private void uninstallEpic(EpicGame g) {

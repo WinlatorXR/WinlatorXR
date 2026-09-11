@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -40,13 +41,22 @@ public final class LudashiLaunchBridge {
 
     private static final String TAG = "LudashiLaunchBridge";
 
+    /** Icons this bridge saves are told apart by name, so uninstalling only removes its own. */
+    private static final String ICON_PREFIX = "store_";
+    private static final int ICON_SIZE = 256;
+
     private LudashiLaunchBridge() {}
 
     /**
      * Show a container picker dialog, then write a .desktop shortcut file
      * into the chosen container's Wine desktop directory.
+     *
+     * @param userAgent sent when fetching the artwork (GOG's image CDN expects one); may be null
+     * @param artUrls   the store's artwork for the game, best first. The first that downloads
+     *                  becomes the shortcut's icon; if none does, it keeps the generic one.
      */
-    public static void addToLauncher(Activity activity, String gameName, String exePath) {
+    public static void addToLauncher(Activity activity, String gameName, String exePath,
+                                     String userAgent, String... artUrls) {
         new Thread(() -> {
             Handler h = new Handler(Looper.getMainLooper());
             try {
@@ -74,7 +84,8 @@ public final class LudashiLaunchBridge {
                 h.post(() -> new AlertDialog.Builder(activity)
                         .setTitle("Select container for \"" + gameName + "\"")
                         .setItems(names, (dialog, which) ->
-                                writeShortcut(activity, containers.get(which), gameName, exePath, h))
+                                writeShortcut(activity, containers.get(which), gameName, exePath,
+                                        userAgent, artUrls, h))
                         .setNegativeButton("Cancel", null)
                         .show());
 
@@ -92,6 +103,9 @@ public final class LudashiLaunchBridge {
             if (name.compareTo(safeString(shortcut.name)) == 0) {
                 safeDelete(shortcut.file);
                 deletePairedLnkForShortcut(shortcut);
+                if (shortcut.iconFile != null && shortcut.iconFile.getName().startsWith(ICON_PREFIX)) {
+                    safeDelete(shortcut.iconFile);
+                }
             }
         }
     }
@@ -177,8 +191,52 @@ public final class LudashiLaunchBridge {
         return output.toString();
     }
 
+    /**
+     * Puts the store's artwork where Shortcut looks up a desktop entry's Icon, and returns the
+     * name to write there -- or null to leave the generic icon.
+     *
+     * An icon already saved for this game is used as it is: the store's Launch button writes the
+     * shortcut again every time, and should not wait on the network to do it.
+     *
+     * Store art is portrait box art or a wide banner, and the Games list shows a small square, so
+     * the middle square is kept; fitted whole it would be a sliver.
+     */
+    private static String saveIcon(Container container, String safeName,
+                                   String userAgent, String... artUrls) {
+        String iconName = ICON_PREFIX + safeName;
+        File iconDir = container.getIconsDir(64);
+        File iconFile = new File(iconDir, iconName + ".png");
+        if (iconFile.isFile()) return iconName;
+        if (artUrls == null) return null;
+
+        for (String url : artUrls) {
+            if (url == null || url.isEmpty()) continue;
+            if (url.startsWith("//")) url = "https:" + url;
+            byte[] data = StoreImageLoader.fetch(url, userAgent);
+            if (data == null) continue;
+            Bitmap art = StoreImageLoader.decodeSampled(data, ICON_SIZE);
+            if (art == null) continue;
+
+            int side = Math.min(art.getWidth(), art.getHeight());
+            Bitmap square = Bitmap.createBitmap(art, (art.getWidth() - side) / 2,
+                    (art.getHeight() - side) / 2, side, side);
+            Bitmap icon = Bitmap.createScaledBitmap(square, ICON_SIZE, ICON_SIZE, true);
+
+            if (!iconDir.exists() && !iconDir.mkdirs()) {
+                Log.w(TAG, "Could not create icon directory " + iconDir);
+                return null;
+            }
+            if (FileUtils.saveBitmapToFile(icon, iconFile)) return iconName;
+            Log.w(TAG, "Could not save icon to " + iconFile);
+            return null;
+        }
+        Log.w(TAG, "No artwork could be downloaded for " + safeName);
+        return null;
+    }
+
     private static void writeShortcut(Activity activity, Container container,
-                                      String gameName, String exePath, Handler h) {
+                                      String gameName, String exePath,
+                                      String userAgent, String[] artUrls, Handler h) {
         new Thread(() -> {
             try {
                 Method getDesktopDir = container.getClass().getMethod("getDesktopDir");
@@ -209,10 +267,12 @@ public final class LudashiLaunchBridge {
                 String winPath = GogInstallPath.toWinePath(activity, exePath);
                 String escapedWinPath = winPath.replace("\\", "\\\\\\\\");
 
+                String iconName = saveIcon(container, safeName, userAgent, artUrls);
+
                 String content = "[Desktop Entry]\n"
                         + "Name=" + gameName + "\n"
                         + "Exec=wine " + escapedWinPath + "\n"
-                        + "Icon=\n"
+                        + "Icon=" + (iconName != null ? iconName : "") + "\n"
                         + "Type=Application\n"
                         + "StartupWMClass=explorer\n"
                         + "\n"

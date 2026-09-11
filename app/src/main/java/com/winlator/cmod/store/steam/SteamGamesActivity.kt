@@ -447,13 +447,13 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         val lowerTitle = game.name.lowercase()
         exeFiles.sortWith(compareByDescending { AmazonLaunchHelper.scoreExe(it, lowerTitle) })
         if (exeFiles.size == 1) {
-            LudashiLaunchBridge.addToLauncher(this, game.name, exeFiles[0].absolutePath)
+            LudashiLaunchBridge.addToLauncher(this, game.name, exeFiles[0].absolutePath, null, *game.artworkUrls)
         } else {
             val labels = exeFiles.map { it.name }.toTypedArray()
             android.app.AlertDialog.Builder(this)
                 .setTitle("Choose executable")
                 .setItems(labels) { _, which ->
-                    LudashiLaunchBridge.addToLauncher(this, game.name, exeFiles[which].absolutePath)
+                    LudashiLaunchBridge.addToLauncher(this, game.name, exeFiles[which].absolutePath, null, *game.artworkUrls)
                 }
                 .show()
         }

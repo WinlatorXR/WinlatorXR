@@ -482,7 +482,7 @@ public class GogGamesActivity extends NavActivity {
     private void launchGog(GogGame g) {
         String exe = prefs.getString("gog_exe_" + g.gameId, null);
         if (exe == null) { openDetailScreen(g); return; }
-        LudashiLaunchBridge.addToLauncher(this, g.title, exe);
+        LudashiLaunchBridge.addToLauncher(this, g.title, exe, "GOG Galaxy", g.imageUrl);
     }
 
     private void uninstallGog(GogGame g) {

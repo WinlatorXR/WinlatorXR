@@ -401,7 +401,7 @@ public class AmazonGamesActivity extends NavActivity {
     private void launchAmazon(AmazonGame g) {
         String exe = prefs.getString("amazon_exe_" + g.productId, null);
         if (exe == null) { openDetailScreen(g); return; }
-        LudashiLaunchBridge.addToLauncher(this, g.title, exe);
+        LudashiLaunchBridge.addToLauncher(this, g.title, exe, null, g.artUrl, g.heroUrl);
     }
 
     private void uninstallAmazon(AmazonGame g) {

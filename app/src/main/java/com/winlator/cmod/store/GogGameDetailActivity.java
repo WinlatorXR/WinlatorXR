@@ -328,7 +328,7 @@ public class GogGameDetailActivity extends NavActivity {
         launchBtn.setOnClickListener(v -> {
             String exe = prefs.getString("gog_exe_" + gameId, null);
             if (exe != null) {
-                LudashiLaunchBridge.addToLauncher(this, title, exe);
+                LudashiLaunchBridge.addToLauncher(this, title, exe, "GOG Galaxy", imageUrl);
             } else {
                 String dir = prefs.getString("gog_dir_" + gameId, null);
                 File installPath = GogInstallPath.getInstallDir(this, dir);
@@ -337,7 +337,7 @@ public class GogGameDetailActivity extends NavActivity {
                 showExePicker(candidates, selected -> {
                     if (selected != null && !selected.isEmpty()) {
                         prefs.edit().putString("gog_exe_" + gameId, selected).apply();
-                        uiHandler.post(() -> LudashiLaunchBridge.addToLauncher(this, title, selected));
+                        uiHandler.post(() -> LudashiLaunchBridge.addToLauncher(this, title, selected, "GOG Galaxy", imageUrl));
                     }
                 });
             }

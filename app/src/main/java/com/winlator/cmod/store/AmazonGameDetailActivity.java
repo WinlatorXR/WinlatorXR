@@ -506,7 +506,7 @@ public class AmazonGameDetailActivity extends NavActivity {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private void pendingLaunchExe(String absPath) {
-        LudashiLaunchBridge.addToLauncher(this, title, absPath);
+        LudashiLaunchBridge.addToLauncher(this, title, absPath, null, artUrl);
     }
 
     private void loadImage(String url, android.widget.ImageView iv) {

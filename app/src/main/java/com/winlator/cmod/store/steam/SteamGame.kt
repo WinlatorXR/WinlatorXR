@@ -71,6 +71,14 @@ data class SteamGame(
             "https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/$appId/$iconHash.jpg"
         else null
 
+    /** Artwork for a shortcut icon, best first: portrait library art, the store header, the old icon. */
+    val artworkUrls: Array<String>
+        get() = listOfNotNull(
+            "https://shared.steamstatic.com/store_item_assets/steam/apps/$appId/library_600x900.jpg",
+            headerUrl,
+            iconUrl,
+        ).toTypedArray()
+
     companion object {
         /** Convert a Java GameRow (from SteamDatabase) to a SteamGame. */
         fun fromGameRow(row: SteamDatabase.GameRow): SteamGame {
