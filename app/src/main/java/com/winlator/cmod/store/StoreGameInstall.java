@@ -1,10 +1,15 @@
 package com.winlator.cmod.store;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.util.Log;
 
 import com.winlator.cmod.xenvironment.ImageFs;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -34,21 +39,30 @@ public final class StoreGameInstall {
      * a folder is matched against; the rest are cleared along with whatever they matched.
      */
     private enum Store {
-        GOG("gog_games", "GOG", "bh_gog_prefs", "gog_dir_", "gog_exe_", "gog_cover_"),
-        EPIC("epic_games", "Epic Games", "bh_epic_prefs", "epic_dir_", "epic_exe_"),
-        AMAZON("Amazon", "Amazon Games", "bh_amazon_prefs", "amazon_dir_", "amazon_exe_"),
-        /** Steam records what is installed in steam.db instead of in preferences. */
-        STEAM("steam_games", "Steam", null);
+        GOG("gog_games", "GOG", "bh_gog_prefs", "gog_library_cache", "gameId",
+                "gog_dir_", "gog_exe_", "gog_cover_"),
+        EPIC("epic_games", "Epic Games", "bh_epic_prefs", "epic_cache", "appName",
+                "epic_dir_", "epic_exe_"),
+        AMAZON("Amazon", "Amazon Games", "bh_amazon_prefs", "amazon_library_cache", "productId",
+                "amazon_dir_", "amazon_exe_"),
+        /** Steam records what is installed, and its library, in steam.db instead of in preferences. */
+        STEAM("steam_games", "Steam", null, null, null);
 
         final String folder;
         final String label;
         final String prefsName;
+        /** The store's saved copy of its library, a JSON array holding what its pages are opened with. */
+        final String libraryKey;
+        /** The field of a library entry holding the same id the install keys are appended to. */
+        final String libraryIdField;
         final String[] keys;
 
-        Store(String folder, String label, String prefsName, String... keys) {
+        Store(String folder, String label, String prefsName, String libraryKey, String libraryIdField, String... keys) {
             this.folder = folder;
             this.label = label;
             this.prefsName = prefsName;
+            this.libraryKey = libraryKey;
+            this.libraryIdField = libraryIdField;
             this.keys = keys;
         }
     }
@@ -136,11 +150,23 @@ public final class StoreGameInstall {
      * Removes every key group whose recorded path is inside the folder.
      *
      * A game is identified by whatever the store appended to its keys, and DLC installed into the
-     * same folder carries an id of its own, so this collects every id that points inside rather
+     * same folder carries an id of its own, so this clears every id that points inside rather
      * than only the one the shortcut was for.
      */
     private void forgetRecordedKeys(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(store.prefsName, Context.MODE_PRIVATE);
+        List<String> ids = recordedIds(prefs);
+        if (ids.isEmpty()) return;
+
+        SharedPreferences.Editor editor = prefs.edit();
+        for (String id : ids) for (String key : store.keys) editor.remove(key + id);
+        editor.apply();
+
+        Log.d(TAG, "Forgot " + ids.size() + " " + store.label + " install(s) under " + installDir);
+    }
+
+    /** Every id the store recorded a path inside the folder for: the game, and any DLC with it. */
+    private List<String> recordedIds(SharedPreferences prefs) {
         File storeRoot = installDir.getParentFile();
 
         List<String> ids = new ArrayList<>();
@@ -156,13 +182,7 @@ public final class StoreGameInstall {
                 if (!ids.contains(id) && isInside(resolve(storeRoot, (String) entry.getValue()))) ids.add(id);
             }
         }
-        if (ids.isEmpty()) return;
-
-        SharedPreferences.Editor editor = prefs.edit();
-        for (String id : ids) for (String key : store.keys) editor.remove(key + id);
-        editor.apply();
-
-        Log.d(TAG, "Forgot " + ids.size() + " " + store.label + " install(s) under " + installDir);
+        return ids;
     }
 
     private void forgetSteamInstall(Context context) {
@@ -172,6 +192,120 @@ public final class StoreGameInstall {
             if (game.installDir == null || game.installDir.isEmpty()) continue;
             if (isInside(new File(game.installDir))) database.markUninstalled(game.appId);
         }
+    }
+
+    /* ------------------------------------------------------------------ *
+     *  The store's own page for it                                        *
+     * ------------------------------------------------------------------ */
+
+    /**
+     * Whether the store that installed the game still has an account signed in.
+     *
+     * Its page is only any use while it does: signed out, the store has no library to show the
+     * game in, and nothing to update it or sync its saves with.
+     */
+    public boolean isSignedIn(Context context) {
+        switch (store) {
+            case GOG:
+                return context.getSharedPreferences(store.prefsName, Context.MODE_PRIVATE)
+                        .getString("access_token", null) != null;
+            case EPIC:
+                return EpicCredentialStore.isLoggedIn(context);
+            case AMAZON:
+                return AmazonCredentialStore.isLoggedIn(context);
+            default:
+                SteamPrefs.INSTANCE.init(context);
+                return SteamPrefs.INSTANCE.isLoggedIn();
+        }
+    }
+
+    /**
+     * The store's page for the game, or null when the store no longer has a record of it.
+     *
+     * A store opens its pages from its library, which hands each one everything it shows. This
+     * starts from the folder instead, so the game is found by the path the store recorded when it
+     * installed it, and the rest comes from the store's saved copy of that library.
+     *
+     * Reads the store's records on disk, so it is not for the UI thread.
+     */
+    public Intent storePage(Context context) {
+        if (store == Store.STEAM) return steamPage(context);
+
+        SharedPreferences prefs = context.getSharedPreferences(store.prefsName, Context.MODE_PRIVATE);
+        JSONObject entry = libraryEntry(prefs, recordedIds(prefs));
+        if (entry == null) return null;
+
+        switch (store) {
+            case GOG:
+                return new Intent(context, GogGameDetailActivity.class)
+                        .putExtra("game_id", entry.optString("gameId"))
+                        .putExtra("title", entry.optString("title"))
+                        .putExtra("image_url", entry.optString("imageUrl"))
+                        .putExtra("description", entry.optString("description"))
+                        .putExtra("developer", entry.optString("developer"))
+                        .putExtra("category", entry.optString("category"))
+                        .putExtra("generation", entry.optInt("generation", 1));
+            case EPIC:
+                return new Intent(context, EpicGameDetailActivity.class)
+                        .putExtra("app_name", entry.optString("appName"))
+                        .putExtra("title", entry.optString("title"))
+                        .putExtra("description", entry.optString("description"))
+                        .putExtra("developer", entry.optString("developer"))
+                        .putExtra("art_cover", entry.optString("artCover"))
+                        .putExtra("namespace", entry.optString("namespace"))
+                        .putExtra("catalog_item_id", entry.optString("catalogItemId"));
+            default:
+                return new Intent(context, AmazonGameDetailActivity.class)
+                        .putExtra("product_id", entry.optString("productId"))
+                        .putExtra("entitlement_id", entry.optString("entitlementId"))
+                        .putExtra("title", entry.optString("title"))
+                        .putExtra("developer", entry.optString("developer"))
+                        .putExtra("publisher", entry.optString("publisher"))
+                        .putExtra("art_url", entry.optString("artUrl"))
+                        .putExtra("product_sku", entry.optString("productSku"));
+        }
+    }
+
+    /**
+     * The library entry for one of the ids recorded against the folder.
+     *
+     * DLC installed into the same folder has an id of its own, but the library holds only what
+     * has a page to open, so whichever id is found there is the game's.
+     */
+    private JSONObject libraryEntry(SharedPreferences prefs, List<String> ids) {
+        if (ids.isEmpty()) return null;
+
+        String json = prefs.getString(store.libraryKey, null);
+        if (json == null) return null;
+
+        try {
+            JSONArray library = new JSONArray(json);
+            for (int i = 0; i < library.length(); i++) {
+                JSONObject entry = library.getJSONObject(i);
+                if (ids.contains(entry.optString(store.libraryIdField))) return entry;
+            }
+        }
+        catch (JSONException e) {
+            Log.w(TAG, "Unreadable " + store.label + " library", e);
+        }
+        return null;
+    }
+
+    private Intent steamPage(Context context) {
+        // Steam's pages read the store's database through its repository, and the Steam screen
+        // sets that up -- and starts the connection its pages download and update over -- on the
+        // way in. Coming from Z: skips that screen, so the same is done here.
+        SteamRepository repository = SteamRepository.getInstance();
+        repository.initialize(context);
+        SteamForegroundService.Companion.start(context);
+
+        for (SteamDatabase.GameRow game : repository.getDatabase().getInstalledGames()) {
+            if (game.installDir == null || game.installDir.isEmpty()) continue;
+            if (isInside(new File(game.installDir)))
+                return new Intent(context, SteamGameDetailActivity.class)
+                        .putExtra(SteamGameDetailActivity.EXTRA_APP_ID, game.appId);
+        }
+        return null;
     }
 
     /**

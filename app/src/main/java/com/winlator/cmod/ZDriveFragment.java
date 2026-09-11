@@ -3,6 +3,7 @@ package com.winlator.cmod;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
@@ -54,6 +55,9 @@ public class ZDriveFragment extends Fragment {
     /** Scanning is not free, so it happens when the tab is opened rather than on every redraw. */
     private volatile boolean scanning;
 
+    /** A store page can uninstall or update the game, so the list is read again on the way back. */
+    private boolean returningFromStorePage;
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -103,6 +107,56 @@ public class ZDriveFragment extends Fragment {
 
                 recyclerView.setAdapter(new ZDriveAdapter(games));
                 emptyTextView.setVisibility(games.isEmpty() ? View.VISIBLE : View.GONE);
+            });
+        });
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (returningFromStorePage) {
+            returningFromStorePage = false;
+            refresh();
+        }
+    }
+
+    /**
+     * Opens the page the store that installed the game keeps for it.
+     *
+     * The way there from the store is its library, filtered down to what is installed, and then
+     * the game; this is the same page, reached from the folder instead. It is only offered while
+     * the store is signed in, since signed out it has no library to show the game in.
+     */
+    private void openStorePage(ZDriveGames.Game game) {
+        if (getContext() == null) return;
+
+        final Context context = requireContext().getApplicationContext();
+        final StoreGameInstall install = StoreGameInstall.forInstallDir(context, game.dir);
+        if (install == null) return;
+
+        // Finding the game means reading the store's records, and for Steam its database.
+        Executors.newSingleThreadExecutor().execute(() -> {
+            final boolean signedIn = install.isSignedIn(context);
+            final Intent page = signedIn ? install.storePage(context) : null;
+
+            Activity activity = getActivity();
+            if (activity == null) return;
+
+            activity.runOnUiThread(() -> {
+                if (getContext() == null) return;
+
+                if (!signedIn) {
+                    ContentDialog.alert(getContext(), getString(R.string.z_drive_store_signed_out,
+                            install.storeName, game.getName()), null);
+                }
+                else if (page == null) {
+                    ContentDialog.alert(getContext(), getString(R.string.z_drive_store_no_record,
+                            install.storeName, game.getName()), null);
+                }
+                else {
+                    returningFromStorePage = true;
+                    startActivity(page);
+                }
             });
         });
     }
@@ -288,9 +342,13 @@ public class ZDriveFragment extends Fragment {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) listItemMenu.setForceShowIcon(true);
 
             listItemMenu.inflate(R.menu.z_drive_popup_menu);
+            // Only what a store installed has a store page; copied and unpacked games do not.
+            listItemMenu.getMenu().findItem(R.id.z_drive_store_page)
+                    .setVisible(StoreGameInstall.forInstallDir(getContext(), game.dir) != null);
             listItemMenu.setOnMenuItemClickListener((menuItem) -> {
                 int itemId = menuItem.getItemId();
                 if (itemId == R.id.z_drive_create_shortcut) createShortcut(game);
+                else if (itemId == R.id.z_drive_store_page) openStorePage(game);
                 else if (itemId == R.id.z_drive_delete) confirmDelete(game);
                 else if (itemId == R.id.z_drive_properties) showProperties(game);
                 return true;

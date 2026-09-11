@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@+id/z_drive_create_shortcut" android:title="@string/z_drive_create_shortcut" android:icon="@drawable/icon_add" android:iconTint="@color/colorAccent" />
+    <item android:id="@+id/z_drive_store_page" android:title="@string/z_drive_store_page" android:icon="@android:drawable/ic_menu_view" android:iconTint="@color/colorAccent" />
     <item android:id="@+id/z_drive_delete" android:title="@string/z_drive_delete" android:icon="@drawable/icon_popup_menu_remove" android:iconTint="@color/colorAccent" />
     <item android:id="@+id/z_drive_properties" android:title="@string/z_drive_properties" android:icon="@android:drawable/ic_menu_info_details" android:iconTint="@color/colorAccent" />
 </menu>
