@@ -33,6 +33,7 @@ import androidx.preference.PreferenceManager;
 import com.winlator.xr.XrActivity;
 import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.ContentDialog;
+import com.winlator.cmod.core.SessionSettings;
 import com.winlator.xr.io.XrController;
 import com.winlator.xr.io.XrInput;
 import com.winlator.xr.utils.XrEnvironment;
@@ -71,16 +72,15 @@ public class XrDialog extends ContentDialog {
         CheckBox cbKeys = findViewById(R.id.CBPlayerXRKeys);
         controllerUI(cbMouseLeftHanded, cbMouseLightgun, cbRelativeMouse, cbMouse, cbGamepad, cbKeys);
 
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
-
+        // Which controller profile is in use belongs to the game; the profiles themselves
+        // are a shared library and stay in the app-wide preferences.
         ListView listView = findViewById(R.id.listView);
         listView.setAdapter(new ArrayAdapter<>(activity, android.R.layout.simple_list_item_single_choice, getProfileNames(activity)));
         listView.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
-        listView.setItemChecked(prefs.getInt(XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, 0), true);
+        listView.setItemChecked(SessionSettings.getInt(activity,
+                XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, 0), true);
         listView.setOnItemClickListener((adapterView, view, index, l) -> {
-            SharedPreferences.Editor e = prefs.edit();
-            e.putInt(XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, index);
-            e.commit();
+            SessionSettings.putInt(activity, XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, index);
             XrController.cleanMappingCache();
         });
         findViewById(R.id.LLSpinnerLayout).setVisibility(View.GONE);
@@ -92,13 +92,13 @@ public class XrDialog extends ContentDialog {
     }
 
     public static void controllerUI(CheckBox cbMouseLeftHanded, CheckBox cbMouseLightgun, CheckBox cbRelativeMouse, CheckBox cbMouse, CheckBox cbGamepad, CheckBox cbKeys) {
-        loadConfig(cbMouseLeftHanded, "use_xr_leftHanded", false, XrActivity.mouseLeftHanded);
+        loadConfig(cbMouseLeftHanded, "use_xr_leftHanded", XrActivity.DEFAULT_MOUSE_LEFT_HANDED, XrActivity.mouseLeftHanded);
         cbMouseLeftHanded.setOnCheckedChangeListener((compoundButton, checked) -> {
             saveConfig(cbMouseLeftHanded, "use_xr_leftHanded", checked);
             XrActivity.mouseLeftHanded = checked;
         });
 
-        loadConfig(cbMouseLightgun, "use_xr_lightgun", false, XrActivity.mouseLightgun);
+        loadConfig(cbMouseLightgun, "use_xr_lightgun", XrActivity.DEFAULT_MOUSE_LIGHTGUN, XrActivity.mouseLightgun);
         cbMouseLightgun.setOnCheckedChangeListener((compoundButton, checked) -> {
             saveConfig(cbMouseLightgun, "use_xr_lightgun", checked);
             XrActivity.mouseLightgun = checked;
@@ -106,7 +106,7 @@ public class XrDialog extends ContentDialog {
             cbRelativeMouse.setEnabled(!checked && cbMouse.isChecked());
         });
 
-        loadConfig(cbRelativeMouse, "use_xr_relative_mouse", false, XrActivity.mouseRelative);
+        loadConfig(cbRelativeMouse, "use_xr_relative_mouse", XrActivity.DEFAULT_MOUSE_RELATIVE, XrActivity.mouseRelative);
         cbRelativeMouse.setOnCheckedChangeListener((compoundButton, checked) -> {
             saveConfig(cbRelativeMouse, "use_xr_relative_mouse", checked);
             XrActivity.mouseRelative = checked;
@@ -115,7 +115,7 @@ public class XrDialog extends ContentDialog {
             }
         });
 
-        loadConfig(cbMouse, "use_xr_mouse", true, XrActivity.mouseEmulation);
+        loadConfig(cbMouse, "use_xr_mouse", XrActivity.DEFAULT_MOUSE, XrActivity.mouseEmulation);
         cbMouse.setOnCheckedChangeListener((compoundButton, checked) -> {
             saveConfig(cbMouse, "use_xr_mouse", checked);
             XrActivity.mouseEmulation = checked;
@@ -127,7 +127,7 @@ public class XrDialog extends ContentDialog {
         cbMouseLightgun.setEnabled(cbMouse.isChecked());
         cbRelativeMouse.setEnabled(cbMouse.isChecked() && !cbMouseLightgun.isChecked());
 
-        loadConfig(cbGamepad, "use_xr_gamepad", false, XrActivity.gamepadEmulation);
+        loadConfig(cbGamepad, "use_xr_gamepad", XrActivity.DEFAULT_GAMEPAD, XrActivity.gamepadEmulation);
         cbGamepad.setOnCheckedChangeListener((compoundButton, checked) -> {
             saveConfig(cbGamepad, "use_xr_gamepad", checked);
             XrActivity.gamepadEmulation = checked;
@@ -136,7 +136,7 @@ public class XrDialog extends ContentDialog {
             }
         });
 
-        loadConfig(cbKeys, "use_xr_keys", false, XrActivity.keysEmulation);
+        loadConfig(cbKeys, "use_xr_keys", XrActivity.DEFAULT_KEYS, XrActivity.keysEmulation);
         cbKeys.setOnCheckedChangeListener((compoundButton, checked) -> {
             saveConfig(cbKeys, "use_xr_keys", checked);
             XrActivity.keysEmulation = checked;
@@ -306,7 +306,6 @@ public class XrDialog extends ContentDialog {
     }
 
     public static void hmdUI(Activity activity, CheckBox cbSBS, CheckBox cbImmersiveMode, CheckBox cbCurvedScreen, CheckBox cbPassthrough, TextView tvToApplyClose, Runnable onChanged) {
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(activity);
         boolean isImmersive = XrActivity.isImmersive;
 
         if (XrActivity.isActive()) {
@@ -318,15 +317,15 @@ public class XrDialog extends ContentDialog {
             cbSBS.setVisibility(View.GONE);
             cbImmersiveMode.setVisibility(View.GONE);
         }
-        cbCurvedScreen.setChecked(preferences.getBoolean("use_cs", false));
+        cbCurvedScreen.setChecked(SessionSettings.getBoolean(activity, "use_cs", XrActivity.DEFAULT_CURVED_SCREEN));
         cbPassthrough.setEnabled(!isImmersive);
-        cbPassthrough.setChecked(preferences.getBoolean("use_pt", true));
+        cbPassthrough.setChecked(SessionSettings.getBoolean(activity, "use_pt", XrActivity.DEFAULT_PASSTHROUGH));
 
         Runnable applyAll = () -> {
-            SharedPreferences.Editor e = preferences.edit();
-            e.putBoolean("use_cs", cbCurvedScreen.isChecked());
-            e.putBoolean("use_pt", cbPassthrough.isChecked());
-            e.commit();
+            SessionSettings.edit(activity)
+                    .putBoolean("use_cs", cbCurvedScreen.isChecked())
+                    .putBoolean("use_pt", cbPassthrough.isChecked())
+                    .apply();
 
             XrActivity.isSBS = cbSBS.isChecked();
             XrActivity.isPassthrough = cbPassthrough.isChecked();
@@ -356,15 +355,16 @@ public class XrDialog extends ContentDialog {
         if (XrActivity.isActive()) {
             cb.setChecked(curValue);
         } else {
-            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(cb.getContext());
-            cb.setChecked(prefs.getBoolean(key, defValue));
+            cb.setChecked(SessionSettings.getBoolean(cb.getContext(), key, defValue));
         }
     }
 
+    /**
+     * In a session this pins the value to the game that is running; from Settings, where
+     * there is no session, it sets the default every game inherits. Either way the write is
+     * on disk before this returns, because a session ends by killing its own process.
+     */
     private static void saveConfig(CheckBox cb, String key, boolean value) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(cb.getContext());
-        SharedPreferences.Editor e = prefs.edit();
-        e.putBoolean(key, value);
-        e.apply();
+        SessionSettings.putBoolean(cb.getContext(), key, value);
     }
 }

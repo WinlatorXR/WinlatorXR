@@ -86,6 +86,7 @@ import com.winlator.cmod.core.KeyValueSet;
 import com.winlator.cmod.core.OnExtractFileListener;
 import com.winlator.cmod.core.PreloaderDialog;
 import com.winlator.cmod.core.ProcessHelper;
+import com.winlator.cmod.core.SessionSettings;
 import com.winlator.cmod.core.StringUtils;
 import com.winlator.cmod.core.TarCompressorUtils;
 import com.winlator.cmod.core.Win32AppWorkarounds;
@@ -106,7 +107,6 @@ import com.winlator.cmod.math.XForm;
 import com.winlator.cmod.midi.MidiHandler;
 import com.winlator.cmod.midi.MidiManager;
 import com.winlator.cmod.renderer.GLRenderer;
-import com.winlator.cmod.renderer.effects.ColorEffect;
 import com.winlator.cmod.widget.FrameRating;
 import com.winlator.cmod.widget.InputControlsView;
 import com.winlator.cmod.widget.LogView;
@@ -337,13 +337,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
 
-        boolean gyroEnabled = preferences.getBoolean("gyro_enabled", false);
-
-        if (gyroEnabled) {
-            // Register the sensor event listener
-            sensorManager.registerListener(gyroListener, gyroSensor, SensorManager.SENSOR_DELAY_GAME);
-        }
-
 
 
         // Record the start time
@@ -504,6 +497,16 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         if (shortcutPath != null && !shortcutPath.isEmpty()) {
             shortcut = new Shortcut(container, new File(shortcutPath));
+        }
+
+        // Everything the in-session menus change is pinned to this shortcut from here on.
+        // A container launched without one keeps writing the app-wide preferences.
+        SessionSettings.setShortcut(shortcut);
+
+        // Has to come after the line above: before it, this read the app-wide value and
+        // would register the gyro for a game whose own setting has it switched off.
+        if (SessionSettings.getBoolean(this, "gyro_enabled", MotionControls.DEFAULT_ENABLED)) {
+            sensorManager.registerListener(gyroListener, gyroSensor, SensorManager.SENSOR_DELAY_GAME);
         }
 
         enableLogs = preferences.getBoolean("enable_wine_debug", false)
@@ -919,7 +922,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     @Override
     public void onResume() {
         super.onResume();
-        boolean gyroEnabled = preferences.getBoolean("gyro_enabled", true);
+        boolean gyroEnabled = SessionSettings.getBoolean(this, "gyro_enabled", MotionControls.DEFAULT_ENABLED);
 
         if (gyroEnabled) {
             // Re-register the sensor listener when the activity is resumed
@@ -944,7 +947,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     @Override
     public void onPause() {
         super.onPause();
-        boolean gyroEnabled = preferences.getBoolean("gyro_enabled", true);
+        boolean gyroEnabled = SessionSettings.getBoolean(this, "gyro_enabled", MotionControls.DEFAULT_ENABLED);
 
         if (gyroEnabled) {
             // Unregister the sensor listener when the activity is paused
@@ -1474,11 +1477,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
             case R.id.main_menu_screen_effects:
                 ScreenEffectDialog dlg = new ScreenEffectDialog(this);
-                dlg.setOnConfirmCallback(() -> {
-                    GLRenderer r = xServerView.getRenderer();
-                    ColorEffect color = r.getEffectComposer().getEffect(ColorEffect.class);
-                    dlg.applyEffects(color, r);
-                });
+                dlg.setOnConfirmCallback(() -> dlg.applyEffects(xServerView.getRenderer()));
                 dlg.show();
                 drawerLayout.closeDrawers();
                 return true;
@@ -1940,6 +1939,12 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         xServer.setRenderer(renderer);
         rootView.addView(xServerView);
+
+        // Screen effects used to last only as long as the session that set them. Put back
+        // whatever this game was last played with, and remember which named profile that
+        // came from so the dialog reopens on it.
+        screenEffectProfile = SessionSettings.getString(this, "screenEffectProfile", null);
+        ScreenEffectDialog.restore(this, renderer);
 
         globalCursorSpeed = preferences.getFloat("cursor_speed", 1.0f);
         touchpadView = new TouchpadView(this, xServer, timeoutHandler, hideControlsRunnable);
@@ -2857,12 +2862,64 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         }
     }
 
+    /**
+     * Drops everything the in-session menus have pinned to this game, so it goes back to
+     * inheriting the app-wide defaults, and puts the result on screen straight away rather
+     * than at the next launch.
+     *
+     * Returns false when the game had nothing of its own, so the caller can say so instead
+     * of reporting a reset that changed nothing.
+     */
+    public boolean resetSessionSettingsToDefaults() {
+        String[][] areas = {XrActivity.SESSION_KEYS, MotionControls.SESSION_KEYS,
+                ScreenEffectDialog.SESSION_KEYS};
+
+        boolean hadSettings = false;
+        SessionSettings.Editor editor = SessionSettings.edit(this);
+        for (String[] keys : areas) {
+            for (String key : keys) {
+                if (SessionSettings.isOverridden(key)) hadSettings = true;
+                editor.remove(key);
+            }
+        }
+        editor.apply();
+
+        reloadSessionSettings();
+        return hadSettings;
+    }
+
+    /**
+     * Reads the settings back and applies them to the running session. Split out so XrActivity
+     * can add the XR half; this base covers what a session has with or without a headset.
+     */
+    protected void reloadSessionSettings() {
+        if (winHandler != null) MotionControls.getInstance(this).attach(winHandler);
+
+        // The gyro listener this activity owns is separate from the one MotionControls
+        // registers, and onResume is not going to run to sort it out.
+        if (sensorManager != null && gyroSensor != null) {
+            if (SessionSettings.getBoolean(this, "gyro_enabled", MotionControls.DEFAULT_ENABLED)) {
+                sensorManager.registerListener(gyroListener, gyroSensor, SensorManager.SENSOR_DELAY_GAME);
+            }
+            else sensorManager.unregisterListener(gyroListener);
+        }
+
+        GLRenderer renderer = xServerView != null ? xServerView.getRenderer() : null;
+        if (renderer != null) {
+            screenEffectProfile = SessionSettings.getString(this, "screenEffectProfile", null);
+            // An empty set removes every effect, which is what a reset should look like.
+            ScreenEffectDialog.applySettings(
+                    new KeyValueSet(ScreenEffectDialog.storedSettings(this)), renderer);
+        }
+    }
+
     public String getScreenEffectProfile() {
         return screenEffectProfile;
     }
 
     public void setScreenEffectProfile(String screenEffectProfile) {
         this.screenEffectProfile = screenEffectProfile;
+        SessionSettings.putString(this, "screenEffectProfile", screenEffectProfile);
     }
 
 

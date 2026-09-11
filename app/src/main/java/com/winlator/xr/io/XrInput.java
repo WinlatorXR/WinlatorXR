@@ -18,6 +18,7 @@
  */
 package com.winlator.xr.io;
 
+import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.inputcontrols.ControllerManager;
 import com.winlator.cmod.xserver.XLock;
 import com.winlator.cmod.xserver.XServer;
@@ -55,11 +56,39 @@ public class XrInput {
             XrInterface.ControllerButton.R_THUMBSTICK_UP,
             XrInterface.ControllerButton.R_THUMBSTICK_DOWN};
 
+    // The face buttons, in the order ContentDialog.FaceButton lists them, and which hand
+    // each one is on for the haptic tick.
+    private static final XrInterface.ControllerButton[] FACE_BUTTONS = {
+            XrInterface.ControllerButton.R_A,
+            XrInterface.ControllerButton.R_B,
+            XrInterface.ControllerButton.L_X,
+            XrInterface.ControllerButton.L_Y};
+    private static final int[] FACE_BUTTON_HANDS = {1, 1, 0, 0};
+    // Held rather than calling values() per frame, which copies the array each time.
+    private static final ContentDialog.FaceButton[] FACE_BUTTON_ACTIONS =
+            ContentDialog.FaceButton.values();
+
+    // A tick when a hold starts and another when it fires, so a three second wait is not
+    // spent wondering whether the button registered.
+    private static final int FACE_BUTTON_HAPTIC_MILLIS = 40;
+    private static final float FACE_BUTTON_HAPTIC_INTENSITY = 0.35f;
+
     private final XrController xrController;
     private final XrHaptics xrHaptics;
 
     private boolean screenDistanceAdjusting = false;
     private long lastDistanceNanos = 0;
+
+    // Edge detection for the face buttons is kept here rather than read from XrController:
+    // the buttons are cleared out of the frame's array below, so by the time XrController
+    // records them they always look released.
+    private final boolean[] faceButtonWasDown = new boolean[FACE_BUTTONS.length];
+    private final long[] faceButtonHeldSince = new long[FACE_BUTTONS.length];
+    private final boolean[] faceButtonFired = new boolean[FACE_BUTTONS.length];
+    // Which dialog the state above belongs to, so a hold cannot be carried across to another
+    // one and count as time already served there. Only ever the dialog that is currently in
+    // front, which XrContentDialog is holding anyway, and dropped as soon as it is not.
+    private ContentDialog faceButtonDialog = null;
 
     private XrAPI xrAPI = null;
     private boolean wasBlocking = false;
@@ -99,6 +128,7 @@ public class XrInput {
         float[] axes = instance.getAxes();
         boolean[] buttons = instance.getButtons();
         updateScreenDistance(instance, axes, buttons);
+        updateMenuActions(instance, buttons);
 
         // Communication between XR and Windows apps
         updateXrAPI(instance);
@@ -198,6 +228,82 @@ public class XrInput {
             buttons[XrInterface.ControllerButton.L_GRIP.ordinal()] = false;
             buttons[XrInterface.ControllerButton.R_GRIP.ordinal()] = false;
         }
+    }
+
+    /**
+     * The face buttons drive the action lines listed at the bottom of an open dialog.
+     *
+     * With a dialog up these four have nothing else to do - the thumbstick and trigger
+     * already work the menu, and nothing reaches the game while it is blocking - so they are
+     * free for actions the menu cannot sensibly offer as another checkbox. They are taken out
+     * of the frame's button array whether or not a line claims them, so a press can never
+     * arrive in the game behind, or count as a keyboard or gamepad button, while the menu is
+     * up. The keyboard is left alone: it is a dialog of its own with its own input.
+     */
+    private void updateMenuActions(XrActivity instance, boolean[] buttons) {
+        XrContentDialog front = XrKeyboard.isShown() ? null : XrContentDialog.getFrontInstance();
+        ContentDialog dialog = (front instanceof ContentDialog) ? (ContentDialog) front : null;
+        if (dialog != faceButtonDialog) {
+            faceButtonDialog = dialog;
+            // Seeded from what is held right now rather than zeroed, so a thumb already
+            // resting on a button when the dialog opens is not read as a press against it,
+            // and a hold has to be started again from a release.
+            for (int i = 0; i < FACE_BUTTONS.length; i++) {
+                boolean down = buttons[FACE_BUTTONS[i].ordinal()];
+                faceButtonWasDown[i] = down;
+                faceButtonHeldSince[i] = 0;
+                faceButtonFired[i] = down;
+            }
+        }
+        if (dialog == null) return;
+
+        long now = System.currentTimeMillis();
+        for (int i = 0; i < FACE_BUTTONS.length; i++) {
+            int index = FACE_BUTTONS[i].ordinal();
+            boolean down = buttons[index];
+            buttons[index] = false;
+
+            ContentDialog.FaceButton action = FACE_BUTTON_ACTIONS[i];
+            if (!dialog.hasFaceButtonAction(action)) {
+                faceButtonWasDown[i] = down;
+                continue;
+            }
+
+            long holdMillis = dialog.getFaceButtonHoldMillis(action);
+            boolean hasPress = dialog.hasFaceButtonPressAction(action);
+
+            if (!down) {
+                // A press acts here rather than on the way down, so that a button which
+                // also has a hold is not read as a press on its way past the hold.
+                if (faceButtonWasDown[i] && !faceButtonFired[i] && hasPress) {
+                    tickFaceButton(instance, i);
+                    dialog.runFaceButtonPress(action);
+                }
+                faceButtonHeldSince[i] = 0;
+                faceButtonFired[i] = false;
+            }
+            else if (!faceButtonFired[i]) {
+                if (faceButtonHeldSince[i] == 0) {
+                    faceButtonHeldSince[i] = now;
+                    // Say a hold has been noticed, otherwise the wait is indistinguishable
+                    // from the press having missed. Nothing to say when a press is going to
+                    // act on release anyway.
+                    if (holdMillis > 0 && !hasPress) tickFaceButton(instance, i);
+                }
+                else if (holdMillis > 0 && (now - faceButtonHeldSince[i] >= holdMillis)) {
+                    faceButtonFired[i] = true;
+                    tickFaceButton(instance, i);
+                    dialog.runFaceButtonHold(action);
+                }
+            }
+
+            faceButtonWasDown[i] = down;
+        }
+    }
+
+    private void tickFaceButton(XrActivity instance, int index) {
+        instance.vibrateController(FACE_BUTTON_HAPTIC_MILLIS, FACE_BUTTON_HANDS[index],
+                FACE_BUTTON_HAPTIC_INTENSITY);
     }
 
     /** Short enough to read as a click rather than a buzz, on the hand holding the grip. */

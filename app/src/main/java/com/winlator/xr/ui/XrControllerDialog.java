@@ -31,6 +31,7 @@ import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.ContentDialog;
+import com.winlator.cmod.core.SessionSettings;
 import com.winlator.cmod.xserver.XKeycode;
 import com.winlator.xr.io.XrController;
 
@@ -49,7 +50,7 @@ public class XrControllerDialog extends ContentDialog {
         setTitle(context.getString(R.string.controller_profile));
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        int index = prefs.getInt(XR_CONTROLLER_PROFILE_INDEX, 0);
+        int index = SessionSettings.getInt(context, XR_CONTROLLER_PROFILE_INDEX, 0);
         EditText etName = findViewById(R.id.ETName);
         etName.setText(prefs.getString(XR_CONTROLLER_PROFILE_NAME + index, "Unknown name"));
 
@@ -89,7 +90,7 @@ public class XrControllerDialog extends ContentDialog {
             updateUISpinner(activity, sControllerPreset);
         });
         btDuplicateControllerPreset.setOnClickListener(view -> {
-            int index = prefs.getInt(XR_CONTROLLER_PROFILE_INDEX, 0);
+            int index = SessionSettings.getInt(activity, XR_CONTROLLER_PROFILE_INDEX, 0);
             String name = prefs.getString(XR_CONTROLLER_PROFILE_NAME + index, "Cloned profile");
             String value = prefs.getString(XR_CONTROLLER_PROFILE_VALUE + index, XrController.getDefaultMapping());
 
@@ -102,7 +103,7 @@ public class XrControllerDialog extends ContentDialog {
             updateUISpinner(activity, sControllerPreset);
         });
         btRemoveControllerPreset.setOnClickListener(view -> {
-            int index = prefs.getInt(XR_CONTROLLER_PROFILE_INDEX, 0);
+            int index = SessionSettings.getInt(activity, XR_CONTROLLER_PROFILE_INDEX, 0);
             int count = prefs.getInt(XR_CONTROLLER_PROFILE_COUNT, 1);
             SharedPreferences.Editor e = prefs.edit();
             for (int i = index + 1; i < count; i++) {
@@ -112,8 +113,9 @@ public class XrControllerDialog extends ContentDialog {
                 e.putString(XR_CONTROLLER_PROFILE_VALUE + (i - 1), value);
             }
             e.putInt(XR_CONTROLLER_PROFILE_COUNT, count - 1);
-            e.putInt(XR_CONTROLLER_PROFILE_INDEX, 0);
             e.commit();
+            // The removed profile cannot stay selected for whoever had picked it.
+            SessionSettings.putInt(activity, XR_CONTROLLER_PROFILE_INDEX, 0);
             updateUISpinner(activity, sControllerPreset);
         });
     }
@@ -155,16 +157,14 @@ public class XrControllerDialog extends ContentDialog {
     }
 
     private static void updateUISpinner(Activity activity, Spinner sControllerProfile) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
         List<String> names = XrDialog.getProfileNames(activity);
         sControllerProfile.setAdapter(new ArrayAdapter<>(activity, android.R.layout.simple_spinner_dropdown_item, names));
-        sControllerProfile.setSelection(prefs.getInt(XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, 0));
+        sControllerProfile.setSelection(SessionSettings.getInt(activity,
+                XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, 0));
         sControllerProfile.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int index, long l) {
-                SharedPreferences.Editor e = prefs.edit();
-                e.putInt(XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, index);
-                e.commit();
+                SessionSettings.putInt(activity, XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, index);
                 XrController.cleanMappingCache();
                 updateUISpinner(activity, sControllerProfile);
             }

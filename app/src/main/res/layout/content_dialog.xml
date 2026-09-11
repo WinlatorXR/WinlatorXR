@@ -108,6 +108,51 @@
                 android:orientation="horizontal"
                 android:visibility="gone" />
 
+            <!-- What the controller does while this dialog is up. Only shown in a headset,
+                 where the face buttons are otherwise idle with a dialog open. -->
+            <LinearLayout
+                android:id="@+id/LLActionLines"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_gravity="bottom"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/TVFaceButtonA"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/TVFaceButtonB"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/TVFaceButtonX"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/TVFaceButtonY"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="13sp" />
+
+                <!-- A control that is not on a face button and cannot be reassigned, listed
+                     here because this is where the user looks for what the sticks do. -->
+                <TextView
+                    android:id="@+id/TVControlHint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

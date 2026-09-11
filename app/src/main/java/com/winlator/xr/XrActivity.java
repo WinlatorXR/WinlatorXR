@@ -25,19 +25,21 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.Display;
-import android.content.SharedPreferences;
 
 import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.ContentDialog;
+import com.winlator.cmod.core.SessionSettings;
 import com.winlator.cmod.xserver.XKeycode;
 import com.winlator.cmod.XServerDisplayActivity;
 import com.winlator.xr.io.XrInput;
 import com.winlator.xr.io.XrRenderer;
 import com.winlator.xr.ui.XrContentDialog;
+import com.winlator.xr.ui.XrControllerDialog;
 import com.winlator.xr.ui.XrKeyboard;
 import com.winlator.xr.utils.Device;
+import com.winlator.xr.utils.XrEnvironment;
 
 public class XrActivity extends XServerDisplayActivity {
     private static XrActivity instance;
@@ -64,9 +66,12 @@ public class XrActivity extends XServerDisplayActivity {
     public static boolean pointerSmoothing;
     public static boolean wheelEmulation;
 
+    // How far from the eye the screen sits until the user moves it.
+    public static final float DEFAULT_DISTANCE = 5.0f;
+
     // Rendering status
     public static long lastActive = 0;
-    public static float lastDistance = 5;
+    public static float lastDistance = DEFAULT_DISTANCE;
     public static int lastMode3D = -1;
 
     // How near and far the screen is allowed to sit. The magnifier steps through this range a
@@ -74,7 +79,37 @@ public class XrActivity extends XServerDisplayActivity {
     // two controls cannot take the screen anywhere the other cannot bring it back from.
     public static final float MIN_DISTANCE = 0.5f;
     public static final float MAX_DISTANCE = 7.0f;
+
     private static final String PREF_SCREEN_DISTANCE = "xr_screen_distance";
+
+    // Defaults for everything the XR and motion control menus can change. They live here
+    // because both the menus and this activity have to agree on what an untouched setting
+    // means; when they did not, the menu showed key emulation off while the session ran it
+    // on. A shortcut that has been given its own answer overrides these.
+    public static final boolean DEFAULT_CURVED_SCREEN = false;
+    public static final boolean DEFAULT_PASSTHROUGH = true;
+    public static final boolean DEFAULT_GAMEPAD = false;
+    public static final boolean DEFAULT_RADIAL_TO_SQUARE = false;
+    public static final boolean DEFAULT_RUMBLE_PASSTHROUGH = false;
+    public static final boolean DEFAULT_KEYS = true;
+    public static final boolean DEFAULT_MOUSE = true;
+    public static final boolean DEFAULT_MOUSE_LEFT_HANDED = false;
+    public static final boolean DEFAULT_MOUSE_LIGHTGUN = false;
+    public static final boolean DEFAULT_MOUSE_RELATIVE = false;
+    public static final boolean DEFAULT_POINTER_SMOOTHING = false;
+    public static final boolean DEFAULT_WHEEL = false;
+
+    /**
+     * Every setting the XR menu can pin to a game. Listed so "Reset to default" can drop the
+     * lot and let the game inherit the app-wide values again; anything added to the menu
+     * belongs here too, or it will survive a reset.
+     */
+    public static final String[] SESSION_KEYS = {
+            "use_cs", "use_pt", "use_xr_gamepad", "xr_gamepad_radial_to_square",
+            "use_xr_rumble_passthrough", "use_xr_keys", "use_xr_mouse", "use_xr_leftHanded",
+            "use_xr_lightgun", "use_xr_relative_mouse", "use_xr_smoothing", "use_xr_wheel",
+            PREF_SCREEN_DISTANCE, XrEnvironment.PREF_KEY, XrEnvironment.ENABLED_KEY,
+            XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX};
 
     static {
         System.loadLibrary("xr");
@@ -83,22 +118,38 @@ public class XrActivity extends XServerDisplayActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        boolean curvedScreen = prefs.getBoolean("use_cs", false);
-        int sharpening = prefs.getInt("sharpening_level", 0);
-        int edgeGlow = prefs.getInt("edge_glow_level", 0);
-        isPassthrough = prefs.getBoolean("use_pt", true);
-        gamepadEmulation = prefs.getBoolean("use_xr_gamepad", false);
-        gamepadRadialToSquare = prefs.getBoolean("xr_gamepad_radial_to_square", false);
-        rumblePassthrough = prefs.getBoolean("use_xr_rumble_passthrough", false);
-        keysEmulation = prefs.getBoolean("use_xr_keys", true);
-        mouseEmulation = prefs.getBoolean("use_xr_mouse", true);
-        mouseLeftHanded = prefs.getBoolean("use_xr_leftHanded", false);
-        mouseLightgun = prefs.getBoolean("use_xr_lightgun", false);
-        mouseRelative = prefs.getBoolean("use_xr_relative_mouse", false);
-        pointerSmoothing = prefs.getBoolean("use_xr_smoothing", false);
-        wheelEmulation = prefs.getBoolean("use_xr_wheel", false);
-        lastDistance = prefs.getFloat(PREF_SCREEN_DISTANCE, lastDistance);
+        loadSessionSettings();
+        sendManufacturer(Build.MANUFACTURER.toUpperCase());
+
+        instance = this;
+        if (xrInput == null) {
+            xrInput = new XrInput();
+        }
+    }
+
+    /**
+     * Reads every XR setting for the game being played and pushes it to the native side.
+     * Called once at startup, and again after a reset to defaults so the change shows up
+     * without waiting for a relaunch.
+     */
+    private void loadSessionSettings() {
+        // Read through SessionSettings, not the preferences directly: a game that has been
+        // given its own answer for one of these overrides the app-wide default.
+        boolean curvedScreen = SessionSettings.getBoolean(this, "use_cs", DEFAULT_CURVED_SCREEN);
+        int sharpening = SessionSettings.getInt(this, "sharpening_level", 0);
+        int edgeGlow = SessionSettings.getInt(this, "edge_glow_level", 0);
+        isPassthrough = SessionSettings.getBoolean(this, "use_pt", DEFAULT_PASSTHROUGH);
+        gamepadEmulation = SessionSettings.getBoolean(this, "use_xr_gamepad", DEFAULT_GAMEPAD);
+        gamepadRadialToSquare = SessionSettings.getBoolean(this, "xr_gamepad_radial_to_square", DEFAULT_RADIAL_TO_SQUARE);
+        rumblePassthrough = SessionSettings.getBoolean(this, "use_xr_rumble_passthrough", DEFAULT_RUMBLE_PASSTHROUGH);
+        keysEmulation = SessionSettings.getBoolean(this, "use_xr_keys", DEFAULT_KEYS);
+        mouseEmulation = SessionSettings.getBoolean(this, "use_xr_mouse", DEFAULT_MOUSE);
+        mouseLeftHanded = SessionSettings.getBoolean(this, "use_xr_leftHanded", DEFAULT_MOUSE_LEFT_HANDED);
+        mouseLightgun = SessionSettings.getBoolean(this, "use_xr_lightgun", DEFAULT_MOUSE_LIGHTGUN);
+        mouseRelative = SessionSettings.getBoolean(this, "use_xr_relative_mouse", DEFAULT_MOUSE_RELATIVE);
+        pointerSmoothing = SessionSettings.getBoolean(this, "use_xr_smoothing", DEFAULT_POINTER_SMOOTHING);
+        wheelEmulation = SessionSettings.getBoolean(this, "use_xr_wheel", DEFAULT_WHEEL);
+        lastDistance = SessionSettings.getFloat(this, PREF_SCREEN_DISTANCE, DEFAULT_DISTANCE);
 
         if (mouseLightgun) mouseRelative = false;
         setRelativeMouseMovement(mouseRelative);
@@ -108,13 +159,19 @@ public class XrActivity extends XServerDisplayActivity {
         nativeSetSharpening(sharpening);
         nativeSetEdgeGlow(edgeGlow);
         nativeSetPointerSmoothing(pointerSmoothing);
-        nativeSetEnvironmentEnabled(prefs.getBoolean("xr_environment_enabled", true));
-        sendManufacturer(Build.MANUFACTURER.toUpperCase());
+        nativeSetEnvironmentEnabled(XrEnvironment.isEnabled(this));
+    }
 
-        instance = this;
-        if (xrInput == null) {
-            xrInput = new XrInput();
-        }
+    /**
+     * After a reset, the XR settings have to be read again and the panorama reapplied: the
+     * selection is one of the things that goes back to the default, and nothing else reloads
+     * it until the next launch.
+     */
+    @Override
+    protected void reloadSessionSettings() {
+        super.reloadSessionSettings();
+        loadSessionSettings();
+        XrEnvironment.apply(this, XrEnvironment.getSelected(this));
     }
 
     @Override
@@ -169,9 +226,7 @@ public class XrActivity extends XServerDisplayActivity {
 
     /** Remembers where the user left the screen, for the magnifier and the thumbstick alike. */
     public void saveScreenDistance() {
-        PreferenceManager.getDefaultSharedPreferences(this).edit()
-                .putFloat(PREF_SCREEN_DISTANCE, lastDistance)
-                .apply();
+        SessionSettings.putFloat(this, PREF_SCREEN_DISTANCE, lastDistance);
     }
 
     public static boolean isActive() {

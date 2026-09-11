@@ -1,5 +1,6 @@
 package com.winlator.cmod.contentdialog;
 
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.util.Log;
@@ -19,6 +20,7 @@ import com.winlator.cmod.core.AppUtils;
 import com.winlator.xr.XrActivity;
 import com.winlator.xr.ui.XrDialog;
 import com.winlator.cmod.core.KeyValueSet;
+import com.winlator.cmod.core.SessionSettings;
 import com.winlator.cmod.renderer.GLRenderer;
 import com.winlator.cmod.renderer.effects.BloomEffect;
 import com.winlator.cmod.renderer.effects.CASEffect;
@@ -55,6 +57,13 @@ public class ScreenEffectDialog extends ContentDialog {
 
     private static final String TAG = "ScreenEffectDialog";
 
+    /** Where a game's own effect settings are kept. See {@link SessionSettings}. */
+    public static final String KEY_EFFECTS = "screenEffects";
+
+    /** Every setting this dialog can pin to a game. See XrActivity.SESSION_KEYS. */
+    public static final String[] SESSION_KEYS = {
+            KEY_EFFECTS, "screenEffectProfile", "sharpening_level", "edge_glow_level"};
+
 
     public ScreenEffectDialog(XServerDisplayActivity activity) {
         super(activity, R.layout.screen_effect_dialog);
@@ -89,10 +98,10 @@ public class ScreenEffectDialog extends ContentDialog {
         View llSharpening = findViewById(R.id.LLSharpening);
         SeekBar sbSharpening = findViewById(R.id.SBSharpening);
         if (XrActivity.isActive() && XrActivity.getInstance().nativeIsSharpeningSupported()) {
-            sbSharpening.setValue(preferences.getInt("sharpening_level", 0) * 50);
+            sbSharpening.setValue(SessionSettings.getInt(activity, "sharpening_level", 0) * 50);
             sbSharpening.setOnValueChangeListener((seekBar, value) -> {
                 int level = Math.round(value / 50);
-                preferences.edit().putInt("sharpening_level", level).apply();
+                SessionSettings.putInt(activity, "sharpening_level", level);
                 if (XrActivity.isActive()) XrActivity.getInstance().nativeSetSharpening(level);
             });
         } else {
@@ -113,14 +122,14 @@ public class ScreenEffectDialog extends ContentDialog {
             // off for the whole session. Show the stored level, but do not pretend it applies.
             tvEdgeGlow.setText(activity.getString(R.string.xr_not_available_in_vr,
                     activity.getString(R.string.use_edge_glow)));
-            sbEdgeGlow.setValue(preferences.getInt("edge_glow_level", 0));
+            sbEdgeGlow.setValue(SessionSettings.getInt(activity, "edge_glow_level", 0));
             XrDialog.setUnavailableInVR(tvEdgeGlow);
             XrDialog.setUnavailableInVR(sbEdgeGlow);
         } else {
-            sbEdgeGlow.setValue(preferences.getInt("edge_glow_level", 0));
+            sbEdgeGlow.setValue(SessionSettings.getInt(activity, "edge_glow_level", 0));
             sbEdgeGlow.setOnValueChangeListener((seekBar, value) -> {
                 int intensity = Math.round(value);
-                preferences.edit().putInt("edge_glow_level", intensity).apply();
+                SessionSettings.putInt(activity, "edge_glow_level", intensity);
                 if (XrActivity.isActive()) XrActivity.getInstance().nativeSetEdgeGlow(intensity);
             });
         }
@@ -143,28 +152,37 @@ public class ScreenEffectDialog extends ContentDialog {
 
         Log.d(TAG, "ScreenEffectDialog initialized");
 
-        if (colorEffect != null) {
-            Log.d(TAG, "ColorEffect found");
-            sbBrightness.setValue(colorEffect.getBrightness() * 100);
-            sbContrast.setValue(colorEffect.getContrast() * 100);
-            sbGamma.setValue(colorEffect.getGamma());
-        } else {
-            Log.d(TAG, "ColorEffect not found, resetting settings");
-            resetSettings();
+        // What this game was last played with, when it has been given settings of its own.
+        // Reading the live effects instead cannot tell CAS from DLS or recover a sharpness
+        // that is currently switched off, so the stored set wins where there is one.
+        String stored = storedSettings(activity);
+        if (!stored.isEmpty()) {
+            applySettingsToWidgets(new KeyValueSet(stored));
         }
+        else {
+            if (colorEffect != null) {
+                Log.d(TAG, "ColorEffect found");
+                sbBrightness.setValue(colorEffect.getBrightness() * 100);
+                sbContrast.setValue(colorEffect.getContrast() * 100);
+                sbGamma.setValue(colorEffect.getGamma());
+            } else {
+                Log.d(TAG, "ColorEffect not found, resetting settings");
+                resetSettings();
+            }
 
-        if (casEffect != null) {
-            cbEnableCAS.setChecked(true);
-            sbSharpnessLevel.setValue(casEffect.getSharpness() * 100);
-            sbSharpnessDenoise.setValue(casEffect.getDenoise() * 100);
+            if (casEffect != null) {
+                cbEnableCAS.setChecked(true);
+                sbSharpnessLevel.setValue(casEffect.getSharpness() * 100);
+                sbSharpnessDenoise.setValue(casEffect.getDenoise() * 100);
+            }
+
+            cbEnableBloom.setChecked(bloomEffect != null);
+            cbEnableFakeReflections.setChecked(fakeReflectionsEffect != null);
+            cbEnableFXAA.setChecked(fxaaEffect != null);
+            cbEnableCRTShader.setChecked(crtEffect != null);
+            cbEnableToonShader.setChecked(toonEffect != null);
+            cbEnableNTSCEffect.setChecked(ntscEffect != null);
         }
-
-        cbEnableBloom.setChecked(bloomEffect != null);
-        cbEnableFakeReflections.setChecked(fakeReflectionsEffect != null);
-        cbEnableFXAA.setChecked(fxaaEffect != null);
-        cbEnableCRTShader.setChecked(crtEffect != null);
-        cbEnableToonShader.setChecked(toonEffect != null);
-        cbEnableNTSCEffect.setChecked(ntscEffect != null);
 
         loadProfileSpinner(sProfile, activity.getScreenEffectProfile());
 
@@ -180,7 +198,7 @@ public class ScreenEffectDialog extends ContentDialog {
             public void onNothingSelected(AdapterView<?> parent) {}
         });
 
-        Runnable applyAll = () -> applyEffects(colorEffect, renderer);
+        Runnable applyAll = () -> applyEffects(renderer);
         Button resetButton = findViewById(R.id.BTReset);
         resetButton.setVisibility(View.VISIBLE);
         resetButton.setOnClickListener(view -> {
@@ -217,7 +235,7 @@ public class ScreenEffectDialog extends ContentDialog {
 
             // Directly calling applyEffects to ensure it's triggered
             Log.d(TAG, "Calling applyEffects() directly.");
-            applyEffects(colorEffect, renderer);
+            applyEffects(renderer);
 
             Log.d(TAG, "Effects applied. Dismissing dialog.");
             dismiss(); // Close the dialog
@@ -231,7 +249,7 @@ public class ScreenEffectDialog extends ContentDialog {
 
         setOnConfirmCallback(() -> {
             Log.d(TAG, "OnConfirm callback triggered. Applying effects.");
-            applyEffects(colorEffect, renderer);
+            applyEffects(renderer);
             Log.d(TAG, "Effects applied from callback.");
 
             // Optionally dismiss after applying effects in callback
@@ -303,20 +321,7 @@ public class ScreenEffectDialog extends ContentDialog {
         for (String profile : profiles) {
             String[] parts = profile.split(":");
             if (parts[0].equals(name) && parts.length > 1 && !parts[1].isEmpty()) {
-                KeyValueSet settings = new KeyValueSet(parts[1]);
-                sbBrightness.setValue(settings.getFloat("brightness", 0));
-                sbContrast.setValue(settings.getFloat("contrast", 1.0f));
-                sbGamma.setValue(settings.getFloat("gamma", 0.0f));
-                cbEnableBloom.setChecked(settings.getBoolean("bloom", false));
-                cbEnableFakeReflections.setChecked(settings.getBoolean("fake_reflections", false));
-                cbEnableFXAA.setChecked(settings.getBoolean("fxaa", false));
-                cbEnableCRTShader.setChecked(settings.getBoolean("crt_shader", false));
-                cbEnableToonShader.setChecked(settings.getBoolean("toon_shader", false));
-                cbEnableNTSCEffect.setChecked(settings.getBoolean("ntsc_effect", false));
-                cbEnableCAS.setChecked(settings.getBoolean("cas_enabled", false));
-                cbEnableDLS.setChecked(settings.getBoolean("dls_enabled", false));
-                sbSharpnessLevel.setValue(settings.getFloat("sharpness_level", 0));
-                sbSharpnessDenoise.setValue(settings.getFloat("sharpness_denoise", 0));
+                applySettingsToWidgets(new KeyValueSet(parts[1]));
                 return;
             }
         }
@@ -351,20 +356,7 @@ public class ScreenEffectDialog extends ContentDialog {
             String selectedProfile = sProfile.getSelectedItem().toString();
             Set<String> oldProfiles = new LinkedHashSet<>(preferences.getStringSet("screen_effect_profiles", new LinkedHashSet<>()));
             Set<String> newProfiles = new LinkedHashSet<>();
-            KeyValueSet settings = new KeyValueSet();
-            settings.put("brightness", sbBrightness.getValue());
-            settings.put("contrast", sbContrast.getValue());
-            settings.put("gamma", sbGamma.getValue());
-            settings.put("bloom", cbEnableBloom.isChecked());
-            settings.put("fake_reflections", cbEnableFakeReflections.isChecked());
-            settings.put("fxaa", cbEnableFXAA.isChecked());
-            settings.put("crt_shader", cbEnableCRTShader.isChecked());
-            settings.put("toon_shader", cbEnableToonShader.isChecked());
-            settings.put("ntsc_effect", cbEnableNTSCEffect.isChecked());
-            settings.put("cas_enabled", cbEnableCAS.isChecked());
-            settings.put("dls_enabled", cbEnableDLS.isChecked());
-            settings.put("sharpness_level", sbSharpnessLevel.getValue());
-            settings.put("sharpness_denoise", sbSharpnessDenoise.getValue());
+            KeyValueSet settings = collectSettings();
 
             for (String profile : oldProfiles) {
                 String[] parts = profile.split(":");
@@ -379,41 +371,98 @@ public class ScreenEffectDialog extends ContentDialog {
         }
     }
 
-    public void applyEffects(ColorEffect colorEffect, GLRenderer renderer) {
-        Log.d(TAG, "applyEffects() called");
+    /**
+     * Collects what the dialog is currently showing, in the same form the named profiles are
+     * stored in. Also what gets pinned to the shortcut, so a game comes back with the effects
+     * it was last played with.
+     */
+    private KeyValueSet collectSettings() {
+        KeyValueSet settings = new KeyValueSet();
+        settings.put("brightness", sbBrightness.getValue());
+        settings.put("contrast", sbContrast.getValue());
+        settings.put("gamma", sbGamma.getValue());
+        settings.put("bloom", cbEnableBloom.isChecked());
+        settings.put("fake_reflections", cbEnableFakeReflections.isChecked());
+        settings.put("fxaa", cbEnableFXAA.isChecked());
+        settings.put("crt_shader", cbEnableCRTShader.isChecked());
+        settings.put("toon_shader", cbEnableToonShader.isChecked());
+        settings.put("ntsc_effect", cbEnableNTSCEffect.isChecked());
+        settings.put("cas_enabled", cbEnableCAS.isChecked());
+        settings.put("dls_enabled", cbEnableDLS.isChecked());
+        settings.put("sharpness_level", sbSharpnessLevel.getValue());
+        settings.put("sharpness_denoise", sbSharpnessDenoise.getValue());
+        return settings;
+    }
 
-        float brightness = sbBrightness.getValue();
-        float contrast = sbContrast.getValue();
-        float gamma = sbGamma.getValue();
-        boolean enableBloom = cbEnableBloom.isChecked();
-        boolean enableFakeReflections = cbEnableFakeReflections.isChecked();
-        boolean enableFXAA = cbEnableFXAA.isChecked();
-        boolean enableCRTShader = cbEnableCRTShader.isChecked();
-        boolean enableToonShader = cbEnableToonShader.isChecked();
-        boolean enableNTSCEffect = cbEnableNTSCEffect.isChecked();
-        boolean enableCAS = cbEnableCAS.isChecked();
-        boolean enableDLS = cbEnableDLS.isChecked();
-        float sharpnessLevel = sbSharpnessLevel.getValue();
-        float sharpnessDenoise = sbSharpnessDenoise.getValue();
+    /** Puts a stored set of settings into the dialog's controls. */
+    private void applySettingsToWidgets(KeyValueSet settings) {
+        sbBrightness.setValue(settings.getFloat("brightness", 0));
+        sbContrast.setValue(settings.getFloat("contrast", 0));
+        sbGamma.setValue(settings.getFloat("gamma", 0.0f));
+        cbEnableBloom.setChecked(settings.getBoolean("bloom", false));
+        cbEnableFakeReflections.setChecked(settings.getBoolean("fake_reflections", false));
+        cbEnableFXAA.setChecked(settings.getBoolean("fxaa", false));
+        cbEnableCRTShader.setChecked(settings.getBoolean("crt_shader", false));
+        cbEnableToonShader.setChecked(settings.getBoolean("toon_shader", false));
+        cbEnableNTSCEffect.setChecked(settings.getBoolean("ntsc_effect", false));
+        cbEnableCAS.setChecked(settings.getBoolean("cas_enabled", false));
+        cbEnableDLS.setChecked(settings.getBoolean("dls_enabled", false));
+        sbSharpnessLevel.setValue(settings.getFloat("sharpness_level", 0));
+        sbSharpnessDenoise.setValue(settings.getFloat("sharpness_denoise", 0));
+    }
 
-        Log.d(TAG, "Settings - Brightness: " + brightness + ", Contrast: " + contrast + ", Gamma: " + gamma);
-        Log.d(TAG, "FXAA Enabled: " + enableFXAA + ", CRT Shader Enabled: " + enableCRTShader);
+    /** What the game being played was last left with, empty when it has nothing stored. */
+    public static String storedSettings(Context context) {
+        return SessionSettings.getString(context, KEY_EFFECTS, "");
+    }
 
-        // Check ColorEffect state
-        if (colorEffect == null) {
-            Log.d(TAG, "ColorEffect is null, creating new instance.");
-            colorEffect = new ColorEffect();
-        }
+    /**
+     * Puts the effects a game was last played with back on the renderer. Called once when the
+     * session starts; before this, effects lasted only as long as the dialog's own session
+     * and nothing was reapplied on the next launch.
+     */
+    public static void restore(Context context, GLRenderer renderer) {
+        String stored = storedSettings(context);
+        if (stored.isEmpty()) return;
+        applySettings(new KeyValueSet(stored), renderer);
+    }
 
-        // Check if renderer and effect composer are non-null
+    /**
+     * Puts a set of settings onto the renderer. Shared by the dialog and by the restore at
+     * session start, so a game looks the same whether the user has just changed something or
+     * has only launched it.
+     */
+    public static void applySettings(KeyValueSet settings, GLRenderer renderer) {
         if (renderer == null) {
             Log.e(TAG, "Renderer is null!");
             return;
         }
-
         if (renderer.getEffectComposer() == null) {
             Log.e(TAG, "EffectComposer is null!");
             return;
+        }
+
+        float brightness = settings.getFloat("brightness", 0);
+        float contrast = settings.getFloat("contrast", 0);
+        float gamma = settings.getFloat("gamma", 0);
+        boolean enableBloom = settings.getBoolean("bloom", false);
+        boolean enableFakeReflections = settings.getBoolean("fake_reflections", false);
+        boolean enableFXAA = settings.getBoolean("fxaa", false);
+        boolean enableCRTShader = settings.getBoolean("crt_shader", false);
+        boolean enableToonShader = settings.getBoolean("toon_shader", false);
+        boolean enableNTSCEffect = settings.getBoolean("ntsc_effect", false);
+        boolean enableCAS = settings.getBoolean("cas_enabled", false);
+        boolean enableDLS = settings.getBoolean("dls_enabled", false);
+        float sharpnessLevel = settings.getFloat("sharpness_level", 0);
+        float sharpnessDenoise = settings.getFloat("sharpness_denoise", 0);
+
+        Log.d(TAG, "Settings - Brightness: " + brightness + ", Contrast: " + contrast + ", Gamma: " + gamma);
+        Log.d(TAG, "FXAA Enabled: " + enableFXAA + ", CRT Shader Enabled: " + enableCRTShader);
+
+        ColorEffect colorEffect = renderer.getEffectComposer().getEffect(ColorEffect.class);
+        if (colorEffect == null) {
+            Log.d(TAG, "ColorEffect is null, creating new instance.");
+            colorEffect = new ColorEffect();
         }
 
         // Apply or remove ColorEffect
@@ -485,6 +534,23 @@ public class ScreenEffectDialog extends ContentDialog {
         } else {
             renderer.getEffectComposer().removeEffect(CASEffect.class);
         }
+    }
+
+    /**
+     * Applies what the dialog is showing and remembers it. The settings are pinned to the
+     * shortcut that launched the session, so the next launch of this game gets them back and
+     * no other game picks them up; with no shortcut they go to the app-wide preferences.
+     */
+    public void applyEffects(GLRenderer renderer) {
+        Log.d(TAG, "applyEffects() called");
+        if (renderer == null) {
+            Log.e(TAG, "Renderer is null!");
+            return;
+        }
+
+        KeyValueSet settings = collectSettings();
+        SessionSettings.putString(activity, KEY_EFFECTS, settings.toString());
+        applySettings(settings, renderer);
 
         saveProfile();
         Log.d(TAG, "Profile saved after applying effects.");

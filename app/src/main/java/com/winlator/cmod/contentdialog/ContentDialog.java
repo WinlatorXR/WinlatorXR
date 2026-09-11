@@ -3,6 +3,8 @@ package com.winlator.cmod.contentdialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.SparseBooleanArray;
 import android.view.InputDevice;
 import android.view.KeyEvent;
@@ -126,6 +128,156 @@ public class ContentDialog extends XrContentDialog {
             tvTitle.setText("");
             titleBar.setVisibility(View.GONE);
         }
+    }
+
+    /**
+     * The controller face buttons, in the order the action lines are listed. A and B sit on
+     * the right controller, X and Y on the left, which is also which hand gets the haptic
+     * tick when one of these is used.
+     */
+    public enum FaceButton { A, B, X, Y }
+
+    private static final int[] FACE_BUTTON_VIEW_IDS = {
+            R.id.TVFaceButtonA, R.id.TVFaceButtonB, R.id.TVFaceButtonX, R.id.TVFaceButtonY};
+
+    private static final class FaceButtonAction {
+        final Runnable pressAction;
+        final Runnable holdAction;
+        final long holdMillis;
+
+        FaceButtonAction(Runnable pressAction, Runnable holdAction, long holdMillis) {
+            this.pressAction = pressAction;
+            this.holdAction = holdAction;
+            this.holdMillis = holdMillis;
+        }
+    }
+
+    private final FaceButtonAction[] faceButtonActions = new FaceButtonAction[FaceButton.values().length];
+
+    /** Acts when the button is released, with nothing to hold for. */
+    public void setFaceButtonAction(FaceButton button, CharSequence label, Runnable pressAction) {
+        setFaceButtonAction(button, null, 0, null, label, pressAction);
+    }
+
+    /** Acts only once the button has been held for holdMillis. */
+    public void setFaceButtonAction(FaceButton button, CharSequence label, long holdMillis,
+                                    Runnable holdAction) {
+        setFaceButtonAction(button, label, holdMillis, holdAction, null, null);
+    }
+
+    /**
+     * Both, where the press works on whatever the hold names: the line says so rather than
+     * describing the press separately.
+     */
+    public void setFaceButtonAction(FaceButton button, CharSequence label, long holdMillis,
+                                    Runnable holdAction, Runnable pressAction) {
+        setFaceButtonAction(button, label, holdMillis, holdAction, null, pressAction);
+    }
+
+    /**
+     * Puts an action on a face button and lists it under the dialog's buttons.
+     *
+     * A button can carry both. The press then acts on release, so that a hold on its way
+     * past holdMillis is not read as a press first.
+     *
+     * A hold is what stands in for a confirmation prompt: there is no cursor on these
+     * buttons and no way to take a press back, so anything destructive, or anything that
+     * undoes what repeated presses have built up, should ask for one rather than fire on a
+     * knock.
+     *
+     * All four lines are listed whether or not they have an action, so what is free is as
+     * visible as what is taken.
+     */
+    public void setFaceButtonAction(FaceButton button, CharSequence holdLabel, long holdMillis,
+                                    Runnable holdAction, CharSequence pressLabel,
+                                    Runnable pressAction) {
+        holdMillis = holdAction != null ? Math.max(0, holdMillis) : 0;
+        faceButtonActions[button.ordinal()] = (pressAction == null && holdAction == null) ? null
+                : new FaceButtonAction(pressAction, holdAction, holdMillis);
+
+        Context context = getContext();
+        for (FaceButton each : FaceButton.values()) {
+            TextView view = findViewById(FACE_BUTTON_VIEW_IDS[each.ordinal()]);
+            if (each == button) {
+                view.setText(faceButtonLabel(context, each, holdLabel, holdMillis,
+                        pressLabel, pressAction));
+            }
+            else if (view.getText().length() == 0) {
+                view.setText(context.getString(R.string.xr_face_button_unassigned, each.name()));
+            }
+            // An unassigned line is there to show the slot is free, not to be read first.
+            view.setAlpha(faceButtonActions[each.ordinal()] != null ? 1.0f : 0.4f);
+        }
+        findViewById(R.id.LLActionLines).setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * Lists a control that is not on a face button and cannot be reassigned, alongside the
+     * face button lines. The user looks in one place for what the controller does while a
+     * dialog is up, so a fixed gesture belongs in the same list as the assignable ones.
+     */
+    public void setControlHint(CharSequence text) {
+        TextView view = findViewById(R.id.TVControlHint);
+        view.setText(text);
+        view.setVisibility(View.VISIBLE);
+        findViewById(R.id.LLActionLines).setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * A press with a label of its own is named separately, because it is then acting on
+     * something other than what the hold names. Without one it is taken to work on the same
+     * thing, and the line just says a press will change it.
+     */
+    private String faceButtonLabel(Context context, FaceButton button, CharSequence holdLabel,
+                                   long holdMillis, CharSequence pressLabel, Runnable pressAction) {
+        if (faceButtonActions[button.ordinal()] == null) {
+            return context.getString(R.string.xr_face_button_unassigned, button.name());
+        }
+        long holdSeconds = Math.round(holdMillis / 1000.0);
+        if (holdMillis <= 0) {
+            return context.getString(R.string.xr_face_button_action, button.name(), pressLabel);
+        }
+        if (pressAction == null) {
+            return context.getString(R.string.xr_face_button_action_hold,
+                    button.name(), holdLabel, holdSeconds);
+        }
+        if (pressLabel == null) {
+            return context.getString(R.string.xr_face_button_action_hold_press,
+                    button.name(), holdLabel, holdSeconds);
+        }
+        return context.getString(R.string.xr_face_button_action_hold_press_split,
+                button.name(), holdLabel, holdSeconds, pressLabel);
+    }
+
+    public boolean hasFaceButtonAction(FaceButton button) {
+        return faceButtonActions[button.ordinal()] != null;
+    }
+
+    /** How long the button must be held, or 0 when it has nothing to hold for. */
+    public long getFaceButtonHoldMillis(FaceButton button) {
+        FaceButtonAction entry = faceButtonActions[button.ordinal()];
+        return entry != null ? entry.holdMillis : 0;
+    }
+
+    public boolean hasFaceButtonPressAction(FaceButton button) {
+        FaceButtonAction entry = faceButtonActions[button.ordinal()];
+        return entry != null && entry.pressAction != null;
+    }
+
+    /** Called from the XR render thread, so the action itself is posted to the UI thread. */
+    public void runFaceButtonPress(FaceButton button) {
+        FaceButtonAction entry = faceButtonActions[button.ordinal()];
+        if (entry != null && entry.pressAction != null) postToUi(entry.pressAction);
+    }
+
+    /** Called from the XR render thread, so the action itself is posted to the UI thread. */
+    public void runFaceButtonHold(FaceButton button) {
+        FaceButtonAction entry = faceButtonActions[button.ordinal()];
+        if (entry != null && entry.holdAction != null) postToUi(entry.holdAction);
+    }
+
+    private static void postToUi(Runnable action) {
+        new Handler(Looper.getMainLooper()).post(action);
     }
 
     public void setBottomBarText(String bottomBarText) {

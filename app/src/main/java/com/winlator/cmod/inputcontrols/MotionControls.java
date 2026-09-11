@@ -1,7 +1,6 @@
 package com.winlator.cmod.inputcontrols;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -26,6 +25,7 @@ import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.ContentDialog;
+import com.winlator.cmod.core.SessionSettings;
 import com.winlator.cmod.widget.SeekBar;
 import com.winlator.cmod.winhandler.WinHandler;
 import com.winlator.xr.XrActivity;
@@ -34,6 +34,25 @@ import com.winlator.xr.io.XrInput;
 import java.util.List;
 
 public class MotionControls implements SensorEventListener {
+    // Shared with WinHandler and XServerDisplayActivity, which read the same settings on
+    // their own. They disagreed on the gyro_enabled default before this.
+    public static final boolean DEFAULT_ENABLED = false;
+    public static final boolean DEFAULT_TO_LEFT_STICK = false;
+    public static final float DEFAULT_X_SENSITIVITY = 1.0f;
+    public static final float DEFAULT_Y_SENSITIVITY = 1.0f;
+    public static final float DEFAULT_SMOOTHING = 0.9f;
+    public static final float DEFAULT_DEADZONE = 0.05f;
+    public static final boolean DEFAULT_INVERT_X = false;
+    public static final boolean DEFAULT_INVERT_Y = false;
+    public static final int DEFAULT_TRIGGER_BUTTON = KeyEvent.KEYCODE_BUTTON_L1;
+    public static final int DEFAULT_MODE = 0;
+
+    /** Every setting this dialog can pin to a game. See XrActivity.SESSION_KEYS. */
+    public static final String[] SESSION_KEYS = {
+            "gyro_enabled", "gyro_to_left_stick", "gyro_x_sensitivity", "gyro_y_sensitivity",
+            "gyro_smoothing", "gyro_deadzone", "invert_gyro_x", "invert_gyro_y",
+            "gyro_trigger_button", "gyro_mode"};
+
     private static MotionControls INSTANCE;
     public static MotionControls getInstance(Context ctx) {
         if (INSTANCE == null) INSTANCE = new MotionControls(ctx.getApplicationContext());
@@ -43,7 +62,6 @@ public class MotionControls implements SensorEventListener {
     private final Context appCtx;
     private final SensorManager sensorManager;
     private final Sensor gyro;
-    private final SharedPreferences prefs;
 
     private WinHandler winHandler;
     private boolean registered = false;
@@ -56,20 +74,20 @@ public class MotionControls implements SensorEventListener {
         this.appCtx = appCtx;
         this.sensorManager = (SensorManager) appCtx.getSystemService(Context.SENSOR_SERVICE);
         this.gyro = sensorManager != null ? sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) : null;
-        this.prefs = PreferenceManager.getDefaultSharedPreferences(appCtx);
         this.windowManager = (WindowManager) appCtx.getSystemService(Context.WINDOW_SERVICE);
         this.displayManager  = (android.hardware.display.DisplayManager)
                 appCtx.getSystemService(Context.DISPLAY_SERVICE);
     }
 
-    /** Wire the active WinHandler and push current prefs immediately. */
+    /** Wire the active WinHandler and push the current settings immediately. */
     public MotionControls attach(WinHandler handler) {
         this.winHandler = handler;
         if (handler != null) {
-            handler.setGyroEnabled(prefs.getBoolean("gyro_enabled", false));
+            handler.setGyroEnabled(SessionSettings.getBoolean(appCtx, "gyro_enabled", DEFAULT_ENABLED));
+            handler.setGyroToLeftStick(SessionSettings.getBoolean(appCtx, "gyro_to_left_stick", DEFAULT_TO_LEFT_STICK));
             applyPrefsToHandler(handler);
-            handler.setGyroTriggerButton(prefs.getInt("gyro_trigger_button", KeyEvent.KEYCODE_BUTTON_L1));
-            handler.setGyroToggleMode(prefs.getInt("gyro_mode", 0) == 1);
+            handler.setGyroTriggerButton(SessionSettings.getInt(appCtx, "gyro_trigger_button", DEFAULT_TRIGGER_BUTTON));
+            handler.setGyroToggleMode(SessionSettings.getInt(appCtx, "gyro_mode", DEFAULT_MODE) == 1);
         }
         refreshRegistration();
         return this;
@@ -78,7 +96,7 @@ public class MotionControls implements SensorEventListener {
     // --- Sensor registration -------------------------------------------------
 
     private void refreshRegistration() {
-        boolean enabled = prefs.getBoolean("gyro_enabled", false);
+        boolean enabled = SessionSettings.getBoolean(appCtx, "gyro_enabled", DEFAULT_ENABLED);
         if (gyro == null || sensorManager == null || winHandler == null) {
             unregister();
             return;
@@ -216,18 +234,19 @@ public class MotionControls implements SensorEventListener {
 
         RadioGroup rgMode   = v.findViewById(R.id.rgGyroMode);
 
-        // Load prefs
-        boolean enabled = prefs.getBoolean("gyro_enabled", false);
-        boolean toLeft = prefs.getBoolean("gyro_to_left_stick", false);
+        // Load the settings for the game being played, falling back to the app-wide defaults
+        // for anything this game has not been given an answer of its own for.
+        boolean enabled = SessionSettings.getBoolean(ctx, "gyro_enabled", DEFAULT_ENABLED);
+        boolean toLeft = SessionSettings.getBoolean(ctx, "gyro_to_left_stick", DEFAULT_TO_LEFT_STICK);
 
-        float xSens = prefs.getFloat("gyro_x_sensitivity", 1.0f);
-        float ySens = prefs.getFloat("gyro_y_sensitivity", 1.0f);
-        float smooth = prefs.getFloat("gyro_smoothing", 0.9f);
-        float dead = prefs.getFloat("gyro_deadzone", 0.05f);
-        boolean invX = prefs.getBoolean("invert_gyro_x", false);
-        boolean invY = prefs.getBoolean("invert_gyro_y", false);
-        int savedKey = prefs.getInt("gyro_trigger_button", KeyEvent.KEYCODE_BUTTON_L1);
-        int mode = prefs.getInt("gyro_mode", 0);
+        float xSens = SessionSettings.getFloat(ctx, "gyro_x_sensitivity", DEFAULT_X_SENSITIVITY);
+        float ySens = SessionSettings.getFloat(ctx, "gyro_y_sensitivity", DEFAULT_Y_SENSITIVITY);
+        float smooth = SessionSettings.getFloat(ctx, "gyro_smoothing", DEFAULT_SMOOTHING);
+        float dead = SessionSettings.getFloat(ctx, "gyro_deadzone", DEFAULT_DEADZONE);
+        boolean invX = SessionSettings.getBoolean(ctx, "invert_gyro_x", DEFAULT_INVERT_X);
+        boolean invY = SessionSettings.getBoolean(ctx, "invert_gyro_y", DEFAULT_INVERT_Y);
+        int savedKey = SessionSettings.getInt(ctx, "gyro_trigger_button", DEFAULT_TRIGGER_BUTTON);
+        int mode = SessionSettings.getInt(ctx, "gyro_mode", DEFAULT_MODE);
 
         if (XrActivity.isEnabled(v.getContext())) {
             v.findViewById(R.id.TVGyroTriggerButton).setVisibility(View.GONE);
@@ -246,9 +265,7 @@ public class MotionControls implements SensorEventListener {
                 cbWheel.setEnabled(enabled);
                 cbWheel.setVisibility(View.VISIBLE);
                 cbWheel.setOnCheckedChangeListener((compoundButton, checked) -> {
-                    SharedPreferences.Editor e = prefs.edit();
-                    e.putBoolean("use_xr_wheel", checked);
-                    e.apply();
+                    SessionSettings.putBoolean(ctx, "use_xr_wheel", checked);
                     XrActivity.wheelEmulation = checked;
                     if (checked) {
                         XrInput.ensureVirtualControllerAttached();
@@ -265,19 +282,17 @@ public class MotionControls implements SensorEventListener {
             cbPointerSmoothing.setVisibility(View.GONE);
         }
 
-        cbRadialToSquare.setChecked(prefs.getBoolean("xr_gamepad_radial_to_square", false));
+        cbRadialToSquare.setChecked(SessionSettings.getBoolean(ctx,
+                "xr_gamepad_radial_to_square", XrActivity.DEFAULT_RADIAL_TO_SQUARE));
         cbRadialToSquare.setOnCheckedChangeListener((compoundButton, checked) -> {
-            SharedPreferences.Editor e = prefs.edit();
-            e.putBoolean("xr_gamepad_radial_to_square", checked);
-            e.apply();
+            SessionSettings.putBoolean(ctx, "xr_gamepad_radial_to_square", checked);
             XrActivity.gamepadRadialToSquare = checked;
         });
 
-        cbRumblePassthrough.setChecked(prefs.getBoolean("use_xr_rumble_passthrough", false));
+        cbRumblePassthrough.setChecked(SessionSettings.getBoolean(ctx,
+                "use_xr_rumble_passthrough", XrActivity.DEFAULT_RUMBLE_PASSTHROUGH));
         cbRumblePassthrough.setOnCheckedChangeListener((compoundButton, checked) -> {
-            SharedPreferences.Editor e = prefs.edit();
-            e.putBoolean("use_xr_rumble_passthrough", checked);
-            e.apply();
+            SessionSettings.putBoolean(ctx, "use_xr_rumble_passthrough", checked);
             XrActivity.rumblePassthrough = checked;
             if (checked && XrActivity.isActive()) {
                 XrInput.ensureVirtualControllerAttached();
@@ -286,11 +301,10 @@ public class MotionControls implements SensorEventListener {
 
         // Off by default: the filter trades a little latency for steadiness and the right
         // balance depends on the headset, so it is opt-in until judged on device.
-        cbPointerSmoothing.setChecked(prefs.getBoolean("use_xr_smoothing", false));
+        cbPointerSmoothing.setChecked(SessionSettings.getBoolean(ctx,
+                "use_xr_smoothing", XrActivity.DEFAULT_POINTER_SMOOTHING));
         cbPointerSmoothing.setOnCheckedChangeListener((compoundButton, checked) -> {
-            SharedPreferences.Editor e = prefs.edit();
-            e.putBoolean("use_xr_smoothing", checked);
-            e.apply();
+            SessionSettings.putBoolean(ctx, "use_xr_smoothing", checked);
             XrActivity.pointerSmoothing = checked;
             if (XrActivity.isActive()) {
                 XrActivity.getInstance().nativeSetPointerSmoothing(checked);
@@ -369,22 +383,21 @@ public class MotionControls implements SensorEventListener {
         });
         rgMode.setOnCheckedChangeListener((g, id) -> pushAll.run());
 
-        // Persist on OK
-        cd.setOnConfirmCallback(() -> {
-            SharedPreferences.Editor e = prefs.edit();
-            e.putBoolean("gyro_enabled", cbEnabled.isChecked());
-            e.putBoolean("gyro_to_left_stick", rgTarget.getCheckedRadioButtonId() == R.id.rbTargetLeft);
-            e.putFloat("gyro_x_sensitivity", sbXSens.getValue() / 100f);
-            e.putFloat("gyro_y_sensitivity", sbYSens.getValue() / 100f);
-            e.putFloat("gyro_smoothing", sbSmooth.getValue() / 100f);
-            e.putFloat("gyro_deadzone", sbDead.getValue() / 100f);
-            e.putBoolean("invert_gyro_x", cbInvX.isChecked());
-            e.putBoolean("invert_gyro_y", cbInvY.isChecked());
-            e.putInt("gyro_trigger_button", MotionControlsUiUtils.getSelectedKeycodeFromSpinner(ctx, spActivator));
-            e.putInt("gyro_mode", rgMode.getCheckedRadioButtonId() == R.id.rbHoldMode ? 0 : 1);
-            e.putBoolean("xr_gamepad_radial_to_square", cbRadialToSquare.isChecked());
-            e.apply();
-        });
+        // Persist on OK. One batched write: pinning these to a shortcut rewrites its
+        // .desktop file, which is not worth doing a dozen times over.
+        cd.setOnConfirmCallback(() -> SessionSettings.edit(ctx)
+                .putBoolean("gyro_enabled", cbEnabled.isChecked())
+                .putBoolean("gyro_to_left_stick", rgTarget.getCheckedRadioButtonId() == R.id.rbTargetLeft)
+                .putFloat("gyro_x_sensitivity", sbXSens.getValue() / 100f)
+                .putFloat("gyro_y_sensitivity", sbYSens.getValue() / 100f)
+                .putFloat("gyro_smoothing", sbSmooth.getValue() / 100f)
+                .putFloat("gyro_deadzone", sbDead.getValue() / 100f)
+                .putBoolean("invert_gyro_x", cbInvX.isChecked())
+                .putBoolean("invert_gyro_y", cbInvY.isChecked())
+                .putInt("gyro_trigger_button", MotionControlsUiUtils.getSelectedKeycodeFromSpinner(ctx, spActivator))
+                .putInt("gyro_mode", rgMode.getCheckedRadioButtonId() == R.id.rbHoldMode ? 0 : 1)
+                .putBoolean("xr_gamepad_radial_to_square", cbRadialToSquare.isChecked())
+                .apply());
 
         cd.show();
     }
@@ -405,12 +418,12 @@ public class MotionControls implements SensorEventListener {
     // --- helpers -------------------------------------------------------------
 
     private void applyPrefsToHandler(WinHandler h) {
-        h.setGyroSensitivityX(prefs.getFloat("gyro_x_sensitivity", 1.0f));
-        h.setGyroSensitivityY(prefs.getFloat("gyro_y_sensitivity", 1.0f));
-        h.setSmoothingFactor  (prefs.getFloat("gyro_smoothing", 0.9f));
-        h.setInvertGyroX      (prefs.getBoolean("invert_gyro_x", false));
-        h.setInvertGyroY      (prefs.getBoolean("invert_gyro_y", false));
-        h.setGyroDeadzone     (prefs.getFloat("gyro_deadzone", 0.05f));
+        h.setGyroSensitivityX(SessionSettings.getFloat(appCtx, "gyro_x_sensitivity", DEFAULT_X_SENSITIVITY));
+        h.setGyroSensitivityY(SessionSettings.getFloat(appCtx, "gyro_y_sensitivity", DEFAULT_Y_SENSITIVITY));
+        h.setSmoothingFactor  (SessionSettings.getFloat(appCtx, "gyro_smoothing", DEFAULT_SMOOTHING));
+        h.setInvertGyroX      (SessionSettings.getBoolean(appCtx, "invert_gyro_x", DEFAULT_INVERT_X));
+        h.setInvertGyroY      (SessionSettings.getBoolean(appCtx, "invert_gyro_y", DEFAULT_INVERT_Y));
+        h.setGyroDeadzone     (SessionSettings.getFloat(appCtx, "gyro_deadzone", DEFAULT_DEADZONE));
     }
 
     /** Spinner <-> keycode helpers. */

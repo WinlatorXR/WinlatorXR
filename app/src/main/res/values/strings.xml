@@ -494,6 +494,24 @@
     <string name="xr_environment_remove_message">Remove \"%1$s\"? The image file will be deleted.</string>
     <string name="controller_profile">Controller profile</string>
     <string name="to_apply_close">To apply the change, close this dialog</string>
+    <!-- Face button action lines shown in the bottom bar of an XR dialog -->
+    <string name="xr_face_button_action">%1$s %2$s</string>
+    <string name="xr_face_button_action_hold">%1$s %2$s (hold %3$ds)</string>
+    <string name="xr_face_button_action_hold_press">%1$s %2$s (hold %3$ds, press to change)</string>
+    <string name="xr_face_button_action_hold_press_split">%1$s %2$s (hold %3$ds) %4$s (press)</string>
+    <string name="xr_face_button_unassigned">%1$s —</string>
+    <string name="xr_reset_to_default">Reset to default</string>
+    <string name="xr_adjust_window_distance">Adjust window distance - Grip trigger+Joystick</string>
+    <string name="xr_gamepad_mode_enabled">Gamepad mode enabled</string>
+    <string name="xr_gamepad_mode_disabled">Gamepad mode disabled</string>
+    <string name="xr_passthrough_enabled">Passthrough enabled</string>
+    <string name="xr_passthrough_disabled">Passthrough disabled</string>
+    <string name="xr_edge_glow_enabled">Edge glow enabled %1$d%%</string>
+    <string name="xr_edge_glow_disabled">Edge glow disabled</string>
+    <string name="xr_environment_shown">Environment shown</string>
+    <string name="xr_environment_hidden">Environment hidden</string>
+    <string name="xr_reset_to_default_done">The XR, motion control and screen effect settings for this game have been reset to the defaults.</string>
+    <string name="xr_reset_to_default_none">This game has no settings of its own. It is already using the defaults.</string>
     <string name="xr" translatable="false">XR</string>
     <string name="cpu_level">CPU level</string>
     <string name="gpu_level">GPU level</string>

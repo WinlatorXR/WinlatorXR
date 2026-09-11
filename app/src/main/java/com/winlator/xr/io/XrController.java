@@ -25,6 +25,7 @@ import android.view.KeyEvent;
 import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.contentdialog.NavigationDialog;
+import com.winlator.cmod.core.SessionSettings;
 import com.winlator.cmod.inputcontrols.ExternalController;
 import com.winlator.cmod.inputcontrols.GamepadState;
 import com.winlator.cmod.winhandler.MouseEventFlags;
@@ -411,7 +412,9 @@ public class XrController {
     public static byte getMapping(Context context, Mapping input) {
         if (mapping == null) {
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-            int index = prefs.getInt(XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, 0);
+            // Which profile is selected belongs to the game; the profiles themselves are a
+            // shared library, so only the index goes through SessionSettings.
+            int index = SessionSettings.getInt(context, XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, 0);
             String key = XrControllerDialog.XR_CONTROLLER_PROFILE_VALUE + index;
             mapping = prefs.getString(key, getDefaultMapping());
         }
@@ -421,7 +424,7 @@ public class XrController {
     public static void setMapping(Context context, String name, String value) {
         mapping = value;
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        int index = prefs.getInt(XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, 0);
+        int index = SessionSettings.getInt(context, XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, 0);
         SharedPreferences.Editor e = prefs.edit();
         e.putString(XrControllerDialog.XR_CONTROLLER_PROFILE_NAME + index, name);
         e.putString(XrControllerDialog.XR_CONTROLLER_PROFILE_VALUE + index, value);

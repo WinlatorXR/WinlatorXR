@@ -19,15 +19,13 @@
 package com.winlator.xr.utils;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.util.Log;
 
-import androidx.preference.PreferenceManager;
-
 import com.winlator.cmod.core.FileUtils;
+import com.winlator.cmod.core.SessionSettings;
 import com.winlator.xr.XrActivity;
 
 import java.io.File;
@@ -176,24 +174,21 @@ public class XrEnvironment {
      * panorama the user picked.
      */
     public static boolean isEnabled(Context context) {
-        return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(ENABLED_KEY, true);
+        return SessionSettings.getBoolean(context, ENABLED_KEY, true);
     }
 
     public static void setEnabled(Context context, boolean enabled) {
-        PreferenceManager.getDefaultSharedPreferences(context).edit()
-                .putBoolean(ENABLED_KEY, enabled).apply();
+        SessionSettings.putBoolean(context, ENABLED_KEY, enabled);
         XrActivity activity = XrActivity.getInstance();
         if (activity != null) activity.nativeSetEnvironmentEnabled(enabled);
     }
 
     public static String getSelected(Context context) {
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
-        return preferences.getString(PREF_KEY, "");
+        return SessionSettings.getString(context, PREF_KEY, "");
     }
 
     public static void setSelected(Context context, String name) {
-        PreferenceManager.getDefaultSharedPreferences(context).edit()
-                .putString(PREF_KEY, name == null ? "" : name).apply();
+        SessionSettings.putString(context, PREF_KEY, name == null ? "" : name);
     }
 
     /**

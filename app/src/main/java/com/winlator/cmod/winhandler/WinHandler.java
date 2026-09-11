@@ -16,11 +16,13 @@ import androidx.preference.PreferenceManager;
 import com.winlator.cmod.XServerDisplayActivity;
 import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.contentdialog.ControllerAssignmentDialog;
+import com.winlator.cmod.core.SessionSettings;
 import com.winlator.cmod.core.StringUtils;
 import com.winlator.cmod.inputcontrols.ControllerManager;
 import com.winlator.cmod.inputcontrols.ControlsProfile;
 import com.winlator.cmod.inputcontrols.ExternalController;
 import com.winlator.cmod.inputcontrols.GamepadState;
+import com.winlator.cmod.inputcontrols.MotionControls;
 import com.winlator.cmod.math.Mathf;
 import com.winlator.cmod.xserver.XServer;
 import com.winlator.xr.XrActivity;
@@ -524,12 +526,15 @@ public class WinHandler {
 
                 preferences = PreferenceManager.getDefaultSharedPreferences(activity.getBaseContext());
 
-                // Input/gyro prefs
-                gyroEnabled       = preferences.getBoolean("gyro_enabled", false);
-                gyroTriggerButton = preferences.getInt("gyro_trigger_button", KeyEvent.KEYCODE_BUTTON_L1);
-                isToggleMode      = preferences.getInt("gyro_mode", 0) == 1;
+                // Input/gyro settings. The gyro ones belong to the game being played, so
+                // they come through SessionSettings and only fall back to the app-wide
+                // preference when this shortcut has no answer of its own.
+                Context settingsCtx = activity.getBaseContext();
+                gyroEnabled       = SessionSettings.getBoolean(settingsCtx, "gyro_enabled", MotionControls.DEFAULT_ENABLED);
+                gyroTriggerButton = SessionSettings.getInt(settingsCtx, "gyro_trigger_button", MotionControls.DEFAULT_TRIGGER_BUTTON);
+                isToggleMode      = SessionSettings.getInt(settingsCtx, "gyro_mode", MotionControls.DEFAULT_MODE) == 1;
                 triggerType = (byte) preferences.getInt("trigger_type", TRIGGER_IS_AXIS);
-                gyroToLeftStick   = preferences.getBoolean("gyro_to_left_stick", false);
+                gyroToLeftStick   = SessionSettings.getBoolean(settingsCtx, "gyro_to_left_stick", MotionControls.DEFAULT_TO_LEFT_STICK);
                 virtualExclusiveP1 = preferences.getBoolean("virtual_exclusive_p1", true);
 
                 // Only set xinputDisabled if not set explicitly by Activity
@@ -538,12 +543,12 @@ public class WinHandler {
                 }
 
                 // Gyro tuning
-                setGyroSensitivityX(preferences.getFloat("gyro_x_sensitivity", 1.0f));
-                setGyroSensitivityY(preferences.getFloat("gyro_y_sensitivity", 1.0f));
-                setSmoothingFactor (preferences.getFloat("gyro_smoothing", 0.9f));
-                setInvertGyroX     (preferences.getBoolean("invert_gyro_x", false));
-                setInvertGyroY     (preferences.getBoolean("invert_gyro_y", false));
-                setGyroDeadzone    (preferences.getFloat("gyro_deadzone", 0.05f));
+                setGyroSensitivityX(SessionSettings.getFloat(settingsCtx, "gyro_x_sensitivity", MotionControls.DEFAULT_X_SENSITIVITY));
+                setGyroSensitivityY(SessionSettings.getFloat(settingsCtx, "gyro_y_sensitivity", MotionControls.DEFAULT_Y_SENSITIVITY));
+                setSmoothingFactor (SessionSettings.getFloat(settingsCtx, "gyro_smoothing", MotionControls.DEFAULT_SMOOTHING));
+                setInvertGyroX     (SessionSettings.getBoolean(settingsCtx, "invert_gyro_x", MotionControls.DEFAULT_INVERT_X));
+                setInvertGyroY     (SessionSettings.getBoolean(settingsCtx, "invert_gyro_y", MotionControls.DEFAULT_INVERT_Y));
+                setGyroDeadzone    (SessionSettings.getFloat(settingsCtx, "gyro_deadzone", MotionControls.DEFAULT_DEADZONE));
 
                 processGyroWithLeftTrigger = preferences.getBoolean("process_gyro_with_left_trigger", false);
 
