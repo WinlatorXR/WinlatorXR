@@ -135,6 +135,7 @@ import com.winlator.cmod.xserver.Window;
 import com.winlator.cmod.xserver.WindowManager;
 import com.winlator.cmod.xserver.XServer;
 import com.winlator.xr.io.XrRenderer;
+import com.winlator.xr.ui.StartupDialog;
 import com.winlator.xr.ui.XrDialog;
 import com.winlator.xr.utils.ModdingUtils;
 
@@ -205,7 +206,8 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     private String midiSoundFont = "";
     private String lc_all = "";
     private String vkbasaltConfig = "";
-    PreloaderDialog preloaderDialog = null;
+    private PreloaderDialog preloaderDialog = null;
+    private StartupDialog startupDialog = null;
     private Runnable configChangedCallback = null;
     private boolean isPaused = false;
     protected boolean isRelativeMouseMovement;
@@ -303,6 +305,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
 
         preloaderDialog = new PreloaderDialog(this);
+        startupDialog = new StartupDialog(this);
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
 
 
@@ -618,7 +621,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         }
 
 
-        preloaderDialog.show(R.string.starting_up);
+        startupDialog.show(R.string.starting_up);
 
 
         inputControlsManager = new InputControlsManager(this);
@@ -633,7 +636,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             public void onUpdateWindowContent(Window window) {
                 if (!winStarted[0] && window.isApplicationWindow()) {
                     xServerView.getRenderer().setCursorVisible(true);
-                    preloaderDialog.closeOnUiThread();
+                    runOnUiThread(() -> startupDialog.dismiss());
                     winStarted[0] = true;
                 }
 
@@ -2486,67 +2489,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
     public InputControlsView getInputControlsView() {
         return inputControlsView;
-    }
-
-    private void generateWineprefix() {
-        Intent intent = getIntent();
-
-        final File rootDir = imageFs.getRootDir();
-        final File installedWineDir = imageFs.getInstalledWineDir();
-        wineInfo = intent.getParcelableExtra("wine_info");
-        envVars.put("WINEARCH", wineInfo.isWin64() ? "win64" : "win32");
-        imageFs.setWinePath(wineInfo.path);
-
-        final File containerPatternDir = new File(installedWineDir, "/preinstall/container-pattern");
-        if (containerPatternDir.isDirectory()) FileUtils.delete(containerPatternDir);
-        containerPatternDir.mkdirs();
-
-        File linkFile = new File(rootDir, ImageFs.HOME_PATH);
-        linkFile.delete();
-        FileUtils.symlink(".."+FileUtils.toRelativePath(rootDir.getPath(), containerPatternDir.getPath()), linkFile.getPath());
-
-        GuestProgramLauncherComponent guestProgramLauncherComponent = environment.getComponent(GuestProgramLauncherComponent.class);
-//        guestProgramLauncherComponent.setGuestExecutable(wineInfo.getExecutable(this, false)+" explorer /desktop=shell,"+Container.DEFAULT_SCREEN_SIZE+" winecfg");
-        guestProgramLauncherComponent.setGuestExecutable("wineboot -u explorer /desktop=shell,"+Container.DEFAULT_SCREEN_SIZE+" winecfg");
-
-        preloaderDialog = new PreloaderDialog(this);
-        guestProgramLauncherComponent.setTerminationCallback((status) -> Executors.newSingleThreadExecutor().execute(() -> {
-            if (status > 0) {
-                showToast(this, R.string.unable_to_install_wine);
-                FileUtils.delete(new File(installedWineDir, "/preinstall"));
-                AppUtils.restartApplication(this);
-                return;
-            }
-
-            preloaderDialog.showOnUiThread(R.string.finishing_installation);
-            FileUtils.writeString(new File(rootDir, ImageFs.WINEPREFIX+"/.update-timestamp"), "disable\n");
-
-            File userDir = new File(rootDir, ImageFs.WINEPREFIX+"/drive_c/users/xuser");
-            File[] userFiles = userDir.listFiles();
-            if (userFiles != null) {
-                for (File userFile : userFiles) {
-                    if (FileUtils.isSymlink(userFile)) {
-                        String path = userFile.getPath();
-                        userFile.delete();
-                        (new File(path)).mkdirs();
-                    }
-                }
-            }
-
-            String suffix = wineInfo.fullVersion()+"-"+wineInfo.getArch();
-            File containerPatternFile = new File(installedWineDir, "/preinstall/container-pattern-"+suffix+".tzst");
-            TarCompressorUtils.compress(TarCompressorUtils.Type.ZSTD, new File(rootDir, ImageFs.WINEPREFIX), containerPatternFile, MainActivity.CONTAINER_PATTERN_COMPRESSION_LEVEL);
-
-            if (!containerPatternFile.renameTo(new File(installedWineDir, containerPatternFile.getName())) ||
-                    !(new File(wineInfo.path)).renameTo(new File(installedWineDir, wineInfo.identifier()))) {
-                containerPatternFile.delete();
-            }
-
-            FileUtils.delete(new File(installedWineDir, "/preinstall"));
-
-            preloaderDialog.closeOnUiThread();
-            AppUtils.restartApplication(this, R.id.main_menu_settings);
-        }));
     }
 
     private static final String TAG = "DXWrapperExtraction";
