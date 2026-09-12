@@ -44,6 +44,7 @@ import com.winlator.cmod.midi.MidiManager;
 import com.winlator.cmod.xenvironment.ImageFsInstaller;
 import com.winlator.xr.ui.XrControllerDialog;
 import com.winlator.xr.ui.XrDialog;
+import com.winlator.xr.ui.XrStartupDialog;
 import com.winlator.xr.utils.XrEnvironment;
 
 import org.json.JSONArray;
@@ -183,6 +184,13 @@ public class SettingsFragment extends Fragment {
                 () -> ContentDialog.confirm(getContext(),
                         getString(R.string.xr_environment_import_message),
                         () -> openFile(REQUEST_CODE_IMPORT_PANORAMA, "image/*")));
+        // Written as it is switched, like the rest of this tab: the next game to boot reads
+        // it, and that can happen without the save button ever being pressed.
+        CheckBox cbDisableStartupHints = view.findViewById(R.id.CBDisableStartupHints);
+        cbDisableStartupHints.setChecked(
+                preferences.getBoolean(XrStartupDialog.PREF_DISABLE_HINTS, false));
+        cbDisableStartupHints.setOnCheckedChangeListener((compoundButton, checked) ->
+                preferences.edit().putBoolean(XrStartupDialog.PREF_DISABLE_HINTS, checked).apply());
 
         // Tab switcher
         TabLayout tabLayout = view.findViewById(R.id.TabLayout);

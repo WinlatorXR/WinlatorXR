@@ -40,10 +40,22 @@ import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.xr.ui.XrControllerDialog;
 
 public class XrController {
+    /**
+     * A profile is stored as one character per entry in this order, so new inputs go on the end:
+     * anything added in the middle would silently reassign every key in every profile already
+     * saved. A profile written before an entry existed is simply short, and {@link #getMapping}
+     * falls back to the default for what it does not reach.
+     */
     public enum Mapping {
         BUTTON_A, BUTTON_B, BUTTON_X, BUTTON_Y, BUTTON_GRIP, BUTTON_TRIGGER,
-        THUMBSTICK_UP, THUMBSTICK_DOWN, THUMBSTICK_LEFT, THUMBSTICK_RIGHT
+        THUMBSTICK_UP, THUMBSTICK_DOWN, THUMBSTICK_LEFT, THUMBSTICK_RIGHT, THUMBSTICK_PRESS
     }
+
+    /** How long the primary thumbstick has to be held to open the menu. */
+    private static final long MENU_HOLD_MILLIS = 1000;
+
+    /** How long a tapped key is held down for, in frames a game will not miss. */
+    private static final long TAP_KEY_MILLIS = 50;
 
     private static String mapping = null;
 
@@ -54,6 +66,9 @@ public class XrController {
     private long lastDialogShown = 0;
     private long menuButtonPressTime = 0;
     private long primaryButtonPressTime = 0;
+    private long tapKeyPressTime = 0;
+    private long tapKeyReleaseTime = 0;
+    private byte tapKeycode = 0;
     private long startPulseEndTime = 0;
     private long dpadComboStartTime = 0;
     private long lastMouseUpdate = 0;
@@ -98,8 +113,10 @@ public class XrController {
 
             if (buttons[primaryPress.ordinal()]) {
                 if (primaryButtonPressTime == 0) primaryButtonPressTime = System.currentTimeMillis();
-                boolean trigger = XrActivity.gamepadEmulation || XrActivity.getVR() ? (System.currentTimeMillis() - primaryButtonPressTime > 1000) : getButtonClicked(buttons, primaryPress);
-                if (trigger) {
+                // A hold in every mode, rather than a hold under gamepad emulation and in a VR
+                // title but a click everywhere else. One gesture is what a user can be taught,
+                // and it leaves the click itself free to be given to the game.
+                if (System.currentTimeMillis() - primaryButtonPressTime > MENU_HOLD_MILLIS) {
                     primaryButtonPressTime = System.currentTimeMillis() + 5000;
                     instance.runOnUiThread(() -> new NavigationDialog(instance).show());
                     System.arraycopy(buttons, 0, lastButtons, 0, buttons.length);
@@ -209,6 +226,9 @@ public class XrController {
         mapKey(secondaryDown, getMapping(context, Mapping.THUMBSTICK_DOWN));
         mapKey(secondaryLeft, getMapping(context, Mapping.THUMBSTICK_LEFT));
         mapKey(secondaryRight, getMapping(context, Mapping.THUMBSTICK_RIGHT));
+        mapTapKey(XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_PRESS
+                : XrInterface.ControllerButton.R_THUMBSTICK_PRESS,
+                getMapping(context, Mapping.THUMBSTICK_PRESS));
     }
 
     /**
@@ -229,6 +249,11 @@ public class XrController {
         for (Mapping input : Mapping.values()) {
             keyboard.setKeyRelease(getMapping(context, input));
         }
+
+        // The loop above has already let go of whatever a tap was holding, so all that is left
+        // is to stop waiting to do it again.
+        tapKeyPressTime = 0;
+        tapKeyReleaseTime = 0;
     }
 
     public void updateMouseAxes(float[] axes, boolean headMapping) {
@@ -416,9 +441,11 @@ public class XrController {
             // shared library, so only the index goes through SessionSettings.
             int index = SessionSettings.getInt(context, XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, 0);
             String key = XrControllerDialog.XR_CONTROLLER_PROFILE_VALUE + index;
-            mapping = prefs.getString(key, getDefaultMapping());
+            mapping = decodeMapping(prefs.getString(key, getDefaultMapping()));
         }
-        return (byte) mapping.charAt(input.ordinal());
+        return (byte) (input.ordinal() < mapping.length()
+                ? mapping.charAt(input.ordinal())
+                : getDefaultMapping().charAt(input.ordinal()));
     }
 
     public static void setMapping(Context context, String name, String value) {
@@ -427,8 +454,24 @@ public class XrController {
         int index = SessionSettings.getInt(context, XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX, 0);
         SharedPreferences.Editor e = prefs.edit();
         e.putString(XrControllerDialog.XR_CONTROLLER_PROFILE_NAME + index, name);
-        e.putString(XrControllerDialog.XR_CONTROLLER_PROFILE_VALUE + index, value);
+        e.putString(XrControllerDialog.XR_CONTROLLER_PROFILE_VALUE + index, encodeMapping(value));
         e.apply();
+    }
+
+    /**
+     * An unbound input is keycode zero, and a zero character cannot go into the XML the
+     * preferences are stored in: writing one risks the whole file failing to parse on the next
+     * launch, taking every setting with it. It is stored as a private use character instead.
+     * Nothing else can produce one, so profiles saved before this read back unchanged.
+     */
+    private static final char STORED_UNBOUND = 0xE000;
+
+    private static String encodeMapping(String value) {
+        return value.replace((char) XKeycode.KEY_NONE.id, STORED_UNBOUND);
+    }
+
+    private static String decodeMapping(String stored) {
+        return stored.replace(STORED_UNBOUND, (char) XKeycode.KEY_NONE.id);
     }
 
     public static String getDefaultMapping() {
@@ -444,6 +487,9 @@ public class XrController {
         output += (char)XKeycode.KEY_DOWN.id;
         output += (char)XKeycode.KEY_LEFT.id;
         output += (char)XKeycode.KEY_RIGHT.id;
+        // The stick click starts unbound. It is the menu gesture first and a key second, so a
+        // game only gets it once someone has asked for that here.
+        output += (char)XKeycode.KEY_NONE.id;
         return output;
     }
 
@@ -462,6 +508,43 @@ public class XrController {
         Pointer mouse = instance.getXServer().pointer;
         if (currentButtons[xrButton.ordinal()] != lastButtons[xrButton.ordinal()]) {
             mouse.setButton(button, currentButtons[xrButton.ordinal()]);
+        }
+    }
+
+    /**
+     * The primary thumbstick press, which is the menu gesture and so cannot be mapped the way
+     * every other button is: a press that is still down might yet become a menu summon, and
+     * opening the menu must not have fed the game a keystroke on the way there. So the game is
+     * given the key on the way up instead, and only when the press was let go of before the menu
+     * would have opened.
+     *
+     * The key is held for a few frames rather than pressed and released in the same breath: a
+     * game polling its keyboard once a frame can miss a press that is already over by the time
+     * it looks.
+     */
+    private void mapTapKey(XrInterface.ControllerButton xrButton, byte xKeycode) {
+        Keyboard keyboard = instance.getXServer().keyboard;
+        long now = System.currentTimeMillis();
+
+        if (tapKeyReleaseTime > 0 && now >= tapKeyReleaseTime) {
+            keyboard.setKeyRelease(tapKeycode);
+            tapKeyReleaseTime = 0;
+        }
+
+        int index = xrButton.ordinal();
+        if (currentButtons[index] && !lastButtons[index]) {
+            tapKeyPressTime = now;
+        } else if (!currentButtons[index] && lastButtons[index]) {
+            boolean wasClick = (tapKeyPressTime > 0) && (now - tapKeyPressTime < MENU_HOLD_MILLIS);
+            tapKeyPressTime = 0;
+            if (wasClick && (xKeycode != XKeycode.KEY_NONE.id)) {
+                // A tap still in flight from a previous click is let go of first, or its release
+                // below would be the only one left and this press would stay down.
+                if (tapKeyReleaseTime > 0) keyboard.setKeyRelease(tapKeycode);
+                tapKeycode = xKeycode;
+                tapKeyReleaseTime = now + TAP_KEY_MILLIS;
+                keyboard.setKeyPress(xKeycode, 0);
+            }
         }
     }
 

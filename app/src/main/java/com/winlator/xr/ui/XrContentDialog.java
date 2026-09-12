@@ -23,6 +23,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.BaseInputConnection;
@@ -120,6 +121,10 @@ public class XrContentDialog extends Dialog {
         //Apply background
         android.graphics.drawable.Drawable background = v.getBackground();
         if (background != null) {
+            // The bitmap is reused between redraws, so anything the background does not cover
+            // - the outside of a rounded panel - would otherwise still be holding the last
+            // frame's pixels rather than showing the game behind.
+            canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
             background.draw(canvas);
         } else {
             canvas.drawColor(Color.WHITE);

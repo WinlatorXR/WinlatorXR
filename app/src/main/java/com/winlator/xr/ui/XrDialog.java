@@ -63,6 +63,9 @@ public class XrDialog extends ContentDialog {
         // is unusable from inside a session, and the list is not something to manage mid-game.
         findViewById(R.id.TVEnvironment).setVisibility(View.GONE);
         findViewById(R.id.LLEnvironment).setVisibility(View.GONE);
+        // So is the startup hint switch: by the time this menu can be opened the hint it
+        // governs has already been and gone.
+        findViewById(R.id.CBDisableStartupHints).setVisibility(View.GONE);
 
         CheckBox cbMouseLeftHanded = findViewById(R.id.CBPlayerXRMouseLeftHanded);
         CheckBox cbMouseLightgun = findViewById(R.id.CBPlayerXRMouseLightgun);

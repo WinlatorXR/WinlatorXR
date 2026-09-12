@@ -515,6 +515,10 @@
     <string name="xr_reset_to_default_done">The XR, motion control and screen effect settings for this game have been reset to the defaults.</string>
     <string name="xr_reset_to_default_none">This game has no settings of its own. It is already using the defaults.</string>
     <string name="xr" translatable="false">XR</string>
+    <string name="xr_startup_hint_label">Tip</string>
+    <string name="xr_startup_hint_menu">To show XR Menu, long press the right joystick click (R3)</string>
+    <string name="xr_startup_hint_menu_left_handed">To show XR Menu, long press the left joystick click (L3)</string>
+    <string name="xr_disable_startup_hints">Do not show control hints while a game starts</string>
     <string name="cpu_level">CPU level</string>
     <string name="gpu_level">GPU level</string>
     <string name="refresh_rate">Refresh rate</string>
@@ -540,6 +544,7 @@
     <string name="thumbstick_right">Thumbstick right</string>
     <string name="thumbstick_up">Thumbstick up</string>
     <string name="thumbstick_down">Thumbstick down</string>
+    <string name="thumbstick_press">Thumbstick click (primary hand, hold opens the menu)</string>
     <string name="hint_camera_adjust">Use primary thumstick to adjust camera height.\nUse secondary thumstick to adjust camera position</string>
     <string name="autoclose">Automatically close the container when all windows are closed</string>
     <string name="trackir_plugin">TrackIR emulation plugin</string>

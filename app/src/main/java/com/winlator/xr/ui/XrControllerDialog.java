@@ -64,6 +64,7 @@ public class XrControllerDialog extends ContentDialog {
         bindMapping(findViewById(R.id.SThumbstickRight), XrController.Mapping.THUMBSTICK_RIGHT);
         bindMapping(findViewById(R.id.SThumbstickUp), XrController.Mapping.THUMBSTICK_UP);
         bindMapping(findViewById(R.id.SThumbstickDown), XrController.Mapping.THUMBSTICK_DOWN);
+        bindMapping(findViewById(R.id.SThumbstickPress), XrController.Mapping.THUMBSTICK_PRESS);
 
         setOnConfirmCallback(() -> {
             saveMapping(etName.getText().toString());
@@ -145,7 +146,8 @@ public class XrControllerDialog extends ContentDialog {
         //The order has to be the same as in Mapping enum
         int[] ids = {
                 R.id.SButtonA, R.id.SButtonB, R.id.SButtonX, R.id.SButtonY, R.id.SButtonGrip, R.id.SButtonTrigger,
-                R.id.SThumbstickUp, R.id.SThumbstickDown, R.id.SThumbstickLeft, R.id.SThumbstickRight
+                R.id.SThumbstickUp, R.id.SThumbstickDown, R.id.SThumbstickLeft, R.id.SThumbstickRight,
+                R.id.SThumbstickPress
         };
         byte[] output = new byte[ids.length];
         for (int i = 0; i < ids.length; i++) {

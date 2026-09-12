@@ -621,7 +621,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         }
 
 
-        startupDialog.show(R.string.starting_up);
+        startupDialog.show(R.string.starting_up, firstTimeBoot);
 
 
         inputControlsManager = new InputControlsManager(this);
@@ -636,7 +636,9 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             public void onUpdateWindowContent(Window window) {
                 if (!winStarted[0] && window.isApplicationWindow()) {
                     xServerView.getRenderer().setCursorVisible(true);
-                    runOnUiThread(() -> startupDialog.dismiss());
+                    // Not a dismiss: the dialog decides for itself how much longer it stays
+                    // over the game, which is its only chance to finish a hint.
+                    runOnUiThread(() -> startupDialog.onGameWindowReady());
                     winStarted[0] = true;
                 }
 

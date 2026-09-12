@@ -27,6 +27,7 @@ import com.winlator.cmod.math.XForm;
 import com.winlator.cmod.renderer.GLRenderer;
 import com.winlator.cmod.renderer.RenderableWindow;
 import com.winlator.cmod.renderer.Texture;
+import com.winlator.cmod.renderer.material.BGRAMaterial;
 import com.winlator.cmod.renderer.material.BGRMaterial;
 import com.winlator.cmod.renderer.material.ShaderMaterial;
 import com.winlator.cmod.widget.XServerView;
@@ -43,6 +44,7 @@ import javax.microedition.khronos.opengles.GL10;
 
 public class XrRenderer extends GLRenderer {
     private final BGRMaterial bgrMaterial = new BGRMaterial();
+    private final BGRAMaterial dialogMaterial = new BGRAMaterial();
 
     private final Texture[] lastTexture = {new Texture(), new Texture()};
     private short lastTextureWidth = 0;
@@ -212,10 +214,15 @@ public class XrRenderer extends GLRenderer {
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
     }
 
+    /**
+     * Dialogs go through the alpha keeping material rather than the one the windows use: a
+     * dialog drawn on a rounded panel has transparent corners, and they have to show the game
+     * behind rather than a square of whatever those pixels happen to hold.
+     */
     private void renderDialog() {
-        bgrMaterial.use();
-        GLES20.glUniform2f(bgrMaterial.getUniformLocation("viewSize"), xServer.screenInfo.width, xServer.screenInfo.height);
-        quadVertices.bind(bgrMaterial.programId);
+        dialogMaterial.use();
+        GLES20.glUniform2f(dialogMaterial.getUniformLocation("viewSize"), xServer.screenInfo.width, xServer.screenInfo.height);
+        quadVertices.bind(dialogMaterial.programId);
 
         XForm.identity(tmpXForm2);
         float aspect = xServer.screenInfo.width / (float)xServer.screenInfo.height;
@@ -240,10 +247,10 @@ public class XrRenderer extends GLRenderer {
                     if (XrKeyboard.isShown()) {
                         offsetY = (int) (xServer.screenInfo.height - viewTransformation.sceneOffsetY - drawable.height * scale);
                     }
-                    renderDrawable(drawable, offsetX, offsetY, bgrMaterial, false, scale * aspect / div, scale);
+                    renderDrawable(drawable, offsetX, offsetY, dialogMaterial, false, scale * aspect / div, scale);
                     if (div > 1) {
                         offsetX += (int) (xServer.screenInfo.width / div);
-                        renderDrawable(drawable, offsetX, offsetY, bgrMaterial, false, scale * aspect / div, scale);
+                        renderDrawable(drawable, offsetX, offsetY, dialogMaterial, false, scale * aspect / div, scale);
                     }
                 }
             }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The panel the startup dialog is drawn on in a headset, where it has no window background
+     to sit on and would otherwise be a bare white rectangle. The outline is there for a bright
+     game behind it, which a white edge on its own disappears into. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@android:color/white" />
+    <corners android:radius="18dp" />
+    <stroke android:width="1dp" android:color="#332F0B81" />
+</shape>

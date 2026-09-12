@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The startup dialog shown while a game boots in a headset: a status line with the spinner,
+     and under it the one hint that boot is teaching.
+
+     Laid out for the distance it is read at. In a headset the dialog reaches the eye as a
+     bitmap on a quad a couple of metres away, so the type is larger than a phone dialog would
+     want it, the two blocks are told apart by a tinted panel rather than a rule, and the hint
+     sits on a fixed width with a floor on its line count: a longer hint replacing a shorter
+     one must not resize the panel around the user mid-wait. -->
+<!-- The width belongs to the hint panel, not to this: with no hint to show the dialog is a
+     spinner and two words, and a panel sized for a hint would leave it adrift in white. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <!-- Centred on whatever the dialog ends up being: the hint's width when there is one, its
+         own when there is not. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <ProgressBar
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:indeterminate="true"
+            android:layout_marginRight="16dp"
+            android:indeterminateDrawable="@drawable/progress_bar_indeterminate" />
+
+        <TextView
+            android:id="@+id/TextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="@color/colorPrimary" />
+    </LinearLayout>
+
+    <!-- Hidden as a block when there is no hint to show, which leaves the bare preloader. -->
+    <LinearLayout
+        android:id="@+id/LLHint"
+        android:layout_width="460dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="16dp"
+        android:padding="14dp"
+        android:background="@drawable/xr_startup_hint_card">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_marginRight="12dp"
+            android:layout_gravity="top"
+            android:contentDescription="@string/xr_startup_hint_label"
+            android:src="@drawable/ic_tip" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="3dp"
+                android:letterSpacing="0.08"
+                android:text="@string/xr_startup_hint_label"
+                android:textAllCaps="true"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/colorAccent" />
+
+            <TextView
+                android:id="@+id/TVHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minLines="3"
+                android:lineSpacingExtra="3dp"
+                android:textSize="16sp"
+                android:textColor="@color/colorPrimaryDark" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

@@ -101,6 +101,15 @@
     </LinearLayout>
 
 
+    <!-- Settings only: the hints are only ever shown while a game boots, so there is nothing
+         this could change from inside a session. XrDialog hides it. -->
+    <CheckBox
+        android:id="@+id/CBDisableStartupHints"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/xr_disable_startup_hints" />
+
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
