@@ -36,7 +36,9 @@ import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.contents.Downloader;
 import com.winlator.cmod.core.FileUtils;
+import com.winlator.cmod.core.GameUninstaller;
 import com.winlator.cmod.store.SteamDatabase;
+import com.winlator.cmod.store.StoreGameInstall;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -169,6 +171,29 @@ public class GoldbergEmu {
     }
 
     /**
+     * Whether the Goldberg fix is worth offering for a shortcut at all.
+     *
+     * Goldberg stands in for the Steam client, so it only means anything to a game built against
+     * Steam. A game one of the other stores downloaded is that store's own build, sold without
+     * Steam in it, and there is nothing in it for Goldberg to stand in for. Everything else --
+     * a game the app's Steam screen downloaded, or anything installed or copied in by hand --
+     * could be a Steam build, so it keeps the offer.
+     *
+     * Resolves a .lnk to the program behind it and reads what is on disk, so it belongs with
+     * opening the menu rather than with drawing a row of it.
+     */
+    public static boolean appliesTo(Context context, Shortcut shortcut) {
+        StoreGameInstall install = StoreGameInstall.find(context,
+                GameUninstaller.resolveExecutable(context, shortcut.container, shortcut));
+        return install == null || install.installsSteamBuilds();
+    }
+
+    /** Whether the fix is on the game, and so is there to be taken back off it. */
+    public static boolean isApplied(Shortcut shortcut) {
+        return !shortcut.getExtra("goldbergApplied", "").isEmpty();
+    }
+
+    /**
      * Lightweight, dismiss-by-ignoring hint shown on the first GOLDBERG_HINT_MAX_SHOWS
      * launches of a shortcut (not a blocking gate — we can't know in advance whether a
      * game actually needs the fix to start, only that it plausibly could, so it's a
@@ -176,7 +201,10 @@ public class GoldbergEmu {
      */
     public static boolean maybeShowGoldbergHint(Context context, Shortcut shortcut) {
         if (readCachedGoldbergDirs(shortcut).isEmpty()) return false;
-        if (!shortcut.getExtra("goldbergApplied", "").isEmpty()) return false;
+        if (isApplied(shortcut)) return false;
+        // Steam files left lying in another store's build are leftovers rather than something the
+        // game runs on, and the menu the hint points at does not offer the fix for one of those.
+        if (!appliesTo(context, shortcut)) return false;
 
         int shownCount;
         try {

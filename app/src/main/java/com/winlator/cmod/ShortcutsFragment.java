@@ -980,6 +980,13 @@ public class ShortcutsFragment extends Fragment {
             // to, so the rest are not offered a copy they would gain nothing from.
             listItemMenu.getMenu().findItem(R.id.shortcut_copy_to_internal)
                     .setVisible(GameCopier.canCopy(context, shortcut));
+            // Goldberg stands in for Steam, which the build a store other than Steam sold has no
+            // use for. Taking the fix back off stays where it is put, so a game it was somehow
+            // applied to is never left holding it with no way to undo that.
+            boolean goldbergApplies = GoldbergEmu.appliesTo(context, shortcut);
+            listItemMenu.getMenu().findItem(R.id.shortcut_apply_goldberg).setVisible(goldbergApplies);
+            listItemMenu.getMenu().findItem(R.id.shortcut_revert_goldberg)
+                    .setVisible(goldbergApplies || GoldbergEmu.isApplied(shortcut));
 
             listItemMenu.setOnMenuItemClickListener((menuItem) -> {
                 int itemId = menuItem.getItemId();

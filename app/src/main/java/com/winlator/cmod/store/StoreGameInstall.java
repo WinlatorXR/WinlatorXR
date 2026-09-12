@@ -136,6 +136,17 @@ public final class StoreGameInstall {
     }
 
     /**
+     * Whether the store's downloads are Steam builds -- games that reach Steam through
+     * steam_api.dll and expect the client to be running behind it.
+     *
+     * Only Steam's are. The other stores sell their own build of a game, made without Steam in
+     * it, so nothing they install has any use for a stand-in for Steam.
+     */
+    public boolean installsSteamBuilds() {
+        return store == Store.STEAM;
+    }
+
+    /**
      * Clears what the store wrote down about the game, so its page shows it as installable again
      * rather than offering to launch files that are gone.
      *
