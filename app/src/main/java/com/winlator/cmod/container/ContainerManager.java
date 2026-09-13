@@ -30,10 +30,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.concurrent.Executors;
 
 public class ContainerManager {
+    // Any .tzst/.txz container image dropped in assets/containers/ at build time is picked up
+    // here — no fixed filename required. Used both for the auto-created first container
+    // (MainActivity.autoCreateDefaultContainersIfNeeded) and the manual "Import bundled container"
+    // menu action (ContainersFragment).
+    public static final String BUNDLED_CONTAINERS_ASSET_DIR = "containers";
+
     private final ArrayList<Container> containers = new ArrayList<>();
     private int maxContainerId = 0;
     private final File homeDir;
@@ -293,6 +300,104 @@ public class ContainerManager {
             }
         }
         return null;  // Return null if no matching container is found
+    }
+
+    /**
+     * Lists container images bundled into the APK under assets/containers/. Any .tzst (zstd) or
+     * .txz (xz) file placed there at build time is picked up automatically — the filename is not
+     * fixed, so multiple bundled images can coexist.
+     */
+    public ArrayList<String> listBundledContainerAssets() {
+        ArrayList<String> result = new ArrayList<>();
+        try {
+            AssetManager assets = context.getAssets();
+            String[] files = assets.list(BUNDLED_CONTAINERS_ASSET_DIR);
+            if (files != null) {
+                for (String file : files) {
+                    String lower = file.toLowerCase();
+                    if (lower.endsWith(".tzst") || lower.endsWith(".txz")) result.add(file);
+                }
+            }
+        } catch (IOException e) {
+            Log.e("ContainerManager", "Failed to list bundled container assets", e);
+        }
+        Collections.sort(result);
+        return result;
+    }
+
+    /**
+     * Imports a container image bundled in assets/containers/&lt;assetFileName&gt; (as listed by
+     * {@link #listBundledContainerAssets()}). Same format/behavior as
+     * {@link #importContainerFromArchive}, just sourced from the APK's assets instead of a file
+     * the user picked. The callback reports success/failure on the UI thread.
+     */
+    public void importContainerFromAsset(String assetFileName, Callback<Boolean> callback) {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            boolean ok = doImportContainerAsset(assetFileName);
+            if (callback != null) runOnUiThread(() -> callback.call(ok));
+        });
+    }
+
+    private boolean doImportContainerAsset(String assetFileName) {
+        File extractDir = null;
+        try {
+            if (assetFileName == null || assetFileName.isEmpty()) {
+                Log.e("ContainerManager", "No bundled container asset specified for import");
+                return false;
+            }
+            String assetPath = BUNDLED_CONTAINERS_ASSET_DIR + "/" + assetFileName;
+
+            extractDir = new File(context.getCacheDir(), "container_import_" + System.currentTimeMillis());
+            if (!extractDir.mkdirs()) {
+                Log.e("ContainerManager", "Failed to create temp extract dir: " + extractDir.getPath());
+                return false;
+            }
+
+            // Guess the compressor from the extension, then fall back to the other one — mirrors
+            // doImportContainerArchive's tolerance for a mislabeled/renamed file.
+            TarCompressorUtils.Type guessedType = assetFileName.toLowerCase().endsWith(".txz")
+                    ? TarCompressorUtils.Type.XZ : TarCompressorUtils.Type.ZSTD;
+            TarCompressorUtils.Type fallbackType = guessedType == TarCompressorUtils.Type.ZSTD
+                    ? TarCompressorUtils.Type.XZ : TarCompressorUtils.Type.ZSTD;
+
+            boolean extracted = TarCompressorUtils.extract(guessedType, context, assetPath, extractDir);
+            if (!extracted) extracted = TarCompressorUtils.extract(fallbackType, context, assetPath, extractDir);
+            if (!extracted) {
+                Log.e("ContainerManager", "Failed to extract bundled container asset: " + assetPath);
+                return false;
+            }
+
+            File sourceDir = resolveImportedContainerDir(extractDir);
+            if (!new File(sourceDir, ".container").isFile())
+                Log.w("ContainerManager", "Bundled container asset has no .container at " + sourceDir.getPath() + " — image may be incomplete");
+
+            int newContainerId = getNextContainerId();
+            File newContainerDir = new File(homeDir, ImageFs.USER + "-" + newContainerId);
+            if (newContainerDir.exists()) {
+                Log.e("ContainerManager", "Container directory already exists: " + newContainerDir.getPath());
+                return false;
+            }
+
+            if (!sourceDir.renameTo(newContainerDir)) {
+                Log.w("ContainerManager", "Move failed; falling back to copy for: " + newContainerDir.getPath());
+                if (!newContainerDir.mkdirs()
+                        || !FileUtils.copy(sourceDir, newContainerDir, file -> FileUtils.chmod(file, 0771))) {
+                    FileUtils.delete(newContainerDir);
+                    Log.e("ContainerManager", "Failed to place bundled container at: " + newContainerDir.getPath());
+                    return false;
+                }
+            }
+
+            String fallbackName = assetFileName.replaceAll("\\.(tzst|txz)$", "");
+            boolean ok = registerImportedContainer(newContainerId, newContainerDir, fallbackName);
+            if (ok) Log.d("ContainerManager", "Bundled container imported from asset: " + assetPath);
+            return ok;
+        } catch (Exception e) {
+            Log.e("ContainerManager", "Failed to import bundled container asset: " + assetFileName, e);
+            return false;
+        } finally {
+            if (extractDir != null) FileUtils.delete(extractDir);
+        }
     }
 
     public void importContainer(File importDir, Runnable callback) {

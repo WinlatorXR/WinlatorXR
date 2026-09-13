@@ -518,6 +518,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
      * changes, done once for each bundled Wine/Proton version (x86_64 and arm64ec), naming
      * each container after the Wine version it was created with. Runs once ever, guarded by a
      * SharedPreferences flag, and only when the user has no containers yet.
+     *
+     * If a container image was bundled into the APK under assets/containers/, that "golden"
+     * image is imported instead of building the blank per-version ones — it ships
+     * pre-configured (wine components, DXVK, drivers, etc. already installed). The blank ones
+     * are still created if that import fails.
      */
     private void autoCreateDefaultContainersIfNeeded() {
         if (sharedPreferences.getBoolean(PREF_AUTO_DEFAULT_CONTAINER_CREATED, false)) return;
@@ -529,7 +534,25 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         if (!containerManager.getContainers().isEmpty()) return;
 
         String[] wineVersions = getResources().getStringArray(R.array.wine_entries);
-        createDefaultContainer(wineVersions, 0, new ContentsManager(this));
+        ContentsManager contentsManager = new ContentsManager(this);
+
+        List<String> bundledContainers = containerManager.listBundledContainerAssets();
+        if (!bundledContainers.isEmpty()) {
+            containerManager.importContainerFromAsset(bundledContainers.get(0), (Boolean success) -> {
+                if (success != null && success) {
+                    Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.FLFragmentContainer);
+                    if (currentFragment instanceof ContainersFragment) {
+                        ((ContainersFragment) currentFragment).loadContainersList();
+                    }
+                } else {
+                    Log.e("MainActivity", "Failed to auto-import bundled container asset; falling back to default containers");
+                    createDefaultContainer(wineVersions, 0, contentsManager);
+                }
+            });
+            return;
+        }
+
+        createDefaultContainer(wineVersions, 0, contentsManager);
     }
 
     /**

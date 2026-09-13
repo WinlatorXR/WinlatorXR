@@ -166,6 +166,8 @@ public class ContainersFragment extends Fragment {
 
         menu.findItem(R.id.containers_menu_add).setVisible(currentTab == 0);
         menu.findItem(R.id.containers_menu_import).setVisible(currentTab == 1);
+        menu.findItem(R.id.containers_menu_import_bundled).setVisible(
+                currentTab == 0 && manager != null && !manager.listBundledContainerAssets().isEmpty());
     }
 
     @Override
@@ -180,9 +182,58 @@ public class ContainersFragment extends Fragment {
                 openImportContainerArchive();
                 return true;
 
+            case R.id.containers_menu_import_bundled:
+                openImportBundledContainer();
+                return true;
+
             default:
                 return super.onOptionsItemSelected(menuItem);
         }
+    }
+
+    // Import a container image bundled into the APK's assets (assets/containers/). If more than
+    // one is bundled, lets the user pick which one.
+    private void openImportBundledContainer() {
+        List<String> bundled = manager.listBundledContainerAssets();
+        if (bundled.isEmpty()) {
+            AppUtils.showToast(getContext(), getString(R.string.import_bundled_container_none));
+            return;
+        }
+
+        if (bundled.size() == 1) {
+            confirmImportBundledContainer(bundled.get(0));
+            return;
+        }
+
+        String[] items = bundled.toArray(new String[0]);
+        new AlertDialog.Builder(getContext())
+                .setTitle(R.string.import_bundled_container_choose_title)
+                .setItems(items, (dialog, which) -> confirmImportBundledContainer(items[which]))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void confirmImportBundledContainer(String assetFileName) {
+        new AlertDialog.Builder(getContext())
+                .setTitle(R.string.import_bundled_container)
+                .setMessage(getString(R.string.import_bundled_container_confirm, assetFileName))
+                .setPositiveButton(R.string.import_bundled_container, (dialog, which) -> importBundledContainer(assetFileName))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void importBundledContainer(String assetFileName) {
+        preloaderDialog.show(R.string.importing_container);
+        manager.importContainerFromAsset(assetFileName, (Boolean success) -> {
+            // Delivered on the UI thread by the manager.
+            preloaderDialog.close();
+            if (success != null && success) {
+                loadContainersList();
+                AppUtils.showToast(getContext(), getString(R.string.import_container_success));
+            } else {
+                AppUtils.showToast(getContext(), getString(R.string.import_container_failed));
+            }
+        });
     }
 
     private void openCreateContainer() {

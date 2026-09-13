@@ -14,4 +14,10 @@
         android:icon="@drawable/icon_action_bar_import"
         android:title="@string/import_container"
         app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/containers_menu_import_bundled"
+        android:icon="@drawable/icon_action_bar_import"
+        android:title="@string/import_bundled_container"
+        app:showAsAction="never" />
 </menu>

@@ -579,6 +579,10 @@
     <string name="import_container_invalid">Invalid container image.</string>
     <string name="import_container_success">Container imported.</string>
     <string name="import_container_failed">Failed to import. Make sure you selected a valid exported container image.</string>
+    <string name="import_bundled_container">Import bundled container</string>
+    <string name="import_bundled_container_none">No container images are bundled in this build.</string>
+    <string name="import_bundled_container_confirm">Import the bundled container \"%1$s\"?</string>
+    <string name="import_bundled_container_choose_title">Choose a bundled container</string>
 
     <string name="brightness">Brightness</string>
     <string name="contrast">Contrast</string>
