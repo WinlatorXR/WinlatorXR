@@ -27,7 +27,6 @@ import com.winlator.cmod.XServerDisplayActivity;
 import com.winlator.cmod.core.SessionSettings;
 import com.winlator.xr.XrActivity;
 import com.winlator.xr.io.XrInput;
-import com.winlator.xr.io.XrRenderer;
 import com.winlator.xr.ui.XrDialog;
 import com.winlator.xr.utils.XrEnvironment;
 
@@ -293,15 +292,6 @@ public class NavigationDialog extends ContentDialog {
 
     private static String getStatusText(Context context) {
         StringBuilder status = new StringBuilder();
-
-        // The rate the game is producing frames at, whether or not it is also drawn over it.
-        // A VR title is read from its own frame sync, which passthrough makes unreliable, so
-        // that one keeps the narrower guard it has always had.
-        boolean frameSyncReadable = XrRenderer.vrWindowOnTop && !XrActivity.isPassthrough;
-        if (XrActivity.isActive() && (!XrActivity.isVR || frameSyncReadable)) {
-            status.append(XrActivity.getInstance().getLastFPS()).append(" FPS   ");
-        }
-
         status.append(DateFormat.getTimeFormat(context).format(new Date()));
 
         Intent battery = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
