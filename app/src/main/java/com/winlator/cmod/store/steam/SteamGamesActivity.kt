@@ -34,6 +34,10 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
     private var sortKey = SortKey.TITLE
     private var sortAsc = true
 
+    /** Ids of the Steam collections currently filtered on. Empty means no filtering. */
+    private val selectedCollections = linkedSetOf<String>()
+    private lateinit var collectionsBtn: TextView
+
     private enum class InstallFilter { ALL, INSTALLED, NOT_INSTALLED, ANDROID }
     private enum class SortKey { TITLE, SIZE }
 
@@ -41,6 +45,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         super.onCreate(savedInstanceState)
         setContentView(buildUI())
         SteamRepository.getInstance().addListener(this)
+        SteamCollectionStore.init(this)
         loadGames()
         maybeAutoSync()
     }
@@ -80,6 +85,14 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
                 ui.post {
                     loadGames()
                     statusText.text = "${games.size} games in library"
+                }
+            }
+            event.startsWith(SteamCollectionStore.EVENT_SYNCED) -> {
+                // Collections arrive on their own RPC, well after the library list —
+                // re-run the filter so the pill and any active selection catch up.
+                ui.post {
+                    SteamCollectionStore.reconcile(selectedCollections)
+                    refreshList()
                 }
             }
             event == "LoggedOut" -> {
@@ -140,6 +153,9 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
     private fun maybeAutoSync() {
         val repo = SteamRepository.getInstance()
         if (!repo.isLoggedIn) return
+        // Collections otherwise refresh with the library sync below. This only covers the
+        // case where no snapshot exists at all, and fires at most once per process.
+        SteamCollectionStore.fetchIfNoSnapshot()
         val staleThresholdSec = 4 * 60 * 60L  // 4 hours
         val elapsed = System.currentTimeMillis() / 1000L - repo.lastSyncTime
         if (games.isEmpty() || elapsed > staleThresholdSec) {
@@ -158,6 +174,13 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             InstallFilter.ANDROID       -> seq.filter { it.hasAndroid }
             InstallFilter.ALL           -> seq
         }
+        // Resolve the selection to one appId set up front — testing membership per game
+        // beats rebuilding the union for every row.
+        val allowedAppIds = SteamCollectionStore.allowedAppIds(selectedCollections)
+        if (allowedAppIds != null) seq = seq.filter { it.appId in allowedAppIds }
+        // A selection that resolved to nothing filters nothing, so it must not claim to.
+        val collectionFilterActive = allowedAppIds != null
+        updateCollectionsLabel()
         val cmp: Comparator<SteamGame> = when (sortKey) {
             SortKey.TITLE -> compareBy { it.name.lowercase() }
             SortKey.SIZE  -> compareBy { it.sizeBytes }
@@ -210,8 +233,9 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         }
         gridView.adapter = adapter
         emptyText.text = when {
-            searchQuery.isNotEmpty()           -> "No games match \"$searchQuery\"."
-            installFilter != InstallFilter.ALL -> "No games match the current filter."
+            searchQuery.isNotEmpty()             -> "No games match \"$searchQuery\"."
+            collectionFilterActive               -> "No games in the selected collections."
+            installFilter != InstallFilter.ALL   -> "No games match the current filter."
             else -> "No games found.\nIf sync just finished, tap Refresh."
         }
         emptyText.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
@@ -251,6 +275,93 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         // Downsample to the on-screen cell width (RGB_565) so big libraries stay light on RAM.
         val target = resources.displayMetrics.widthPixels / StoreGridUi.COLUMNS
         return StoreImageLoader.decodeSampled(data, target)
+    }
+
+    // -------------------------------------------------------------------------
+    // Steam collections filter
+    // -------------------------------------------------------------------------
+
+    private fun updateCollectionsLabel() {
+        if (!::collectionsBtn.isInitialized) return
+        val all = SteamCollectionStore.get()
+        collectionsBtn.text = "Collections: " + when {
+            // No snapshot yet. Collections arrive with the library sync, so this is a
+            // "not synced" state rather than work in progress.
+            all == null                      -> "not synced"
+            selectedCollections.isEmpty()    -> "All"
+            selectedCollections.size == 1    ->
+                all.firstOrNull { it.id in selectedCollections }?.name?.ellipsize(COLLECTION_LABEL_MAX)
+                    ?: "1 selected"
+            else                             -> "${selectedCollections.size} selected"
+        }
+    }
+
+    /** The pills share one non-wrapping row, so a long collection name can't run free. */
+    private fun String.ellipsize(max: Int): String =
+        if (length <= max) this else take(max - 1).trimEnd() + "…"
+
+    /**
+     * Multi-select over the user's Steam collections.
+     *
+     * Counts are taken from the whole library rather than the currently filtered list,
+     * so a collection's number doesn't shift as the other pills are changed.
+     */
+    private fun showCollectionsDialog() {
+        val all = SteamCollectionStore.get()
+        if (all == null) {
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Collections")
+                .setMessage("Collections sync with the library. Tap Refresh to sync now.")
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+        if (all.isEmpty()) {
+            val skipped = SteamCollectionStore.skippedDynamic
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Collections")
+                .setMessage(
+                    if (skipped > 0)
+                        "No usable collections found. $skipped dynamic collection(s) were skipped — " +
+                        "those are built from filter rules rather than a fixed list of games, " +
+                        "which can't be resolved outside the Steam client."
+                    else
+                        "No collections found. Create one in the Steam client and it will appear here."
+                )
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+
+        val labels = all.map { c ->
+            val count = games.count { it.appId in c.appIds }
+            "${c.name}  ($count)"
+        }.toTypedArray()
+        val checked = BooleanArray(all.size) { all[it].id in selectedCollections }
+
+        val skipped = SteamCollectionStore.skippedDynamic
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Filter by collection")
+            .apply {
+                if (skipped > 0) setMessage(
+                    "$skipped dynamic collection(s) skipped — those are built from filter " +
+                    "rules rather than a fixed list of games."
+                )
+            }
+            .setMultiChoiceItems(labels, checked) { _, which, isChecked ->
+                checked[which] = isChecked
+            }
+            .setPositiveButton("Apply") { _, _ ->
+                selectedCollections.clear()
+                all.forEachIndexed { i, c -> if (checked[i]) selectedCollections.add(c.id) }
+                refreshList()
+            }
+            .setNeutralButton("Show all") { _, _ ->
+                selectedCollections.clear()
+                refreshList()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     // -------------------------------------------------------------------------
@@ -354,6 +465,8 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         val filterBtn = StoreGridUi.pillButton(this, "Filter: All")
         val sortBtn   = StoreGridUi.pillButton(this, "Sort: Title")
         val dirBtn    = StoreGridUi.pillButton(this, "↑")
+        collectionsBtn = StoreGridUi.pillButton(this, "Collections: All")
+        collectionsBtn.setOnClickListener { showCollectionsDialog() }
         filterBtn.setOnClickListener {
             PopupMenu(this, filterBtn).apply {
                 menu.add(0, 0, 0, "All")
@@ -397,6 +510,9 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             dirBtn.text = if (sortAsc) "↑" else "↓"
             refreshList()
         }
+        controls.addView(collectionsBtn, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            .apply { marginEnd = dp(8) })
         controls.addView(filterBtn, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             .apply { marginEnd = dp(8) })
@@ -471,6 +587,9 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
     }
 
     companion object {
+        /** Longest collection name shown on the pill before it gets an ellipsis. */
+        private const val COLLECTION_LABEL_MAX = 16
+
         private val BG      = Color.parseColor("#1B1B1B")
         private val GRAY    = Color.parseColor("#AAAAAA")
 

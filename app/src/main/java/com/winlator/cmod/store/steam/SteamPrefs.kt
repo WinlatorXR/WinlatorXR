@@ -20,6 +20,8 @@ object SteamPrefs {
     private const val K_DISPLAY_NAME     = "display_name"
     private const val K_CELL_ID          = "cell_id"
     private const val K_LAST_PICS_CHANGE = "last_pics_change"
+    private const val K_COLLECTIONS         = "collections_cache"
+    private const val K_COLLECTIONS_SKIPPED = "collections_skipped_dynamic"
 
     private lateinit var prefs: SharedPreferences
 
@@ -70,6 +72,20 @@ object SteamPrefs {
         get() = prefs.getInt(K_LAST_PICS_CHANGE, 0)
         set(v) { prefs.edit().putInt(K_LAST_PICS_CHANGE, v).apply() }
 
+    /**
+     * JSON snapshot of the user's Steam collections, so the library filter still works
+     * before the first fetch of a session finishes — and offline. Written by
+     * SteamCollectionStore; empty means nothing has been fetched yet.
+     */
+    var collectionsCache: String
+        get() = prefs.getString(K_COLLECTIONS, "") ?: ""
+        set(v) { prefs.edit().putString(K_COLLECTIONS, v).apply() }
+
+    /** How many dynamic ("smart") collections the last fetch had to skip. */
+    var collectionsSkippedDynamic: Int
+        get() = prefs.getInt(K_COLLECTIONS_SKIPPED, 0)
+        set(v) { prefs.edit().putInt(K_COLLECTIONS_SKIPPED, v).apply() }
+
     /** True if a session exists (refresh token present). */
     val isLoggedIn: Boolean
         get() = refreshToken.isNotEmpty() && username.isNotEmpty()
@@ -83,6 +99,8 @@ object SteamPrefs {
             .remove(K_ACCOUNT_ID)
             .remove(K_DISPLAY_NAME)
             .remove(K_LAST_PICS_CHANGE)
+            .remove(K_COLLECTIONS)
+            .remove(K_COLLECTIONS_SKIPPED)
             .apply()
         // Keep K_CELL_ID — it's a network routing hint, not sensitive
     }
