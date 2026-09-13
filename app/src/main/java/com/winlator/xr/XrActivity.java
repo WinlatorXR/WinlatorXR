@@ -64,6 +64,7 @@ public class XrActivity extends XServerDisplayActivity {
     public static boolean mouseLightgun;
     public static boolean mouseRelative;
     public static boolean pointerSmoothing;
+    public static boolean showFPS;
     public static boolean wheelEmulation;
 
     // How far from the eye the screen sits until the user moves it.
@@ -82,6 +83,9 @@ public class XrActivity extends XServerDisplayActivity {
 
     private static final String PREF_SCREEN_DISTANCE = "xr_screen_distance";
 
+    /** Whether the guest frame rate is drawn over the game, in place of the DXVK HUD. */
+    public static final String PREF_SHOW_FPS = "use_xr_fps";
+
     // Defaults for everything the XR and motion control menus can change. They live here
     // because both the menus and this activity have to agree on what an untouched setting
     // means; when they did not, the menu showed key emulation off while the session ran it
@@ -97,6 +101,7 @@ public class XrActivity extends XServerDisplayActivity {
     public static final boolean DEFAULT_MOUSE_LIGHTGUN = false;
     public static final boolean DEFAULT_MOUSE_RELATIVE = false;
     public static final boolean DEFAULT_POINTER_SMOOTHING = false;
+    public static final boolean DEFAULT_SHOW_FPS = false;
     public static final boolean DEFAULT_WHEEL = false;
 
     /**
@@ -108,7 +113,7 @@ public class XrActivity extends XServerDisplayActivity {
             "use_cs", "use_pt", "use_xr_gamepad", "xr_gamepad_radial_to_square",
             "use_xr_rumble_passthrough", "use_xr_keys", "use_xr_mouse", "use_xr_leftHanded",
             "use_xr_lightgun", "use_xr_relative_mouse", "use_xr_smoothing", "use_xr_wheel",
-            PREF_SCREEN_DISTANCE, XrEnvironment.PREF_KEY, XrEnvironment.ENABLED_KEY,
+            PREF_SHOW_FPS, PREF_SCREEN_DISTANCE, XrEnvironment.PREF_KEY, XrEnvironment.ENABLED_KEY,
             XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX};
 
     static {
@@ -149,6 +154,7 @@ public class XrActivity extends XServerDisplayActivity {
         mouseRelative = SessionSettings.getBoolean(this, "use_xr_relative_mouse", DEFAULT_MOUSE_RELATIVE);
         pointerSmoothing = SessionSettings.getBoolean(this, "use_xr_smoothing", DEFAULT_POINTER_SMOOTHING);
         wheelEmulation = SessionSettings.getBoolean(this, "use_xr_wheel", DEFAULT_WHEEL);
+        showFPS = SessionSettings.getBoolean(this, PREF_SHOW_FPS, DEFAULT_SHOW_FPS);
         lastDistance = SessionSettings.getFloat(this, PREF_SCREEN_DISTANCE, DEFAULT_DISTANCE);
 
         if (mouseLightgun) mouseRelative = false;
@@ -202,8 +208,13 @@ public class XrActivity extends XServerDisplayActivity {
         return isImmersive && XrContentDialog.getFrontInstance() == null;
     }
 
+    /**
+     * The rate the game is producing frames at, which is not the rate the headset composites
+     * at. A VR title is read from its own frame sync, anything else from how often it redraws
+     * its window; either is counted whether or not the reading is being shown anywhere.
+     */
     public int getLastFPS() {
-        return isVR && XrRenderer.vrWindowOnTop ? XrRenderer.getLastFPS() : (int) frameRating.getLastFPS();
+        return isVR && XrRenderer.vrWindowOnTop ? XrRenderer.getLastFPS() : XrRenderer.getGuestFPS();
     }
 
     public static boolean getAER() {

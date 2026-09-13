@@ -59,6 +59,7 @@ public class XrDialog extends ContentDialog {
                 () -> setViewEnabled(cbDisableEnvironment,
                         !cbPassthrough.isChecked() && !isVRGameRunning()));
         environmentToggleUI(activity, cbDisableEnvironment);
+        frameRateUI(findViewById(R.id.CBShowFPS));
         // The environment picker is Settings-only. Importing needs a document picker, which
         // is unusable from inside a session, and the list is not something to manage mid-game.
         findViewById(R.id.TVEnvironment).setVisibility(View.GONE);
@@ -92,6 +93,21 @@ public class XrDialog extends ContentDialog {
         findViewById(R.id.BTConfirm).setVisibility(View.VISIBLE);
         findViewById(R.id.BTConfirm).setOnClickListener(v -> dismiss());
         setOnConfirmCallback(this::dismiss);
+    }
+
+    /**
+     * The frame rate reading drawn over the game, which is what a user would otherwise have to
+     * run the DXVK HUD for. Offered here and in Settings alike: in a session it is pinned to
+     * the game, from Settings it is the default every game inherits.
+     *
+     * Only drawn in a headset; a flat session has the HUD in the corner of the screen already.
+     */
+    public static void frameRateUI(CheckBox cbShowFPS) {
+        loadConfig(cbShowFPS, XrActivity.PREF_SHOW_FPS, XrActivity.DEFAULT_SHOW_FPS, XrActivity.showFPS);
+        cbShowFPS.setOnCheckedChangeListener((compoundButton, checked) -> {
+            saveConfig(cbShowFPS, XrActivity.PREF_SHOW_FPS, checked);
+            XrActivity.showFPS = checked;
+        });
     }
 
     public static void controllerUI(CheckBox cbMouseLeftHanded, CheckBox cbMouseLightgun, CheckBox cbRelativeMouse, CheckBox cbMouse, CheckBox cbGamepad, CheckBox cbKeys) {

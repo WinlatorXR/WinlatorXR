@@ -162,6 +162,7 @@ public class SettingsFragment extends Fragment {
         CheckBox cbGamepad = view.findViewById(R.id.CBPlayerXRGamepad);
         CheckBox cbKeys = view.findViewById(R.id.CBPlayerXRKeys);
         XrDialog.controllerUI(cbMouseLeftHanded, cbMouseLightgun, cbRelativeMouse, cbMouse, cbGamepad, cbKeys);
+        XrDialog.frameRateUI(view.findViewById(R.id.CBShowFPS));
         CheckBox cbSBS = view.findViewById(R.id.CBEnableSBS);
         CheckBox cbImmersiveMode = view.findViewById(R.id.CBEnableImmersiveMode);
         CheckBox cbCurvedScreen = view.findViewById(R.id.CBEnableCurvedScreen);

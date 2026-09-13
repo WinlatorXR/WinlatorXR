@@ -294,8 +294,12 @@ public class NavigationDialog extends ContentDialog {
     private static String getStatusText(Context context) {
         StringBuilder status = new StringBuilder();
 
-        if (XrActivity.isVR && XrRenderer.vrWindowOnTop && !XrActivity.isPassthrough) {
-            status.append(XrActivity.getInstance().getLastFPS() + " FPS   ");
+        // The rate the game is producing frames at, whether or not it is also drawn over it.
+        // A VR title is read from its own frame sync, which passthrough makes unreliable, so
+        // that one keeps the narrower guard it has always had.
+        boolean frameSyncReadable = XrRenderer.vrWindowOnTop && !XrActivity.isPassthrough;
+        if (XrActivity.isActive() && (!XrActivity.isVR || frameSyncReadable)) {
+            status.append(XrActivity.getInstance().getLastFPS()).append(" FPS   ");
         }
 
         status.append(DateFormat.getTimeFormat(context).format(new Date()));

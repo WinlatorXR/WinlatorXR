@@ -56,6 +56,13 @@
         android:text="@string/use_pt" />
 
     <CheckBox
+        android:id="@+id/CBShowFPS"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/xr_selector"
+        android:text="@string/xr_show_fps" />
+
+    <CheckBox
         android:id="@+id/CBDisableEnvironment"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

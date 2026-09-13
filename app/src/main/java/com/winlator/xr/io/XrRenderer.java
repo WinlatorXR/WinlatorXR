@@ -32,17 +32,22 @@ import com.winlator.cmod.renderer.material.BGRMaterial;
 import com.winlator.cmod.renderer.material.ShaderMaterial;
 import com.winlator.cmod.widget.XServerView;
 import com.winlator.cmod.xserver.Drawable;
+import com.winlator.cmod.xserver.Window;
 import com.winlator.cmod.xserver.XLock;
 import com.winlator.cmod.xserver.XServer;
 import com.winlator.xr.XrActivity;
 import com.winlator.xr.api.XrFramesync;
 import com.winlator.xr.ui.XrContentDialog;
+import com.winlator.xr.ui.XrFpsOverlay;
 import com.winlator.xr.ui.XrKeyboard;
 import com.winlator.xr.utils.XrEnvironment;
 
 import javax.microedition.khronos.opengles.GL10;
 
 public class XrRenderer extends GLRenderer {
+    /** How far the frame rate panel sits from the corner, as a fraction of the screen. */
+    private static final float FPS_PANEL_MARGIN = 0.01f;
+
     private final BGRMaterial bgrMaterial = new BGRMaterial();
     private final BGRAMaterial dialogMaterial = new BGRAMaterial();
 
@@ -55,6 +60,7 @@ public class XrRenderer extends GLRenderer {
     private boolean xrFrameReady = false;
     private boolean xrFrameStarted = false;
     private final XrFramesync xrFramesync;
+    private final XrFpsOverlay fpsOverlay = new XrFpsOverlay();
 
     public static boolean autoclose = true;
     public static boolean vrWindowOnTop = false;
@@ -69,6 +75,17 @@ public class XrRenderer extends GLRenderer {
 
     public static int getLastFPS() {
         return instance.xrFramesync.getLastFPS();
+    }
+
+    /** The rate the guest is redrawing the window the user is looking at. */
+    public static int getGuestFPS() {
+        return instance == null ? 0 : instance.fpsOverlay.getLastFPS();
+    }
+
+    @Override
+    public void onUpdateWindowContent(Window window) {
+        fpsOverlay.onContentUpdate(window.getContent());
+        super.onUpdateWindowContent(window);
     }
 
     @Override
@@ -181,6 +198,9 @@ public class XrRenderer extends GLRenderer {
             if (!renderableWindows.isEmpty()) {
                 RenderableWindow window = renderableWindows.get(renderableWindows.size() - 1);
                 vrWindowOnTop = (window.rootX == 0) && (window.rootY == 0);
+                // This is the window renderWindows draws, so its redraws are the frame rate
+                // the user is watching - not those of a launcher still ticking away behind it.
+                fpsOverlay.setTrackedContent(window.content);
             }
         }  else if ((System.currentTimeMillis() - timestampHadWindow > 1000)) {
             if (autoclose && XrActivity.isEnabled(null)) {
@@ -212,6 +232,61 @@ public class XrRenderer extends GLRenderer {
         }
         XrActivity.getInstance().bindFBO(-1);
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
+    }
+
+    /**
+     * The frame rate reading goes in after the game and the cursor so that nothing is drawn
+     * over it, and from here rather than beside the dialogs so that it shares the transform
+     * the window was drawn with: that puts it in the corner of the game rather than the
+     * corner of the square the compositor is handed.
+     */
+    @Override
+    public void drawFrame() {
+        super.drawFrame();
+        renderFPS();
+    }
+
+    /**
+     * Draws the game's frame rate over the top left of the window, where the DXVK HUD this
+     * stands in for would have been.
+     *
+     * Left out of the two modes it cannot be drawn correctly in: AER renders the window into
+     * its own pair of framebuffers and leaves the default one bound, so there is nothing here
+     * for the panel to land in, and a side-by-side render splits the screen between the eyes,
+     * where a panel drawn once would reach one eye only.
+     */
+    private void renderFPS() {
+        if (!xrFrameStarted || !XrActivity.showFPS) return;
+        if (XrActivity.getAER() || XrActivity.getSBS()) return;
+
+        // A VR title is counted by its own frame sync rather than by its window redraws, which
+        // getLastFPS already prefers; either way this is the number the main menu reports.
+        Drawable reading = fpsOverlay.getDrawable(XrActivity.getInstance().getLastFPS(),
+                xServer.screenInfo.height);
+
+        // In VR the window fills the square the compositor is handed instead of being
+        // letterboxed into it, which stretches it vertically; the panel has to be widened by
+        // the same amount to come out square itself.
+        float aspect = fullscreen ? xServer.screenInfo.width / (float)xServer.screenInfo.height : 1.0f;
+        int margin = Math.round(xServer.screenInfo.height * FPS_PANEL_MARGIN);
+
+        dialogMaterial.use();
+        GLES20.glUniform2f(dialogMaterial.getUniformLocation("viewSize"), xServer.screenInfo.width, xServer.screenInfo.height);
+        quadVertices.bind(dialogMaterial.programId);
+
+        // The compositor reads this framebuffer's alpha to decide how much of the room or the
+        // environment shows through, and the window under the panel had left it opaque. Blending
+        // a translucent panel the ordinary way thinned it again, which put passthrough behind the
+        // reading rather than the game. So blend the colour as usual but only ever add to the
+        // alpha: the panel can darken what is behind it without opening a hole, and it still
+        // shows up where the screen had nothing behind it to begin with. Put the shared state
+        // back afterwards.
+        GLES20.glBlendFuncSeparate(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA,
+                GLES20.GL_ONE, GLES20.GL_ONE);
+        renderDrawable(reading, Math.round(margin * aspect), margin, dialogMaterial, false, aspect, 1);
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+
+        quadVertices.disable();
     }
 
     /**

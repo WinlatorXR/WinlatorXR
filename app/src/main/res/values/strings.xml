@@ -483,6 +483,7 @@
     <string name="use_sbs">Map side-by-side 3D render to left and right eye</string>
     <string name="use_sharpening">Compositor sharpening</string>
     <string name="use_edge_glow">Edge glow</string>
+    <string name="xr_show_fps">Show the game\'s frame rate</string>
     <string name="xr_not_available_in_vr">%1$s (not available in VR games)</string>
     <string name="xr_environment">360 environment</string>
     <string name="disable_environment">Disable environment</string>
