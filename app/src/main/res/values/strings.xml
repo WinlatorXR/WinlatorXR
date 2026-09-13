@@ -959,9 +959,8 @@ E.g. <b>META</b> for <i>META key</i>, \n
 
     <string name="copy_to_internal_nothing_to_copy">This shortcut has no game folder to copy. Either it is already on internal storage, or its program sits loose in a drive\'s top folder rather than in a folder of its own.</string>
 
-    <!-- The Z: Drive tab: games installed outside every container, with or without a shortcut. -->
-    <string name="z_drive">Z: Drive</string>
-    <string name="no_items_to_display_z_drive">Nothing is installed on Z: yet.\n\nGames copied to internal storage, unpacked from an archive, or downloaded by a store are kept here, outside every container, and show up on this tab.</string>
+    <!-- The games/store tab: games installed outside every container, with or without a shortcut. -->
+    <string name="no_items_to_display_z_drive">Nothing is installed from store yet.\n\nGames copied to internal storage, unpacked from an archive, or downloaded by a store are kept here, outside every container, and show up on this tab.</string>
     <string name="z_drive_source_copied">Copied to internal storage</string>
     <string name="z_drive_source_extracted">Unpacked from an archive</string>
     <string name="z_drive_subtitle">%1$s • %2$s • %3$s</string>
@@ -978,8 +977,7 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="z_drive_no_executable">There is no program in \"%1$s\" to point a shortcut at. Its folder is %2$s.</string>
     <string name="z_drive_store_page">Open Store Page</string>
     <string name="z_drive_store_signed_out">You are signed out of %1$s, so it has no page to show \"%2$s\" on. Sign in to %1$s again, then open its page from here.</string>
-    <string name="z_drive_store_no_record">%1$s has no record of installing \"%2$s\" any more, so there is no page to open for it. Its files on Z: are untouched.</string>
-    <string name="z_drive_delete">Delete from Z:</string>
+    <string name="z_drive_store_no_record">%1$s has no record of installing \"%2$s\" any more, so there is no page to open for it. Its files are untouched.</string>
     <string name="z_drive_delete_title">Delete this game?</string>
-    <string name="z_drive_delete_message">\"%1$s\" (%2$s) will be deleted from %3$s.\n\nNothing on Z: belongs to any one container, so this takes the game away from all of them, and it cannot be undone. Only the folder on Z: goes: any copy of the game you keep elsewhere is left alone.</string>
+    <string name="z_drive_delete_message">\"%1$s\" (%2$s) will be deleted from %3$s.\n\nFiles do not belong to any one container, so this takes the game away from all of them, and it cannot be undone. Only the folder goes: any copy of the game you keep elsewhere is left alone.</string>
 </resources>
