@@ -151,4 +151,34 @@ public class WineInfo implements Parcelable {
     public static boolean isMainWineVersion(String wineVersion) {
         return wineVersion == null ||wineVersion.equals(MAIN_WINE_VERSION.identifier());
     }
+
+    /**
+     * The architecture named in a wine version identifier, or null if it names none.
+     *
+     * Read by looking for the architecture anywhere in the string rather than by splitting off
+     * the last segment: an identifier that came from installed content carries a suffix after
+     * the architecture, so "proton-9.0-x86_64-1" has to answer the same as "proton-9.0-x86_64".
+     * Unlike {@link #fromIdentifier}, this needs no ContentsManager and no imagefs, so it can be
+     * asked about a container the app is only reading about -- one described by a file that came
+     * from another device, say.
+     */
+    public static String archFromIdentifier(String identifier) {
+        if (identifier == null) return null;
+        // arm64ec before x86_64 before x86, so the longer name wins where one contains another.
+        if (identifier.contains("arm64ec")) return "arm64ec";
+        if (identifier.contains("x86_64")) return "x86_64";
+        if (identifier.contains("x86")) return "x86";
+        return null;
+    }
+
+    /** An architecture as it should be shown to someone, or the raw value if it is unknown. */
+    public static String archLabel(String arch) {
+        if (arch == null) return "unknown";
+        switch (arch) {
+            case "arm64ec": return "ARM64EC";
+            case "x86_64": return "x86_64";
+            case "x86": return "32-bit x86";
+            default: return arch;
+        }
+    }
 }

@@ -8,6 +8,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.DocumentsContract;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,6 +31,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.tabs.TabLayout;
 import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.ContainerManager;
+import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.contentdialog.ContentInfoDialog;
 import com.winlator.cmod.contentdialog.ContentUntrustedDialog;
@@ -41,6 +43,7 @@ import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.PreloaderDialog;
 import com.winlator.cmod.core.GameUninstaller;
+import com.winlator.cmod.core.ModInstaller;
 import com.winlator.cmod.core.ShortcutCreator;
 import com.winlator.cmod.core.StringUtils;
 import com.winlator.cmod.core.ZipExtractor;
@@ -50,12 +53,23 @@ import com.winlator.cmod.contents.ContentInstaller;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.Executors;
 
 public class ContentsFragment extends Fragment {
-    /** Argument that opens the fragment on the Installers tab with the add-installer prompt up. */
+    /** Argument that opens the fragment on the Installers &amp; Mods tab, ready to add an installer. */
     public static final String ARG_ADD_INSTALLER = "add_installer";
-    private static final int INSTALLERS_TAB = 8;
+
+    /**
+     * Installers and mods share one tab.
+     *
+     * They are two kinds of the user's own files rather than two kinds of thing: both are listed
+     * where they were left rather than copied in, both are added by pointing at a file, and
+     * neither is packed content like the other tabs hold. Two tabs a screen apart, each with one
+     * button, asked the user to know which of the two a .zip was before they could add it -- so
+     * the question is asked after the button instead, where it can be explained.
+     */
+    private static final int INSTALLERS_AND_MODS_TAB = 8;
 
     private RecyclerView recyclerView;
     private View emptyText;
@@ -139,7 +153,10 @@ public class ContentsFragment extends Fragment {
                     case 5: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_WOWBOX64); break;
                     case 6: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_FEXCORE); break;
                     case 7: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS); break;
-                    case 8: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER); break;
+                    case INSTALLERS_AND_MODS_TAB:
+                        currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER);
+                        currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_MOD);
+                        break;
                 }
                 loadContentList();
             }
@@ -157,8 +174,10 @@ public class ContentsFragment extends Fragment {
         Bundle args = getArguments();
         if (args != null && args.getBoolean(ARG_ADD_INSTALLER)) {
             args.remove(ARG_ADD_INSTALLER);
-            tabLayout.getTabAt(INSTALLERS_TAB).select();
-            promptInstallContent();
+            tabLayout.getTabAt(INSTALLERS_AND_MODS_TAB).select();
+            // Sent here to add an installer specifically, so the kind is already answered and
+            // asking again would be asking a question the caller brought the answer to.
+            promptAddInstaller();
         }
         else tabLayout.getTabAt(0).select();
 
@@ -177,11 +196,22 @@ public class ContentsFragment extends Fragment {
             return;
         }
 
-        final boolean installers = currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER);
+        // Installers and mods sit in one list, so which of the two is being added cannot be read
+        // off the tab any more. It is asked once, here, and every prompt after it is the one that
+        // kind always had.
+        if (currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER)
+                && currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_MOD)) {
+            String[] kinds = {getString(R.string.add_kind_installer), getString(R.string.add_kind_mod)};
+            ContentDialog.showSingleChoiceList(getContext(), getString(R.string.add_kind_title),
+                    kinds, which -> {
+                        if (which == 0) promptAddInstaller();
+                        else promptAddMod();
+                    });
+            return;
+        }
 
         String message = getString(R.string.do_you_want_to_install_content) + " " + getString(R.string.pls_make_sure_content_trustworthy) + " ";
-        if (installers) message += getString(R.string.select_installer);
-        else message += currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_RUNTIME)
+        message += currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_RUNTIME)
                 ? getString(R.string.content_suffix_is_wcp_or_runtime_installer)
                 : getString(R.string.content_suffix_is_wcp_packed_xz_zst);
 
@@ -189,15 +219,58 @@ public class ContentsFragment extends Fragment {
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
             intent.addCategory(Intent.CATEGORY_OPENABLE);
             intent.setType("*/*");
-            // An installer is taken from the Download folder, which is the D: drive a
-            // container gets by default, so open the picker there.
-            if (installers) intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, ContentInstaller.downloadsDocumentUri());
             getActivity().startActivityFromFragment(this, intent, MainActivity.OPEN_FILE_REQUEST_CODE);
         });
     }
 
+    /**
+     * Which of the two kinds the add button is part-way through adding.
+     *
+     * The file picker leaves this fragment and comes back to onActivityResult, which used to read
+     * the kind off the tab. One tab holding both means it has to be remembered instead.
+     */
+    private enum AddKind { INSTALLER, MOD }
+    private AddKind pendingAdd;
+
+    /** A demo or offline installer: listed where the user keeps it, run from its own row later. */
+    private void promptAddInstaller() {
+        pendingAdd = AddKind.INSTALLER;
+        String message = getString(R.string.do_you_want_to_install_content) + " "
+                + getString(R.string.pls_make_sure_content_trustworthy) + " "
+                + getString(R.string.select_installer);
+        ContentDialog.confirm(getContext(), message, () -> pickFileFromDownloads());
+    }
+
+    /**
+     * A mod is not installed from here at all -- it is added to the list, and unpacked into a game
+     * later from its own row, once there is a game to name.
+     */
+    private void promptAddMod() {
+        pendingAdd = AddKind.MOD;
+        ContentDialog.confirm(getContext(), getString(R.string.add_mod_message), () -> pickFileFromDownloads());
+    }
+
+    /**
+     * Both kinds are the user's own files kept in the Download folder -- which is also the D:
+     * drive a container gets by default -- so the picker opens there for both.
+     */
+    private void pickFileFromDownloads() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, ContentInstaller.downloadsDocumentUri());
+        getActivity().startActivityFromFragment(this, intent, MainActivity.OPEN_FILE_REQUEST_CODE);
+    }
+
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        // A picker backed out of leaves nothing to add, and an answer left lying around would be
+        // read by whatever opened the picker next.
+        if (requestCode == MainActivity.OPEN_FILE_REQUEST_CODE
+                && (resultCode != Activity.RESULT_OK || data == null || data.getData() == null)) {
+            pendingAdd = null;
+        }
+
         if (currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS)) {
             if (requestCode == MainActivity.OPEN_FILE_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
                 Uri uri = data.getData();
@@ -208,15 +281,24 @@ public class ContentsFragment extends Fragment {
             return;
         }
 
-        // A demo or offline installer is not packed content and is not copied in either: the
-        // entry is a reference to the file where the user keeps it.
+        // Neither a mod nor an offline installer is copied in: the entry is a reference to the
+        // file where the user keeps it. Which of the two was asked for before the picker opened,
+        // since one tab holds both and the list alone no longer says.
         if (requestCode == MainActivity.OPEN_FILE_REQUEST_CODE && resultCode == Activity.RESULT_OK
-                && currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER)
-                && data.getData() != null) {
-            ContentInstaller.addLocalInstaller(getActivity(), data.getData(), () -> {
-                manager.syncContents();
-                loadContentList();
-            });
+                && pendingAdd != null && data.getData() != null) {
+            AddKind kind = pendingAdd;
+            pendingAdd = null;
+
+            if (kind == AddKind.MOD) {
+                // A mod is only ever read once, to be unpacked into a game.
+                addPickedMod(data.getData());
+            }
+            else {
+                ContentInstaller.addLocalInstaller(getActivity(), data.getData(), () -> {
+                    manager.syncContents();
+                    loadContentList();
+                });
+            }
             return;
         }
 
@@ -346,6 +428,134 @@ public class ContentsFragment extends Fragment {
         ContentDialog.alert(getContext(), getString(R.string.installer_added, executable.getName()), null);
     }
 
+    /**
+     * Lists a mod archive the user picked, referenced where they keep it.
+     *
+     * Only a .zip is taken, since that is the whole of what the mod installer can unpack, and an
+     * entry offering an install that cannot be carried out is worse than no entry at all.
+     */
+    private void addPickedMod(Uri uri) {
+        String path = FileUtils.getFilePathFromDocumentUri(getContext(), uri);
+        if (path == null) {
+            ContentDialog.alert(getContext(), R.string.mod_not_local_file, null);
+            return;
+        }
+
+        File picked = new File(path);
+        if (!picked.isFile()) {
+            ContentDialog.alert(getContext(), R.string.mod_not_local_file, null);
+            return;
+        }
+
+        if (!ContentsManager.isMod(picked.getName())) {
+            ContentDialog.alert(getContext(), R.string.mod_zip_only, null);
+            return;
+        }
+
+        if (!ContentsManager.addModReference(getContext(), picked)) {
+            ContentDialog.alert(getContext(), getString(R.string.mod_add_failed, picked.getName()), null);
+            return;
+        }
+
+        manager.syncContents();
+        loadContentList();
+        ContentDialog.alert(getContext(), getString(R.string.mod_added, picked.getName()), null);
+    }
+
+    /**
+     * Installs a listed mod into a game, which means settling which game first.
+     *
+     * A mod belongs to one game and nothing on the entry says which, so every shortcut is offered
+     * and the answer is the user's. What happens after that is the same as installing a mod from
+     * the game's own menu -- the same dialogs, the same folder, the same warning -- since it is
+     * the same code reached from the other end.
+     */
+    private void installModIntoGame(ContentProfile profile, File modFile) {
+        List<Shortcut> shortcuts = allShortcuts();
+        if (shortcuts.isEmpty()) {
+            ContentDialog.alert(getContext(), R.string.mod_no_games, null);
+            return;
+        }
+
+        // An entry that names its game puts the games it could mean at the top, rather than
+        // hiding the rest: the name is free text and the match is a guess, so a wrong guess
+        // should cost a scroll and not the entry disappearing.
+        final String gameKey = matchKey(profile.game);
+        if (gameKey != null) shortcuts.sort((a, b) -> {
+            boolean matchesA = matchesGame(gameKey, a);
+            if (matchesA != matchesGame(gameKey, b)) return matchesA ? -1 : 1;
+            return a.name.compareToIgnoreCase(b.name);
+        });
+
+        String[] names = new String[shortcuts.size()];
+        for (int i = 0; i < shortcuts.size(); i++) {
+            Shortcut shortcut = shortcuts.get(i);
+            names[i] = shortcut.name + " · " + shortcut.container.getName();
+        }
+
+        String title = profile.game != null
+                ? getString(R.string.mod_choose_game_title_for, modFile.getName(), profile.game)
+                : getString(R.string.mod_choose_game_title, modFile.getName());
+
+        ContentDialog.showSingleChoiceList(getActivity(), title, names,
+                which -> ModInstaller.start(getActivity(), shortcuts.get(which), modFile, null));
+    }
+
+    /**
+     * Whether a shortcut looks like the game a mod names.
+     *
+     * Both the shortcut's name and the path it runs are tested, because either can be the one
+     * carrying the game's name: a shortcut can be renamed to anything, while the path still
+     * leads through the folder the game was installed into, and a folder the user made is the
+     * other way round.
+     */
+    private static boolean matchesGame(String gameKey, Shortcut shortcut) {
+        String name = matchKey(shortcut.name);
+        String path = matchKey(shortcut.path);
+        return (name != null && (name.contains(gameKey) || gameKey.contains(name)))
+                || (path != null && path.contains(gameKey));
+    }
+
+    /**
+     * A name reduced to what two spellings of it have in common, or null when what is left is too
+     * short to match on -- "GTA" would otherwise be found inside half the library.
+     */
+    private static String matchKey(String name) {
+        if (name == null) return null;
+        String key = name.toLowerCase(Locale.ENGLISH).replaceAll("[^a-z0-9]", "");
+        return key.length() >= 4 ? key : null;
+    }
+
+    /**
+     * Every game shortcut, in every container, for asking which one a mod is for.
+     *
+     * The Games tab is one screen away and its list is the one the user knows, so this is put in
+     * the same order and says which container each belongs to -- the same game in two containers
+     * is two entries there and has to be two entries here.
+     */
+    private List<Shortcut> allShortcuts() {
+        List<Shortcut> shortcuts = new ArrayList<>();
+
+        for (Container container : new ContainerManager(getContext()).getContainers()) {
+            File[] files = container.getDesktopDir().listFiles((dir, name) -> name.endsWith(".desktop"));
+            if (files == null) continue;
+
+            for (File file : files) {
+                // The shortcut a container runs its own installers through is not a game.
+                if (file.getAbsolutePath().contains(ShortcutsFragment.HIDDEN_SHORTCUT)) continue;
+                try {
+                    shortcuts.add(new Shortcut(container, file));
+                }
+                catch (Exception e) {
+                    Log.w("ContentsFragment", "Skipping unreadable shortcut " + file, e);
+                }
+            }
+        }
+
+        shortcuts.sort((a, b) -> a.name.compareToIgnoreCase(b.name));
+        return shortcuts;
+    }
+
     /** The .zip a runtime was picked as, which has to be a file on the device to be unpacked. */
     private void addRuntimeFromZip(Uri uri) {
         String path = FileUtils.getFilePathFromDocumentUri(getContext(), uri);
@@ -354,6 +564,41 @@ public class ContentsFragment extends Fragment {
             return;
         }
         addFromZip(new File(path), false);
+    }
+
+    /**
+     * Whether an entry is one downloadable file rather than packed content.
+     *
+     * Runtimes, installers and mods are each a single file that is either on the device or still
+     * to be fetched, which is what decides both how the row is drawn and what downloading one
+     * does with what comes back.
+     */
+    private static boolean isSingleFileEntry(ContentProfile profile) {
+        return profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME
+                || profile.type == ContentProfile.ContentType.CONTENT_TYPE_INSTALLER
+                || profile.type == ContentProfile.ContentType.CONTENT_TYPE_MOD;
+    }
+
+    /**
+     * Removing a mod entry, which never takes the archive with it when the archive is the user's
+     * own: it sits in their Download folder and is theirs to keep. A downloaded one is this app's
+     * doing, so that one goes.
+     */
+    private void confirmRemoveMod(ContentProfile profile, File modFile) {
+        final boolean referenced = profile.localFilePath != null;
+
+        String message = referenced
+                ? getString(R.string.remove_mod_reference, modFile.getName())
+                : getString(R.string.do_you_want_to_remove_this_content);
+
+        ContentDialog.confirm(getContext(), message, () -> {
+            if (referenced) ContentsManager.getReferenceFile(getContext(), profile).delete();
+            else modFile.delete();
+            // A mod entry only exists as a file, so the profile list has to be rebuilt for it to
+            // disappear.
+            manager.syncContents();
+            loadContentList();
+        });
     }
 
     /**
@@ -414,9 +659,10 @@ public class ContentsFragment extends Fragment {
             recyclerView.setAdapter(new DriversAdapter(adrenotoolsManager.enumarateInstalledDrivers()));
             btInstallContent.setText(R.string.install_drivers);
             return;
-        } else if (currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER)) {
-            btInstallContent.setText(R.string.add_installer);
-            ((TextView) emptyText).setText(R.string.no_installers_to_display);
+        } else if (currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER)
+                || currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_MOD)) {
+            btInstallContent.setText(R.string.add_installers_or_mods);
+            ((TextView) emptyText).setText(R.string.no_installers_or_mods_to_display);
         } else {
             btInstallContent.setText(R.string.install_content);
             ((TextView) emptyText).setText(R.string.no_items_to_display_contents);
@@ -509,17 +755,22 @@ public class ContentsFragment extends Fragment {
             holder.ivIcon.setBackground(getContext().getDrawable(iconId));
 
             final boolean isInstaller = profile.type == ContentProfile.ContentType.CONTENT_TYPE_INSTALLER;
-            final File localFile = isInstaller
-                    ? ContentsManager.getInstallerFile(getContext(), profile)
-                    : ContentsManager.getRuntimeFile(getContext(), profile);
+            final boolean isMod = profile.type == ContentProfile.ContentType.CONTENT_TYPE_MOD;
+            final File localFile = isMod
+                    ? ContentsManager.getModFile(getContext(), profile)
+                    : isInstaller
+                        ? ContentsManager.getInstallerFile(getContext(), profile)
+                        : ContentsManager.getRuntimeFile(getContext(), profile);
 
-            if (isInstaller) {
-                // An installer has no version behind it, so the file is the identity -- and a
-                // listed one that has not been fetched yet has no size to report.
+            if (isInstaller || isMod) {
+                // Neither an installer nor a mod has a version behind it, so the file is the
+                // identity -- and a listed one not fetched yet has no size to report.
                 holder.tvVersionName.setText(profile.localFileName != null ? profile.localFileName : profile.verName);
                 String subtitle = localFile.exists()
                         ? StringUtils.formatBytes(localFile.length())
                         : getString(R.string.not_downloaded_yet);
+                // Which game a mod is for is the thing a list of mods is read for, so it leads.
+                if (profile.game != null) subtitle = profile.game + " · " + subtitle;
                 // One of the user's own files is worth locating, since it is listed from wherever
                 // they keep it rather than from a folder of ours.
                 if (profile.localFilePath != null && localFile.getParentFile() != null)
@@ -535,6 +786,20 @@ public class ContentsFragment extends Fragment {
                 PopupMenu selectionMenu = new PopupMenu(getContext(), holder.ibMenu);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
                     selectionMenu.setForceShowIcon(true);
+
+                // A mod is not installed into a container like everything else here: it goes into
+                // one game, which has to be named before anything can happen.
+                if (isMod) {
+                    selectionMenu.inflate(R.menu.content_popup_mod_menu);
+                    selectionMenu.setOnMenuItemClickListener(item -> {
+                        int itemId = item.getItemId();
+                        if (itemId == R.id.mod_install_into_game) installModIntoGame(profile, localFile);
+                        else if (itemId == R.id.remove_content) confirmRemoveMod(profile, localFile);
+                        return true;
+                    });
+                    selectionMenu.show();
+                    return;
+                }
 
                 if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME || isInstaller) {
                     selectionMenu.inflate(R.menu.content_popup_runtime_menu);
@@ -580,9 +845,9 @@ public class ContentsFragment extends Fragment {
                 selectionMenu.show();
             });
 
-            // Both kinds are a single file that is either here or still to be fetched, so the row
+            // These are a single file that is either here or still to be fetched, so the row
             // offers whichever of the two actions applies.
-            if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME || isInstaller) {
+            if (isSingleFileEntry(profile)) {
                 if (localFile.exists()) {
                     holder.ibDownload.setVisibility(View.GONE);
                     holder.ibMenu.setVisibility(View.VISIBLE);
@@ -601,14 +866,23 @@ public class ContentsFragment extends Fragment {
 
                     try {
                         if (Downloader.downloadFileWithProgress(profile.remoteUrl, output, preloaderDialog)) {
-                            // Neither is packed content: the download is the file itself, so it
-                            // goes straight to where the install action will look for it.
-                            if (profile.type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME || isInstaller) {
+                            // None of these is packed content: the download is the file itself, so
+                            // it goes straight to where the install action will look for it.
+                            if (isSingleFileEntry(profile)) {
                                 FileUtils.copy(output, localFile);
                                 output.delete();
 
                                 getActivity().runOnUiThread(() -> {
                                     preloaderDialog.close();
+                                    // A mod stays an archive: it is unpacked into a game rather
+                                    // than into a folder of its own, and which game that is has
+                                    // not been asked yet.
+                                    if (isMod) {
+                                        ContentDialog.alert(getContext(),
+                                                getString(R.string.mod_downloaded, localFile.getName()), null);
+                                        loadContentList();
+                                        return;
+                                    }
                                     // A download that turns out to be an archive holds the
                                     // program rather than being it, so it is unpacked before it
                                     // can be listed as something to run.

@@ -346,11 +346,8 @@
     <string name="pls_make_sure_content_trustworthy">Contents contain executable files. Unsafe executable files may compromise your data or device security. Before installing, PLEASE make sure that the additional content you are installing is trustworthy.</string>
     <string name="content_suffix_is_wcp_packed_xz_zst">The content files have the .wcp extension and are compressed using either xz or zst formats.</string>
     <string name="content_suffix_is_wcp_or_runtime_installer">Select a .wcp content file, or a runtime installer (.exe, .msi, or a .zip holding one) to add from local storage.</string>
-    <string name="installers">Installers</string>
     <string name="installer_toast">Installer downloaded into\n Z:\\installers. Use its menu to install it into a container.</string>
-    <string name="add_installer">Add Installer</string>
     <string name="select_installer">Select an installer (.exe or .msi) from your Download folder. Nothing is copied: it is run where it sits, so any data files it comes with, such as the .bin parts of a GOG offline installer, only have to stay in the same folder as it.\n\nA .zip holding an installer can be selected too. That one is extracted first, into Z:\\extracted, and the installer inside it is listed from there.</string>
-    <string name="no_installers_to_display">No installers added yet!</string>
     <string name="not_downloaded_yet">Not downloaded yet</string>
     <string name="installer_added">\"%1$s\" added. Use its menu to run it in a container.</string>
     <string name="installer_not_local_file">Could not work out where that file is stored. Please pick one from your Download folder.</string>
@@ -862,6 +859,51 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="zip_delete_archive">\"%3$s\" is unpacked and ready, so \"%1$s\" is no longer needed. Deleting it frees %2$s.</string>
     <string name="zip_delete_archive_confirm">Delete Archive</string>
     <string name="zip_keep_archive">Keep It</string>
+
+    <string name="mod_menu_title">Install Mod from Zip</string>
+    <string name="mod_no_install_dir">The folder \"%1$s\" is installed in could not be found, so there is nowhere to unpack a mod into.</string>
+    <string name="mod_archive_empty">\"%1$s\" holds no files.</string>
+    <string name="mod_confirm_install">A mod is unpacked into the game\'s own folder, keeping the folders it is packed in, so it has to be packed the way that folder is laid out: example.zip should hold Bin32 and Bin64 themselves, not an example folder holding them.\n\nThis one unpacks into %1$s like this:\n\n%2$s\n\nThat needs %3$s.</string>
+    <string name="mod_confirm_wrapper_note">\n\nEverything is packed inside a folder called \"%1$s\", which is named after the download rather than after anything in the game, so that folder is dropped and its contents go in directly.</string>
+    <string name="mod_confirm_no_undo">\n\nAnything already there with the same name is replaced. Nothing is backed up and this cannot be undone, so a mod that breaks the game means installing the game again.</string>
+    <string name="mod_preview_more">…and %1$d more</string>
+    <string name="mod_install">Install Mod</string>
+    <string name="mod_installing">Installing mod…</string>
+    <string name="mod_install_failed">\"%1$s\" could not be installed:\n\n%2$s\n\nSome of its files may already have been written into the game\'s folder.</string>
+    <string name="mod_installed_no_programs">\"%1$s\" is installed into %2$s.\n\nIt added no programs of its own, so there is nothing to make a second shortcut for — start the game as usual.</string>
+    <string name="mod_installed_one_program">\"%1$s\" is installed into %2$s.\n\nIt added \"%3$s\". A shortcut for it can be added to the Games tab, set up the same way as \"%4$s\".</string>
+    <string name="mod_installed_many_programs">\"%1$s\" is installed into %2$s.\n\nIt added %3$d programs. A shortcut for one of them can be added to the Games tab.</string>
+    <string name="mod_add_shortcut">Add Shortcut</string>
+    <string name="mod_choose_shortcut">Choose a Program</string>
+    <string name="mod_no_shortcut">Not Now</string>
+    <string name="mod_choose_program_title">Which program should the shortcut run?</string>
+    <string name="mod_zip_only">A mod has to be a .zip file. Other archives (.rar, .7z) are not supported yet.</string>
+
+    <!-- A mod archive that packed a settings profile beside its files. -->
+    <string name="mod_profile_included">\n\nIt also brought settings of its own (%1$s), which will be applied to that shortcut.</string>
+    <string name="mod_profile_unused">\n\nIt also brought settings of its own (%1$s), but with no program added there is no mod shortcut to apply them to. Your game\'s own settings are untouched.</string>
+    <string name="mod_profile_applied">\n\nThe mod\'s own settings were applied to it (%1$d settings). Use Remove Custom Profile on its row to put the game\'s settings back.</string>
+    <string name="mod_profile_arch_mismatch">\n\nNote: those settings are %1$s based and this game\'s container is %2$s based, so they may need adjusting.</string>
+    <string name="mod_profile_unreadable">\n\nIts settings file (%1$s) could not be used, so the shortcut kept the game\'s settings: %2$s</string>
+    <string name="mod_profile_shortcut_unreadable">the new shortcut could not be read back.</string>
+
+    <!-- Installers and mods share one tab, so which kind is being added is asked after the button. -->
+    <string name="installers_and_mods">Installers &amp; Mods</string>
+    <string name="add_installers_or_mods">Add Installers or Mods</string>
+    <string name="no_installers_or_mods_to_display">No installers or mods yet. Add one of your own, or download one from the list.</string>
+    <string name="add_kind_title">Is this an installer or a mod?</string>
+    <string name="add_kind_installer">Installer — a program that installs a game</string>
+    <string name="add_kind_mod">Mod — files that go inside a game you have</string>
+    <string name="add_mod_message">A mod is a .zip holding files that go inside a game you already have. It stays where it is and is unpacked into a game when you choose one for it.</string>
+    <string name="mod_install_into_game">Install into a Game…</string>
+    <string name="mod_choose_game_title">Which game should \"%1$s\" be installed into?</string>
+    <string name="mod_choose_game_title_for">\"%1$s\" is a mod for %2$s. Which game should it be installed into?</string>
+    <string name="mod_no_games">There are no game shortcuts yet. Add a game on the Games tab first, then install a mod into it.</string>
+    <string name="mod_added">\"%1$s\" added to the Mods tab.</string>
+    <string name="mod_add_failed">\"%1$s\" could not be added.</string>
+    <string name="mod_not_local_file">That file could not be reached. Please pick a mod from local storage.</string>
+    <string name="mod_downloaded">\"%1$s\" downloaded. Use its menu to install it into a game.</string>
+    <string name="remove_mod_reference">Remove \"%1$s\" from the Mods tab? The file itself stays where it is.</string>
     <string name="remove_extracted_installer">Remove \"%1$s\" from this list? The folder it was extracted into, %2$s (%3$s), will be deleted with it.</string>
 
     <!-- Making a Games tab shortcut for a program that is already on disk. -->
@@ -873,6 +915,28 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="shortcut_already_exists">%1$s already has a shortcut for this game:%2$s\n\nCreate another one?</string>
     <string name="shortcut_create_another">Create Another</string>
     <string name="shortcut_create_failed">The shortcut could not be created.</string>
+
+    <!-- Carrying one shortcut's settings to another as a file. -->
+    <string name="export_settings_profile">Export Settings Profile</string>
+    <string name="import_settings_profile">Import Settings Profile</string>
+    <string name="remove_settings_profile">Remove Custom Profile</string>
+    <string name="settings_profile_badge">Custom Profile</string>
+    <string name="settings_profile_exported">The settings for \"%1$s\" were saved to:\n\n%2$s\n\nImporting that file onto another game applies these settings to it — it never renames it.</string>
+    <string name="settings_profile_export_failed">The profile could not be saved.\n\n%1$s</string>
+    <string name="settings_profile_export_replace">%1$s is already in %2$s.\n\nReplace it with this game\'s current settings?</string>
+    <string name="settings_profile_export_replace_confirm">Replace</string>
+    <string name="settings_profile_import_title">Import settings profile</string>
+    <string name="settings_profile_import_same_game">This profile holds %1$d settings exported from \"%2$s\".\n\nThey will replace the settings \"%3$s\" is using now. Its name, icon and game are not touched, and you can put its own settings back later with Remove Custom Profile.</string>
+    <string name="settings_profile_import_other_game">This profile was exported from a different game, \"%1$s\" (%2$d settings).\n\nYou can still apply it to \"%3$s\" — its name, icon and game are not touched, only the settings it runs with. Put its own settings back later with Remove Custom Profile.</string>
+    <string name="settings_profile_import_other_device">\n\nIt was exported on a %1$s and you are on a %2$s, so the performance settings may need adjusting.</string>
+    <string name="settings_profile_import_arch_mismatch">\n\nNote: this profile is %1$s based — it was exported from a container running %2$s. This game\'s container is %3$s based (%4$s).\n\nThe graphics driver, DirectX wrapper and emulator settings often do not carry across, so expect to adjust them.</string>
+    <string name="settings_profile_import_confirm">Apply Profile</string>
+    <string name="settings_profile_imported">\"%1$s\" is now running the profile from \"%2$s\".</string>
+    <string name="settings_profile_import_failed">That profile could not be imported.\n\n%1$s</string>
+    <string name="settings_profile_remove_title">Remove custom profile</string>
+    <string name="settings_profile_remove_message">\"%1$s\" is running the profile from \"%2$s\".\n\nRemoving it puts back the settings this shortcut had before the profile was imported. Its name, icon and game are not touched.</string>
+    <string name="settings_profile_removed">\"%1$s\" is back on its own settings.</string>
+    <string name="settings_profile_no_picker">No file picker app is available on this device.</string>
 
     <!-- Copying a game off a mapped drive onto Z:, so it is read from internal storage. -->
     <string name="copy_to_internal_menu">Copy Game to Internal Storage</string>

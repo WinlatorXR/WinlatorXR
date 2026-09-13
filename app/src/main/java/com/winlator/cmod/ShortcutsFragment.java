@@ -56,14 +56,18 @@ import com.winlator.cmod.core.GameCopier;
 import com.winlator.cmod.core.GameUninstaller;
 import com.winlator.cmod.core.GuestScriptRunner;
 import com.winlator.cmod.core.MSLink;
+import com.winlator.cmod.core.ModInstaller;
 import com.winlator.cmod.core.PreloaderDialog;
 import com.winlator.cmod.core.RedistInstaller;
 import com.winlator.cmod.core.ShortcutCreator;
+import com.winlator.cmod.core.ShortcutProfile;
 import com.winlator.cmod.core.ShortcutSource;
 import com.winlator.cmod.core.StringUtils;
+import com.winlator.cmod.core.WineInfo;
 import com.winlator.cmod.core.ZipExtractor;
 import com.winlator.cmod.core.ZipImport;
 import com.winlator.cmod.store.StoreGameInstall;
+import com.winlator.xr.utils.Device;
 import com.winlator.xr.utils.GoldbergEmu;
 
 import java.io.BufferedReader;
@@ -165,6 +169,64 @@ public class ShortcutsFragment extends Fragment {
         }
     }
 
+    /** The game a picked mod archive is being installed into, held across the picker. */
+    private Shortcut modTargetShortcut;
+
+    private final ActivityResultLauncher<Intent> modZipPickerLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    Uri uri = result.getData().getData();
+                    if (uri != null) handlePickedModZipUri(uri);
+                }
+            });
+
+    private void openModZipPicker(Shortcut shortcut) {
+        this.modTargetShortcut = shortcut;
+
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        // Not filtered to application/zip: a .zip handed over by a browser or a file manager
+        // arrives under half a dozen different MIME types, and filtering on them hides the file
+        // the user is looking straight at. The extension is checked instead once it is picked.
+        intent.setType("*/*");
+
+        Uri initialUri = DocumentsContract.buildDocumentUri(
+                "com.android.externalstorage.documents", "primary:" + Environment.DIRECTORY_DOWNLOADS);
+        intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, initialUri);
+
+        try {
+            modZipPickerLauncher.launch(intent);
+        } catch (ActivityNotFoundException e) {
+            showLocalGameMessage("No file picker app is available on this device.");
+        }
+    }
+
+    private void handlePickedModZipUri(Uri uri) {
+        Shortcut shortcut = modTargetShortcut;
+        modTargetShortcut = null;
+        if (shortcut == null || getActivity() == null) return;
+
+        String path = FileUtils.getFilePathFromDocumentUri(getContext(), uri);
+        if (path == null) {
+            showLocalGameMessage("Could not resolve the selected file's location. Please pick a file from local storage.");
+            return;
+        }
+
+        File pickedFile = new File(path);
+        if (!pickedFile.isFile()) {
+            showLocalGameMessage("Selected file could not be found.");
+            return;
+        }
+
+        if (!ZipImport.isZip(pickedFile)) {
+            showLocalGameMessage(getString(R.string.mod_zip_only));
+            return;
+        }
+
+        ModInstaller.start(getActivity(), shortcut, pickedFile, this::loadShortcutsList);
+    }
+
     private void handlePickedExeUri(Uri uri) {
         String path = FileUtils.getFilePathFromDocumentUri(getContext(), uri);
         if (path == null) {
@@ -192,6 +254,156 @@ public class ShortcutsFragment extends Fragment {
         }
 
         chooseContainerForExe(pickedFile);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*                       settings profiles                            */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * The shortcut a profile is being imported onto.
+     *
+     * Held separately from {@link #currentShortcut}, which the icon picker owns: both flows leave
+     * the app for a file picker and would otherwise be writing over each other's answer.
+     */
+    private Shortcut profileShortcut;
+
+    private final ActivityResultLauncher<Intent> profileImportLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null) return;
+                Uri uri = result.getData().getData();
+                if (uri != null && profileShortcut != null) readProfileFrom(profileShortcut, uri);
+            });
+
+    /** Toasts render broken under the Quest panel compositor, so this screen says things in dialogs. */
+    private void showProfileMessage(String message) {
+        if (getContext() == null) return;
+        new AlertDialog.Builder(getContext())
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
+    /**
+     * Profiles go to one known folder rather than wherever a picker was last pointed, so a user
+     * told where their profiles are is told something that is true of all of them.
+     */
+    private void exportSettingsProfile(Shortcut shortcut) {
+        File destination = ShortcutProfile.exportFileFor(shortcut);
+
+        // The only export that can destroy something is the second one for the same game, or one
+        // landing on a profile that arrived under the same name. Both are worth a question.
+        if (destination.isFile()) {
+            new AlertDialog.Builder(getContext())
+                    .setTitle(R.string.export_settings_profile)
+                    .setMessage(getString(R.string.settings_profile_export_replace,
+                            destination.getName(), destination.getParent()))
+                    .setPositiveButton(R.string.settings_profile_export_replace_confirm,
+                            (dialog, which) -> writeProfile(shortcut))
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+            return;
+        }
+
+        writeProfile(shortcut);
+    }
+
+    private void writeProfile(Shortcut shortcut) {
+        String error = ShortcutProfile.export(shortcut);
+        showProfileMessage(error == null
+                ? getString(R.string.settings_profile_exported, shortcut.name,
+                        ShortcutProfile.exportFileFor(shortcut).getAbsolutePath())
+                : getString(R.string.settings_profile_export_failed, error));
+    }
+
+    private void importSettingsProfile(Shortcut shortcut) {
+        profileShortcut = shortcut;
+
+        // Picked as any file rather than as application/json: a profile copied off a PC or out of
+        // a chat app often arrives typed as something else, and a picker that hides it is worse
+        // than one that lets a wrong file through -- reading it says so plainly either way.
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        // Opens on the folder exports go to, which is where a profile that came from somewhere
+        // else was most likely dropped -- but still a picker, since a received one can be
+        // anywhere and the folder is a convenience rather than a rule for reading.
+        intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, DocumentsContract.buildDocumentUri(
+                "com.android.externalstorage.documents",
+                "primary:" + Environment.DIRECTORY_DOWNLOADS + "/Winlator/WxrProfiles"));
+
+        try {
+            profileImportLauncher.launch(intent);
+        }
+        catch (ActivityNotFoundException e) {
+            showProfileMessage(getString(R.string.settings_profile_no_picker));
+        }
+    }
+
+    private void readProfileFrom(Shortcut shortcut, Uri source) {
+        ShortcutProfile.ReadResult result = ShortcutProfile.read(getContext(), source);
+        if (result.profile == null) {
+            showProfileMessage(getString(R.string.settings_profile_import_failed, result.error));
+            return;
+        }
+
+        final ShortcutProfile.Parsed profile = result.profile;
+        // A profile from another game is the interesting case, not the error case: one that works
+        // for a game usually works for the next one built on the same engine. It is worth saying
+        // out loud whose settings these are, and then applying them anyway if that is wanted.
+        String message = profile.matches(shortcut)
+                ? getString(R.string.settings_profile_import_same_game,
+                        profile.settingCount(), profile.gameName, shortcut.name)
+                : getString(R.string.settings_profile_import_other_game,
+                        profile.gameName, profile.settingCount(), shortcut.name);
+
+        // Which headset tuned these settings is context rather than a warning: the same values
+        // do not land the same way on every headset, so a profile that crossed over is a
+        // starting point, not an answer.
+        if (profile.isDifferentDevice()) {
+            message += getString(R.string.settings_profile_import_other_device,
+                    profile.deviceName, Device.getDisplayName());
+        }
+
+        // Crossing between the x86 and ARM64EC sides is the one difference that reliably changes
+        // what the settings mean, so it is said before the import rather than left to be worked
+        // out from a game that will not start.
+        if (profile.isArchMismatch(shortcut)) {
+            message += getString(R.string.settings_profile_import_arch_mismatch,
+                    WineInfo.archLabel(profile.arch()), profile.wineVersion,
+                    WineInfo.archLabel(WineInfo.archFromIdentifier(
+                            shortcut.container.getWineVersion())),
+                    shortcut.container.getWineVersion());
+        }
+
+        new AlertDialog.Builder(getContext())
+                .setTitle(R.string.settings_profile_import_title)
+                .setMessage(message)
+                .setPositiveButton(R.string.settings_profile_import_confirm, (dialog, which) -> {
+                    ShortcutProfile.apply(shortcut, profile, profile.gameName);
+                    loadShortcutsList();
+                    showProfileMessage(getString(R.string.settings_profile_imported,
+                            shortcut.name, profile.gameName));
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void removeSettingsProfile(Shortcut shortcut) {
+        String profileName = ShortcutProfile.appliedName(shortcut);
+        if (profileName == null) return;
+
+        new AlertDialog.Builder(getContext())
+                .setTitle(R.string.settings_profile_remove_title)
+                .setMessage(getString(R.string.settings_profile_remove_message, shortcut.name, profileName))
+                .setPositiveButton(R.string.remove_settings_profile, (dialog, which) -> {
+                    ShortcutProfile.remove(shortcut);
+                    loadShortcutsList();
+                    showProfileMessage(getString(R.string.settings_profile_removed, shortcut.name));
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     /** A game can be played from any container that reaches it, so which one is the user's call. */
@@ -944,8 +1156,16 @@ public class ShortcutsFragment extends Fragment {
             // The container plays the game; the source says where the game itself is, which is not
             // the same thing and is the only difference between two rows for the same title.
             String source = sources.get(item);
-            holder.subtitle.setText(source == null ? item.container.getName()
-                    : getString(R.string.shortcut_subtitle_with_source, item.container.getName(), source));
+            String subtitle = source == null ? item.container.getName()
+                    : getString(R.string.shortcut_subtitle_with_source, item.container.getName(), source);
+            // Settings that came in from a file are the third thing about a row that is not
+            // visible anywhere else, and the one that explains a game behaving unlike its
+            // neighbours. The separator is the same one the source already uses.
+            if (ShortcutProfile.appliedName(item) != null) {
+                subtitle = getString(R.string.shortcut_subtitle_with_source, subtitle,
+                        getString(R.string.settings_profile_badge));
+            }
+            holder.subtitle.setText(subtitle);
             holder.menuButton.setOnClickListener((v) -> showListItemMenu(v, item));
             holder.innerArea.setOnClickListener((v) -> runFromShortcut(item));
 
@@ -983,6 +1203,10 @@ public class ShortcutsFragment extends Fragment {
             // Goldberg stands in for Steam, which the build a store other than Steam sold has no
             // use for. Taking the fix back off stays where it is put, so a game it was somehow
             // applied to is never left holding it with no way to undo that.
+            // There is nothing to remove until a profile has been imported, and the shortcut's
+            // own settings are what it is already running.
+            listItemMenu.getMenu().findItem(R.id.shortcut_remove_settings_profile)
+                    .setVisible(ShortcutProfile.appliedName(shortcut) != null);
             boolean goldbergApplies = GoldbergEmu.appliesTo(context, shortcut);
             listItemMenu.getMenu().findItem(R.id.shortcut_apply_goldberg).setVisible(goldbergApplies);
             listItemMenu.getMenu().findItem(R.id.shortcut_revert_goldberg)
@@ -995,6 +1219,15 @@ public class ShortcutsFragment extends Fragment {
                 }
                 else if (itemId == R.id.shortcut_remove) {
                     showRemoveShortcutDialog(shortcut);
+                }
+                else if (itemId == R.id.shortcut_export_settings) {
+                    exportSettingsProfile(shortcut);
+                }
+                else if (itemId == R.id.shortcut_import_settings) {
+                    importSettingsProfile(shortcut);
+                }
+                else if (itemId == R.id.shortcut_remove_settings_profile) {
+                    removeSettingsProfile(shortcut);
                 }
                 else if (itemId == R.id.shortcut_clone_to_container) {
                     // Use the ContainerManager to get the list of containers
@@ -1034,6 +1267,9 @@ public class ShortcutsFragment extends Fragment {
                 }
                 else if (itemId == R.id.shortcut_install_redist) {
                     RedistInstaller.showDialog(getActivity(), shortcut);
+                }
+                else if (itemId == R.id.shortcut_install_mod) {
+                    openModZipPicker(shortcut);
                 }
                 else if (itemId == R.id.shortcut_properties) {
                     showShortcutProperties(shortcut);

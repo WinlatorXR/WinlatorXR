@@ -52,6 +52,7 @@ import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.core.Callback;
 import com.winlator.cmod.core.PreloaderDialog;
+import com.winlator.cmod.core.ShortcutProfile;
 import com.winlator.cmod.core.WineInfo;
 import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.ContainerManager;
@@ -506,6 +507,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 && !Environment.isExternalStorageManager()) {
             showAllFilesAccessDialog();
         }
+        // A folder someone is meant to copy profiles into has to be there before the first export
+        // creates it, or there is nowhere to put the profile a friend just sent.
+        ShortcutProfile.ensureProfilesDir();
         autoCreateDefaultContainersIfNeeded();
     }
 

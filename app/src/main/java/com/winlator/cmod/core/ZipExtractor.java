@@ -131,6 +131,21 @@ public abstract class ZipExtractor {
      * one to unpack the rest of.
      */
     public static void extract(File zip, File destDir, OnProgressListener listener) throws IOException {
+        extract(zip, destDir, null, listener);
+    }
+
+    /**
+     * Unpacks the archive into destDir, optionally dropping one wrapping folder from the front of
+     * every entry name.
+     *
+     * Nothing already in destDir is removed: entries land beside what is there and replace only
+     * the files they share a name with. That is what unpacking over an existing folder has to
+     * mean -- see {@link ModInstaller}, whose destination is a game the user still wants.
+     *
+     * @param stripPrefix the single top-level folder to unpack the contents of rather than the
+     *                    folder itself, or null to unpack entry names as they are
+     */
+    public static void extract(File zip, File destDir, String stripPrefix, OnProgressListener listener) throws IOException {
         if (!destDir.isDirectory() && !destDir.mkdirs())
             throw new IOException("Could not create " + destDir.getAbsolutePath());
 
@@ -149,7 +164,10 @@ public abstract class ZipExtractor {
             Enumeration<? extends ZipEntry> entries = zipFile.entries();
             while (entries.hasMoreElements()) {
                 ZipEntry entry = entries.nextElement();
-                File target = new File(destDir, entry.getName());
+                String name = strip(entry.getName(), stripPrefix);
+                if (name == null) continue;
+
+                File target = new File(destDir, name);
 
                 if (!target.getCanonicalPath().startsWith(destPath))
                     throw new IOException("Entry outside of the destination folder: " + entry.getName());
@@ -190,6 +208,100 @@ public abstract class ZipExtractor {
             Log.w(TAG, "Falling back to Latin-1 entry names for " + zip.getName());
             return new ZipFile(zip, Charset.forName("ISO-8859-1"));
         }
+    }
+
+    /**
+     * An entry name with its wrapping folder taken off, or null when the entry is that folder
+     * itself and so has nothing left to unpack.
+     */
+    private static String strip(String name, String stripPrefix) {
+        if (stripPrefix == null) return name;
+
+        String prefix = stripPrefix + "/";
+        if (!name.startsWith(prefix)) return null;
+
+        String stripped = name.substring(prefix.length());
+        return stripped.isEmpty() ? null : stripped;
+    }
+
+    /**
+     * The one folder an archive holds everything inside, or null when it does not have one.
+     *
+     * This only reports the shape. It says nothing about whether that folder is the download's
+     * own wrapper or a folder belonging to the layout the archive is packed in -- both look
+     * identical from here, and telling them apart is the caller's business.
+     */
+    public static String commonTopLevelFolder(File zip) {
+        try (ZipFile zipFile = open(zip)) {
+            String folder = null;
+
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while (entries.hasMoreElements()) {
+                String name = entries.nextElement().getName();
+                int slash = name.indexOf('/');
+                // A file sitting at the top level means the archive is not wrapped at all.
+                if (slash <= 0) return null;
+
+                String top = name.substring(0, slash);
+                if (folder == null) folder = top;
+                else if (!folder.equals(top)) return null;
+            }
+            return folder;
+        }
+        catch (IOException e) {
+            Log.w(TAG, "Could not read the layout of " + zip.getName(), e);
+            return null;
+        }
+    }
+
+    /**
+     * The .exe entries an archive holds, as the paths they will have once unpacked.
+     *
+     * Read from the archive rather than by scanning afterwards so that what came out of it can be
+     * told apart from what was already in the folder, which is the whole question when unpacking
+     * over a game that has executables of its own.
+     */
+    public static List<String> exeEntries(File zip, String stripPrefix) {
+        return entries(zip, stripPrefix, ".exe");
+    }
+
+    /**
+     * Every file an archive holds, as the paths they will have once unpacked -- what says where
+     * an archive's contents are about to land, before any of it is written.
+     */
+    public static List<String> fileEntries(File zip, String stripPrefix) {
+        return entries(zip, stripPrefix, null);
+    }
+
+    /**
+     * The archive's file entries, shallowest first, which is the order that reads as a layout
+     * rather than as whatever order the archive happens to be packed in.
+     */
+    private static List<String> entries(File zip, String stripPrefix, String suffix) {
+        List<String> found = new ArrayList<>();
+
+        try (ZipFile zipFile = open(zip)) {
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                if (entry.isDirectory()) continue;
+
+                String name = strip(entry.getName(), stripPrefix);
+                if (name == null) continue;
+                if (suffix == null || name.toLowerCase(Locale.ENGLISH).endsWith(suffix)) found.add(name);
+            }
+        }
+        catch (IOException e) {
+            Log.w(TAG, "Could not read the contents of " + zip.getName(), e);
+        }
+
+        Collections.sort(found, (a, b) -> {
+            int depthA = a.split("/").length;
+            int depthB = b.split("/").length;
+            if (depthA != depthB) return Integer.compare(depthA, depthB);
+            return a.compareToIgnoreCase(b);
+        });
+        return found;
     }
 
     /**

@@ -359,4 +359,18 @@ import java.nio.file.Files;
         public boolean hasExtra(String name) {
             return this.extraData != null && this.extraData.has(name);
         }
+
+        /**
+         * Every Extra Data key this shortcut currently holds.
+         *
+         * A copy, so a caller is free to putExtra() while walking it -- which is what removing a
+         * set of keys looks like, and what iterating the live JSONObject would break on.
+         */
+        public List<String> getExtraKeys() {
+            List<String> keys = new ArrayList<>();
+            if (extraData == null) return keys;
+            Iterator<String> it = extraData.keys();
+            while (it.hasNext()) keys.add(it.next());
+            return keys;
+        }
     }

@@ -10,6 +10,7 @@ import androidx.annotation.NonNull;
 import com.winlator.cmod.core.EvshimPatcher;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.TarCompressorUtils;
+import com.winlator.cmod.core.ZipExtractor;
 import com.winlator.cmod.xenvironment.ImageFs;
 
 import org.json.JSONArray;
@@ -35,6 +36,8 @@ public class ContentsManager {
     public static final String INSTALLER_REFERENCE_SUFFIX = ".installerref";
     /** The same, for a runtime installer that has to stay in the folder it was unpacked into. */
     public static final String RUNTIME_REFERENCE_SUFFIX = ".runtimeref";
+    /** The same, for a mod archive, which is left wherever the user downloaded it to. */
+    public static final String MOD_REFERENCE_SUFFIX = ".modref";
     public static final String REMOTE_PROFILES = "https://raw.githubusercontent.com/WinlatorXR/Winlator-Contents/refs/heads/main/contents.json";
     public static final String[] DXVK_TRUST_FILES = {"${system32}/d3d8.dll", "${system32}/d3d9.dll", "${system32}/d3d10.dll", "${system32}/d3d10_1.dll",
             "${system32}/d3d10core.dll", "${system32}/d3d11.dll", "${system32}/dxgi.dll", "${syswow64}/d3d8.dll", "${syswow64}/d3d9.dll", "${syswow64}/d3d10.dll",
@@ -103,6 +106,19 @@ public class ContentsManager {
         void onSucceed(ContentProfile profile);
     }
 
+    /**
+     * A field that an entry does not have to carry, as null rather than as an empty string.
+     *
+     * optString answers "" for a missing key and the literal "null" for a JSON null, and neither
+     * is a value: an entry that says nothing about its game has to be told apart from one that
+     * names a game, not given a blank one.
+     */
+    private static String optionalString(JSONObject object, String key) {
+        if (object.isNull(key)) return null;
+        String value = object.optString(key, "").trim();
+        return value.isEmpty() ? null : value;
+    }
+
     public void setRemoteProfiles(String json) {
         try {
             remoteProfiles = new ArrayList<>();
@@ -115,6 +131,7 @@ public class ContentsManager {
                     remoteProfile.type = ContentProfile.ContentType.getTypeByName(object.getString("type"));
                     remoteProfile.verName = object.getString("verName");
                     remoteProfile.verCode = object.getInt("verCode");
+                    remoteProfile.game = optionalString(object, ContentProfile.MARK_GAME);
                     remoteProfiles.add(remoteProfile);
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -178,6 +195,7 @@ public class ContentsManager {
 
         syncLocalRuntimes();
         syncLocalInstallers();
+        syncLocalMods();
     }
 
     /**
@@ -300,6 +318,68 @@ public class ContentsManager {
     }
 
     /**
+     * Surfaces the mod archives the mods directory knows about, so one the user added from local
+     * storage is listed beside the ones contents.json offers.
+     *
+     * A mod is never unpacked here -- it is unpacked into a game, once the user says which game --
+     * so an entry is the archive itself, either downloaded into the mods directory or referenced
+     * where the user keeps it. Referencing rather than copying matters more here than it does for
+     * installers: a mod is downloaded for one game and used once, and copying it in would leave a
+     * second multi-gigabyte copy behind for nothing.
+     */
+    private void syncLocalMods() {
+        List<ContentProfile> mods = profilesMap.get(ContentProfile.ContentType.CONTENT_TYPE_MOD);
+        if (mods == null) return;
+
+        File[] files = getModsDir(context).listFiles(File::isFile);
+        if (files == null) return;
+
+        List<ContentProfile> found = new ArrayList<>();
+
+        for (File file : files) {
+            File target = file;
+            String referencePath = null;
+
+            if (file.getName().endsWith(MOD_REFERENCE_SUFFIX)) {
+                byte[] content = FileUtils.read(file);
+                if (content == null) continue;
+                referencePath = new String(content, StandardCharsets.UTF_8).trim();
+
+                // A reference whose file has since been moved or deleted is skipped rather than
+                // cleaned up, so putting the file back brings its entry back with it.
+                target = new File(referencePath);
+                if (!target.isFile()) {
+                    Log.d("ContentsManager", "Mod reference points at a missing file: " + referencePath);
+                    continue;
+                }
+            }
+            if (!isMod(target.getName())) continue;
+
+            // A downloaded entry already owns its file, so it must not be listed a second time.
+            boolean known = false;
+            for (ContentProfile profile : mods) {
+                if (getModFile(context, profile).equals(target)) {
+                    known = true;
+                    break;
+                }
+            }
+            if (known) continue;
+
+            ContentProfile profile = new ContentProfile();
+            profile.type = ContentProfile.ContentType.CONTENT_TYPE_MOD;
+            profile.verName = FileUtils.getBasename(target.getName());
+            profile.verCode = 0;
+            profile.localFileName = target.getName();
+            profile.localFilePath = referencePath;
+            found.add(profile);
+            Log.d("ContentsManager", "Local mod found: " + target.getAbsolutePath());
+        }
+
+        found.sort((a, b) -> a.localFileName.compareToIgnoreCase(b.localFileName));
+        mods.addAll(found);
+    }
+
+    /**
      * Records a demo or offline installer held elsewhere on the device as an entry, by writing a
      * reference file naming it into the installers directory. The file itself stays where it is.
      */
@@ -315,6 +395,12 @@ public class ContentsManager {
     public static boolean addRuntimeReference(Context context, File runtime) {
         String path = runtime.getAbsolutePath();
         return FileUtils.writeString(referenceFile(context, ContentProfile.ContentType.CONTENT_TYPE_RUNTIME, path), path);
+    }
+
+    /** The same for a mod archive, which stays wherever the user downloaded it to. */
+    public static boolean addModReference(Context context, File mod) {
+        String path = mod.getAbsolutePath();
+        return FileUtils.writeString(referenceFile(context, ContentProfile.ContentType.CONTENT_TYPE_MOD, path), path);
     }
 
     /**
@@ -340,15 +426,27 @@ public class ContentsManager {
             name.append(Integer.toHexString(path.hashCode()));
         }
 
-        return type == ContentProfile.ContentType.CONTENT_TYPE_RUNTIME
-                ? new File(getRuntimesDir(context), name + RUNTIME_REFERENCE_SUFFIX)
-                : new File(getInstallersDir(context), name + INSTALLER_REFERENCE_SUFFIX);
+        switch (type) {
+            case CONTENT_TYPE_RUNTIME: return new File(getRuntimesDir(context), name + RUNTIME_REFERENCE_SUFFIX);
+            case CONTENT_TYPE_MOD: return new File(getModsDir(context), name + MOD_REFERENCE_SUFFIX);
+            default: return new File(getInstallersDir(context), name + INSTALLER_REFERENCE_SUFFIX);
+        }
     }
 
     /** Whether a file is something a container can be asked to run, rather than data beside it. */
     public static boolean isInstaller(String name) {
         String lower = name.toLowerCase(Locale.ENGLISH);
         return lower.endsWith(".exe") || lower.endsWith(".msi");
+    }
+
+    /**
+     * Whether a file is something that can be unpacked into a game.
+     *
+     * Only .zip, which is the whole of what {@link com.winlator.cmod.core.ModInstaller} can read:
+     * a .rar or a .7z listed here would offer an install that cannot be carried out.
+     */
+    public static boolean isMod(String name) {
+        return ZipExtractor.isZip(name);
     }
 
     public static File getRuntimesDir(Context context) {
@@ -359,6 +457,12 @@ public class ContentsManager {
 
     public static File getInstallersDir(Context context) {
         File dir = new File(ImageFs.find(context).getRootDir(), "installers");
+        if (!dir.isDirectory()) dir.mkdirs();
+        return dir;
+    }
+
+    public static File getModsDir(Context context) {
+        File dir = new File(ImageFs.find(context).getRootDir(), "mods");
         if (!dir.isDirectory()) dir.mkdirs();
         return dir;
     }
@@ -379,6 +483,15 @@ public class ContentsManager {
     public static File getRuntimeFile(Context context, ContentProfile profile) {
         if (profile.localFilePath != null) return new File(profile.localFilePath);
         return new File(getRuntimesDir(context), localFileName(profile));
+    }
+
+    /**
+     * The on-disk archive for a Mod profile: where it was downloaded to, or where the user keeps
+     * it if the entry is a reference to a file of their own.
+     */
+    public static File getModFile(Context context, ContentProfile profile) {
+        if (profile.localFilePath != null) return new File(profile.localFilePath);
+        return new File(getModsDir(context), localFileName(profile));
     }
 
     /**
@@ -573,6 +686,7 @@ public class ContentsManager {
             profile.verName = profileJSONObject.optString(ContentProfile.MARK_VERSION_NAME, "");
             profile.verCode = profileJSONObject.optInt(ContentProfile.MARK_VERSION_CODE, 0);
             profile.desc = profileJSONObject.optString(ContentProfile.MARK_DESC, "");
+            profile.game = optionalString(profileJSONObject, ContentProfile.MARK_GAME);
 
             JSONArray fileJSONArray = profileJSONObject.optJSONArray(ContentProfile.MARK_FILE_LIST);
             List<ContentProfile.ContentFile> fileList = new ArrayList<>();

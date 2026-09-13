@@ -9,6 +9,8 @@ public class ContentProfile {
     public static final String MARK_VERSION_NAME = "versionName";
     public static final String MARK_VERSION_CODE = "versionCode";
     public static final String MARK_DESC = "description";
+    /** The game a Mod entry is for, which nothing else about the entry says. */
+    public static final String MARK_GAME = "game";
     public static final String MARK_FILE_LIST = "files";
     public static final String MARK_FILE_SOURCE = "source";
     public static final String MARK_FILE_TARGET = "target";
@@ -32,7 +34,8 @@ public class ContentProfile {
         CONTENT_TYPE_FEXCORE("FEXCore"),
         CONTENT_TYPE_ADRENO_GPU_DRIVERS("Adreno GPU drivers"),
         CONTENT_TYPE_GOLDBERG("Goldberg"),
-        CONTENT_TYPE_INSTALLER("Installer");
+        CONTENT_TYPE_INSTALLER("Installer"),
+        CONTENT_TYPE_MOD("Mod");
 
         final String typeName;
 
@@ -63,6 +66,17 @@ public class ContentProfile {
     public String verName;
     public int verCode;
     public String desc;
+    /**
+     * The game a mod is for, as the name a person would recognise it by -- "Crysis". Free text
+     * rather than an id, because this app has no id for a game: one is a folder a store made, a
+     * folder the user copied in, or a shortcut they named themselves, and nothing runs through
+     * all three. So it is matched loosely and used to sort the likely answer to the top of the
+     * list rather than to decide anything on the user's behalf.
+     *
+     * Null for every entry that does not name one, which is every entry the user added
+     * themselves and any mod listed without it.
+     */
+    public String game;
     public List<ContentFile> fileList;
     public String wineLibPath;
     public String wineBinPath;

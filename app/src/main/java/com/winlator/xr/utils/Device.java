@@ -47,6 +47,38 @@ public class Device {
         }
     }
 
+    /**
+     * The headset's name as someone would say it -- "Quest 3", "PICO 4 Ultra".
+     *
+     * For anything the enum does not name, and for a phone or tablet, it falls back to what the
+     * build says about itself rather than to "unknown": a headset this code has not been taught
+     * about still identifies itself usefully that way, and the point of asking is to tell one
+     * device from another, not to prove which one it is.
+     */
+    public static String getDisplayName() {
+        return switch (getDevice()) {
+            case PICO_NEO_3_LINK -> "Pico Neo 3";
+            case PICO_4 -> "PICO 4";
+            case PICO_4_ULTRA -> "PICO 4 Ultra";
+            case QUEST_1 -> "Quest 1";
+            case QUEST_2 -> "Quest 2";
+            case QUEST_3 -> "Quest 3";
+            case QUEST_PRO -> "Quest Pro";
+            default -> buildName();
+        };
+    }
+
+    /** What the build calls itself, with the maker left off when the model already says it. */
+    private static String buildName() {
+        String manufacturer = Build.MANUFACTURER == null ? "" : Build.MANUFACTURER.trim();
+        String model = Build.MODEL == null ? "" : Build.MODEL.trim();
+
+        if (model.isEmpty()) return manufacturer.isEmpty() ? "Unknown device" : manufacturer;
+        if (manufacturer.isEmpty()) return model;
+        if (model.toLowerCase().startsWith(manufacturer.toLowerCase())) return model;
+        return manufacturer + " " + model;
+    }
+
     public static Class getRuntime() {
         if (Build.MANUFACTURER.compareToIgnoreCase("PICO") == 0) {
             return Pico.class;
