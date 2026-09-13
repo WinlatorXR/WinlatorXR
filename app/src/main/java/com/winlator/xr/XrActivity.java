@@ -256,13 +256,6 @@ public class XrActivity extends XServerDisplayActivity {
             case R.id.main_menu_keyboard:
                 new XrKeyboard(instance).show();
                 break;
-            case R.id.main_menu_magnifier:
-                lastDistance -= 1.0f;
-                if (lastDistance < MIN_DISTANCE) {
-                    lastDistance = MAX_DISTANCE;
-                }
-                saveScreenDistance();
-                break;
             case R.id.main_menu_task_manager:
                 getWinHandler().exec("taskmgr.exe");
                 break;

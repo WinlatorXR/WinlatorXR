@@ -401,6 +401,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         Menu menu = navigationView.getMenu();
         if (XrActivity.isEnabled(this)) {
             menu.findItem(R.id.main_menu_input_controls).setVisible(false);
+            menu.findItem(R.id.main_menu_magnifier).setVisible(false);
             menu.findItem(R.id.main_menu_pip_mode).setVisible(false);
             menu.findItem(R.id.main_menu_relative_mouse).setVisible(false);
             menu.findItem(R.id.main_menu_touchpad_help).setVisible(false);
@@ -1460,10 +1461,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 return true;
 
             case R.id.main_menu_magnifier:
-                if (XrActivity.isEnabled(null)) {
-                    XrActivity.getInstance().callMenuAction(id);
-                    return false;
-                } else if (magnifierView == null) {
+                if (magnifierView == null) {
                     FrameLayout container = findViewById(R.id.FLXServerDisplay);
                     magnifierView = new MagnifierView(this);
                     magnifierView.setZoomButtonCallback(value -> {

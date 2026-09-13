@@ -13,10 +13,6 @@
         android:title="@string/logs"
         android:icon="@drawable/icon_debug" />
     <item
-        android:id="@+id/main_menu_motion_controls"
-        android:title="@string/motion_controls"
-        android:icon="@drawable/icon_motion_controls" />
-    <item
         android:id="@+id/main_menu_camera"
         android:title="@string/camera_adjust"
         android:icon="@drawable/icon_camera" />

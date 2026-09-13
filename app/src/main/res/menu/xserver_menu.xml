@@ -44,6 +44,10 @@
             android:title="@string/magnifier"
             android:icon="@drawable/icon_magnifier" />
         <item
+            android:id="@+id/main_menu_motion_controls"
+            android:title="@string/motion_controls"
+            android:icon="@drawable/icon_motion_controls" />
+        <item
             android:id="@+id/main_menu_pip_mode"
             android:title="@string/pip_mode"
             android:icon="@drawable/ic_picture_in_picture_alt" />
