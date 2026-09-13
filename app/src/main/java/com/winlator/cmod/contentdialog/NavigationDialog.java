@@ -49,8 +49,6 @@ public class NavigationDialog extends ContentDialog {
 
     public NavigationDialog(@NonNull XServerDisplayActivity context) {
         super(context, R.layout.navigation_dialog);
-        setIcon(R.drawable.icon_container);
-        setTitle(context.getString(R.string.app_name));
         findViewById(R.id.BTCancel).setVisibility(View.GONE);
 
         GridLayout grid = findViewById(R.id.main_menu_grid);
@@ -102,16 +100,15 @@ public class NavigationDialog extends ContentDialog {
             grid.addView(layout);
         }
 
-        final TextView statusInfo = findViewById(R.id.TVStatusInfo);
         final Runnable updateStatus = new Runnable() {
             @Override
             public void run() {
-                statusInfo.setText(getStatusText(context));
-                statusInfo.postDelayed(this, STATUS_REFRESH_INTERVAL_MS);
+                setTitle(getStatusText(context));
+                grid.postDelayed(this, STATUS_REFRESH_INTERVAL_MS);
             }
         };
         updateStatus.run();
-        setOnDismissListener((dialog) -> statusInfo.removeCallbacks(updateStatus));
+        setOnDismissListener((dialog) -> grid.removeCallbacks(updateStatus));
 
         actionLinesUI(context);
     }

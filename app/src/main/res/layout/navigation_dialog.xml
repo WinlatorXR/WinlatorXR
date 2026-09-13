@@ -15,12 +15,4 @@
             android:layout_gravity="center_horizontal">
         </GridLayout>
     </ScrollView>
-
-    <TextView
-        android:id="@+id/TVStatusInfo"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:paddingTop="8dp"
-        android:textSize="16sp" />
 </LinearLayout>

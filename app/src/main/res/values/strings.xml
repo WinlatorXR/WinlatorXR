@@ -501,7 +501,7 @@
     <string name="xr_face_button_action_hold_press_split">%1$s %2$s (hold %3$ds) %4$s (press)</string>
     <string name="xr_face_button_unassigned">%1$s —</string>
     <string name="xr_reset_to_default">Reset to default</string>
-    <string name="xr_adjust_window_distance">Adjust window distance - Grip trigger+Joystick</string>
+    <string name="xr_adjust_window_distance">Adjust window distance - Grip trigger+Thumbstick</string>
     <string name="xr_gamepad_mode_enabled">Gamepad mode enabled</string>
     <string name="xr_gamepad_mode_disabled">Gamepad mode disabled</string>
     <string name="xr_passthrough_enabled">Passthrough enabled</string>
