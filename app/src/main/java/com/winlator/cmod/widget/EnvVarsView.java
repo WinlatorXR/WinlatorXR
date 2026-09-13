@@ -40,7 +40,8 @@ public class EnvVarsView extends FrameLayout {
         {"PULSE_LATENCY_MSEC", "NUMBER"},
         {"MANGOHUD", "CHECKBOX", "0", "1"},
         {"DXVK_DISABLE_TIMELINE_SEMAPHORES", "CHECKBOX", "0", "1"},
-        {"WINE_FAST_YIELD", "CHECKBOX", "0", "1"}
+        {"WINE_FAST_YIELD", "CHECKBOX", "0", "1"},
+        {"FEX_DISKCACHE", "CHECKBOX", "0", "1"}
     };
     private final LinearLayout container;
     private final TextView emptyTextView;
