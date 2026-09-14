@@ -278,6 +278,37 @@ public final class StoreGameInstall {
     }
 
     /**
+     * The store's artwork for the game, best first, found the same way as its page. Empty when
+     * the store has no record of it.
+     *
+     * Reads the store's records on disk, so it is not for the UI thread.
+     */
+    public String[] artUrls(Context context) {
+        if (store == Store.STEAM) {
+            for (SteamDatabase.GameRow game : SteamDatabase.getInstance(context).getInstalledGames()) {
+                if (game.installDir == null || game.installDir.isEmpty()) continue;
+                if (isInside(new File(game.installDir))) return SteamGame.Companion.fromGameRow(game).getArtworkUrls();
+            }
+            return new String[0];
+        }
+
+        SharedPreferences prefs = context.getSharedPreferences(store.prefsName, Context.MODE_PRIVATE);
+        JSONObject entry = libraryEntry(prefs, recordedIds(prefs));
+        if (entry == null) return new String[0];
+
+        switch (store) {
+            case GOG: return new String[] { entry.optString("imageUrl") };
+            case EPIC: return new String[] { entry.optString("artCover"), entry.optString("artSquare") };
+            default: return new String[] { entry.optString("artUrl"), entry.optString("heroUrl") };
+        }
+    }
+
+    /** GOG's image CDN expects a user agent when its artwork is fetched; the others do not. */
+    public String artUserAgent() {
+        return store == Store.GOG ? "GOG Galaxy" : null;
+    }
+
+    /**
      * The library entry for one of the ids recorded against the folder.
      *
      * DLC installed into the same folder has an id of its own, but the library holds only what

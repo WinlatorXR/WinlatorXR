@@ -38,6 +38,11 @@ public abstract class ShortcutCreator {
      * @param onCreated run on the UI thread once a shortcut has actually been written, or null
      */
     public static void createForExecutable(Activity activity, File exeFile, Runnable onCreated) {
+        createForExecutable(activity, exeFile, null, onCreated);
+    }
+
+    /** @param iconFile a square PNG to copy in as the shortcut's icon, or null for the generic one */
+    public static void createForExecutable(Activity activity, File exeFile, File iconFile, Runnable onCreated) {
         String gameName = FileUtils.getBasename(exeFile.getName());
 
         List<Container> containers = new ContainerManager(activity).getContainers();
@@ -51,11 +56,11 @@ public abstract class ShortcutCreator {
             // A container that already has this game says so instead, which asks the same
             // question and more besides, so the two are never both shown.
             if (!existingShortcutsFor(activity, only, exeFile).isEmpty()) {
-                create(activity, only, exeFile, onCreated);
+                create(activity, only, exeFile, iconFile, onCreated);
                 return;
             }
             ContentDialog.confirm(activity, activity.getString(R.string.shortcut_will_be_created,
-                    gameName, only.getName()), () -> create(activity, only, exeFile, onCreated));
+                    gameName, only.getName()), () -> create(activity, only, exeFile, iconFile, onCreated));
             return;
         }
 
@@ -64,7 +69,7 @@ public abstract class ShortcutCreator {
 
         ContentDialog.showSingleChoiceList(activity,
                 activity.getString(R.string.shortcut_choose_container, gameName), names,
-                which -> create(activity, containers.get(which), exeFile, onCreated));
+                which -> create(activity, containers.get(which), exeFile, iconFile, onCreated));
     }
 
     /**
@@ -75,7 +80,7 @@ public abstract class ShortcutCreator {
      * them -- one set up differently for a different way of playing -- so the answer is the
      * user's rather than something to refuse or to do silently.
      */
-    public static void create(Activity activity, Container container, File exeFile, Runnable onCreated) {
+    public static void create(Activity activity, Container container, File exeFile, File iconFile, Runnable onCreated) {
         List<Shortcut> existing = existingShortcutsFor(activity, container, exeFile);
         if (!existing.isEmpty()) {
             StringBuilder names = new StringBuilder();
@@ -86,12 +91,12 @@ public abstract class ShortcutCreator {
             dialog.setMessage(activity.getString(R.string.shortcut_already_exists,
                     container.getName(), names.toString()));
             ((TextView)dialog.findViewById(R.id.BTConfirm)).setText(R.string.shortcut_create_another);
-            dialog.setOnConfirmCallback(() -> writeAndReport(activity, container, exeFile, onCreated));
+            dialog.setOnConfirmCallback(() -> writeAndReport(activity, container, exeFile, iconFile, onCreated));
             dialog.show();
             return;
         }
 
-        writeAndReport(activity, container, exeFile, onCreated);
+        writeAndReport(activity, container, exeFile, iconFile, onCreated);
     }
 
     /**
@@ -122,7 +127,7 @@ public abstract class ShortcutCreator {
     }
 
     /** Puts the shortcut on disk, having settled that it is wanted. */
-    private static void writeAndReport(Activity activity, Container container, File exeFile, Runnable onCreated) {
+    private static void writeAndReport(Activity activity, Container container, File exeFile, File iconFile, Runnable onCreated) {
         // The container's own C:, its mapped drives, and Z: -- the image root, which is where an
         // extracted archive lands and is the same folder in every container.
         String winePath = GuestScriptRunner.toWinPath(activity, container, exeFile);
@@ -132,7 +137,7 @@ public abstract class ShortcutCreator {
             return;
         }
 
-        File desktopFile = write(activity, container, exeFile, winePath);
+        File desktopFile = write(activity, container, exeFile, winePath, iconFile);
         if (desktopFile == null) {
             ContentDialog.alert(activity, R.string.shortcut_create_failed, null);
             return;
@@ -149,7 +154,7 @@ public abstract class ShortcutCreator {
      * A name already taken is numbered rather than overwritten: the same game can reasonably be
      * added to more than one container, and a second copy of one is not a mistake to correct.
      */
-    private static File write(Context context, Container container, File exeFile, String winePath) {
+    private static File write(Context context, Container container, File exeFile, String winePath, File iconFile) {
         File desktopDir = container.getDesktopDir();
         if (!desktopDir.exists() && !desktopDir.mkdirs()) {
             Log.e(TAG, "Could not create the desktop directory at " + desktopDir.getAbsolutePath());
@@ -169,12 +174,19 @@ public abstract class ShortcutCreator {
         // Shortcut's own reader unescapes each backslash from four characters, so the path goes
         // in the way it expects to read it back.
         String escapedWinePath = winePath.replace("\\", "\\\\\\\\");
+
+        // Icon= names a PNG in the container's own icons folder, so the icon is copied there.
+        String iconName = "";
+        File iconDir = container.getIconsDir(64);
+        if (iconFile != null && (iconDir.isDirectory() || iconDir.mkdirs())
+                && FileUtils.copy(iconFile, new File(iconDir, iconFile.getName())))
+            iconName = FileUtils.getBasename(iconFile.getName());
         String content = "[Desktop Entry]\n" +
                 "Name=" + gameName + "\n" +
                 "Exec=wine " + escapedWinePath + "\n" +
                 "Type=Application\n" +
                 "StartupNotify=true\n" +
-                "Icon=\n" +
+                "Icon=" + iconName + "\n" +
                 "StartupWMClass=" + exeFile.getName() + "\n\n" +
                 "[Extra Data]\n" +
                 "container_id:" + container.id + "\n";

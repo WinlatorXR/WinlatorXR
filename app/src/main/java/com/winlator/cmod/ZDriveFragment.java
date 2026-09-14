@@ -5,6 +5,8 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
@@ -33,8 +35,11 @@ import com.winlator.cmod.core.StringUtils;
 import com.winlator.cmod.core.ZDriveGames;
 import com.winlator.cmod.store.StoreGameInstall;
 
+import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 
 /**
@@ -93,6 +98,7 @@ public class ZDriveFragment extends Fragment {
         // it does not happen on the UI thread.
         Executors.newSingleThreadExecutor().execute(() -> {
             final List<ZDriveGames.Game> games = ZDriveGames.scan(context, manager);
+            final ZDriveAdapter adapter = new ZDriveAdapter(games);
 
             Activity activity = getActivity();
             if (activity == null) {
@@ -105,9 +111,17 @@ public class ZDriveFragment extends Fragment {
                 // The screen can be gone by the time the walk finishes.
                 if (recyclerView == null) return;
 
-                recyclerView.setAdapter(new ZDriveAdapter(games));
+                recyclerView.setAdapter(adapter);
                 emptyTextView.setVisibility(games.isEmpty() ? View.VISIBLE : View.GONE);
             });
+
+            // Store art may need downloading, so it fills in once the list is already showing.
+            for (ZDriveGames.Game game : games) {
+                if (shortcutIcon(game) != null) continue;
+                File iconFile = ZDriveGames.storeIcon(context, game);
+                Bitmap icon = iconFile != null ? BitmapFactory.decodeFile(iconFile.getPath()) : null;
+                if (icon != null) activity.runOnUiThread(() -> adapter.setIcon(game, icon));
+            }
         });
     }
 
@@ -266,8 +280,15 @@ public class ZDriveFragment extends Fragment {
         dialog.show();
     }
 
+    /** The icon of a shortcut already pointing at the game, or null when none has one. */
+    private static Bitmap shortcutIcon(ZDriveGames.Game game) {
+        for (Shortcut shortcut : game.shortcuts) if (shortcut.icon != null) return shortcut.icon;
+        return null;
+    }
+
     private class ZDriveAdapter extends RecyclerView.Adapter<ZDriveAdapter.ViewHolder> {
         private final List<ZDriveGames.Game> data;
+        private final Map<File, Bitmap> storeIcons = new HashMap<>();
 
         private class ViewHolder extends RecyclerView.ViewHolder {
             private final ImageButton menuButton;
@@ -290,6 +311,12 @@ public class ZDriveFragment extends Fragment {
             this.data = new ArrayList<>(data);
         }
 
+        private void setIcon(ZDriveGames.Game game, Bitmap icon) {
+            storeIcons.put(game.dir, icon);
+            int position = data.indexOf(game);
+            if (position != -1) notifyItemChanged(position);
+        }
+
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -306,7 +333,10 @@ public class ZDriveFragment extends Fragment {
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             final ZDriveGames.Game game = data.get(position);
 
-            holder.imageView.setImageResource(R.mipmap.ic_launcher_foreground);
+            Bitmap icon = shortcutIcon(game);
+            if (icon == null) icon = storeIcons.get(game.dir);
+            if (icon != null) holder.imageView.setImageBitmap(icon);
+            else holder.imageView.setImageResource(R.mipmap.ic_launcher_foreground);
             holder.imageView.setClickable(false);
             holder.imageView.setFocusable(false);
             holder.title.setText(game.getName());

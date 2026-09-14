@@ -9,6 +9,7 @@ import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.ContainerManager;
 import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.contentdialog.ContentDialog;
+import com.winlator.cmod.store.LudashiLaunchBridge;
 import com.winlator.cmod.store.StoreGameInstall;
 import com.winlator.cmod.xenvironment.ImageFs;
 
@@ -159,8 +160,25 @@ public abstract class ZDriveGames {
         return shortcuts;
     }
 
+    /**
+     * The store's artwork for a game a store installed, cropped square like a store shortcut's
+     * icon, or null for any other game or when none could be downloaded.
+     *
+     * Kept in the app's cache, since a game on Z: belongs to no container's icons; only the first
+     * call downloads it. Not for the UI thread.
+     */
+    public static File storeIcon(Context context, Game game) {
+        StoreGameInstall install = StoreGameInstall.forInstallDir(context, game.dir);
+        if (install == null) return null;
+
+        File iconFile = new File(new File(context.getCacheDir(), "z_drive_icons"), LudashiLaunchBridge.ICON_PREFIX
+                + game.dir.getParentFile().getName() + "_" + game.getName() + ".png");
+        if (iconFile.isFile()) return iconFile;
+        return LudashiLaunchBridge.saveIcon(iconFile, install.artUserAgent(), install.artUrls(context)) ? iconFile : null;
+    }
+
     /* ------------------------------------------------------------------ *
-     *  Pointing a new shortcut at one                                     *
+     *  Pointing a new shortcut at one                                    *
      * ------------------------------------------------------------------ */
 
     /**
@@ -180,6 +198,7 @@ public abstract class ZDriveGames {
         // A game folder can hold thousands of files, so the walk stays off the UI thread.
         Executors.newSingleThreadExecutor().execute(() -> {
             List<File> executables = ZipExtractor.findExecutables(game.dir, ZipExtractor.Role.GAME);
+            File iconFile = storeIcon(activity, game);
 
             activity.runOnUiThread(() -> {
                 preloaderDialog.close();
@@ -191,7 +210,7 @@ public abstract class ZDriveGames {
                 }
 
                 if (executables.size() == 1) {
-                    ShortcutCreator.createForExecutable(activity, executables.get(0), onCreated);
+                    ShortcutCreator.createForExecutable(activity, executables.get(0), iconFile, onCreated);
                     return;
                 }
 
@@ -201,7 +220,7 @@ public abstract class ZDriveGames {
 
                 ContentDialog.showSingleChoiceList(activity,
                         activity.getString(R.string.zip_choose_game_title, game.getName()), names,
-                        which -> ShortcutCreator.createForExecutable(activity, executables.get(which), onCreated));
+                        which -> ShortcutCreator.createForExecutable(activity, executables.get(which), iconFile, onCreated));
             });
         });
     }

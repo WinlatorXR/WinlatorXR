@@ -42,7 +42,7 @@ public final class LudashiLaunchBridge {
     private static final String TAG = "LudashiLaunchBridge";
 
     /** Icons this bridge saves are told apart by name, so uninstalling only removes its own. */
-    private static final String ICON_PREFIX = "store_";
+    public static final String ICON_PREFIX = "store_";
     private static final int ICON_SIZE = 256;
 
     private LudashiLaunchBridge() {}
@@ -204,10 +204,15 @@ public final class LudashiLaunchBridge {
     private static String saveIcon(Container container, String safeName,
                                    String userAgent, String... artUrls) {
         String iconName = ICON_PREFIX + safeName;
-        File iconDir = container.getIconsDir(64);
-        File iconFile = new File(iconDir, iconName + ".png");
+        File iconFile = new File(container.getIconsDir(64), iconName + ".png");
         if (iconFile.isFile()) return iconName;
-        if (artUrls == null) return null;
+        return saveIcon(iconFile, userAgent, artUrls) ? iconName : null;
+    }
+
+    /** Downloads the first artwork that works into iconFile, cropped square. Not for the UI thread. */
+    public static boolean saveIcon(File iconFile, String userAgent, String... artUrls) {
+        File iconDir = iconFile.getParentFile();
+        if (artUrls == null) return false;
 
         for (String url : artUrls) {
             if (url == null || url.isEmpty()) continue;
@@ -224,14 +229,14 @@ public final class LudashiLaunchBridge {
 
             if (!iconDir.exists() && !iconDir.mkdirs()) {
                 Log.w(TAG, "Could not create icon directory " + iconDir);
-                return null;
+                return false;
             }
-            if (FileUtils.saveBitmapToFile(icon, iconFile)) return iconName;
+            if (FileUtils.saveBitmapToFile(icon, iconFile)) return true;
             Log.w(TAG, "Could not save icon to " + iconFile);
-            return null;
+            return false;
         }
-        Log.w(TAG, "No artwork could be downloaded for " + safeName);
-        return null;
+        Log.w(TAG, "No artwork could be downloaded for " + iconFile.getName());
+        return false;
     }
 
     private static void writeShortcut(Activity activity, Container container,
