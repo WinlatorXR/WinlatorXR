@@ -282,6 +282,7 @@ public class XrRenderer extends GLRenderer {
                         scale *= (float)Math.min(xServer.screenInfo.width, xServer.screenInfo.height);
                         scale /= (float)Math.min(displayMetrics.widthPixels, displayMetrics.heightPixels);
                     }
+                    scale *= dialog.getXrScale();
 
                     int offsetX = (int) ((xServer.screenInfo.width - drawable.width * aspect * scale) / 2 / div);
                     int offsetY = (int) ((xServer.screenInfo.height - drawable.height * scale) / 2);

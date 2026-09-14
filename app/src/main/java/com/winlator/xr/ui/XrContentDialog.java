@@ -68,6 +68,11 @@ public class XrContentDialog extends Dialog {
         super.dismiss();
     }
 
+    /** How large the dialog is drawn in the headset, relative to other dialogs. */
+    public float getXrScale() {
+        return 1;
+    }
+
     public Drawable getDrawable() {
         if (counter++ > 10) {
             XrActivity.getInstance().runOnUiThread(this::redraw);

@@ -174,6 +174,12 @@ public class XrStartupDialog extends ContentDialog {
         }
     }
 
+    /** Smaller than other dialogs: it sits over the game while it boots and should not fill the view. */
+    @Override
+    public float getXrScale() {
+        return 0.8f;
+    }
+
     @Override
     public void dismiss() {
         handler.removeCallbacks(hintDone);
