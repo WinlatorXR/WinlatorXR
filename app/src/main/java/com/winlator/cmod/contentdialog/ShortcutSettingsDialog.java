@@ -1,7 +1,5 @@
 package com.winlator.cmod.contentdialog;
 
-
-
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -27,13 +25,13 @@ import com.winlator.cmod.R;
 import com.winlator.cmod.ShortcutsFragment;
 import com.winlator.cmod.box86_64.Box86_64PresetManager;
 import com.winlator.cmod.box86_64.rc.RCManager;
-import com.winlator.cmod.container.ContainerManager;
 import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.DefaultVersion;
 import com.winlator.cmod.core.EnvVars;
+import com.winlator.cmod.core.ShortcutProfile;
 import com.winlator.cmod.core.StringUtils;
 import com.winlator.cmod.core.WineInfo;
 import com.winlator.cmod.fexcore.FEXCoreManager;
@@ -73,17 +71,6 @@ public class ShortcutSettingsDialog extends ContentDialog {
         setTitle(shortcut.name);
         setIcon(R.drawable.icon_settings);
 
-        // Initialize the ContentsManager
-        ContainerManager containerManager = shortcut.container.getManager();
-
-//        if (containerManager != null) {
-//            this.contentsManager = new ContentsManager(containerManager.getContext());
-//            this.contentsManager.syncTurnipContents();
-//        } else {
-//            Toast.makeText(fragment.getContext(), "Failed to initialize container manager. Please try again.", Toast.LENGTH_SHORT).show();
-//            return;
-//        }
-
         createContentView();
     }
 
@@ -95,6 +82,18 @@ public class ShortcutSettingsDialog extends ContentDialog {
         boolean isDarkMode = prefs.getBoolean("dark_mode", false);
 
         applyDynamicStyles(findViewById(R.id.LLContent), isDarkMode);
+
+        findViewById(R.id.BTExportProfile).setOnClickListener(view -> fragment.exportSettingsProfile(shortcut));
+        findViewById(R.id.BTImportProfile).setOnClickListener(view -> {
+            fragment.importSettingsProfile(shortcut);
+            dismiss();
+        });
+        findViewById(R.id.BTRemoveProfile).setOnClickListener(view -> {
+            fragment.removeSettingsProfile(shortcut);
+            dismiss();
+        });
+        boolean removeProfile = ShortcutProfile.appliedName(shortcut) != null;
+        findViewById(R.id.BTRemoveProfile).setVisibility(removeProfile ? View.VISIBLE : View.GONE);
 
         // Initialize the turnip version TextView
         tvGraphicsDriverVersion = findViewById(R.id.TVGraphicsDriverVersion);

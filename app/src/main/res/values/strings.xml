@@ -921,9 +921,7 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="shortcut_create_failed">The shortcut could not be created.</string>
 
     <!-- Carrying one shortcut's settings to another as a file. -->
-    <string name="export_settings_profile">Export Settings Profile</string>
-    <string name="import_settings_profile">Import Settings Profile</string>
-    <string name="remove_settings_profile">Remove Custom Profile</string>
+    <string name="remove_profile">Remove Profile</string>
     <string name="settings_profile_badge">Custom Profile</string>
     <string name="settings_profile_exported">The settings for \"%1$s\" were saved to:\n\n%2$s\n\nImporting that file onto another game applies these settings to it — it never renames it.</string>
     <string name="settings_profile_export_failed">The profile could not be saved.\n\n%1$s</string>

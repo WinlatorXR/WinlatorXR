@@ -11,6 +11,40 @@
         android:orientation="vertical"
         android:padding="8dp">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:orientation="horizontal">
+
+            <Button
+                style="@style/ButtonNeutral"
+                android:id="@+id/BTExportProfile"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_gravity="center_horizontal"
+                android:text="@string/export_profile" />
+
+            <Button
+                style="@style/ButtonNeutral"
+                android:id="@+id/BTImportProfile"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_gravity="center_horizontal"
+                android:text="@string/import_profile" />
+
+            <Button
+                style="@style/ButtonNeutral"
+                android:id="@+id/BTRemoveProfile"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_gravity="center_horizontal"
+                android:text="@string/remove_profile" />
+        </LinearLayout>
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

@@ -289,14 +289,14 @@ public class ShortcutsFragment extends Fragment {
      * Profiles go to one known folder rather than wherever a picker was last pointed, so a user
      * told where their profiles are is told something that is true of all of them.
      */
-    private void exportSettingsProfile(Shortcut shortcut) {
+    public void exportSettingsProfile(Shortcut shortcut) {
         File destination = ShortcutProfile.exportFileFor(shortcut);
 
         // The only export that can destroy something is the second one for the same game, or one
         // landing on a profile that arrived under the same name. Both are worth a question.
         if (destination.isFile()) {
             new AlertDialog.Builder(getContext())
-                    .setTitle(R.string.export_settings_profile)
+                    .setTitle(R.string.export_profile)
                     .setMessage(getString(R.string.settings_profile_export_replace,
                             destination.getName(), destination.getParent()))
                     .setPositiveButton(R.string.settings_profile_export_replace_confirm,
@@ -317,7 +317,7 @@ public class ShortcutsFragment extends Fragment {
                 : getString(R.string.settings_profile_export_failed, error));
     }
 
-    private void importSettingsProfile(Shortcut shortcut) {
+    public void importSettingsProfile(Shortcut shortcut) {
         profileShortcut = shortcut;
 
         // Picked as any file rather than as application/json: a profile copied off a PC or out of
@@ -390,14 +390,14 @@ public class ShortcutsFragment extends Fragment {
                 .show();
     }
 
-    private void removeSettingsProfile(Shortcut shortcut) {
+    public void removeSettingsProfile(Shortcut shortcut) {
         String profileName = ShortcutProfile.appliedName(shortcut);
         if (profileName == null) return;
 
         new AlertDialog.Builder(getContext())
                 .setTitle(R.string.settings_profile_remove_title)
                 .setMessage(getString(R.string.settings_profile_remove_message, shortcut.name, profileName))
-                .setPositiveButton(R.string.remove_settings_profile, (dialog, which) -> {
+                .setPositiveButton(R.string.remove_profile, (dialog, which) -> {
                     ShortcutProfile.remove(shortcut);
                     loadShortcutsList();
                     showProfileMessage(getString(R.string.settings_profile_removed, shortcut.name));
@@ -1205,8 +1205,6 @@ public class ShortcutsFragment extends Fragment {
             // applied to is never left holding it with no way to undo that.
             // There is nothing to remove until a profile has been imported, and the shortcut's
             // own settings are what it is already running.
-            listItemMenu.getMenu().findItem(R.id.shortcut_remove_settings_profile)
-                    .setVisible(ShortcutProfile.appliedName(shortcut) != null);
             boolean goldbergApplies = GoldbergEmu.appliesTo(context, shortcut);
             listItemMenu.getMenu().findItem(R.id.shortcut_apply_goldberg).setVisible(goldbergApplies);
             listItemMenu.getMenu().findItem(R.id.shortcut_revert_goldberg)
@@ -1219,15 +1217,6 @@ public class ShortcutsFragment extends Fragment {
                 }
                 else if (itemId == R.id.shortcut_remove) {
                     showRemoveShortcutDialog(shortcut);
-                }
-                else if (itemId == R.id.shortcut_export_settings) {
-                    exportSettingsProfile(shortcut);
-                }
-                else if (itemId == R.id.shortcut_import_settings) {
-                    importSettingsProfile(shortcut);
-                }
-                else if (itemId == R.id.shortcut_remove_settings_profile) {
-                    removeSettingsProfile(shortcut);
                 }
                 else if (itemId == R.id.shortcut_clone_to_container) {
                     // Use the ContainerManager to get the list of containers
