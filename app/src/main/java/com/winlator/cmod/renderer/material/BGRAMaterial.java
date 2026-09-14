@@ -1,14 +1,26 @@
 package com.winlator.cmod.renderer.material;
 
-/**
- * The BGR material with the texture's alpha kept rather than forced opaque.
- *
- * An X11 window's pixels carry whatever alpha the client left in them, which is why the
- * material this extends throws it away. A dialog is drawn by Android into a bitmap of its
- * own, so its alpha means what it says, and a panel with rounded corners needs the corners
- * to show what is behind them.
- */
-public class BGRAMaterial extends BGRMaterial {
+public class BGRAMaterial extends ShaderMaterial {
+    public BGRAMaterial() {
+        setUniformNames("xform", "viewSize", "texture");
+    }
+
+    @Override
+    protected String getVertexShader() {
+        return
+            "uniform float xform[6];\n" +
+            "uniform vec2 viewSize;\n" +
+            "attribute vec2 position;\n" +
+            "varying vec2 vUV;\n" +
+
+            "void main() {\n" +
+                "vUV = position;\n" +
+                "vec2 transformedPos = applyXForm(position, xform);\n" +
+                "gl_Position = vec4(2.0 * transformedPos.x / viewSize.x - 1.0, 1.0 - 2.0 * transformedPos.y / viewSize.y, 0.0, 1.0);\n" +
+            "}"
+        ;
+    }
+
     @Override
     protected String getFragmentShader() {
         return
