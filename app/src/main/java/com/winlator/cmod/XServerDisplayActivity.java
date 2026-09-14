@@ -2715,6 +2715,10 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         return isRelativeMouseMovement;
     }
 
+    public WineInfo getWineInfo() {
+        return wineInfo;
+    }
+
     public WinHandler getWinHandler() {
         return winHandler;
     }

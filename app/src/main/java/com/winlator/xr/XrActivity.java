@@ -152,6 +152,8 @@ public class XrActivity extends XServerDisplayActivity {
         mouseLeftHanded = SessionSettings.getBoolean(this, "use_xr_leftHanded", DEFAULT_MOUSE_LEFT_HANDED);
         mouseLightgun = SessionSettings.getBoolean(this, "use_xr_lightgun", DEFAULT_MOUSE_LIGHTGUN);
         mouseRelative = SessionSettings.getBoolean(this, "use_xr_relative_mouse", DEFAULT_MOUSE_RELATIVE);
+        // Proton 10/11 need relative mouse, so it is on unless this game was given its own answer.
+        if (getWineInfo() != null && getWineInfo().requiresRelativeMouse() && !SessionSettings.isOverridden("use_xr_relative_mouse")) mouseRelative = true;
         pointerSmoothing = SessionSettings.getBoolean(this, "use_xr_smoothing", DEFAULT_POINTER_SMOOTHING);
         wheelEmulation = SessionSettings.getBoolean(this, "use_xr_wheel", DEFAULT_WHEEL);
         showFPS = SessionSettings.getBoolean(this, PREF_SHOW_FPS, DEFAULT_SHOW_FPS);

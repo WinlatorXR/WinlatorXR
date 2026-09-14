@@ -70,6 +70,12 @@ public class WineInfo implements Parcelable {
 
     public boolean isArm64EC() { return arch.equals("arm64ec"); }
 
+    // Proton 10 and 11 (x86_64 and arm64ec) only take mouse input in relative mode; the downloadable Proton 10 package installs as type Wine.
+    public boolean requiresRelativeMouse() {
+        String major = version.split("\\.")[0];
+        return major.equals("10") || major.equals("11");
+    }
+
     public String identifier() {
         if (type.equals("proton"))
             return "proton-" + fullVersion() + "-"+ arch;
