@@ -56,13 +56,6 @@
         android:text="@string/use_pt" />
 
     <CheckBox
-        android:id="@+id/CBShowFPS"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/xr_selector"
-        android:text="@string/xr_show_fps" />
-
-    <CheckBox
         android:id="@+id/CBDisableEnvironment"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -70,43 +63,12 @@
         android:text="@string/disable_environment"
         android:visibility="gone" />
 
-
-    <TextView
-        android:id="@+id/TVEnvironment"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:text="@string/xr_environment" />
-
-    <LinearLayout
-        android:id="@+id/LLEnvironment"
+    <CheckBox
+        android:id="@+id/CBShowFPS"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
-
-        <Spinner
-            style="@style/ComboBox"
-            android:id="@+id/SEnvironment"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:spinnerMode="dialog" />
-
-        <ImageButton
-            style="@style/ListMenuButton"
-            android:id="@+id/BTImportEnvironment"
-            android:contentDescription="@string/xr_environment_import"
-            android:src="@drawable/icon_add" />
-
-        <ImageButton
-            style="@style/ListMenuButton"
-            android:id="@+id/BTRemoveEnvironment"
-            android:contentDescription="@string/xr_environment_remove"
-            android:layout_marginRight="0dp"
-            android:src="@drawable/icon_remove" />
-    </LinearLayout>
-
+        android:background="@drawable/xr_selector"
+        android:text="@string/xr_show_fps" />
 
     <!-- Settings only: the hints are only ever shown while a game boots, so there is nothing
          this could change from inside a session. XrDialog hides it. -->
@@ -114,7 +76,7 @@
         android:id="@+id/CBDisableStartupHints"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:background="@drawable/xr_selector"
         android:text="@string/xr_disable_startup_hints" />
 
     <View
@@ -173,6 +135,41 @@
         android:background="@drawable/xr_selector"
         android:text="@string/relative_mouse_movement" />
 
+    <TextView
+        android:id="@+id/TVEnvironment"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/xr_environment" />
+
+    <LinearLayout
+        android:id="@+id/LLEnvironment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <Spinner
+            style="@style/ComboBox"
+            android:id="@+id/SEnvironment"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:spinnerMode="dialog" />
+
+        <ImageButton
+            style="@style/ListMenuButton"
+            android:id="@+id/BTImportEnvironment"
+            android:contentDescription="@string/xr_environment_import"
+            android:src="@drawable/icon_add" />
+
+        <ImageButton
+            style="@style/ListMenuButton"
+            android:id="@+id/BTRemoveEnvironment"
+            android:contentDescription="@string/xr_environment_remove"
+            android:layout_marginRight="0dp"
+            android:src="@drawable/icon_remove" />
+    </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"
