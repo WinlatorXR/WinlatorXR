@@ -82,20 +82,4 @@
         android:text="@string/no_items_to_display_contents"
         android:textSize="24sp"
         android:visibility="gone" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp">
-
-        <Button
-            android:id="@+id/BTInstallContent"
-            style="@style/ButtonNeutral"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/install_content" />
-
-    </LinearLayout>
 </LinearLayout>

@@ -733,7 +733,6 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="fexcore_x87reduced_precision">X87Mode</string>
     <string name="fexcore_multiblock">MultiBlock</string>
     <string name="adrenotools_gpu_drivers">Adrenotools GPU Drivers</string>
-    <string name="install_drivers">Install Drivers</string>
     <string name="install_drivers_message">You will now be prompted to pick a driver. These must be the same ones used in other emulators like Yuzu, Dolphin, Citra, etc.</string>
     <string name="install_drivers_warning">Be warned that because of limitations of current PC emulators, Qualcomm Drivers may not work on chipsets below 8 Gen2 without getting patched.</string>
     <string name="enable_vulkan_api_dump">Enable dumping of Vulkan api calls to file.</string>
@@ -893,9 +892,8 @@ E.g. <b>META</b> for <i>META key</i>, \n
 
     <!-- Installers and mods share one tab, so which kind is being added is asked after the button. -->
     <string name="installers_and_mods">Installers &amp; Mods</string>
-    <string name="add_installers_or_mods">Add Installers or Mods</string>
     <string name="no_installers_or_mods_to_display">No installers or mods yet. Add one of your own, or download one from the list.</string>
-    <string name="add_kind_title">Is this an installer or a mod?</string>
+    <string name="add_kind_title">What kind of package do you want to add?</string>
     <string name="add_kind_installer">Installer — a program that installs a game</string>
     <string name="add_kind_mod">Mod — files that go inside a game you have</string>
     <string name="add_mod_message">A mod is a .zip holding files that go inside a game you already have. It stays where it is and is unpacked into a game when you choose one for it.</string>

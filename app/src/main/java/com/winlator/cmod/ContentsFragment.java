@@ -10,9 +10,11 @@ import android.os.Bundle;
 import android.provider.DocumentsContract;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
@@ -60,29 +62,17 @@ public class ContentsFragment extends Fragment {
     /** Argument that opens the fragment on the Installers &amp; Mods tab, ready to add an installer. */
     public static final String ARG_ADD_INSTALLER = "add_installer";
 
-    /**
-     * Installers and mods share one tab.
-     *
-     * They are two kinds of the user's own files rather than two kinds of thing: both are listed
-     * where they were left rather than copied in, both are added by pointing at a file, and
-     * neither is packed content like the other tabs hold. Two tabs a screen apart, each with one
-     * button, asked the user to know which of the two a .zip was before they could add it -- so
-     * the question is asked after the button instead, where it can be explained.
-     */
-    private static final int INSTALLERS_AND_MODS_TAB = 8;
-
     private RecyclerView recyclerView;
     private View emptyText;
     private AdrenotoolsManager adrenotoolsManager;
     private ContentsManager manager;
     private PreloaderDialog preloaderDialog;
     private ArrayList<ContentProfile.ContentType> currentContentType = new ArrayList<>();
-    private Button btInstallContent;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(false);
+        setHasOptionsMenu(true);
         adrenotoolsManager = new AdrenotoolsManager(getActivity());
         preloaderDialog = new PreloaderDialog(getActivity());
         manager = new ContentsManager(getContext());
@@ -123,9 +113,6 @@ public class ContentsFragment extends Fragment {
 
         emptyText = layout.findViewById(R.id.TVEmptyText);
 
-        btInstallContent = layout.findViewById(R.id.BTInstallContent);
-        btInstallContent.setOnClickListener(v -> promptInstallContent());
-
         recyclerView = layout.findViewById(R.id.RecyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(recyclerView.getContext()));
         recyclerView.addItemDecoration(new DividerItemDecoration(recyclerView.getContext(), DividerItemDecoration.VERTICAL));
@@ -153,7 +140,7 @@ public class ContentsFragment extends Fragment {
                     case 5: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_WOWBOX64); break;
                     case 6: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_FEXCORE); break;
                     case 7: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS); break;
-                    case INSTALLERS_AND_MODS_TAB:
+                    case 8:
                         currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER);
                         currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_MOD);
                         break;
@@ -174,7 +161,7 @@ public class ContentsFragment extends Fragment {
         Bundle args = getArguments();
         if (args != null && args.getBoolean(ARG_ADD_INSTALLER)) {
             args.remove(ARG_ADD_INSTALLER);
-            tabLayout.getTabAt(INSTALLERS_AND_MODS_TAB).select();
+            tabLayout.getTabAt(8).select();
             // Sent here to add an installer specifically, so the kind is already answered and
             // asking again would be asking a question the caller brought the answer to.
             promptAddInstaller();
@@ -182,6 +169,24 @@ public class ContentsFragment extends Fragment {
         else tabLayout.getTabAt(0).select();
 
         return layout;
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        menu.clear();
+        inflater.inflate(R.menu.contents_menu, menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem menuItem) {
+        switch (menuItem.getItemId()) {
+            case R.id.contents_menu_add:
+                promptInstallContent();
+                return true;
+
+            default:
+                return super.onOptionsItemSelected(menuItem);
+        }
     }
 
     /** What the install button does, which depends on the tab it is pressed on. */
@@ -657,14 +662,11 @@ public class ContentsFragment extends Fragment {
             emptyText.setVisibility(View.GONE);
             recyclerView.setVisibility(View.VISIBLE);
             recyclerView.setAdapter(new DriversAdapter(adrenotoolsManager.enumarateInstalledDrivers()));
-            btInstallContent.setText(R.string.install_drivers);
             return;
         } else if (currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_INSTALLER)
                 || currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_MOD)) {
-            btInstallContent.setText(R.string.add_installers_or_mods);
             ((TextView) emptyText).setText(R.string.no_installers_or_mods_to_display);
         } else {
-            btInstallContent.setText(R.string.install_content);
             ((TextView) emptyText).setText(R.string.no_items_to_display_contents);
         }
 
