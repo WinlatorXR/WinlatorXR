@@ -101,31 +101,39 @@ object SteamDepotDownloader {
     const val OS_WINDOWS = "windows"
     const val OS_ANDROID = "android"
 
+    const val BRANCH_PUBLIC = "public"
+    private const val BRANCH_PREFS = "steam_installed_branch"
+
+    /** Branch the installed files came from; "public" when unknown. */
+    @JvmStatic fun installedBranch(ctx: Context, appId: Int): String =
+        ctx.getSharedPreferences(BRANCH_PREFS, Context.MODE_PRIVATE).getString("branch_$appId", null) ?: BRANCH_PUBLIC
+
     /**
      * Start a fresh install. Returns a DownloadControl with cancel + pause Runnables.
      * @param threads number of parallel chunk downloads + decompression workers (4 / 8 / 16)
      * @param os      which platform's depots to download — "windows" (default, PC build via
      *                Wine/Box64) or "android" (the native APK build for Steam VR titles).
+     * @param branch  Steam branch to download; must not need a password
      */
     @JvmOverloads
-    fun installApp(appId: Int, ctx: Context, threads: Int = 4, os: String = OS_WINDOWS): DownloadControl =
-        buildControl(appId, ctx, threads, isResume = false, os = os)
+    fun installApp(appId: Int, ctx: Context, threads: Int = 4, os: String = OS_WINDOWS, branch: String = BRANCH_PUBLIC): DownloadControl =
+        buildControl(appId, ctx, threads, isResume = false, os = os, branch = branch)
 
     /**
      * Resume a previously paused install. Keeps the existing DB row (bytes intact).
      * DepotDownloader will re-verify and skip already-written chunks where possible.
      */
     @JvmOverloads
-    fun resumeApp(appId: Int, ctx: Context, threads: Int = 4, os: String = OS_WINDOWS): DownloadControl =
-        buildControl(appId, ctx, threads, isResume = true, os = os)
+    fun resumeApp(appId: Int, ctx: Context, threads: Int = 4, os: String = OS_WINDOWS, branch: String = BRANCH_PUBLIC): DownloadControl =
+        buildControl(appId, ctx, threads, isResume = true, os = os, branch = branch)
 
-    private fun buildControl(appId: Int, ctx: Context, threads: Int, isResume: Boolean, os: String): DownloadControl {
+    private fun buildControl(appId: Int, ctx: Context, threads: Int, isResume: Boolean, os: String, branch: String): DownloadControl {
         val cancelled     = AtomicBoolean(false)
         val paused        = AtomicBoolean(false)
         val downloaderRef = AtomicReference<DepotDownloader?>(null)
 
         CoroutineScope(Dispatchers.IO).launch {
-            runInstall(appId, ctx, cancelled, paused, downloaderRef, threads, isResume, os)
+            runInstall(appId, ctx, cancelled, paused, downloaderRef, threads, isResume, os, branch)
         }
 
         return DownloadControl(
@@ -158,11 +166,12 @@ object SteamDepotDownloader {
         threads: Int = 4,
         isResume: Boolean = false,
         os: String = OS_WINDOWS,
+        branch: String = BRANCH_PUBLIC,
     ) {
         val isAndroid = os.equals(OS_ANDROID, ignoreCase = true)
         activeDownloads[appId] = Unit
         initDebugLog(ctx)
-        dlog("=== Starting install: appId=$appId os=$os ===")
+        dlog("=== Starting install: appId=$appId os=$os branch=$branch ===")
 
         val repo = SteamRepository.getInstance()
         val steamClient = repo.steamClient
@@ -227,7 +236,9 @@ object SteamDepotDownloader {
 
         // total bytes from PICS size data (falls back to depot manifest sum).
         // Android uses its own per-platform size; PC uses the Windows depot size.
-        val picsSize = if (isAndroid) row.androidSizeBytes else row.sizeBytes
+        val branchSize = if (branch == BRANCH_PUBLIC) 0L
+            else db.getBranches(appId).firstOrNull { it.name == branch }?.sizeBytes ?: 0L
+        val picsSize = if (isAndroid) row.androidSizeBytes else if (branchSize > 0L) branchSize else row.sizeBytes
         val hasPicsSize: Boolean
         val totalExpected: Long = if (picsSize > 0L) {
             hasPicsSize = true
@@ -323,6 +334,7 @@ object SteamDepotDownloader {
                 val finalTotal = totalRunning.get()
                 // Emit 100% before switching to installed state
                 repo.emit("DownloadProgress:$appId:$finalTotal:$finalTotal")
+                ctx.getSharedPreferences(BRANCH_PREFS, Context.MODE_PRIVATE).edit().putString("branch_$appId", branch).apply()
                 db.markInstalled(appId, installDir.absolutePath, finalBytes, os)
                 repo.emit("DownloadComplete:$appId")
             }
@@ -342,7 +354,7 @@ object SteamDepotDownloader {
         val item = AppItem(
             appId = appId,
             installDirectory = installDir.absolutePath,
-            branch = "public",
+            branch = branch,
             // Explicitly request the target platform's depots — don't let Util.getSteamOS()
             // guess, since androidEmulation forces it to report "windows" on this device.
             // "windows" = PC build (run via Wine/Box64); "android" = native APK depots.

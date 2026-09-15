@@ -675,6 +675,8 @@ public final class SteamRepository {
                         StringBuilder depotSb = new StringBuilder();
                         long windowsSize = 0L;   // depots that are Windows or shared (no oslist)
                         long androidSize = 0L;   // depots explicitly tagged android and downloadable
+                        // Per-branch PC size change vs public; depots without a branch manifest fall back to public
+                        Map<String, Long> branchSizeDelta = new java.util.HashMap<>();
                         KeyValue depotsKv = root.get("depots");
                         List<KeyValue> depotChildren = depotsKv.getChildren();
                         if (depotChildren != null) {
@@ -709,6 +711,15 @@ public final class SteamRepository {
                                     catch (NumberFormatException ignored) {}
                                 }
                                 if (isWindows) windowsSize += depotSize;
+                                if (isWindows) {
+                                    for (KeyValue m : d.get("manifests").getChildren()) {
+                                        if ("public".equals(m.getName())) continue;
+                                        long branchSize = 0L;
+                                        try { branchSize = Long.parseLong(kvStr(m.get("size"))); }
+                                        catch (NumberFormatException ignored) {}
+                                        branchSizeDelta.merge(m.getName(), branchSize - depotSize, Long::sum);
+                                    }
+                                }
                                 // Only a depot with a public manifest counts toward the Android
                                 // download size — a tagged-but-manifest-less depot means the APK
                                 // exists but isn't publicly downloadable yet.
@@ -722,6 +733,21 @@ public final class SteamRepository {
                                 }
                             }
                         }
+
+                        // Branches without a password that have their own PC manifests (password ones are skipped)
+                        List<SteamDatabase.BranchRow> branches = new ArrayList<>();
+                        for (KeyValue b : depotsKv.get("branches").getChildren()) {
+                            String bName = b.getName();
+                            if (bName == null || "1".equals(kvStr(b.get("pwdrequired")))) continue;
+                            boolean isPublic = "public".equals(bName);
+                            if (!isPublic && !branchSizeDelta.containsKey(bName)) continue;
+                            long timeUpdated = 0L;
+                            try { timeUpdated = Long.parseLong(kvStr(b.get("timeupdated"))); }
+                            catch (NumberFormatException ignored) {}
+                            long branchSize = windowsSize + (isPublic ? 0L : branchSizeDelta.get(bName));
+                            branches.add(new SteamDatabase.BranchRow(bName, kvStr(b.get("description")), timeUpdated, branchSize));
+                        }
+                        db.replaceBranches(app.getId(), branches);
 
                         String oslist = String.join(",", platforms);
                         db.upsertGame(app.getId(), name, icon, windowsSize, depotSb.toString(), type,

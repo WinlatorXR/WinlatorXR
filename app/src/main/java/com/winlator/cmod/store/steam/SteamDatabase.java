@@ -90,6 +90,17 @@ public final class SteamDatabase extends SQLiteOpenHelper {
             "  PRIMARY KEY (app_id, depot_id)" +
             ")";
 
+    // Created in onOpen with IF NOT EXISTS, so adding it needs no version bump (onUpgrade wipes installs)
+    private static final String SQL_BRANCHES =
+            "CREATE TABLE IF NOT EXISTS steam_branches (" +
+            "  app_id       INTEGER NOT NULL," +
+            "  name         TEXT    NOT NULL," +
+            "  description  TEXT    NOT NULL DEFAULT ''," +
+            "  time_updated INTEGER NOT NULL DEFAULT 0," +
+            "  size_bytes   INTEGER NOT NULL DEFAULT 0," +
+            "  PRIMARY KEY (app_id, name)" +
+            ")";
+
     // -------------------------------------------------------------------------
     // Singleton
     // -------------------------------------------------------------------------
@@ -132,8 +143,15 @@ public final class SteamDatabase extends SQLiteOpenHelper {
     }
 
     @Override
+    public void onOpen(SQLiteDatabase db) {
+        super.onOpen(db);
+        if (!db.isReadOnly()) db.execSQL(SQL_BRANCHES);
+    }
+
+    @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         Log.i(TAG, "Upgrading steam.db v" + oldVersion + " → v" + newVersion);
+        db.execSQL("DROP TABLE IF EXISTS steam_branches");
         db.execSQL("DROP TABLE IF EXISTS depot_manifests");
         db.execSQL("DROP TABLE IF EXISTS steam_downloads");
         db.execSQL("DROP TABLE IF EXISTS steam_license_apps");
@@ -424,6 +442,59 @@ public final class SteamDatabase extends SQLiteOpenHelper {
             while (c.moveToNext()) {
                 rows.add(new DepotManifestRow(
                         c.getInt(0), c.getInt(1), c.getLong(2), c.getLong(3)));
+            }
+        }
+        return rows;
+    }
+
+    // =========================================================================
+    // steam_branches
+    // =========================================================================
+
+    public static final class BranchRow {
+        public final String name;
+        public final String description;
+        public final long   timeUpdated; // seconds since epoch, 0 = unknown
+        public final long   sizeBytes;   // PC download size on this branch
+
+        public BranchRow(String name, String description, long timeUpdated, long sizeBytes) {
+            this.name        = name;
+            this.description = description;
+            this.timeUpdated = timeUpdated;
+            this.sizeBytes   = sizeBytes;
+        }
+    }
+
+    /** Replace every stored branch for an app with the given list. */
+    public void replaceBranches(int appId, List<BranchRow> branches) {
+        SQLiteDatabase db = getWritableDatabase();
+        db.beginTransaction();
+        try {
+            db.delete("steam_branches", "app_id = ?", new String[]{String.valueOf(appId)});
+            for (BranchRow b : branches) {
+                ContentValues cv = new ContentValues();
+                cv.put("app_id",       appId);
+                cv.put("name",         b.name);
+                cv.put("description",  b.description != null ? b.description : "");
+                cv.put("time_updated", b.timeUpdated);
+                cv.put("size_bytes",   b.sizeBytes);
+                db.insertWithOnConflict("steam_branches", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /** Branches without a password for an app, "public" first, then newest. */
+    public List<BranchRow> getBranches(int appId) {
+        List<BranchRow> rows = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery(
+                "SELECT name,description,time_updated,size_bytes FROM steam_branches" +
+                " WHERE app_id = ? ORDER BY (name = 'public') DESC, time_updated DESC",
+                new String[]{String.valueOf(appId)})) {
+            while (c.moveToNext()) {
+                rows.add(new BranchRow(c.getString(0), c.getString(1), c.getLong(2), c.getLong(3)));
             }
         }
         return rows;

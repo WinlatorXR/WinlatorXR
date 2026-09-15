@@ -55,6 +55,12 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
     // True once the user manually taps a variant toggle — stops auto-defaulting on refresh.
     private var userPickedVariant = false
 
+    // Steam branch for PC downloads; Android downloads always use public
+    private var branches: List<SteamDatabase.BranchRow> = emptyList()
+    private var selectedBranch = SteamDepotDownloader.BRANCH_PUBLIC
+    private var lastBranch = SteamDepotDownloader.BRANCH_PUBLIC
+    private var userPickedBranch = false
+
     // obb copy state, see the OBB section further down
     @Volatile private var obbCopyRunning = false
     private var installReceiver: android.content.BroadcastReceiver? = null
@@ -79,6 +85,9 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
     private lateinit var versionRow: LinearLayout
     private lateinit var pcVariantBtn: Button
     private lateinit var androidVariantBtn: Button
+
+    // Branch picker — visible only when the PC build has more than the public branch.
+    private lateinit var branchBtn: Button
 
     // Auto-applies the Goldberg Steam fix (steam_api.dll swap) right after a PC install
     // finishes — persisted globally so it carries over to every Steam store download.
@@ -213,7 +222,8 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
                     appId,
                     applicationContext,
                     DOWNLOAD_THREADS,
-                    lastOs
+                    lastOs,
+                    lastBranch
                 )
 
             StoreDownloadQueue.registerHandle(appId, downloadHandle)
@@ -386,6 +396,9 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         if (row == null) { finish(); return }
         game = SteamGame.fromGameRow(row)
         initVariantSelection()
+        branches = SteamRepository.getInstance().database.getBranches(appId)
+        if (!userPickedBranch) selectedBranch = if (row.isInstalled)
+            SteamDepotDownloader.installedBranch(this, appId) else SteamDepotDownloader.BRANCH_PUBLIC
         refreshUI()
         loadHeaderImage()
 
@@ -426,9 +439,13 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
 
         val androidSelected = selectedOs == SteamDepotDownloader.OS_ANDROID
         autoGoldbergCheck.visibility = if (androidSelected) View.GONE else View.VISIBLE
+        branchBtn.visibility = if (!androidSelected && branches.size > 1) View.VISIBLE else View.GONE
+        branchBtn.text = "Branch: $selectedBranch"
+        val branchSize = branches.firstOrNull { it.name == selectedBranch }?.sizeBytes ?: 0L
         sizeText.text = when {
             androidSelected && g.androidDownloadable -> "~${fmtSize(g.androidSizeBytes)}  ·  APK"
             androidSelected                          -> "Android build not publicly available"
+            selectedBranch != SteamDepotDownloader.BRANCH_PUBLIC && branchSize > 0 -> "~${fmtSize(branchSize)}"
             g.sizeBytes > 0                          -> "~${fmtSize(g.sizeBytes)}"
             else                                     -> "Size unknown"
         }
@@ -437,14 +454,20 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         val installedOs = if (g.isInstalled)
             g.installedVariant.ifEmpty { SteamDepotDownloader.OS_WINDOWS } else ""
         val installedThisVariant = g.isInstalled && installedOs == selectedOs
+        val installedBranch = SteamDepotDownloader.installedBranch(this, appId)
+        val otherBranchSelected = installedThisVariant && installedBranch != downloadBranch()
 
         if (installedThisVariant) {
-            statusText.text = if (androidSelected) "APK downloaded" else "Installed"
+            statusText.text = when {
+                androidSelected -> "APK downloaded"
+                installedBranch != SteamDepotDownloader.BRANCH_PUBLIC -> "Installed (branch: $installedBranch)"
+                else -> "Installed"
+            }
             statusText.setTextColor(Color.parseColor("#4CAF50"))
             // Android only removes the downloaded APK file — it can't uninstall an APK the
             // user already pushed through the system installer, so don't imply that it does.
-            installBtn.text = if (androidSelected) "Delete APK" else "Uninstall"
-            installBtn.setBackgroundColor(COLOR_UNINSTALL)
+            installBtn.text = if (otherBranchSelected) "Switch branch" else if (androidSelected) "Delete APK" else "Uninstall"
+            installBtn.setBackgroundColor(if (otherBranchSelected) COLOR_INSTALL else COLOR_UNINSTALL)
             installBtn.isEnabled = true
             launchBtn.isEnabled  = true
             launchBtn.alpha      = 1f
@@ -469,6 +492,34 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
      *  fetches the APK (installed separately via the Install APK button), so it reads "Download". */
     private fun installLabel(): String =
         if (selectedOs == SteamDepotDownloader.OS_ANDROID) "Download" else "Install"
+
+    /** Branch the next download uses: the picked one for PC, always public for Android. */
+    private fun downloadBranch(): String =
+        if (selectedOs == SteamDepotDownloader.OS_ANDROID) SteamDepotDownloader.BRANCH_PUBLIC else selectedBranch
+
+    private fun showBranchPicker() {
+        val installed = if (game?.isInstalled == true) SteamDepotDownloader.installedBranch(this, appId) else ""
+        val dateFmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+        val labels = branches.map { b ->
+            val details = listOfNotNull(
+                b.description.ifEmpty { null },
+                if (b.sizeBytes > 0) "~${fmtSize(b.sizeBytes)}" else null,
+                if (b.timeUpdated > 0) "updated ${dateFmt.format(java.util.Date(b.timeUpdated * 1000))}" else null,
+            ).joinToString("  ·  ")
+            (if (b.name == installed) "${b.name} (installed)" else b.name) +
+                (if (details.isNotEmpty()) "\n$details" else "")
+        }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle("Select branch")
+            .setSingleChoiceItems(labels, branches.indexOfFirst { it.name == selectedBranch }) { dialog, which ->
+                userPickedBranch = true
+                selectedBranch = branches[which].name
+                dialog.dismiss()
+                refreshUI()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
 
     /** Highlight whichever variant button is currently selected. */
     private fun updateVariantButtons() {
@@ -540,8 +591,12 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
 
             // Delete partial files
             val dir = dlRow.installDir
+            // A cancelled branch switch leaves a half-updated install, so it's removed like an uninstall
+            val cancelledSwitch = g.isInstalled && dir.isNotEmpty() && dir == g.installDir
+            if (cancelledSwitch) db.markUninstalled(appId)
             if (dir.isNotEmpty()) {
                 Thread {
+                    if (cancelledSwitch) LudashiLaunchBridge.deleteShortcut(this, g.name)
                     try {
                         File(dir).deleteRecursively()
                     } catch (_: Exception) {}
@@ -561,12 +616,26 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
 
             downloadHandle = null
 
+            if (cancelledSwitch) loadGame()
             return
         }
 
         val installedOs = if (g.isInstalled)
             g.installedVariant.ifEmpty { SteamDepotDownloader.OS_WINDOWS } else ""
         val installedThisVariant = g.isInstalled && installedOs == selectedOs
+
+        // -------------------------------------------------------------
+        // SWITCH BRANCH — download the changed files into the existing install
+        // -------------------------------------------------------------
+        if (installedThisVariant && SteamDepotDownloader.installedBranch(this, appId) != downloadBranch()) {
+            AlertDialog.Builder(this)
+                .setTitle("Switch branch")
+                .setMessage("Switch ${g.name} to the \"${downloadBranch()}\" branch? Only changed files are downloaded.\n\nCancelling the download part way removes the game.")
+                .setPositiveButton("Switch") { _, _ -> startDownload(g, db, installedThisVariant) }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+            return
+        }
 
         // -------------------------------------------------------------
         // UNINSTALL (only when the *selected* variant is the installed one)
@@ -626,6 +695,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         // -------------------------------------------------------------
         resetRetryState()
         lastOs = selectedOs
+        lastBranch = downloadBranch()
 
         installBtn.isEnabled = false
         installBtn.text = "Starting…"
@@ -636,7 +706,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         progressText.visibility = View.VISIBLE
         progressText.text = "Initializing download…"
 
-        downloadHandle = SteamDepotDownloader.installApp(appId, applicationContext, DOWNLOAD_THREADS, selectedOs)
+        downloadHandle = SteamDepotDownloader.installApp(appId, applicationContext, DOWNLOAD_THREADS, selectedOs, lastBranch)
         StoreDownloadQueue.registerHandle(appId, downloadHandle)
     }
 
@@ -1309,6 +1379,20 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         versionRow.addView(pcVariantBtn)
         versionRow.addView(androidVariantBtn)
         info.addView(versionRow)
+
+        branchBtn = Button(this).apply {
+            text = "Branch: ${SteamDepotDownloader.BRANCH_PUBLIC}"
+            textSize = 12f
+            isAllCaps = false
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.parseColor("#3A3A3A"))
+            visibility = View.GONE
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                .apply { topMargin = dp(4); bottomMargin = dp(4) }
+            setOnClickListener { showBranchPicker() }
+        }
+        info.addView(branchBtn)
 
         autoGoldbergCheck = CheckBox(this).apply {
             text = "Auto-apply Goldberg Steam fix after install"
