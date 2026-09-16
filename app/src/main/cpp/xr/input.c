@@ -251,7 +251,8 @@ void XrInputUpdate(struct XrEngine* engine, struct XrInput* input)
         input->ButtonsLeft |= (int)Y;
     if (input->TriggerLeft > 0.5f)
         input->ButtonsLeft |= (int)Trigger;
-    if (XrInputGetActionStateFloat(session, input->GripLeft).currentState > 0.5f)
+    input->SqueezeLeft = XrInputGetActionStateFloat(session, input->GripLeft).currentState;
+    if (input->SqueezeLeft > 0.5f)
         input->ButtonsLeft |= (int)Grip;
     if (XrInputGetActionStateBoolean(session, input->ThumbLeft).currentState)
         input->ButtonsLeft |= (int)LThumb;
@@ -263,7 +264,8 @@ void XrInputUpdate(struct XrEngine* engine, struct XrInput* input)
         input->ButtonsRight |= (int)B;
     if (input->TriggerRight > 0.5f)
         input->ButtonsRight |= (int)Trigger;
-    if (XrInputGetActionStateFloat(session, input->GripRight).currentState > 0.5f)
+    input->SqueezeRight = XrInputGetActionStateFloat(session, input->GripRight).currentState;
+    if (input->SqueezeRight > 0.5f)
         input->ButtonsRight |= (int)Grip;
     if (XrInputGetActionStateBoolean(session, input->ThumbRight).currentState)
         input->ButtonsRight |= (int)RThumb;

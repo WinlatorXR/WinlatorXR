@@ -91,6 +91,7 @@ struct XrEngine {
     XrSpace StageSpace;
 
     XrTime PredictedDisplayTime;
+    XrDuration PredictedDisplayPeriod;
 
     int MainThreadId;
     int RenderThreadId;

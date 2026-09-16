@@ -263,4 +263,5 @@ void XrEngineWaitForFrame(struct XrEngine* engine)
 
     OXR(xrWaitFrame(engine->Session, &wait_frame_info, &frame_state));
     engine->PredictedDisplayTime = frame_state.predictedDisplayTime;
+    engine->PredictedDisplayPeriod = frame_state.predictedDisplayPeriod;
 }

@@ -109,16 +109,28 @@ public class XrVersion06 extends XrVersion05 {
                     str = str.replaceAll("\\.000", "");
                     poses.append(str).append(" ");
                 }
+                float[] velocity = instance.getPoseVelocity(space.first, space.second);
+                if (velocity.length != 7) velocity = new float[7];
+                for (float f : velocity) {
+                    String str = String.format(Locale.US, "%.3f", f);
+                    str = str.replaceAll("\\.000", "");
+                    poses.append(str).append(" ");
+                }
             }
         }
         return (MSG_CLIENT + clientIndex +
-                " " + String.format(Locale.US, "%.1f", axes[ControllerAxis.L_THUMBSTICK_X.ordinal()]) +
-                " " + String.format(Locale.US, "%.1f", axes[ControllerAxis.L_THUMBSTICK_Y.ordinal()]) +
-                " " + String.format(Locale.US, "%.1f", axes[ControllerAxis.R_THUMBSTICK_X.ordinal()]) +
-                " " + String.format(Locale.US, "%.1f", axes[ControllerAxis.R_THUMBSTICK_Y.ordinal()]) +
+                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.L_THUMBSTICK_X.ordinal()]) +
+                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.L_THUMBSTICK_Y.ordinal()]) +
+                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.R_THUMBSTICK_X.ordinal()]) +
+                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.R_THUMBSTICK_Y.ordinal()]) +
+                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.L_TRIGGER.ordinal()]) +
+                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.L_SQUEEZE.ordinal()]) +
+                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.R_TRIGGER.ordinal()]) +
+                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.R_SQUEEZE.ordinal()]) +
                 " " + String.format(Locale.US, "%.4f", axes[ControllerAxis.HMD_IPD.ordinal()]) +
                 " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.HMD_FOVX.ordinal()]) +
                 " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.HMD_FOVY.ordinal()]) +
+                " " + String.format(Locale.US, "%.2f", instance.getDisplayRefreshRate()) +
                 " " + String.format(Locale.US, "%d", (int)axes[ControllerAxis.HMD_SYNC.ordinal()]) +
                 " " + String.format(Locale.US, "%d", (int)axes[ControllerAxis.HMD_RECENTER.ordinal()]) +
                 " " + binary + " " + poses);

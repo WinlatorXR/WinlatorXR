@@ -35,7 +35,7 @@ public interface XrInterface {
         HMD_PITCH, HMD_YAW, HMD_ROLL, HMD_QX, HMD_QY, HMD_QZ, HMD_QW, HMD_X, HMD_Y, HMD_Z,
         HMD_IPD, HMD_FOVX, HMD_FOVY, HMD_SYNC, HMD_RECENTER, HMD_ALTITUDE,
         LG_QX, LG_QY, LG_QZ, LG_QW, RG_QX, RG_QY, RG_QZ, RG_QW,
-        L_TRIGGER, R_TRIGGER, MENU_YAW
+        L_TRIGGER, R_TRIGGER, MENU_YAW, L_SQUEEZE, R_SQUEEZE
     }
 
     // Order of the enum has to be the as in xr/main.cpp

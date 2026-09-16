@@ -39,7 +39,7 @@ import java.util.concurrent.Executors;
 
 public class XrAPI implements XrInterface {
 
-    private static final int BUFFER_SIZE = 1024;
+    private static final int BUFFER_SIZE = 16384;
     @SuppressLint("SdCardPath")
     private static final String PATH_API = "/data/data/com.winlator.cmod/files/imagefs/tmp/xr";
     @SuppressLint("SdCardPath")
@@ -222,7 +222,11 @@ public class XrAPI implements XrInterface {
                         try {
                             while (XrActivity.isActive()) {
                                 socket.receive(packet);
-                                dataReceived(intent, new String(buffer, 0, packet.getLength()));
+                                try {
+                                    dataReceived(intent, new String(buffer, 0, packet.getLength()));
+                                } catch (Exception e) {
+                                    System.err.println("Error parsing UDP packet: " + e.getMessage());
+                                }
                                 Thread.sleep(10);
                             }
                         } catch (Exception e) {

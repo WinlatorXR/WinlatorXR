@@ -40,6 +40,7 @@ import com.winlator.cmod.inputcontrols.InputControlsManager;
 import com.winlator.cmod.midi.MidiManager;
 import com.winlator.cmod.widget.CPUListView;
 import com.winlator.cmod.widget.EnvVarsView;
+import com.winlator.xr.utils.PcvrRuntime;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -213,6 +214,9 @@ public class ShortcutSettingsDialog extends ContentDialog {
         boolean autoclose = shortcut.getExtra("autoclose", "1").equals("1");
         final CheckBox cbAutoclose = findViewById(R.id.CBAutoclose);
         cbAutoclose.setChecked(autoclose);
+
+        final CheckBox cbPcvrRuntime = findViewById(R.id.CBPcvrRuntime);
+        cbPcvrRuntime.setChecked(PcvrRuntime.isEnabled(shortcut));
 
         // Reshade integration
         int reshade = Integer.parseInt(shortcut.getExtra("useReshade", "0"));
@@ -475,6 +479,7 @@ public class ShortcutSettingsDialog extends ContentDialog {
                 }
 
                 shortcut.putExtra("autoclose", cbAutoclose.isChecked() ? "1" : "0");
+                shortcut.putExtra(PcvrRuntime.EXTRA_KEY, cbPcvrRuntime.isChecked() ? "1" : null);
                 shortcut.putExtra("useReshade", SReshade.getSelectedItemPosition() + "");
                 shortcut.putExtra("useTrackIR", STrackIR.getSelectedItemPosition() + "");
                 shortcut.putExtra("fullscreenStretched", cbFullscreenStretched.isChecked() ? "1" : null);

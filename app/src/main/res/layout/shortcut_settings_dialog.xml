@@ -394,6 +394,12 @@
             android:layout_height="wrap_content"
             android:text="@string/autoclose" />
 
+        <CheckBox
+            android:id="@+id/CBPcvrRuntime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/pcvr_runtime" />
+
         <LinearLayout
             android:id="@+id/LLTabAdvanced"
             android:layout_width="match_parent"

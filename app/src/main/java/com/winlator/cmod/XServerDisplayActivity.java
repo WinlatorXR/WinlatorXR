@@ -138,6 +138,7 @@ import com.winlator.xr.io.XrRenderer;
 import com.winlator.xr.ui.XrStartupDialog;
 import com.winlator.xr.ui.XrDialog;
 import com.winlator.xr.utils.ModdingUtils;
+import com.winlator.xr.utils.PcvrRuntime;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -1618,6 +1619,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         WineStartMenuCreator.create(this, container);
         WineUtils.createDosdevicesSymlinks(container);
+        PcvrRuntime.apply(this, container, PcvrRuntime.isEnabled(shortcut));
 
         if (shortcut != null)
             startupSelection = shortcut.getExtra("startupSelection", String.valueOf(container.getStartupSelection()));

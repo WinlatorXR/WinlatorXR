@@ -589,7 +589,7 @@ public class ContentsManager {
             // game folder (which can be anywhere), not a fixed imagefs template path, so the
             // imagefs-subpath check doesn't apply here. applyContentToDir() enforces containment
             // against the chosen target folder instead, at apply time.
-            if (profile.type != ContentProfile.ContentType.CONTENT_TYPE_GOLDBERG) {
+            if (profile.type != ContentProfile.ContentType.CONTENT_TYPE_GOLDBERG && profile.type != ContentProfile.ContentType.CONTENT_TYPE_OPENCOMPOSITE && profile.type != ContentProfile.ContentType.CONTENT_TYPE_OXRWXR) {
                 String realPath = getPathFromTemplate(contentFile.target);
                 if (!isSubPath(imagefsPath, realPath) || isSubPath(ContentsManager.getContentDir(context).getAbsolutePath(), realPath) || realPath.contains("dosdevices")) {
                     callback.onFailed(InstallFailedReason.ERROR_UNTRUSTPROFILE, null);

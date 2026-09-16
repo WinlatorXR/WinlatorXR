@@ -58,7 +58,7 @@ import java.util.concurrent.Executors;
 public class GoldbergEmu {
 
     private static final int GOLDBERG_HINT_MAX_SHOWS = 3;
-    private static final int GOLDBERG_SCAN_MAX_DEPTH = 4;
+    private static final int GOLDBERG_SCAN_MAX_DEPTH = 6; // UE4 keeps it in Engine/Binaries/ThirdParty/Steamworks/SteamvNNN/Win64
     private static final int GOLDBERG_SCAN_MAX_VISITED_DIRS = 4000;
     private static final String GOLDBERG_DIR_DELIM = ";;";
 

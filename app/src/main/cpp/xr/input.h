@@ -81,6 +81,8 @@ struct XrInput {
     uint32_t ButtonsRight;
     float TriggerLeft;
     float TriggerRight;
+    float SqueezeLeft;
+    float SqueezeRight;
     XrSpaceLocation ControllerPose[4];
     struct XrOneEuroPose PoseFilter[4];
     bool Smoothing;

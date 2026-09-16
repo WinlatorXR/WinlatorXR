@@ -133,6 +133,8 @@ public class ContentsFragment extends Fragment {
                     case 1:
                         currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_RUNTIME);
                         currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_GOLDBERG);
+                        currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_OPENCOMPOSITE);
+                        currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_OXRWXR);
                         break;
                     case 2: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_DXVK); break;
                     case 3: currentContentType.add(ContentProfile.ContentType.CONTENT_TYPE_VKD3D); break;

@@ -28,6 +28,7 @@
 
 std::vector<std::pair<int, int> > xr_locate_spaces;
 std::map<std::pair<int, int>, XrPosef> xr_poses;
+std::map<std::pair<int, int>, XrSpaceVelocity> xr_velocities;
 std::map<int, XrReferenceSpaceCreateInfo> xr_info;
 std::map<int, XrSpace> xr_spaces;
 XrVector3f xr_camera_offset = {};
@@ -95,6 +96,7 @@ void updatePoses() {
     }
 
     xr_poses.clear();
+    xr_velocities.clear();
     for (auto& space : xr_locate_spaces) {
         bool hasFirst = xr_spaces.find(space.first) != xr_spaces.end();
         bool hasSecond = xr_spaces.find(space.second) != xr_spaces.end();
@@ -123,12 +125,21 @@ void updatePoses() {
             pose.position.y = (projections[0].pose.position.y + projections[1].pose.position.y) * 0.5f;
             pose.position.z = (projections[0].pose.position.z + projections[1].pose.position.z) * 0.5f;
             xr_poses[space] = pose;
+
+            XrSpaceVelocity velocity = {XR_TYPE_SPACE_VELOCITY};
+            XrSpaceLocation head = {XR_TYPE_SPACE_LOCATION, &velocity};
+            OXR(xrLocateSpace(xr_module_engine.HeadSpace, xr_spaces[space.second],
+                              xr_module_engine.PredictedDisplayTime, &head));
+            xr_velocities[space] = velocity;
         } else if (hasFirst && hasSecond) {
+            XrSpaceVelocity velocity = {XR_TYPE_SPACE_VELOCITY};
             XrSpaceLocation loc = {};
             loc.type = XR_TYPE_SPACE_LOCATION;
+            loc.next = &velocity;
             OXR(xrLocateSpace(xr_spaces[space.first], xr_spaces[space.second],
                               xr_module_engine.PredictedDisplayTime, &loc));
             xr_poses[space] = loc.pose;
+            xr_velocities[space] = velocity;
         }
     }
 }
@@ -350,6 +361,8 @@ JNIEXPORT jfloatArray JNICALL Java_com_winlator_xr_XrActivity_getAxes(JNIEnv *en
     data[count++] = xr_module_input.TriggerLeft; //L_TRIGGER
     data[count++] = xr_module_input.TriggerRight; //R_TRIGGER
     data[count++] = yaw; //MENU_YAW
+    data[count++] = xr_module_input.SqueezeLeft; //L_SQUEEZE
+    data[count++] = xr_module_input.SqueezeRight; //R_SQUEEZE
 
     jfloat values[count];
     memcpy(values, data, count * sizeof(float));
@@ -547,6 +560,36 @@ Java_com_winlator_xr_XrActivity_getPose(JNIEnv *env, jobject thiz, jint a, jint 
     jfloatArray output = env->NewFloatArray(count);
     env->SetFloatArrayRegion(output, (jsize) 0, (jsize) count, values);
     return output;
+}
+
+JNIEXPORT jfloatArray JNICALL
+Java_com_winlator_xr_XrActivity_getPoseVelocity(JNIEnv *env, jobject thiz, jint a, jint b) {
+    int count = 0;
+    float data[7];
+    std::pair<int, int> key;
+    key.first = a;
+    key.second = b;
+
+    if (xr_velocities.find(key) != xr_velocities.end()) {
+        XrSpaceVelocity velocity = xr_velocities[key];
+        data[count++] = (float)velocity.velocityFlags;
+        data[count++] = velocity.linearVelocity.x;
+        data[count++] = velocity.linearVelocity.y;
+        data[count++] = velocity.linearVelocity.z;
+        data[count++] = velocity.angularVelocity.x;
+        data[count++] = velocity.angularVelocity.y;
+        data[count++] = velocity.angularVelocity.z;
+    }
+
+    jfloatArray output = env->NewFloatArray(count);
+    env->SetFloatArrayRegion(output, (jsize) 0, (jsize) count, data);
+    return output;
+}
+
+JNIEXPORT jfloat JNICALL
+Java_com_winlator_xr_XrActivity_getDisplayRefreshRate(JNIEnv *env, jobject thiz) {
+    XrDuration period = xr_module_engine.PredictedDisplayPeriod;
+    return period > 0 ? (jfloat)(1e9 / (double)period) : 0.0f;
 }
 
 JNIEXPORT void JNICALL
