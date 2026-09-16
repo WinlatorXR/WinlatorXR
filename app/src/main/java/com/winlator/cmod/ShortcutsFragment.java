@@ -152,6 +152,14 @@ public class ShortcutsFragment extends Fragment {
     }
 
     private void openAddLocalGamePicker() {
+        // Android's own picker hides the whole Download folder when its restricted-path check
+        // fails, showing "No items" although the files are there. This browses Download directly.
+        if (PreferenceManager.getDefaultSharedPreferences(requireContext())
+                .getBoolean("browse_download_with_winlator", false)) {
+            browseDownloadFolder(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS));
+            return;
+        }
+
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
@@ -167,6 +175,43 @@ public class ShortcutsFragment extends Fragment {
         } catch (ActivityNotFoundException e) {
             showLocalGameMessage("No file picker app is available on this device.");
         }
+    }
+
+    /** Browses Download and its subfolders only, listing what a shortcut can be made from. */
+    private void browseDownloadFolder(File dir) {
+        if (getContext() == null) return;
+
+        File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        File[] files = dir.listFiles((file) -> {
+            if (file.isDirectory()) return true;
+            String name = file.getName().toLowerCase(Locale.ROOT);
+            return name.endsWith(".exe") || name.endsWith(".zip");
+        });
+        if (files == null) files = new File[0];
+
+        ArrayList<File> entries = new ArrayList<>();
+        for (File file : files) if (file.isDirectory()) entries.add(file);
+        for (File file : files) if (!file.isDirectory()) entries.add(file);
+
+        // The root gets no ".." entry, so nothing above Download can be reached from here.
+        boolean atRoot = dir.getAbsolutePath().equals(downloadDir.getAbsolutePath());
+        ArrayList<String> labels = new ArrayList<>();
+        if (!atRoot) labels.add("..");
+        for (File file : entries) labels.add(file.isDirectory() ? file.getName() + "/" : file.getName());
+
+        new AlertDialog.Builder(getContext())
+                .setTitle(atRoot ? Environment.DIRECTORY_DOWNLOADS : dir.getName())
+                .setItems(labels.toArray(new String[0]), (dialog, which) -> {
+                    if (!atRoot && which == 0) {
+                        browseDownloadFolder(dir.getParentFile());
+                        return;
+                    }
+                    File picked = entries.get(atRoot ? which : which - 1);
+                    if (picked.isDirectory()) browseDownloadFolder(picked);
+                    else handlePickedExeFile(picked);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     /** The game a picked mod archive is being installed into, held across the picker. */
@@ -234,7 +279,10 @@ public class ShortcutsFragment extends Fragment {
             return;
         }
 
-        File pickedFile = new File(path);
+        handlePickedExeFile(new File(path));
+    }
+
+    private void handlePickedExeFile(File pickedFile) {
         if (!pickedFile.isFile()) {
             showLocalGameMessage("Selected file could not be found.");
             return;
@@ -248,7 +296,7 @@ public class ShortcutsFragment extends Fragment {
             return;
         }
 
-        if (!path.toLowerCase().endsWith(".exe")) {
+        if (!pickedFile.getName().toLowerCase(Locale.ROOT).endsWith(".exe")) {
             showLocalGameMessage("Please select a .exe file, or a .zip holding one.");
             return;
         }

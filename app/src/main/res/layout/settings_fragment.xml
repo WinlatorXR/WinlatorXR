@@ -120,6 +120,12 @@
                                 android:text="Enable Touchscreen Mode Globally"
                                 android:layout_marginTop="8dp" />
 
+                            <CheckBox
+                                android:id="@+id/CBForceKgslShim"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/force_kgsl_shim"
+                                android:layout_marginTop="8dp"/>
                         </LinearLayout>
 
                         <TextView
@@ -278,11 +284,11 @@
                                     android:text="@string/share_android_clipboard" />
 
                                 <CheckBox
-                                    android:id="@+id/CBForceKgslShim"
+                                    android:id="@+id/CBBrowseDownloadWithWinlator"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_gravity="left|center"
-                                    android:text="@string/force_kgsl_shim" />
+                                    android:text="@string/browse_download_with_winlator" />
                             </LinearLayout>
                         </LinearLayout>
 

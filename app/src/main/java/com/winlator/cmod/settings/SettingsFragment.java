@@ -423,6 +423,9 @@ public class SettingsFragment extends Fragment {
         final CheckBox cbForceKgslShim = view.findViewById(R.id.CBForceKgslShim);
         cbForceKgslShim.setChecked(preferences.getBoolean("force_kgsl_shim_all_devices", false));
 
+        final CheckBox cbBrowseDownloadWithWinlator = view.findViewById(R.id.CBBrowseDownloadWithWinlator);
+        cbBrowseDownloadWithWinlator.setChecked(preferences.getBoolean("browse_download_with_winlator", false));
+
         final CheckBox CBEnablePebLogs = view.findViewById(R.id.CBEnablePebLogs);
         CBEnablePebLogs.setChecked(preferences.getBoolean("enable_peb_logs", false));
 
@@ -463,6 +466,7 @@ public class SettingsFragment extends Fragment {
             editor.putBoolean("open_with_android_browser", cbOpenInBrowser.isChecked());
             editor.putBoolean("share_android_clipboard", cbShareClipboard.isChecked());
             editor.putBoolean("force_kgsl_shim_all_devices", cbForceKgslShim.isChecked());
+            editor.putBoolean("browse_download_with_winlator", cbBrowseDownloadWithWinlator.isChecked());
             editor.putBoolean("enable_peb_logs", CBEnablePebLogs.isChecked());
 
 
