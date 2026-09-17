@@ -61,6 +61,7 @@ import com.google.android.material.navigation.NavigationView;
 import com.winlator.cmod.contentdialog.NavigationDialog;
 import com.winlator.cmod.settings.SettingsFragment;
 import com.winlator.xr.XrActivity;
+import com.winlator.xr.api.XrAPI;
 import com.winlator.cmod.box86_64.rc.RCFile;
 import com.winlator.cmod.box86_64.rc.RCManager;
 import com.winlator.cmod.container.Container;
@@ -1656,6 +1657,13 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         // Clear any temporary directory
         String rootPath = imageFs.getRootDir().getPath();
         FileUtils.clear(imageFs.getTmpDir());
+        if (this instanceof XrActivity) {
+            try {
+                XrAPI.writeSystemInfo();
+            } catch (Exception e) {
+                Log.e("XServerDisplayActivity", "Failed to write XR system info", e);
+            }
+        }
 
         // Setup reshade
         if (shortcut != null) {

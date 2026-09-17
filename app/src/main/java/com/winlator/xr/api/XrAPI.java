@@ -76,7 +76,18 @@ public class XrAPI implements XrInterface {
             }
         }
 
-        //Write system info
+        writeSystemInfo();
+
+        //Set debug mode
+        this.debugMode = debugMode;
+    }
+
+    // The launch clears the tmp dir, so this is called again after that or the runtime falls back to 1280x720
+    public static void writeSystemInfo() throws Exception {
+        File dir = new File(PATH_API);
+        if (!dir.exists() && !dir.mkdirs()) {
+            throw new Exception("Filesystem issue");
+        }
         String info = "";
         info += Build.MANUFACTURER.toUpperCase() + "\n";
         info += Build.PRODUCT.toUpperCase() + "\n";
@@ -86,9 +97,6 @@ public class XrAPI implements XrInterface {
         FileOutputStream fos = new FileOutputStream(new File(dir, SYSTEM_FILE));
         fos.write(info.getBytes(StandardCharsets.US_ASCII));
         fos.close();
-
-        //Set debug mode
-        this.debugMode = debugMode;
     }
 
     public void consumeInputs(XServer xServer) {
