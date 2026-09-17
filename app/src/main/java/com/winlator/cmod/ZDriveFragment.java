@@ -32,7 +32,7 @@ import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.PreloaderDialog;
 import com.winlator.cmod.core.StringUtils;
-import com.winlator.cmod.core.ZDriveGames;
+import com.winlator.cmod.container.ZDriveGames;
 import com.winlator.cmod.store.StoreGameInstall;
 
 import java.io.File;

@@ -1,4 +1,4 @@
-package com.winlator.cmod.core;
+package com.winlator.cmod.container;
 
 import android.app.Activity;
 import android.content.Context;
@@ -6,10 +6,9 @@ import android.util.Log;
 import android.widget.TextView;
 
 import com.winlator.cmod.R;
-import com.winlator.cmod.container.Container;
-import com.winlator.cmod.container.ContainerManager;
-import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.contentdialog.ContentDialog;
+import com.winlator.cmod.core.FileUtils;
+import com.winlator.cmod.core.GuestScriptRunner;
 import com.winlator.cmod.store.SteamDatabase;
 import com.winlator.xr.utils.PcvrRuntime;
 import com.winlator.xr.utils.VrGameScanner;

@@ -14,7 +14,7 @@ import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.GuestScriptRunner;
 import com.winlator.cmod.core.PreloaderDialog;
-import com.winlator.cmod.core.ShortcutCreator;
+import com.winlator.cmod.container.ShortcutCreator;
 import com.winlator.cmod.core.ZipExtractor;
 import com.winlator.cmod.core.ZipImport;
 import com.winlator.cmod.xenvironment.ImageFs;

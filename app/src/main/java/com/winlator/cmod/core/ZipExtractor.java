@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.StatFs;
 import android.util.Log;
 
+import com.winlator.cmod.contents.ModInstaller;
 import com.winlator.cmod.xenvironment.ImageFs;
 
 import java.io.File;

@@ -1,12 +1,13 @@
-package com.winlator.cmod.core;
+package com.winlator.cmod.container;
 
 import android.app.Activity;
 import android.content.Context;
 import android.util.Log;
 
-import com.winlator.cmod.container.Container;
-import com.winlator.cmod.container.ContainerManager;
-import com.winlator.cmod.container.Shortcut;
+import com.winlator.cmod.core.FileUtils;
+import com.winlator.cmod.core.GuestScriptRunner;
+import com.winlator.cmod.core.MSLink;
+import com.winlator.cmod.core.ZipExtractor;
 
 import java.io.File;
 import java.util.ArrayDeque;

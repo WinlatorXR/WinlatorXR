@@ -7,7 +7,6 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import com.winlator.cmod.core.EvshimPatcher;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.TarCompressorUtils;
 import com.winlator.cmod.core.ZipExtractor;
@@ -442,7 +441,7 @@ public class ContentsManager {
     /**
      * Whether a file is something that can be unpacked into a game.
      *
-     * Only .zip, which is the whole of what {@link com.winlator.cmod.core.ModInstaller} can read:
+     * Only .zip, which is the whole of what {@link ModInstaller} can read:
      * a .rar or a .7z listed here would offer an install that cannot be carried out.
      */
     public static boolean isMod(String name) {

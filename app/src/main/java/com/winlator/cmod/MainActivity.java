@@ -52,7 +52,7 @@ import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.core.Callback;
 import com.winlator.cmod.core.PreloaderDialog;
-import com.winlator.cmod.core.ShortcutProfile;
+import com.winlator.cmod.container.ShortcutProfile;
 import com.winlator.cmod.core.WineInfo;
 import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.ContainerManager;

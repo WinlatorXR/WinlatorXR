@@ -36,7 +36,7 @@ import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.contents.Downloader;
 import com.winlator.cmod.core.FileUtils;
-import com.winlator.cmod.core.GameUninstaller;
+import com.winlator.cmod.container.GameUninstaller;
 import com.winlator.cmod.store.SteamDatabase;
 import com.winlator.cmod.store.StoreGameInstall;
 

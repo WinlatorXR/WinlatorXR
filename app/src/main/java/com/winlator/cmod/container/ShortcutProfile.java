@@ -1,12 +1,11 @@
-package com.winlator.cmod.core;
+package com.winlator.cmod.container;
 
 import android.content.Context;
 import android.net.Uri;
 import android.os.Environment;
 import android.util.Log;
 
-import com.winlator.cmod.container.Container;
-import com.winlator.cmod.container.Shortcut;
+import com.winlator.cmod.core.WineInfo;
 import com.winlator.xr.utils.Device;
 
 import org.json.JSONException;

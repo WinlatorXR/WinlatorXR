@@ -1,9 +1,8 @@
-package com.winlator.cmod.core;
+package com.winlator.cmod.container;
 
 import android.content.Context;
 
-import com.winlator.cmod.container.Container;
-import com.winlator.cmod.container.Shortcut;
+import com.winlator.cmod.core.GuestScriptRunner;
 import com.winlator.cmod.store.StoreGameInstall;
 
 import java.io.File;
