@@ -10,10 +10,14 @@ import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.ContainerManager;
 import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.contentdialog.ContentDialog;
+import com.winlator.cmod.store.SteamDatabase;
+import com.winlator.xr.utils.PcvrRuntime;
+import com.winlator.xr.utils.VrGameScanner;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 /**
  * Making a Games tab shortcut for a program already sitting on disk.
@@ -43,6 +47,11 @@ public abstract class ShortcutCreator {
 
     /** @param iconFile a square PNG to copy in as the shortcut's icon, or null for the generic one */
     public static void createForExecutable(Activity activity, File exeFile, File iconFile, Runnable onCreated) {
+        createForExecutable(activity, exeFile, iconFile, VrGameScanner.UNKNOWN, onCreated);
+    }
+
+    /** @param vrSupport a SteamDatabase.VR_* value, or VrGameScanner.UNKNOWN to scan the game; VR only turns on PC VR, optional VR asks */
+    public static void createForExecutable(Activity activity, File exeFile, File iconFile, int vrSupport, Runnable onCreated) {
         String gameName = FileUtils.getBasename(exeFile.getName());
 
         List<Container> containers = new ContainerManager(activity).getContainers();
@@ -56,11 +65,11 @@ public abstract class ShortcutCreator {
             // A container that already has this game says so instead, which asks the same
             // question and more besides, so the two are never both shown.
             if (!existingShortcutsFor(activity, only, exeFile).isEmpty()) {
-                create(activity, only, exeFile, iconFile, onCreated);
+                create(activity, only, exeFile, iconFile, vrSupport, onCreated);
                 return;
             }
             ContentDialog.confirm(activity, activity.getString(R.string.shortcut_will_be_created,
-                    gameName, only.getName()), () -> create(activity, only, exeFile, iconFile, onCreated));
+                    gameName, only.getName()), () -> create(activity, only, exeFile, iconFile, vrSupport, onCreated));
             return;
         }
 
@@ -69,7 +78,7 @@ public abstract class ShortcutCreator {
 
         ContentDialog.showSingleChoiceList(activity,
                 activity.getString(R.string.shortcut_choose_container, gameName), names,
-                which -> create(activity, containers.get(which), exeFile, iconFile, onCreated));
+                which -> create(activity, containers.get(which), exeFile, iconFile, vrSupport, onCreated));
     }
 
     /**
@@ -80,7 +89,7 @@ public abstract class ShortcutCreator {
      * them -- one set up differently for a different way of playing -- so the answer is the
      * user's rather than something to refuse or to do silently.
      */
-    public static void create(Activity activity, Container container, File exeFile, File iconFile, Runnable onCreated) {
+    public static void create(Activity activity, Container container, File exeFile, File iconFile, int vrSupport, Runnable onCreated) {
         List<Shortcut> existing = existingShortcutsFor(activity, container, exeFile);
         if (!existing.isEmpty()) {
             StringBuilder names = new StringBuilder();
@@ -91,12 +100,12 @@ public abstract class ShortcutCreator {
             dialog.setMessage(activity.getString(R.string.shortcut_already_exists,
                     container.getName(), names.toString()));
             ((TextView)dialog.findViewById(R.id.BTConfirm)).setText(R.string.shortcut_create_another);
-            dialog.setOnConfirmCallback(() -> writeAndReport(activity, container, exeFile, iconFile, onCreated));
+            dialog.setOnConfirmCallback(() -> writeAndReport(activity, container, exeFile, iconFile, vrSupport, onCreated));
             dialog.show();
             return;
         }
 
-        writeAndReport(activity, container, exeFile, iconFile, onCreated);
+        writeAndReport(activity, container, exeFile, iconFile, vrSupport, onCreated);
     }
 
     /**
@@ -127,7 +136,29 @@ public abstract class ShortcutCreator {
     }
 
     /** Puts the shortcut on disk, having settled that it is wanted. */
-    private static void writeAndReport(Activity activity, Container container, File exeFile, File iconFile, Runnable onCreated) {
+    private static void writeAndReport(Activity activity, Container container, File exeFile, File iconFile, int vrSupport, Runnable onCreated) {
+        // A game folder can hold thousands of files, so the scan stays off the UI thread
+        if (vrSupport == VrGameScanner.UNKNOWN) {
+            Executors.newSingleThreadExecutor().execute(() -> {
+                int found = VrGameScanner.detect(activity, exeFile);
+                activity.runOnUiThread(() -> writeAndReport(activity, container, exeFile, iconFile, found, onCreated));
+            });
+            return;
+        }
+
+        // Optional VR is asked here, and the answer carries on as VR only or none
+        if (vrSupport == SteamDatabase.VR_OPTIONAL) {
+            ContentDialog dialog = new ContentDialog(activity);
+            dialog.setTitle(FileUtils.getBasename(exeFile.getName()));
+            dialog.setMessage(activity.getString(R.string.shortcut_vr_optional, FileUtils.getBasename(exeFile.getName())));
+            ((TextView)dialog.findViewById(R.id.BTConfirm)).setText(R.string.shortcut_vr_enable);
+            ((TextView)dialog.findViewById(R.id.BTCancel)).setText(R.string.shortcut_vr_skip);
+            dialog.setOnConfirmCallback(() -> writeAndReport(activity, container, exeFile, iconFile, SteamDatabase.VR_ONLY, onCreated));
+            dialog.setOnCancelCallback(() -> writeAndReport(activity, container, exeFile, iconFile, SteamDatabase.VR_NONE, onCreated));
+            dialog.show();
+            return;
+        }
+
         // The container's own C:, its mapped drives, and Z: -- the image root, which is where an
         // extracted archive lands and is the same folder in every container.
         String winePath = GuestScriptRunner.toWinPath(activity, container, exeFile);
@@ -137,7 +168,7 @@ public abstract class ShortcutCreator {
             return;
         }
 
-        File desktopFile = write(activity, container, exeFile, winePath, iconFile);
+        File desktopFile = write(activity, container, exeFile, winePath, iconFile, vrSupport == SteamDatabase.VR_ONLY);
         if (desktopFile == null) {
             ContentDialog.alert(activity, R.string.shortcut_create_failed, null);
             return;
@@ -154,7 +185,7 @@ public abstract class ShortcutCreator {
      * A name already taken is numbered rather than overwritten: the same game can reasonably be
      * added to more than one container, and a second copy of one is not a mistake to correct.
      */
-    private static File write(Context context, Container container, File exeFile, String winePath, File iconFile) {
+    private static File write(Context context, Container container, File exeFile, String winePath, File iconFile, boolean pcvr) {
         File desktopDir = container.getDesktopDir();
         if (!desktopDir.exists() && !desktopDir.mkdirs()) {
             Log.e(TAG, "Could not create the desktop directory at " + desktopDir.getAbsolutePath());
@@ -189,7 +220,8 @@ public abstract class ShortcutCreator {
                 "Icon=" + iconName + "\n" +
                 "StartupWMClass=" + exeFile.getName() + "\n\n" +
                 "[Extra Data]\n" +
-                "container_id:" + container.id + "\n";
+                "container_id:" + container.id + "\n" +
+                (pcvr ? PcvrRuntime.EXTRA_KEY + "=1\n" : "");
 
         if (FileUtils.writeString(desktopFile, content)) return desktopFile;
 

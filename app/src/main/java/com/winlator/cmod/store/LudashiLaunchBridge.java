@@ -17,13 +17,14 @@ import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.ContainerManager;
 import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.core.FileUtils;
+import com.winlator.xr.utils.VrGameScanner;
 import com.winlator.xr.XrActivity;
+import com.winlator.xr.utils.PcvrRuntime;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -57,6 +58,12 @@ public final class LudashiLaunchBridge {
      */
     public static void addToLauncher(Activity activity, String gameName, String exePath,
                                      String userAgent, String... artUrls) {
+        addToLauncher(activity, gameName, exePath, userAgent, VrGameScanner.UNKNOWN, artUrls);
+    }
+
+    /** @param vrSupport a SteamDatabase.VR_* value, or VrGameScanner.UNKNOWN to scan the game; VR only turns on PC VR, optional VR asks once */
+    public static void addToLauncher(Activity activity, String gameName, String exePath,
+                                     String userAgent, int vrSupport, String... artUrls) {
         new Thread(() -> {
             Handler h = new Handler(Looper.getMainLooper());
             try {
@@ -85,7 +92,7 @@ public final class LudashiLaunchBridge {
                         .setTitle("Select container for \"" + gameName + "\"")
                         .setItems(names, (dialog, which) ->
                                 writeShortcut(activity, containers.get(which), gameName, exePath,
-                                        userAgent, artUrls, h))
+                                        userAgent, vrSupport, artUrls, h))
                         .setNegativeButton("Cancel", null)
                         .show());
 
@@ -170,6 +177,14 @@ public final class LudashiLaunchBridge {
         else XrActivity.openIntent(activity, shortcut.container.id, shortcut.file.getPath());
     }
 
+    private static void savePcvrAndRun(Activity activity, Shortcut shortcut, String pcvr) {
+        new Thread(() -> {
+            shortcut.putExtra(PcvrRuntime.EXTRA_KEY, pcvr);
+            shortcut.saveData();
+            runFromShortcut(activity, shortcut);
+        }).start();
+    }
+
     private static boolean safeDelete(@Nullable File f) {
         try {
             return f != null && f.exists() && f.delete();
@@ -241,9 +256,12 @@ public final class LudashiLaunchBridge {
 
     private static void writeShortcut(Activity activity, Container container,
                                       String gameName, String exePath,
-                                      String userAgent, String[] artUrls, Handler h) {
+                                      String userAgent, int knownVrSupport, String[] artUrls, Handler h) {
         new Thread(() -> {
             try {
+                int vrSupport = knownVrSupport == VrGameScanner.UNKNOWN
+                        ? VrGameScanner.detect(activity, new File(exePath)) : knownVrSupport;
+
                 Method getDesktopDir = container.getClass().getMethod("getDesktopDir");
                 File desktopDir = (File) getDesktopDir.invoke(container);
 
@@ -274,6 +292,15 @@ public final class LudashiLaunchBridge {
 
                 String iconName = saveIcon(container, safeName, userAgent, artUrls);
 
+                // The file is rewritten below, so keep an earlier answer to the optional VR question
+                String pcvr = null;
+                if (vrSupport == SteamDatabase.VR_ONLY) pcvr = "1";
+                else if (vrSupport == SteamDatabase.VR_OPTIONAL && shortcutFile.isFile()) {
+                    try {
+                        pcvr = new Shortcut(container, shortcutFile).getExtra(PcvrRuntime.EXTRA_KEY, null);
+                    } catch (Exception ignored) {}
+                }
+
                 String content = "[Desktop Entry]\n"
                         + "Name=" + gameName + "\n"
                         + "Exec=wine " + escapedWinPath + "\n"
@@ -281,7 +308,8 @@ public final class LudashiLaunchBridge {
                         + "Type=Application\n"
                         + "StartupWMClass=explorer\n"
                         + "\n"
-                        + "[Extra Data]\n";
+                        + "[Extra Data]\n"
+                        + (pcvr != null ? PcvrRuntime.EXTRA_KEY + "=" + pcvr + "\n" : "");
 
                 try (FileWriter fw = new FileWriter(shortcutFile)) {
                     fw.write(content);
@@ -292,7 +320,19 @@ public final class LudashiLaunchBridge {
                                 + "Open the side menu → Shortcuts to launch and configure it.",
                         Toast.LENGTH_LONG).show());
 
-                runFromShortcut(activity, new Shortcut(container, shortcutFile));
+                Shortcut shortcut = new Shortcut(container, shortcutFile);
+                if (vrSupport == SteamDatabase.VR_OPTIONAL && pcvr == null) {
+                    h.post(() -> new AlertDialog.Builder(activity)
+                            .setTitle("VR mode available")
+                            .setMessage("\"" + gameName + "\" looks like it can be played in VR. Enable PC VR for this game?\n\n"
+                                    + "This can be changed later in the shortcut settings.")
+                            .setCancelable(false)
+                            .setPositiveButton("Enable VR", (d, w) -> savePcvrAndRun(activity, shortcut, "1"))
+                            .setNegativeButton("Play without VR", (d, w) -> savePcvrAndRun(activity, shortcut, "0"))
+                            .show());
+                    return;
+                }
+                runFromShortcut(activity, shortcut);
 
             } catch (Exception e) {
                 h.post(() -> Toast.makeText(activity,

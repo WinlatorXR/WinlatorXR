@@ -158,7 +158,8 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         SteamCollectionStore.fetchIfNoSnapshot()
         val staleThresholdSec = 4 * 60 * 60L  // 4 hours
         val elapsed = System.currentTimeMillis() / 1000L - repo.lastSyncTime
-        if (games.isEmpty() || elapsed > staleThresholdSec) {
+        // Libraries synced before VR support was stored have none, so sync once now rather than in 4 hours
+        if (games.isEmpty() || elapsed > staleThresholdSec || !repo.database.hasVrSupportData()) {
             statusText.text = if (games.isEmpty()) "Syncing library…" else "Refreshing library…"
             repo.syncLibrary()
         }
@@ -562,14 +563,15 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         }
         val lowerTitle = game.name.lowercase()
         exeFiles.sortWith(compareByDescending { AmazonLaunchHelper.scoreExe(it, lowerTitle) })
+        val vrSupport = SteamRepository.getInstance().database.getVrSupport(game.appId)
         if (exeFiles.size == 1) {
-            LudashiLaunchBridge.addToLauncher(this, game.name, exeFiles[0].absolutePath, null, *game.artworkUrls)
+            LudashiLaunchBridge.addToLauncher(this, game.name, exeFiles[0].absolutePath, null, vrSupport, *game.artworkUrls)
         } else {
             val labels = exeFiles.map { it.name }.toTypedArray()
             android.app.AlertDialog.Builder(this)
                 .setTitle("Choose executable")
                 .setItems(labels) { _, which ->
-                    LudashiLaunchBridge.addToLauncher(this, game.name, exeFiles[which].absolutePath, null, *game.artworkUrls)
+                    LudashiLaunchBridge.addToLauncher(this, game.name, exeFiles[which].absolutePath, null, vrSupport, *game.artworkUrls)
                 }
                 .show()
         }

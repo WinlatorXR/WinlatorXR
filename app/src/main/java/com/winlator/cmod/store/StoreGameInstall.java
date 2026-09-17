@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.util.Log;
 
+import com.winlator.xr.utils.VrGameScanner;
 import com.winlator.cmod.xenvironment.ImageFs;
 
 import org.json.JSONArray;
@@ -331,6 +332,18 @@ public final class StoreGameInstall {
             Log.w(TAG, "Unreadable " + store.label + " library", e);
         }
         return null;
+    }
+
+    /** A SteamDatabase.VR_* value from Steam's store categories, VrGameScanner.UNKNOWN for other stores. Not for the UI thread. */
+    public int vrSupport(Context context) {
+        if (store != Store.STEAM) return VrGameScanner.UNKNOWN;
+
+        SteamDatabase database = SteamDatabase.getInstance(context);
+        for (SteamDatabase.GameRow game : database.getInstalledGames()) {
+            if (game.installDir == null || game.installDir.isEmpty()) continue;
+            if (isInside(new File(game.installDir))) return database.getVrSupport(game.appId);
+        }
+        return SteamDatabase.VR_NONE;
     }
 
     private Intent steamPage(Context context) {

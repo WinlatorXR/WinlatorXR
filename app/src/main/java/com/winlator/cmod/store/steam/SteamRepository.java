@@ -749,6 +749,14 @@ public final class SteamRepository {
                         }
                         db.replaceBranches(app.getId(), branches);
 
+                        // Store categories: 54 = VR Only, 53 = VR Supported, 31 = the older VR Support flag
+                        KeyValue categories = common.get("category");
+                        int vrSupport = SteamDatabase.VR_NONE;
+                        if ("1".equals(kvStr(categories.get("category_54")))) vrSupport = SteamDatabase.VR_ONLY;
+                        else if ("1".equals(kvStr(categories.get("category_53")))
+                                || "1".equals(kvStr(categories.get("category_31")))) vrSupport = SteamDatabase.VR_OPTIONAL;
+                        db.setVrSupport(app.getId(), vrSupport);
+
                         String oslist = String.join(",", platforms);
                         db.upsertGame(app.getId(), name, icon, windowsSize, depotSb.toString(), type,
                                 developer, metacriticScore, genreSb.toString(), oslist, androidSize);

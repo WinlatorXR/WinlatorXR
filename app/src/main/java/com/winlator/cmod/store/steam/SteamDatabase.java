@@ -101,6 +101,17 @@ public final class SteamDatabase extends SQLiteOpenHelper {
             "  PRIMARY KEY (app_id, name)" +
             ")";
 
+    // Also created in onOpen; vr_support is one of the VR_* values below
+    private static final String SQL_VR_SUPPORT =
+            "CREATE TABLE IF NOT EXISTS steam_vr_support (" +
+            "  app_id     INTEGER PRIMARY KEY," +
+            "  vr_support INTEGER NOT NULL DEFAULT 0" +
+            ")";
+
+    public static final int VR_NONE     = 0;
+    public static final int VR_OPTIONAL = 1;
+    public static final int VR_ONLY     = 2;
+
     // -------------------------------------------------------------------------
     // Singleton
     // -------------------------------------------------------------------------
@@ -145,12 +156,16 @@ public final class SteamDatabase extends SQLiteOpenHelper {
     @Override
     public void onOpen(SQLiteDatabase db) {
         super.onOpen(db);
-        if (!db.isReadOnly()) db.execSQL(SQL_BRANCHES);
+        if (!db.isReadOnly()) {
+            db.execSQL(SQL_BRANCHES);
+            db.execSQL(SQL_VR_SUPPORT);
+        }
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         Log.i(TAG, "Upgrading steam.db v" + oldVersion + " → v" + newVersion);
+        db.execSQL("DROP TABLE IF EXISTS steam_vr_support");
         db.execSQL("DROP TABLE IF EXISTS steam_branches");
         db.execSQL("DROP TABLE IF EXISTS depot_manifests");
         db.execSQL("DROP TABLE IF EXISTS steam_downloads");
@@ -498,6 +513,33 @@ public final class SteamDatabase extends SQLiteOpenHelper {
             }
         }
         return rows;
+    }
+
+    // =========================================================================
+    // steam_vr_support
+    // =========================================================================
+
+    public void setVrSupport(int appId, int vrSupport) {
+        ContentValues cv = new ContentValues();
+        cv.put("app_id",     appId);
+        cv.put("vr_support", vrSupport);
+        getWritableDatabase().insertWithOnConflict("steam_vr_support", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    /** False until a library sync has run on a build that stores VR support. */
+    public boolean hasVrSupportData() {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT 1 FROM steam_vr_support LIMIT 1", null)) {
+            return c.moveToFirst();
+        }
+    }
+
+    /** VR_NONE until a library sync has stored the app's store categories. */
+    public int getVrSupport(int appId) {
+        try (Cursor c = getReadableDatabase().rawQuery(
+                "SELECT vr_support FROM steam_vr_support WHERE app_id = ?",
+                new String[]{String.valueOf(appId)})) {
+            return c.moveToFirst() ? c.getInt(0) : VR_NONE;
+        }
     }
 
     // =========================================================================

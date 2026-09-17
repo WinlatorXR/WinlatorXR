@@ -918,6 +918,9 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="shortcut_subtitle_with_source">%1$s • %2$s</string>
     <string name="shortcut_already_exists">%1$s already has a shortcut for this game:%2$s\n\nCreate another one?</string>
     <string name="shortcut_create_another">Create Another</string>
+    <string name="shortcut_vr_optional">\"%1$s\" looks like it can be played in VR. Enable PC VR for this shortcut?\n\nThis can be changed later in the shortcut settings.</string>
+    <string name="shortcut_vr_enable">Enable VR</string>
+    <string name="shortcut_vr_skip">Without VR</string>
     <string name="shortcut_create_failed">The shortcut could not be created.</string>
 
     <!-- Carrying one shortcut's settings to another as a file. -->

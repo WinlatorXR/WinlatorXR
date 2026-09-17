@@ -12,6 +12,7 @@ import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.store.LudashiLaunchBridge;
 import com.winlator.cmod.store.StoreGameInstall;
 import com.winlator.cmod.xenvironment.ImageFs;
+import com.winlator.xr.utils.VrGameScanner;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -199,6 +200,7 @@ public abstract class ZDriveGames {
         Executors.newSingleThreadExecutor().execute(() -> {
             List<File> executables = ZipExtractor.findExecutables(game.dir, ZipExtractor.Role.GAME);
             File iconFile = storeIcon(activity, game);
+            int vrSupport = VrGameScanner.detectDir(activity, game.dir);
 
             activity.runOnUiThread(() -> {
                 preloaderDialog.close();
@@ -210,7 +212,7 @@ public abstract class ZDriveGames {
                 }
 
                 if (executables.size() == 1) {
-                    ShortcutCreator.createForExecutable(activity, executables.get(0), iconFile, onCreated);
+                    ShortcutCreator.createForExecutable(activity, executables.get(0), iconFile, vrSupport, onCreated);
                     return;
                 }
 
@@ -220,7 +222,7 @@ public abstract class ZDriveGames {
 
                 ContentDialog.showSingleChoiceList(activity,
                         activity.getString(R.string.zip_choose_game_title, game.getName()), names,
-                        which -> ShortcutCreator.createForExecutable(activity, executables.get(which), iconFile, onCreated));
+                        which -> ShortcutCreator.createForExecutable(activity, executables.get(which), iconFile, vrSupport, onCreated));
             });
         });
     }

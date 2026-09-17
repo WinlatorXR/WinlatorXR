@@ -812,16 +812,17 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
             exeFiles.sortWith { a, b ->
                 AmazonLaunchHelper.scoreExe(b, lowerTitle) - AmazonLaunchHelper.scoreExe(a, lowerTitle)
             }
+            val vrSupport = SteamRepository.getInstance().database.getVrSupport(g.appId)
 
             if (exeFiles.size == 1) {
-                ui.post { LudashiLaunchBridge.addToLauncher(this, g.name, exeFiles[0].absolutePath, null, *g.artworkUrls) }
+                ui.post { LudashiLaunchBridge.addToLauncher(this, g.name, exeFiles[0].absolutePath, null, vrSupport, *g.artworkUrls) }
                 return@Thread
             }
 
             // Multiple exes — show picker
             val candidates = exeFiles.map { it.absolutePath }
             showExePicker(candidates) { chosen ->
-                ui.post { LudashiLaunchBridge.addToLauncher(this, g.name, chosen, null, *g.artworkUrls) }
+                ui.post { LudashiLaunchBridge.addToLauncher(this, g.name, chosen, null, vrSupport, *g.artworkUrls) }
             }
         }.start()
     }
