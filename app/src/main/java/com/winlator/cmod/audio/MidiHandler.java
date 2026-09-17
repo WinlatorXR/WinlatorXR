@@ -1,4 +1,4 @@
-package com.winlator.cmod.midi;
+package com.winlator.cmod.audio;
 
 import java.io.IOException;
 import java.net.DatagramPacket;

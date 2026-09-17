@@ -2,9 +2,9 @@ package com.winlator.cmod.xenvironment.components;
 
 import android.util.SparseArray;
 
-import com.winlator.cmod.alsaserver.ALSAClient;
-import com.winlator.cmod.alsaserver.ALSAClientConnectionHandler;
-import com.winlator.cmod.alsaserver.ALSARequestHandler;
+import com.winlator.cmod.audio.ALSAClient;
+import com.winlator.cmod.audio.ALSAClientConnectionHandler;
+import com.winlator.cmod.audio.ALSARequestHandler;
 import com.winlator.cmod.xconnector.Client;
 import com.winlator.cmod.xconnector.UnixSocketConfig;
 import com.winlator.cmod.xconnector.XConnectorEpoll;

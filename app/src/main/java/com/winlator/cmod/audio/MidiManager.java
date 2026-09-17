@@ -1,4 +1,4 @@
-package com.winlator.cmod.midi;
+package com.winlator.cmod.audio;
 
 import android.content.Context;
 import android.net.Uri;

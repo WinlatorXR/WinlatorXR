@@ -40,7 +40,7 @@ import com.winlator.cmod.core.Callback;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.PreloaderDialog;
 import com.winlator.cmod.core.TarCompressorUtils;
-import com.winlator.cmod.midi.MidiManager;
+import com.winlator.cmod.audio.MidiManager;
 import com.winlator.cmod.xenvironment.ImageFsInstaller;
 import com.winlator.xr.ui.XrControllerDialog;
 import com.winlator.xr.ui.XrDialog;

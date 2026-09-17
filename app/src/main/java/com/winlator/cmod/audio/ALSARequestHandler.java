@@ -1,4 +1,4 @@
-package com.winlator.cmod.alsaserver;
+package com.winlator.cmod.audio;
 
 import com.winlator.cmod.sysvshm.SysVSharedMemory;
 import com.winlator.cmod.xconnector.Client;

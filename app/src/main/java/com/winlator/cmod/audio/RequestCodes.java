@@ -1,4 +1,4 @@
-package com.winlator.cmod.alsaserver;
+package com.winlator.cmod.audio;
 
 public abstract class RequestCodes {
     public static final byte CLOSE = 0;
@@ -9,4 +9,12 @@ public abstract class RequestCodes {
     public static final byte WRITE = 5;
     public static final byte DRAIN = 6;
     public static final byte POINTER = 7;
+
+    public static final byte MIDI_SHORT = 1;
+    public static final byte MIDI_LONG = 2;
+    public static final byte MIDI_PREPARE = 3;
+    public static final byte MIDI_UNPREPARE = 4;
+    public static final byte MIDI_OPEN = 5;
+    public static final byte MIDI_CLOSE = 6;
+    public static final byte MIDI_RESET = 7;
 }
