@@ -356,8 +356,7 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         // Quest 3/3S by default anyway to keep it out of every other device's process.
         // "force_kgsl_shim_all_devices" lets advanced users override the device gate.
         boolean forceKgslShimAllDevices = preferences.getBoolean("force_kgsl_shim_all_devices", false);
-        boolean isQuest3 = XrDevice.getDevice() == XrDevice.HmdModel.QUEST_3;
-        if ((isQuest3 || forceKgslShimAllDevices) && new File(kgslShimPath).exists())
+        if ((XrDevice.requiresKgslShim() || forceKgslShimAllDevices) && new File(kgslShimPath).exists())
             ld_preload += ":" + kgslShimPath;
 
         envVars.put("LD_PRELOAD", ld_preload);
