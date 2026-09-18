@@ -67,7 +67,7 @@ import com.winlator.cmod.core.WineInfo;
 import com.winlator.cmod.core.ZipExtractor;
 import com.winlator.cmod.core.ZipImport;
 import com.winlator.cmod.store.StoreGameInstall;
-import com.winlator.xr.utils.Device;
+import com.winlator.xr.utils.XrDevice;
 import com.winlator.xr.utils.GoldbergEmu;
 
 import java.io.BufferedReader;
@@ -411,7 +411,7 @@ public class ShortcutsFragment extends Fragment {
         // starting point, not an answer.
         if (profile.isDifferentDevice()) {
             message += getString(R.string.settings_profile_import_other_device,
-                    profile.deviceName, Device.getDisplayName());
+                    profile.deviceName, XrDevice.getDisplayName());
         }
 
         // Crossing between the x86 and ARM64EC sides is the one difference that reliably changes

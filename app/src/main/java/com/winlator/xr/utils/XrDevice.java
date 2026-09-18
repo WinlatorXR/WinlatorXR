@@ -24,7 +24,7 @@ import com.winlator.xr.runtime.MetaQuest;
 import com.winlator.xr.runtime.Pico;
 import com.winlator.xr.runtime.PlayForDream;
 
-public class Device {
+public class XrDevice {
 
     public enum HmdModel {
         PICO_NEO_3_LINK, PICO_4, PICO_4_ULTRA, PICO_UNKNOWN,
@@ -94,25 +94,25 @@ public class Device {
     }
 
     public static boolean isSupported() {
-        return Device.getRuntime() != null;
+        return XrDevice.getRuntime() != null;
     }
 
-    private static Device.HmdModel getPicoDevice() {
+    private static XrDevice.HmdModel getPicoDevice() {
         return switch (Build.PRODUCT) {
             case "Pico Neo 3", "Pico_Neo_3", "A7P10", "A7H10" -> HmdModel.PICO_NEO_3_LINK;
             case "Pico 4", "Pico_4", "PICO 4", "PICO_4", "Pico A8110", "PICO A8110", "Pico_A8110", "PICOA8110", "A8110", "pheonix" -> HmdModel.PICO_4;
-            case "PICO 4 Ultra", "Pico_A9210", "A9210", "sparrow" -> Device.HmdModel.PICO_4_ULTRA;
-            default -> Device.HmdModel.PICO_UNKNOWN;
+            case "PICO 4 Ultra", "Pico_A9210", "A9210", "sparrow" -> XrDevice.HmdModel.PICO_4_ULTRA;
+            default -> XrDevice.HmdModel.PICO_UNKNOWN;
         };
     }
 
-    private static Device.HmdModel getQuestDevice() {
+    private static XrDevice.HmdModel getQuestDevice() {
         return switch (Build.PRODUCT) {
-            case "monterey", "vr_monterey" -> Device.HmdModel.QUEST_1;
-            case "hollywood" -> Device.HmdModel.QUEST_2;
-            case "eureka", "stinson", "panther" -> Device.HmdModel.QUEST_3;
-            case "seacliff" -> Device.HmdModel.QUEST_PRO;
-            default -> Device.HmdModel.QUEST_UNKNOWN;
+            case "monterey", "vr_monterey" -> XrDevice.HmdModel.QUEST_1;
+            case "hollywood" -> XrDevice.HmdModel.QUEST_2;
+            case "eureka", "stinson", "panther" -> XrDevice.HmdModel.QUEST_3;
+            case "seacliff" -> XrDevice.HmdModel.QUEST_PRO;
+            default -> XrDevice.HmdModel.QUEST_UNKNOWN;
         };
     }
 }

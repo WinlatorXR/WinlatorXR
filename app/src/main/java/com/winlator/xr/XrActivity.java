@@ -38,7 +38,7 @@ import com.winlator.xr.io.XrRenderer;
 import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.xr.ui.XrControllerDialog;
 import com.winlator.xr.ui.XrKeyboard;
-import com.winlator.xr.utils.Device;
+import com.winlator.xr.utils.XrDevice;
 import com.winlator.xr.utils.XrEnvironment;
 
 public class XrActivity extends XServerDisplayActivity {
@@ -250,7 +250,7 @@ public class XrActivity extends XServerDisplayActivity {
         if (context != null) {
             isEnabled = PreferenceManager.getDefaultSharedPreferences(context).getBoolean("use_xr", true);
         }
-        return isEnabled && Device.isSupported();
+        return isEnabled && XrDevice.isSupported();
     }
 
     public void callMenuAction(int item) {
@@ -275,7 +275,7 @@ public class XrActivity extends XServerDisplayActivity {
 
     public static void openIntent(Activity context, int containerId, String path) {
         // Create the launch intent
-        Intent intent = new Intent(context, Device.getRuntime());
+        Intent intent = new Intent(context, XrDevice.getRuntime());
         intent.putExtra("container_id", containerId);
         if (path != null) {
             intent.putExtra("shortcut_path", path);

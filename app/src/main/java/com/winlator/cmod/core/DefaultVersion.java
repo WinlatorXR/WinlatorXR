@@ -1,12 +1,12 @@
 package com.winlator.cmod.core;
 
-import com.winlator.xr.utils.Device;
+import com.winlator.xr.utils.XrDevice;
 
 public abstract class DefaultVersion {
     public static final String BOX86 = "0.4.2";
     public static final String BOX64 = "0.4.2";
     public static final String FEXCORE = "2605";
-    public static final String WRAPPER = switch(Device.getDevice()) {
+    public static final String WRAPPER = switch(XrDevice.getDevice()) {
         case PICO_4_ULTRA, QUEST_2, PICO_NEO_3_LINK, PICO_4 -> "adrenotools-Turnip_v26.3.0_r9";
         case QUEST_3 -> "Turnip_Adreno_Driver_T26_(@Mr_Purple_666)";
         default -> "System";
@@ -18,12 +18,12 @@ public abstract class DefaultVersion {
      * Wine architecture cannot. arm64ec versions come from R.array.dxvk_version_entries_arm64.
      */
     public static String dxvk(boolean arm64ec) {
-        if (arm64ec) return switch(Device.getDevice()) {
+        if (arm64ec) return switch(XrDevice.getDevice()) {
             case PICO_NEO_3_LINK, PICO_4 -> "sarek-dyasync-arm64ec-1.12.0";
             default -> "1.10.1";
         };
 
-        return switch(Device.getDevice()) {
+        return switch(XrDevice.getDevice()) {
             case PICO_NEO_3_LINK, PICO_4 -> "1.12.-sarek-async-0";
             default -> "1.10.1";
         };
@@ -38,7 +38,7 @@ public abstract class DefaultVersion {
     public static final String D8VK = "1.0";
     public static final String VKD3D = "2.12-0";
 
-    public static final String ENV_VARS = switch(Device.getDevice()) {
+    public static final String ENV_VARS = switch(XrDevice.getDevice()) {
         case PICO_4_ULTRA -> "ZINK_DESCRIPTORS=lazy ZINK_DEBUG=compact MESA_SHADER_CACHE_DISABLE=false MESA_SHADER_CACHE_MAX_SIZE=1024MB mesa_glthread=true WINEESYNC=1 MESA_VK_WSI_PRESENT_MODE=mailbox DXVK_DISABLE_TIMELINE_SEMAPHORES=1 FEX_DISKCACHE=0 WINE_FAST_YIELD=0 TU_DEBUG=noconform DXVK_HUD=0 MANGOHUD=0 MANGOHUD_CONFIG=horizontal,ram,procmem,gpu_temp,frame_timing,engine_version,gpu_stats=0";
         default -> "ZINK_DESCRIPTORS=lazy ZINK_DEBUG=compact MESA_SHADER_CACHE_DISABLE=false MESA_SHADER_CACHE_MAX_SIZE=512MB mesa_glthread=true WINEESYNC=1 MESA_VK_WSI_PRESENT_MODE=mailbox DXVK_DISABLE_TIMELINE_SEMAPHORES=1 FEX_DISKCACHE=0 WINE_FAST_YIELD=0 TU_DEBUG=noconform,sysmem DXVK_HUD=0 MANGOHUD=0 MANGOHUD_CONFIG=horizontal,ram,procmem,gpu_temp,frame_timing,engine_version,gpu_stats=0";
     };

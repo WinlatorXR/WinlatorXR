@@ -4,10 +4,6 @@ import android.app.Service;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
-import android.net.InetAddresses;
-import android.os.Build;
-import android.os.Handler;
-import android.os.Looper;
 import android.os.Process;
 import android.util.Log;
 
@@ -20,22 +16,16 @@ import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.core.Callback;
-import com.winlator.cmod.core.DefaultVersion;
 import com.winlator.cmod.core.EnvVars;
-import com.winlator.cmod.core.EvshimPatcher;
 import com.winlator.cmod.core.FileUtils;
-import com.winlator.cmod.core.GPUInformation;
 import com.winlator.cmod.core.ProcessHelper;
 import com.winlator.cmod.core.TarCompressorUtils;
 import com.winlator.cmod.core.WineInfo;
 import com.winlator.cmod.inputcontrols.ControllerManager;
-import com.winlator.cmod.sysvshm.SysVSHMConnectionHandler;
-import com.winlator.cmod.sysvshm.SysVSHMRequestHandler;
-import com.winlator.cmod.sysvshm.SysVSharedMemory;
 import com.winlator.cmod.xconnector.UnixSocketConfig;
 import com.winlator.cmod.xconnector.XConnectorEpoll;
 import com.winlator.cmod.xenvironment.ImageFs;
-import com.winlator.xr.utils.Device;
+import com.winlator.xr.utils.XrDevice;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -44,7 +34,6 @@ import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.List;
 
 public class BionicProgramLauncherComponent extends GuestProgramLauncherComponent {
     private String guestExecutable;
@@ -367,7 +356,7 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         // Quest 3/3S by default anyway to keep it out of every other device's process.
         // "force_kgsl_shim_all_devices" lets advanced users override the device gate.
         boolean forceKgslShimAllDevices = preferences.getBoolean("force_kgsl_shim_all_devices", false);
-        boolean isQuest3 = Device.getDevice() == Device.HmdModel.QUEST_3;
+        boolean isQuest3 = XrDevice.getDevice() == XrDevice.HmdModel.QUEST_3;
         if ((isQuest3 || forceKgslShimAllDevices) && new File(kgslShimPath).exists())
             ld_preload += ":" + kgslShimPath;
 

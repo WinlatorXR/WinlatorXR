@@ -6,7 +6,7 @@ import android.os.Environment;
 import android.util.Log;
 
 import com.winlator.cmod.core.WineInfo;
-import com.winlator.xr.utils.Device;
+import com.winlator.xr.utils.XrDevice;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -163,7 +163,7 @@ public abstract class ShortcutProfile {
         String wineVersion = sanitize(shortcut.container.getWineVersion());
         if (!wineVersion.isEmpty()) name += " - " + wineVersion;
 
-        String device = sanitize(Device.getDisplayName());
+        String device = sanitize(XrDevice.getDisplayName());
         if (!device.isEmpty()) name += " - " + device;
 
         return name + EXTENSION;
@@ -223,7 +223,7 @@ public abstract class ShortcutProfile {
             root.put(KEY_GAME, shortcut.name);
             root.put(KEY_CONTAINER, shortcut.container.getName());
             root.put(KEY_WINE_VERSION, shortcut.container.getWineVersion());
-            root.put(KEY_DEVICE, Device.getDisplayName());
+            root.put(KEY_DEVICE, XrDevice.getDisplayName());
             root.put(KEY_SETTINGS, effectiveSettingsOf(shortcut));
         }
         catch (JSONException e) {
@@ -314,7 +314,7 @@ public abstract class ShortcutProfile {
          */
         public boolean isDifferentDevice() {
             return deviceName != null && !deviceName.isEmpty()
-                    && !deviceName.equalsIgnoreCase(Device.getDisplayName());
+                    && !deviceName.equalsIgnoreCase(XrDevice.getDisplayName());
         }
 
         // A game reinstalled from another store, or re-added from a .lnk, keeps its title but
