@@ -1615,19 +1615,22 @@ public class ShortcutsFragment extends Fragment {
         intent.putExtra("container_id", containerId);
         intent.putExtra("shortcut_path", shortcutPath);
 
-        return new ShortcutInfo.Builder(getActivity(), uuid)
+        ShortcutInfo.Builder builder = new ShortcutInfo.Builder(getActivity(), uuid)
                 .setShortLabel(shortLabel)
                 .setLongLabel(longLabel)
-                .setIcon(icon)
-                .setIntent(intent)
-                .build();
+                .setIntent(intent);
+        // An update leaves out what it does not set, so a shortcut with no icon keeps the one
+        // the launcher already drew for it.
+        if (icon != null) builder.setIcon(icon);
+        return builder.build();
     }
 
     private void addShortcutToScreen(Shortcut shortcut) {
         ShortcutManager shortcutManager = getSystemService(requireContext(), ShortcutManager.class);
         if (shortcutManager != null && shortcutManager.isRequestPinShortcutSupported())
             shortcutManager.requestPinShortcut(buildScreenShortCut(shortcut.name, shortcut.name, shortcut.container.id,
-                    shortcut.file.getPath(), Icon.createWithBitmap(shortcut.icon), shortcut.getExtra("uuid")), null);
+                    shortcut.file.getPath(), shortcut.icon != null ? Icon.createWithBitmap(shortcut.icon) : null,
+                    shortcut.getExtra("uuid")), null);
     }
 
     public static void disableShortcutOnScreen(Context context, Shortcut shortcut) {

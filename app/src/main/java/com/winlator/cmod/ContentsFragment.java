@@ -786,6 +786,9 @@ public class ContentsFragment extends Fragment {
                 holder.tvVersionCode.setText(getContext().getString(R.string.version_code) + ": " + profile.verCode);
             }
             holder.ibMenu.setVisibility(profile.remoteUrl == null ? View.VISIBLE : View.GONE);
+            // Content already here has no address behind it, so the row offers its menu rather
+            // than a download button whose remote URL is null.
+            holder.ibDownload.setVisibility(profile.remoteUrl == null ? View.GONE : View.VISIBLE);
             holder.ibMenu.setOnClickListener(v -> {
                 PopupMenu selectionMenu = new PopupMenu(getContext(), holder.ibMenu);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
@@ -851,14 +854,9 @@ public class ContentsFragment extends Fragment {
 
             // These are a single file that is either here or still to be fetched, so the row
             // offers whichever of the two actions applies.
-            if (isSingleFileEntry(profile)) {
-                if (localFile.exists()) {
-                    holder.ibDownload.setVisibility(View.GONE);
-                    holder.ibMenu.setVisibility(View.VISIBLE);
-                } else {
-                    holder.ibDownload.setVisibility(View.VISIBLE);
-                    holder.ibMenu.setVisibility(View.GONE);
-                }
+            if (isSingleFileEntry(profile) && localFile.exists()) {
+                holder.ibDownload.setVisibility(View.GONE);
+                holder.ibMenu.setVisibility(View.VISIBLE);
             }
 
             holder.ibDownload.setOnClickListener(v -> {
