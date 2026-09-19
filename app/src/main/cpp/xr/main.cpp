@@ -37,6 +37,7 @@ bool xr_curvedScreen = false;
 bool xr_usePassthrough = false;
 int xr_sharpening = 0;
 int xr_edge_glow = 0;
+int xr_sbs_trim = 0;
 bool xr_vr = false;
 // xr_vr tracks whether the VR path is live this frame, so it drops out while a dialog is
 // up or the VR window is not on top. This one stays set for as long as the XrAPI title
@@ -220,7 +221,7 @@ JNIEXPORT jint JNICALL Java_com_winlator_xr_XrActivity_getHeight(JNIEnv *env, jo
 
 JNIEXPORT jboolean JNICALL
 Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean immersive,
-                                          jboolean sbs, jboolean aer, jfloat distance) {
+                                          jboolean sbs, jboolean sbsStretch, jboolean aer, jfloat distance) {
     if (XrRendererInitFrame(&xr_module_engine, &xr_module_renderer)) {
         // Update controllers state
         XrInputUpdate(&xr_module_engine, &xr_module_input);
@@ -267,6 +268,8 @@ Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean imm
         xr_module_renderer.ConfigInt[CONFIG_FRAMESYNC] = xr_vr;
         xr_module_renderer.ConfigInt[CONFIG_AER] = aer;
         xr_module_renderer.ConfigInt[CONFIG_SBS] = sbs;
+        xr_module_renderer.ConfigInt[CONFIG_SBS_STRETCH] = sbsStretch;
+        xr_module_renderer.ConfigFloat[CONFIG_SBS_TRIM] = sbs ? xr_sbs_trim / 100.0f : 0.0f;
         xr_module_renderer.ConfigInt[CONFIG_VR] = xr_vr;
 
         // Recenter on the first frame
@@ -288,6 +291,11 @@ JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_bindFBO(JNIEnv *env, jobject obj, jint fboIndex) {
     XrRendererEndFrame(&xr_module_renderer);
     XrRendererBeginFrame(&xr_module_renderer, fboIndex);
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_winlator_xr_XrActivity_beginOverlay(JNIEnv *env, jobject obj) {
+    return XrRendererBeginOverlay(&xr_module_engine, &xr_module_renderer);
 }
 
 JNIEXPORT void JNICALL Java_com_winlator_xr_XrActivity_endFrame(JNIEnv *env, jobject obj) {
@@ -429,6 +437,11 @@ Java_com_winlator_xr_XrActivity_nativeSetSharpening(JNIEnv *env, jobject obj, ji
 JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_nativeSetEdgeGlow(JNIEnv *env, jobject obj, jint intensity) {
     xr_edge_glow = intensity < 0 ? 0 : (intensity > 100 ? 100 : intensity);
+}
+
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_nativeSetSbsTrim(JNIEnv *env, jobject obj, jint percent) {
+    xr_sbs_trim = percent < 0 ? 0 : (percent > 20 ? 20 : percent);
 }
 
 JNIEXPORT jboolean JNICALL

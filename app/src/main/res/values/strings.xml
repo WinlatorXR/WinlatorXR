@@ -478,6 +478,8 @@
     <string name="use_curved_screen">Use curved screen</string>
     <string name="use_immersive_mode">3DoF immersive mode (experimental)</string>
     <string name="use_sbs">Map side-by-side 3D render to left and right eye</string>
+    <string name="use_sbs_stretch">Original SBS display (half width)</string>
+    <string name="sbs_edge_trim">Trim SBS eye edges (hides 3D black borders)</string>
     <string name="use_sharpening">Compositor sharpening</string>
     <string name="use_edge_glow">Edge glow</string>
     <string name="xr_show_fps">Show the game\'s frame rate</string>

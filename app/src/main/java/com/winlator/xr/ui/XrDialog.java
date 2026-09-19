@@ -53,11 +53,30 @@ public class XrDialog extends ContentDialog {
         CheckBox cbPassthrough = findViewById(R.id.CBEnablePassthrough);
         TextView tvToApplyClose = findViewById(R.id.TVToApplyClose);
         CheckBox cbDisableEnvironment = findViewById(R.id.CBDisableEnvironment);
+        CheckBox cbSBSStretch = findViewById(R.id.CBSBSStretch);
+        CheckBox cbSBSTrim = findViewById(R.id.CBSBSTrim);
         // Passthrough already covers the space the environment would occupy, so the switch
         // would do nothing visible while it is on.
         hmdUI(activity, cbSBS, cbImmersiveMode, cbCurvedScreen, cbPassthrough, tvToApplyClose,
-                () -> setViewEnabled(cbDisableEnvironment,
-                        !cbPassthrough.isChecked() && !isVRGameRunning()));
+                () -> {
+                    setViewEnabled(cbDisableEnvironment,
+                            !cbPassthrough.isChecked() && !isVRGameRunning());
+                    // Only offered while SBS is ticked
+                    int sbsVisibility = XrActivity.isActive() && !XrActivity.isVR && cbSBS.isChecked() ? View.VISIBLE : View.GONE;
+                    cbSBSStretch.setVisibility(sbsVisibility);
+                    cbSBSTrim.setVisibility(sbsVisibility);
+                });
+        loadConfig(cbSBSStretch, XrActivity.PREF_SBS_STRETCH, XrActivity.DEFAULT_SBS_STRETCH, XrActivity.sbsStretch);
+        cbSBSStretch.setOnCheckedChangeListener((compoundButton, checked) -> {
+            saveConfig(cbSBSStretch, XrActivity.PREF_SBS_STRETCH, checked);
+            XrActivity.sbsStretch = checked;
+        });
+        loadConfig(cbSBSTrim, XrActivity.PREF_SBS_TRIM, XrActivity.DEFAULT_SBS_TRIM, XrActivity.sbsTrim);
+        cbSBSTrim.setOnCheckedChangeListener((compoundButton, checked) -> {
+            saveConfig(cbSBSTrim, XrActivity.PREF_SBS_TRIM, checked);
+            XrActivity.sbsTrim = checked;
+            if (XrActivity.isActive()) XrActivity.getInstance().nativeSetSbsTrim(checked ? XrActivity.SBS_TRIM_PERCENT : 0);
+        });
         environmentToggleUI(activity, cbDisableEnvironment);
         frameRateUI(findViewById(R.id.CBShowFPS));
         // The environment picker is Settings-only. Importing needs a document picker, which
@@ -328,7 +347,7 @@ public class XrDialog extends ContentDialog {
         boolean isImmersive = XrActivity.isImmersive;
 
         if (XrActivity.isActive()) {
-            cbSBS.setEnabled(XrActivity.getInstance().lastMode3D < 0);
+            cbSBS.setEnabled(XrActivity.lastMode3D < 0);
             cbSBS.setChecked(XrActivity.isSBS);
             cbImmersiveMode.setEnabled(!XrActivity.isUDP);
             cbImmersiveMode.setChecked(isImmersive);

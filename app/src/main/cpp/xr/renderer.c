@@ -58,6 +58,9 @@ void XrRendererInit(struct XrEngine* engine, struct XrRenderer* renderer)
     renderer->EnvironmentCreated = false;
     renderer->EnvironmentReady = false;
     renderer->EdgeGlowRendered = false;
+    renderer->OverlayCreated = false;
+    renderer->OverlayFailed = false;
+    renderer->OverlayRendered = false;
 
     if (engine->PlatformFlag[PLATFORM_EXTENSION_PASSTHROUGH])
     {
@@ -156,6 +159,11 @@ void XrRendererDestroy(struct XrEngine* engine, struct XrRenderer* renderer)
     }
     XrRendererClearEnvironment(renderer);
     XrEdgeGlowDestroy(&renderer->EdgeGlow);
+    if (renderer->OverlayCreated)
+    {
+        XrFramebufferDestroy(&renderer->Overlay);
+        renderer->OverlayCreated = false;
+    }
     free(renderer->Projections);
     renderer->Initialized = false;
 }
@@ -240,17 +248,26 @@ void XrRendererLockFrame(struct XrEngine* engine, struct XrRenderer* renderer) {
     renderer->ConfigFloat[CONFIG_VIEWPORT_FOVY] = ToDegrees(fovy);
     renderer->HmdOrientation = XrQuaternionfEulerAngles(renderer->InvertedViewPose[0][renderer->FrameSync].orientation);
     renderer->EdgeGlowRendered = false;
+    renderer->OverlayRendered = false;
     renderer->LayerCount = 0;
     memset(renderer->Layers, 0, sizeof(XrCompositorLayer) * XrMaxLayerCount);
+}
+
+// The overlay is addressed as one index past the eye framebuffers
+#define XrOverlayFbo XrMaxNumEyes
+
+static struct XrFramebuffer* XrRendererGetFramebuffer(struct XrRenderer* renderer, int fbo_index)
+{
+    return fbo_index == XrOverlayFbo ? &renderer->Overlay : &renderer->Framebuffer[fbo_index];
 }
 
 void XrRendererBeginFrame(struct XrRenderer* renderer, int fbo_index)
 {
     if (fbo_index >= 0) {
         if (renderer->ConfigInt[CONFIG_CURRENT_FBO] != fbo_index) {
-            XrFramebufferAcquire(&renderer->Framebuffer[fbo_index]);
+            XrFramebufferAcquire(XrRendererGetFramebuffer(renderer, fbo_index));
         } else {
-            XrFramebufferSetCurrent(&renderer->Framebuffer[fbo_index]);
+            XrFramebufferSetCurrent(XrRendererGetFramebuffer(renderer, fbo_index));
         }
     }
     renderer->ConfigInt[CONFIG_CURRENT_FBO] = fbo_index;
@@ -279,10 +296,13 @@ static void XrRendererUpdateEdgeGlow(struct XrRenderer* renderer, int fbo_index)
     // Matches the sub-rectangle XrRendererFinishFrame hands to the screen layer: the left
     // half of the swapchain under SBS, all of it otherwise.
     float scale_u = renderer->ConfigInt[CONFIG_SBS] ? 0.5f : 1.0f;
+    // Skip the trimmed SBS eye edges, as the screen layer does
+    float offset_u = scale_u * renderer->ConfigFloat[CONFIG_SBS_TRIM];
+    scale_u -= 2.0f * offset_u;
 
     GLuint source = ((XrSwapchainImageOpenGLESKHR*)framebuffer->SwapchainImage)
                             [framebuffer->SwapchainIndex].image;
-    XrEdgeGlowRender(&renderer->EdgeGlow, source, 0.0f, 0.0f, scale_u, 1.0f,
+    XrEdgeGlowRender(&renderer->EdgeGlow, source, offset_u, 0.0f, scale_u, 1.0f,
                       (float)intensity / 100.0f);
     XrFramebufferSetCurrent(framebuffer);
     renderer->EdgeGlowRendered = true;
@@ -294,8 +314,29 @@ void XrRendererEndFrame(struct XrRenderer* renderer)
     int fbo_index = renderer->ConfigInt[CONFIG_CURRENT_FBO];
     if (fbo_index >= 0) {
         XrRendererUpdateEdgeGlow(renderer, fbo_index);
-        XrFramebufferRelease(&renderer->Framebuffer[fbo_index]);
+        XrFramebufferRelease(XrRendererGetFramebuffer(renderer, fbo_index));
     }
+}
+
+/*
+ * Finishes the screen and switches drawing to the overlay, a full resolution layer both eyes
+ * see. Under SBS a menu drawn into the screen gets only half of each eye's width. Created on
+ * first use, so sessions that never open a menu in SBS never pay for it.
+ */
+bool XrRendererBeginOverlay(struct XrEngine* engine, struct XrRenderer* renderer)
+{
+    if (!renderer->OverlayCreated && !renderer->OverlayFailed) {
+        renderer->OverlayCreated = XrFramebufferCreate(&renderer->Overlay, engine->Session,
+                                                       renderer->Framebuffer[0].Width,
+                                                       renderer->Framebuffer[0].Height);
+        renderer->OverlayFailed = !renderer->OverlayCreated;
+    }
+    if (!renderer->OverlayCreated) return false;
+
+    XrRendererEndFrame(renderer);
+    XrRendererBeginFrame(renderer, XrOverlayFbo);
+    renderer->OverlayRendered = renderer->Overlay.Acquired;
+    return renderer->OverlayRendered;
 }
 
 void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
@@ -343,6 +384,9 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
     if (renderer->ConfigInt[CONFIG_SBS]) {
         w /= 2;
     }
+    // Trims both edges of each SBS eye, where 3D shaders leave black strips; the screen narrows to match
+    int trim = (int)(w * renderer->ConfigFloat[CONFIG_SBS_TRIM]);
+    float keep = w > 0 ? (float)(w - 2 * trim) / (float)w : 1.0f;
 
     if (renderer->RecenterPending) {
         // Guard against uninitialized pose (first frame before xrLocateViews)
@@ -462,6 +506,14 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
             glow_layer.radius = radius;
             glow_layer.centralAngle = (float)(M_PI * 0.5) * XrEdgeGlowSpread;
             glow_layer.aspectRatio = 1;
+            if (renderer->ConfigInt[CONFIG_SBS] && renderer->ConfigInt[CONFIG_SBS_STRETCH])
+            {
+                // Match the half-width original SBS screen
+                glow_layer.centralAngle = (float)(M_PI * 0.25) * XrEdgeGlowSpread;
+                glow_layer.aspectRatio = size / 2.0f;
+            }
+            glow_layer.centralAngle *= keep;
+            glow_layer.aspectRatio *= keep;
             renderer->Layers[renderer->LayerCount++].cylinder = glow_layer;
         }
         else
@@ -480,6 +532,13 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
             glow_layer.pose.position = pos;
             glow_layer.size.width = 4 * size * XrEdgeGlowSpread;
             glow_layer.size.height = 4 * size * XrEdgeGlowSpread;
+            if (renderer->ConfigInt[CONFIG_SBS] && renderer->ConfigInt[CONFIG_SBS_STRETCH])
+            {
+                // Match the half-width original SBS screen
+                glow_layer.size.width = 2 * size * XrEdgeGlowSpread;
+                glow_layer.size.height = 4 * XrEdgeGlowSpread;
+            }
+            glow_layer.size.width *= keep;
             renderer->Layers[renderer->LayerCount++].quad = glow_layer;
         }
     }
@@ -544,9 +603,9 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
         cylinder_layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
         cylinder_layer.space = engine->CurrentSpace;
         memset(&cylinder_layer.subImage, 0, sizeof(XrSwapchainSubImage));
-        cylinder_layer.subImage.imageRect.offset.x = x;
+        cylinder_layer.subImage.imageRect.offset.x = x + trim;
         cylinder_layer.subImage.imageRect.offset.y = y;
-        cylinder_layer.subImage.imageRect.extent.width = w;
+        cylinder_layer.subImage.imageRect.extent.width = w - 2 * trim;
         cylinder_layer.subImage.imageRect.extent.height = h;
         cylinder_layer.subImage.swapchain = framebuffer->Handle;
         cylinder_layer.subImage.imageArrayIndex = 0;
@@ -555,6 +614,14 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
         cylinder_layer.radius = radius;
         cylinder_layer.centralAngle = (float)(M_PI * 0.5);
         cylinder_layer.aspectRatio = 1;
+        if (renderer->ConfigInt[CONFIG_SBS] && renderer->ConfigInt[CONFIG_SBS_STRETCH])
+        {
+            // Each eye is half the screen: show it at its own shape, full height of the 16:9 screen
+            cylinder_layer.centralAngle = (float)(M_PI * 0.25);
+            cylinder_layer.aspectRatio = size / 2.0f;
+        }
+        cylinder_layer.centralAngle *= keep;
+        cylinder_layer.aspectRatio *= keep;
 
         // Build the layer
         if (renderer->ConfigInt[CONFIG_SBS])
@@ -562,7 +629,7 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
             cylinder_layer.eyeVisibility = XR_EYE_VISIBILITY_LEFT;
             renderer->Layers[renderer->LayerCount++].cylinder = cylinder_layer;
             cylinder_layer.eyeVisibility = XR_EYE_VISIBILITY_RIGHT;
-            cylinder_layer.subImage.imageRect.offset.x = w;
+            cylinder_layer.subImage.imageRect.offset.x = w + trim;
             renderer->Layers[renderer->LayerCount++].cylinder = cylinder_layer;
         }
         else
@@ -578,9 +645,9 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
         quad_layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
         quad_layer.space = engine->CurrentSpace;
         memset(&quad_layer.subImage, 0, sizeof(XrSwapchainSubImage));
-        quad_layer.subImage.imageRect.offset.x = x;
+        quad_layer.subImage.imageRect.offset.x = x + trim;
         quad_layer.subImage.imageRect.offset.y = y;
-        quad_layer.subImage.imageRect.extent.width = w;
+        quad_layer.subImage.imageRect.extent.width = w - 2 * trim;
         quad_layer.subImage.imageRect.extent.height = h;
         quad_layer.subImage.swapchain = framebuffer->Handle;
         quad_layer.subImage.imageArrayIndex = 0;
@@ -588,6 +655,13 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
         quad_layer.pose.position = pos;
         quad_layer.size.width = 4 * size;
         quad_layer.size.height = 4 * size;
+        if (renderer->ConfigInt[CONFIG_SBS] && renderer->ConfigInt[CONFIG_SBS_STRETCH])
+        {
+            // Each eye is half the screen: show it at its own shape, full height of the 16:9 screen
+            quad_layer.size.width = 2 * size;
+            quad_layer.size.height = 4;
+        }
+        quad_layer.size.width *= keep;
 
         // Build the layer
         if (renderer->ConfigInt[CONFIG_SBS])
@@ -595,13 +669,58 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
             quad_layer.eyeVisibility = XR_EYE_VISIBILITY_LEFT;
             renderer->Layers[renderer->LayerCount++].quad = quad_layer;
             quad_layer.eyeVisibility = XR_EYE_VISIBILITY_RIGHT;
-            quad_layer.subImage.imageRect.offset.x = w;
+            quad_layer.subImage.imageRect.offset.x = w + trim;
             renderer->Layers[renderer->LayerCount++].quad = quad_layer;
         }
         else
         {
             quad_layer.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
             renderer->Layers[renderer->LayerCount++].quad = quad_layer;
+        }
+    }
+
+    if (renderer->OverlayRendered)
+    {
+        // Laid out like the non-SBS screen, so menus look the same with SBS on or off
+        struct XrFramebuffer* overlay = &renderer->Overlay;
+        if (renderer->ConfigInt[CONFIG_VIEWPORT_CURVED])
+        {
+            XrCompositionLayerCylinderKHR overlay_layer = {};
+            overlay_layer.type = XR_TYPE_COMPOSITION_LAYER_CYLINDER_KHR;
+            overlay_layer.next = layer_settings_chain;
+            overlay_layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+            overlay_layer.space = engine->CurrentSpace;
+            overlay_layer.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
+            memset(&overlay_layer.subImage, 0, sizeof(XrSwapchainSubImage));
+            overlay_layer.subImage.swapchain = overlay->Handle;
+            overlay_layer.subImage.imageRect.extent.width = overlay->Width;
+            overlay_layer.subImage.imageRect.extent.height = overlay->Height;
+            overlay_layer.subImage.imageArrayIndex = 0;
+            overlay_layer.pose.orientation = rot;
+            overlay_layer.pose.position = pos;
+            overlay_layer.radius = radius;
+            overlay_layer.centralAngle = (float)(M_PI * 0.5);
+            overlay_layer.aspectRatio = 1;
+            renderer->Layers[renderer->LayerCount++].cylinder = overlay_layer;
+        }
+        else
+        {
+            XrCompositionLayerQuad overlay_layer = {};
+            overlay_layer.type = XR_TYPE_COMPOSITION_LAYER_QUAD;
+            overlay_layer.next = layer_settings_chain;
+            overlay_layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+            overlay_layer.space = engine->CurrentSpace;
+            overlay_layer.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
+            memset(&overlay_layer.subImage, 0, sizeof(XrSwapchainSubImage));
+            overlay_layer.subImage.swapchain = overlay->Handle;
+            overlay_layer.subImage.imageRect.extent.width = overlay->Width;
+            overlay_layer.subImage.imageRect.extent.height = overlay->Height;
+            overlay_layer.subImage.imageArrayIndex = 0;
+            overlay_layer.pose.orientation = rot;
+            overlay_layer.pose.position = pos;
+            overlay_layer.size.width = 4 * size;
+            overlay_layer.size.height = 4 * size;
+            renderer->Layers[renderer->LayerCount++].quad = overlay_layer;
         }
     }
 
@@ -633,7 +752,7 @@ void XrRendererBindFramebuffer(struct XrRenderer* renderer)
         return;
     int fbo_index = renderer->ConfigInt[CONFIG_CURRENT_FBO];
     if (fbo_index >= 0) {
-        XrFramebufferSetCurrent(&renderer->Framebuffer[fbo_index]);
+        XrFramebufferSetCurrent(XrRendererGetFramebuffer(renderer, fbo_index));
     }
 }
 

@@ -43,6 +43,10 @@ import com.winlator.xr.utils.XrEnvironment;
 
 import javax.microedition.khronos.opengles.GL10;
 
+import java.util.Locale;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 public class XrRenderer extends GLRenderer {
     /** How far the frame rate panel sits from the corner, as a fraction of the screen. */
     private static final float FPS_PANEL_MARGIN = 0.01f;
@@ -56,6 +60,12 @@ public class XrRenderer extends GLRenderer {
 
     private boolean xrFrameReady = false;
     private boolean xrFrameStarted = false;
+    // Read once per frame: the menu can flip it mid-frame, and native has already split the eyes by then.
+    private boolean sbs = false;
+    private boolean sbsStretch = false;
+    private float sbsTrim = 0;
+    // Task manager windows on screen: SBS would zoom one and split it across the eyes, so it pauses
+    private final Set<Integer> taskManagerWindows = ConcurrentHashMap.newKeySet();
     private final XrFramesync xrFramesync;
     private final XrFpsOverlay fpsOverlay = new XrFpsOverlay();
 
@@ -77,6 +87,18 @@ public class XrRenderer extends GLRenderer {
     /** The rate the guest is redrawing the window the user is looking at. */
     public static int getGuestFPS() {
         return instance == null ? 0 : instance.fpsOverlay.getLastFPS();
+    }
+
+    @Override
+    public void onMapWindow(Window window) {
+        if (window.getClassName().toLowerCase(Locale.ENGLISH).contains("taskmgr")) taskManagerWindows.add(window.id);
+        super.onMapWindow(window);
+    }
+
+    @Override
+    public void onUnmapWindow(Window window) {
+        taskManagerWindows.remove(window.id);
+        super.onUnmapWindow(window);
     }
 
     @Override
@@ -135,12 +157,17 @@ public class XrRenderer extends GLRenderer {
 
         if (XrActivity.isEnabled(null)) {
             fullscreen = XrActivity.getVR();
+            sbs = XrActivity.getSBS() && taskManagerWindows.isEmpty();
+            sbsStretch = XrActivity.sbsStretch && !XrActivity.isVR;
+            sbsTrim = sbs && XrActivity.sbsTrim ? XrActivity.SBS_TRIM_PERCENT / 100.0f : 0;
             xrFrameReady = xrFrameStarted = XrActivity.getInstance().initFrame(
                     XrActivity.getImmersive() || XrActivity.getVR(),
-                    XrActivity.getSBS(), XrActivity.getAER(), XrActivity.getDistance());
+                    sbs, sbsStretch, XrActivity.getAER(), XrActivity.getDistance());
             XrActivity.getInstance().updateFrame();
             if (!XrActivity.getAER()) {
                 XrActivity.getInstance().bindFBO(0);
+                // Acquiring the swapchain resets the viewport to the full square; SBS needs the screen's letterbox back unless set to original.
+                viewportNeedsUpdate = !sbsStretch;
             }
         } else {
             fullscreen = false;
@@ -152,8 +179,20 @@ public class XrRenderer extends GLRenderer {
         super.postFrame();
 
         if (xrFrameStarted) {
+            // Overlays are laid out for the full square, not the SBS letterbox, and the frame SBS turns on can leave its scissor set.
+            GLES20.glViewport(0, 0, surfaceWidth, surfaceHeight);
+            GLES20.glDisable(GLES20.GL_SCISSOR_TEST);
             renderFPS();
+            // Under SBS, menus get their own full resolution layer instead of half of each eye
+            boolean overlay = sbs && !XrContentDialog.getInstances().isEmpty() && XrActivity.getInstance().beginOverlay();
+            if (overlay) {
+                sbs = false;
+                sbsTrim = 0;
+                // The overlay starts transparent, so alpha must build up as coverage, not coverage squared
+                GLES20.glBlendFuncSeparate(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA, GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+            }
             renderDialog();
+            if (overlay) GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
             xrFrameReady = false;
             XrActivity.getInstance().endFrame();
             xServerView.requestRender();
@@ -164,7 +203,7 @@ public class XrRenderer extends GLRenderer {
     protected Pair<Float, Float> preTransform() {
         if (!XrActivity.isEnabled(null)) {
             return super.preTransform();
-        } else if (!fullscreen && XrActivity.getSBS() && !renderableWindows.isEmpty()) {
+        } else if (!fullscreen && sbs && !renderableWindows.isEmpty()) {
             RenderableWindow window = renderableWindows.get(renderableWindows.size() - 1);
             return new Pair<>((float)window.rootX, (float)window.rootY);
         } else {
@@ -177,7 +216,7 @@ public class XrRenderer extends GLRenderer {
         super.preWindows();
 
         if (XrActivity.isEnabled(null)) {
-            if (!fullscreen && XrActivity.getSBS() && !renderableWindows.isEmpty()) {
+            if (!fullscreen && sbs && !renderableWindows.isEmpty()) {
                 RenderableWindow window = renderableWindows.get(renderableWindows.size() - 1);
                 magnifierZoom = xServer.screenInfo.width / (float)window.content.width;
                 magnifierEnabled = true;
@@ -232,6 +271,14 @@ public class XrRenderer extends GLRenderer {
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
     }
 
+    /**
+     * The original SBS screen is half as wide and shows the whole square in the 16:9 height, so
+     * overlays are shrunk vertically to keep their shape; 16:9 and plain modes leave them be.
+     */
+    private float getSbsFitY() {
+        return sbs && sbsStretch ? xServer.screenInfo.width / (float)xServer.screenInfo.height / 2 : 1;
+    }
+
     private void renderFPS() {
         if (!XrActivity.showFPS) return;
         int fps = XrActivity.getInstance().getLastFPS();
@@ -241,15 +288,18 @@ public class XrRenderer extends GLRenderer {
         GLES20.glUniform2f(dialogMaterial.getUniformLocation("viewSize"), xServer.screenInfo.width, xServer.screenInfo.height);
         quadVertices.bind(dialogMaterial.programId);
 
-        float div = XrActivity.getSBS() ? 2 : 1;
+        float div = sbs ? 2 : 1;
+        float fitY = getSbsFitY();
         float aspect = fullscreen ? xServer.screenInfo.width / (float)xServer.screenInfo.height : 1.0f;
         int offsetX = Math.round(xServer.screenInfo.height * FPS_PANEL_MARGIN * aspect);
+        // Keep clear of the trimmed SBS eye edge
+        offsetX += Math.round(xServer.screenInfo.width / div * sbsTrim);
         int offsetY = Math.round(xServer.screenInfo.height * FPS_PANEL_MARGIN);
         GLES20.glBlendFuncSeparate(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA, GLES20.GL_ONE, GLES20.GL_ONE);
-        renderDrawable(drawable, offsetX, offsetY, dialogMaterial, false, aspect / div, 1);
+        renderDrawable(drawable, offsetX, offsetY, dialogMaterial, false, aspect / div, fitY);
         if (div > 1) {
             offsetX += (int) (xServer.screenInfo.width / div);
-            renderDrawable(drawable, offsetX, offsetY, dialogMaterial, false, aspect / div, 1);
+            renderDrawable(drawable, offsetX, offsetY, dialogMaterial, false, aspect / div, fitY);
         }
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
         quadVertices.disable();
@@ -268,13 +318,16 @@ public class XrRenderer extends GLRenderer {
         XForm.identity(tmpXForm2);
         float aspect = xServer.screenInfo.width / (float)xServer.screenInfo.height;
         try (XLock lock = xServer.lock(XServer.Lockable.DRAWABLE_MANAGER)) {
-            float div = XrActivity.getSBS() ? 2 : 1;
+            float div = sbs ? 2 : 1;
+            float fitY = getSbsFitY();
             for (XrContentDialog dialog : XrContentDialog.getInstances()) {
                 Drawable drawable = dialog.getDrawable();
                 if (drawable != null) {
                     float scale = xServer.screenInfo.height / 1200.0f;
                     if (XrKeyboard.isShown()) {
                         scale = xServer.screenInfo.height / (float)drawable.width / aspect;
+                        // Keep the keyboard inside the trimmed SBS eye
+                        scale *= 1 - 2 * sbsTrim;
                     } else if (Build.MANUFACTURER.compareToIgnoreCase("PICO") == 0) {
                         scale = 0.75f;
                         DisplayMetrics displayMetrics = new DisplayMetrics();
@@ -285,14 +338,16 @@ public class XrRenderer extends GLRenderer {
                     scale *= dialog.getXrScale();
 
                     int offsetX = (int) ((xServer.screenInfo.width - drawable.width * aspect * scale) / 2 / div);
-                    int offsetY = (int) ((xServer.screenInfo.height - drawable.height * scale) / 2);
+                    int offsetY = (int) ((xServer.screenInfo.height - drawable.height * scale * fitY) / 2);
                     if (XrKeyboard.isShown()) {
-                        offsetY = (int) (xServer.screenInfo.height - viewTransformation.sceneOffsetY - drawable.height * scale);
+                        // The original SBS screen shows the whole square, so there is no letterbox to sit above
+                        float sceneOffsetY = sbs && sbsStretch ? 0 : viewTransformation.sceneOffsetY;
+                        offsetY = (int) (xServer.screenInfo.height - sceneOffsetY - drawable.height * scale * fitY);
                     }
-                    renderDrawable(drawable, offsetX, offsetY, dialogMaterial, false, scale * aspect / div, scale);
+                    renderDrawable(drawable, offsetX, offsetY, dialogMaterial, false, scale * aspect / div, scale * fitY);
                     if (div > 1) {
                         offsetX += (int) (xServer.screenInfo.width / div);
-                        renderDrawable(drawable, offsetX, offsetY, dialogMaterial, false, scale * aspect / div, scale);
+                        renderDrawable(drawable, offsetX, offsetY, dialogMaterial, false, scale * aspect / div, scale * fitY);
                     }
                 }
             }

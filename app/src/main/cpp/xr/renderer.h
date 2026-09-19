@@ -34,6 +34,7 @@ enum XrConfigFloat
     CONFIG_VIEWPORT_FOVX,
     CONFIG_VIEWPORT_FOVY,
     CONFIG_VIEWPORT_FOV_SCALE,
+    CONFIG_SBS_TRIM,
 
     CONFIG_FLOAT_MAX
 };
@@ -46,6 +47,7 @@ enum XrConfigInt
     CONFIG_IMMERSIVE,
     CONFIG_AER,
     CONFIG_SBS,
+    CONFIG_SBS_STRETCH,
     CONFIG_VR,
     // config levels
     CONFIG_FRAMERATE,
@@ -83,6 +85,11 @@ struct XrRenderer {
     bool EnvironmentReady;
     struct XrEdgeGlow EdgeGlow;
     bool EdgeGlowRendered;
+    // Menus under SBS, drawn at full resolution for both eyes instead of into half of each
+    struct XrFramebuffer Overlay;
+    bool OverlayCreated;
+    bool OverlayFailed;
+    bool OverlayRendered;
 
     float FovScale;
     int FrameSync;
@@ -108,6 +115,7 @@ void XrRendererLockFrame(struct XrEngine* engine, struct XrRenderer* renderer);
 void XrRendererBeginFrame(struct XrRenderer* renderer, int fbo_index);
 void XrRendererEndFrame(struct XrRenderer* renderer);
 void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer);
+bool XrRendererBeginOverlay(struct XrEngine* engine, struct XrRenderer* renderer);
 
 void XrRendererBindFramebuffer(struct XrRenderer* renderer);
 void XrRendererRecenter(struct XrEngine* engine, struct XrRenderer* renderer);

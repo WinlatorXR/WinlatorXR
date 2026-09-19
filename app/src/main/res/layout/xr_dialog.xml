@@ -42,6 +42,22 @@
         android:text="@string/use_sbs" />
 
     <CheckBox
+        android:id="@+id/CBSBSStretch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/xr_selector"
+        android:text="@string/use_sbs_stretch"
+        android:visibility="gone" />
+
+    <CheckBox
+        android:id="@+id/CBSBSTrim"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/xr_selector"
+        android:text="@string/sbs_edge_trim"
+        android:visibility="gone" />
+
+    <CheckBox
         android:id="@+id/CBEnableCurvedScreen"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

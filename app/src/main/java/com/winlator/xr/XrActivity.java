@@ -65,6 +65,8 @@ public class XrActivity extends XServerDisplayActivity {
     public static boolean mouseRelative;
     public static boolean pointerSmoothing;
     public static boolean showFPS;
+    public static boolean sbsStretch;
+    public static boolean sbsTrim;
     public static boolean wheelEmulation;
 
     // How far from the eye the screen sits until the user moves it.
@@ -86,6 +88,14 @@ public class XrActivity extends XServerDisplayActivity {
     /** Whether the guest frame rate is drawn over the game, in place of the DXVK HUD. */
     public static final String PREF_SHOW_FPS = "use_xr_fps";
 
+    /** Whether SBS shows each eye at its own shape in a half-width screen, instead of 16:9. */
+    public static final String PREF_SBS_STRETCH = "use_xr_sbs_stretch";
+
+    /** Whether SBS trims both edges of each eye, where 3D shaders leave black strips. */
+    public static final String PREF_SBS_TRIM = "use_xr_sbs_edge_trim";
+    /** How much of each eye's width is trimmed from each edge; enough for a 3D shader at default strength. */
+    public static final int SBS_TRIM_PERCENT = 2;
+
     // Defaults for everything the XR and motion control menus can change. They live here
     // because both the menus and this activity have to agree on what an untouched setting
     // means; when they did not, the menu showed key emulation off while the session ran it
@@ -102,6 +112,8 @@ public class XrActivity extends XServerDisplayActivity {
     public static final boolean DEFAULT_MOUSE_RELATIVE = false;
     public static final boolean DEFAULT_POINTER_SMOOTHING = false;
     public static final boolean DEFAULT_SHOW_FPS = false;
+    public static final boolean DEFAULT_SBS_STRETCH = false;
+    public static final boolean DEFAULT_SBS_TRIM = false;
     public static final boolean DEFAULT_WHEEL = false;
 
     /**
@@ -113,7 +125,7 @@ public class XrActivity extends XServerDisplayActivity {
             "use_cs", "use_pt", "use_xr_gamepad", "xr_gamepad_radial_to_square",
             "use_xr_rumble_passthrough", "use_xr_keys", "use_xr_mouse", "use_xr_leftHanded",
             "use_xr_lightgun", "use_xr_relative_mouse", "use_xr_smoothing", "use_xr_wheel",
-            PREF_SHOW_FPS, PREF_SCREEN_DISTANCE, XrEnvironment.PREF_KEY, XrEnvironment.ENABLED_KEY,
+            PREF_SHOW_FPS, PREF_SBS_STRETCH, PREF_SBS_TRIM, PREF_SCREEN_DISTANCE, XrEnvironment.PREF_KEY, XrEnvironment.ENABLED_KEY,
             XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX};
 
     static {
@@ -157,6 +169,8 @@ public class XrActivity extends XServerDisplayActivity {
         pointerSmoothing = SessionSettings.getBoolean(this, "use_xr_smoothing", DEFAULT_POINTER_SMOOTHING);
         wheelEmulation = SessionSettings.getBoolean(this, "use_xr_wheel", DEFAULT_WHEEL);
         showFPS = SessionSettings.getBoolean(this, PREF_SHOW_FPS, DEFAULT_SHOW_FPS);
+        sbsStretch = SessionSettings.getBoolean(this, PREF_SBS_STRETCH, DEFAULT_SBS_STRETCH);
+        sbsTrim = SessionSettings.getBoolean(this, PREF_SBS_TRIM, DEFAULT_SBS_TRIM);
         lastDistance = SessionSettings.getFloat(this, PREF_SCREEN_DISTANCE, DEFAULT_DISTANCE);
 
         if (mouseLightgun) mouseRelative = false;
@@ -166,6 +180,7 @@ public class XrActivity extends XServerDisplayActivity {
         nativeSetCurvedScreen(curvedScreen);
         nativeSetSharpening(sharpening);
         nativeSetEdgeGlow(edgeGlow);
+        nativeSetSbsTrim(sbsTrim ? SBS_TRIM_PERCENT : 0);
         nativeSetPointerSmoothing(pointerSmoothing);
         nativeSetEnvironmentEnabled(XrEnvironment.isEnabled(this));
     }
@@ -301,9 +316,10 @@ public class XrActivity extends XServerDisplayActivity {
     public native void bindFramebuffer();
     public native int getWidth();
     public native int getHeight();
-    public native boolean initFrame(boolean immersive, boolean sbs, boolean aer, float distance);
+    public native boolean initFrame(boolean immersive, boolean sbs, boolean sbsStretch, boolean aer, float distance);
     public native void bindFBO(int index);
     public native void endFrame();
+    public native boolean beginOverlay();
 
     // Controllers
     public native float[] getAxes();
@@ -316,6 +332,7 @@ public class XrActivity extends XServerDisplayActivity {
     public native void nativeSetUsePT(boolean enabled);
     public native void nativeSetSharpening(int level);
     public native void nativeSetEdgeGlow(int intensity);
+    public native void nativeSetSbsTrim(int percent);
     public native void nativeSetPointerSmoothing(boolean enabled);
     public native boolean nativeIsEnvironmentSupported();
     public native void nativeSetEnvironment(byte[] rgba, int width, int height);
