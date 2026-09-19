@@ -683,8 +683,9 @@ public class ShortcutSettingsDialog extends ContentDialog {
         }
 
         fragment.loadShortcutsList();
+        // A shortcut without an icon is normal, and Icon.createWithBitmap rejects a null bitmap.
         fragment.updateShortcutOnScreen(newName, newName, shortcut.container.id, newDesktopFile.getAbsolutePath(),
-                Icon.createWithBitmap(shortcut.icon), shortcut.getExtra("uuid"));
+                shortcut.icon != null ? Icon.createWithBitmap(shortcut.icon) : null, shortcut.getExtra("uuid"));
     }
 
     // Method to ensure no old file remains
