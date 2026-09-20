@@ -401,6 +401,37 @@
             android:text="@string/pcvr_runtime" />
 
         <LinearLayout
+            android:id="@+id/LLPcvrRenderScale"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/pcvr_render_scale" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/TVPcvrRenderScale" />
+            </LinearLayout>
+
+            <!-- 20% to 100% in steps of 5: progress = (scale - 20) / 5 -->
+            <SeekBar
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/SBPcvrRenderScale"
+                android:max="16" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/LLTabAdvanced"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -40,6 +40,9 @@ import java.util.List;
 public final class PcvrRuntime {
 
     public static final String EXTRA_KEY = "pcvrRuntime";
+    /** Direct PC VR renders at the headset's recommended eye size, scaled by this percentage. */
+    public static final String RENDER_SCALE_KEY = "pcvrRenderScale";
+    public static final int DEFAULT_RENDER_SCALE = 50;
 
     private static final String TAG = "PcvrRuntime";
     private static final String ASSET_DIR = "pcvr";
@@ -57,6 +60,15 @@ public final class PcvrRuntime {
 
     public static boolean isEnabled(Shortcut shortcut) {
         return shortcut != null && shortcut.getExtra(EXTRA_KEY, "0").equals("1");
+    }
+
+    public static int getRenderScale(Shortcut shortcut) {
+        try {
+            int scale = Integer.parseInt(shortcut != null ? shortcut.getExtra(RENDER_SCALE_KEY, "") : "");
+            return Math.max(10, Math.min(200, scale));
+        } catch (NumberFormatException e) {
+            return DEFAULT_RENDER_SCALE;
+        }
     }
 
     public static void apply(Context context, Container container, boolean enabled) {

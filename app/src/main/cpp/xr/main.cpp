@@ -61,6 +61,7 @@ char gManufacturer[128] = {0};
 
 extern "C" {
 
+#include "direct_app.h"
 #include "engine.h"
 #include "input.h"
 #include "math.h"
@@ -145,6 +146,12 @@ void updatePoses() {
     }
 }
 
+// The direct transport names spaces by the game's id, the same key XrAPI uses
+static XrSpace direct_space(uint64_t id) {
+    auto it = xr_spaces.find((int)id);
+    return it == xr_spaces.end() ? XR_NULL_HANDLE : it->second;
+}
+
 JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_sendManufacturer(JNIEnv *env, jobject thiz, jstring manufacturer) {
     const char *nativeStr = env->GetStringUTFChars(manufacturer, 0);
@@ -202,6 +209,8 @@ Java_com_winlator_xr_XrActivity_init(JNIEnv *env, jobject obj, jint width, jint 
     XrEngineEnter(&xr_module_engine);
     XrInputInit(&xr_module_engine, &xr_module_input);
     XrRendererInit(&xr_module_engine, &xr_module_renderer);
+    XrDirectSetSpaceResolver(direct_space);
+    XrDirectStart();
     xr_initialized = true;
     ALOGV("Init called");
 }
@@ -519,6 +528,34 @@ Java_com_winlator_xr_XrActivity_nativeSetUseVR(JNIEnv *env, jobject obj, jboolea
 JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_nativeSetVRApp(JNIEnv *env, jobject obj, jboolean enabled) {
     xr_vr_app = enabled;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_winlator_xr_XrActivity_nativeIsDirectActive(JNIEnv *env, jobject obj) {
+    return XrDirectIsActive();
+}
+
+JNIEXPORT jfloat JNICALL
+Java_com_winlator_xr_XrActivity_nativeGetDirectFps(JNIEnv *env, jobject obj) {
+    return XrDirectFps();
+}
+
+// The headset's recommended per-eye size, or 0x0 before XR is up
+JNIEXPORT jintArray JNICALL
+Java_com_winlator_xr_XrActivity_nativeGetRecommendedEyeSize(JNIEnv *env, jobject obj) {
+    jint size[2] = {0, 0};
+    if (xr_initialized) {
+        XrViewConfigurationView views[2] = {{XR_TYPE_VIEW_CONFIGURATION_VIEW}, {XR_TYPE_VIEW_CONFIGURATION_VIEW}};
+        uint32_t count = 2;
+        if (XR_SUCCEEDED(xrEnumerateViewConfigurationViews(xr_module_engine.Instance, xr_module_engine.SystemId,
+                XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, 2, &count, views)) && count > 0) {
+            size[0] = (jint)views[0].recommendedImageRectWidth;
+            size[1] = (jint)views[0].recommendedImageRectHeight;
+        }
+    }
+    jintArray result = env->NewIntArray(2);
+    env->SetIntArrayRegion(result, 0, 2, size);
+    return result;
 }
 
 JNIEXPORT void JNICALL

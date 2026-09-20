@@ -33,6 +33,7 @@ add_library(xr SHARED
         xr/edgeglow.c
         xr/framebuffer.c
         xr/input.c
+        xr/direct.c
         xr/main.cpp
         xr/math.c
         xr/oneeuro.c
@@ -44,6 +45,7 @@ target_link_libraries(xr
         openxr_loader
         EGL
         GLESv3
+        nativewindow
 )
 
 

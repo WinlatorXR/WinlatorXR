@@ -94,6 +94,8 @@ public class XrAPI implements XrInterface {
         info += Build.VERSION.RELEASE.toUpperCase() + "\n";
         info += Build.VERSION.SECURITY_PATCH.toUpperCase() + "\n";
         info += XrActivity.getInstance().getScreenSize() + "\n";
+        // Per-eye size for direct PC VR frames; older runtimes stop reading at the line above
+        info += XrActivity.getInstance().getDirectEyeSize() + "\n";
         FileOutputStream fos = new FileOutputStream(new File(dir, SYSTEM_FILE));
         fos.write(info.getBytes(StandardCharsets.US_ASCII));
         fos.close();

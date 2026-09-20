@@ -40,6 +40,7 @@ import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.contentdialog.StorageInfoDialog;
 import com.winlator.cmod.core.AppUtils;
+import com.winlator.cmod.core.DxvkProbeRunner;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.PreloaderDialog;
 import com.winlator.cmod.xenvironment.ImageFs;
@@ -523,6 +524,13 @@ public class ContainersFragment extends Fragment {
                             new File(container.getRootDir(), ".wine/.update-timestamp").delete();
                         });
                         break;
+                    case R.id.container_dxvk_probe:
+                        // tryCreate on: the inspection pass alone cannot tell a patched DXVK
+                        // from the next vtable in .rdata, and the call that settles it is
+                        // gated on the inspection, SEH-guarded, and passes its extra argument
+                        // in a register both ABIs let the callee ignore.
+                        DxvkProbeRunner.run(getActivity(), container, true);
+                        break;
                     case R.id.container_export_image:
                         container.clearCache();
                         exportContainerImage(container);
@@ -554,4 +562,4 @@ public class ContainersFragment extends Fragment {
             }
         }
     }
-}
+}

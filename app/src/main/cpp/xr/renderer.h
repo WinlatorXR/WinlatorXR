@@ -85,7 +85,7 @@ struct XrRenderer {
     bool EnvironmentReady;
     struct XrEdgeGlow EdgeGlow;
     bool EdgeGlowRendered;
-    // Menus under SBS, drawn at full resolution for both eyes instead of into half of each
+    bool FramebufferDrawn;
     struct XrFramebuffer Overlay;
     bool OverlayCreated;
     bool OverlayFailed;

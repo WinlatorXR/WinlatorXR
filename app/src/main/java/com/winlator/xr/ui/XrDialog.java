@@ -36,6 +36,7 @@ import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.core.SessionSettings;
 import com.winlator.xr.io.XrController;
 import com.winlator.xr.io.XrInput;
+import com.winlator.xr.io.XrRenderer;
 import com.winlator.xr.utils.XrEnvironment;
 
 import java.util.ArrayList;
@@ -347,7 +348,7 @@ public class XrDialog extends ContentDialog {
         boolean isImmersive = XrActivity.isImmersive;
 
         if (XrActivity.isActive()) {
-            cbSBS.setEnabled(XrActivity.lastMode3D < 0);
+            setViewEnabled(cbSBS, XrActivity.lastMode3D < 0 && !XrRenderer.isDirectActive());
             cbSBS.setChecked(XrActivity.isSBS);
             cbImmersiveMode.setEnabled(!XrActivity.isUDP);
             cbImmersiveMode.setChecked(isImmersive);

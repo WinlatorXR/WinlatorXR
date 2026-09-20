@@ -21,6 +21,7 @@ package com.winlator.xr.io;
 import android.opengl.GLES20;
 import android.os.Build;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.util.Pair;
 
 import com.winlator.cmod.math.XForm;
@@ -35,6 +36,7 @@ import com.winlator.cmod.xserver.Window;
 import com.winlator.cmod.xserver.XLock;
 import com.winlator.cmod.xserver.XServer;
 import com.winlator.xr.XrActivity;
+import com.winlator.xr.api.XrAPI;
 import com.winlator.xr.api.XrFramesync;
 import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.xr.ui.XrFpsOverlay;
@@ -50,6 +52,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class XrRenderer extends GLRenderer {
     /** How far the frame rate panel sits from the corner, as a fraction of the screen. */
     private static final float FPS_PANEL_MARGIN = 0.01f;
+    /** In VR the screen is a projection layer wider than the lenses show, so its corner is out of sight. */
+    private static final float FPS_PANEL_MARGIN_VR = 0.2f;
+    /** Lower still, so the panel sits where the eye can read it. */
+    private static final float FPS_PANEL_MARGIN_VR_TOP = 0.35f;
 
     private final BGRAMaterial dialogMaterial = new BGRAMaterial();
     private final Texture[] lastTexture = {new Texture(), new Texture()};
@@ -60,11 +66,11 @@ public class XrRenderer extends GLRenderer {
 
     private boolean xrFrameReady = false;
     private boolean xrFrameStarted = false;
-    // Read once per frame: the menu can flip it mid-frame, and native has already split the eyes by then.
+    private boolean directActive = false;
+    private boolean screenBound = true;
     private boolean sbs = false;
     private boolean sbsStretch = false;
     private float sbsTrim = 0;
-    // Task manager windows on screen: SBS would zoom one and split it across the eyes, so it pauses
     private final Set<Integer> taskManagerWindows = ConcurrentHashMap.newKeySet();
     private final XrFramesync xrFramesync;
     private final XrFpsOverlay fpsOverlay = new XrFpsOverlay();
@@ -82,6 +88,10 @@ public class XrRenderer extends GLRenderer {
 
     public static int getLastFPS() {
         return instance.xrFramesync.getLastFPS();
+    }
+
+    public static boolean isDirectActive() {
+        return instance != null && instance.directActive;
     }
 
     /** The rate the guest is redrawing the window the user is looking at. */
@@ -129,6 +139,13 @@ public class XrRenderer extends GLRenderer {
             int gpuLevel = activity.getContainer().getGpuLevel();
             int refresh = activity.getContainer().getRefreshRate();
             activity.init(width, height, refresh, cpuLevel, gpuLevel);
+            // The headset's eye size is only known now; the runtime reads it at the game's xrCreateInstance
+            activity.updateRecommendedEyeSize();
+            try {
+                XrAPI.writeSystemInfo();
+            } catch (Exception e) {
+                Log.e("XrRenderer", "Failed to write XR system info", e);
+            }
             XrEnvironment.apply(activity, XrEnvironment.getSelected(activity));
             height = width; ////Use square resolution
             GLES20.glViewport(0, 0, width, height);
@@ -164,7 +181,13 @@ public class XrRenderer extends GLRenderer {
                     XrActivity.getImmersive() || XrActivity.getVR(),
                     sbs, sbsStretch, XrActivity.getAER(), XrActivity.getDistance());
             XrActivity.getInstance().updateFrame();
-            if (!XrActivity.getAER()) {
+            // PC VR frames arriving directly replace the game window, so the screen swapchain
+            // is only needed for what is drawn over them: the FPS panel and XR dialogs
+            directActive = xrFrameStarted && XrActivity.getInstance().nativeIsDirectActive();
+            screenBound = !directActive || XrActivity.showFPS || !XrContentDialog.getInstances().isEmpty();
+            if (!screenBound) {
+                GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
+            } else if (!XrActivity.getAER()) {
                 XrActivity.getInstance().bindFBO(0);
                 // Acquiring the swapchain resets the viewport to the full square; SBS needs the screen's letterbox back unless set to original.
                 viewportNeedsUpdate = !sbsStretch;
@@ -179,20 +202,22 @@ public class XrRenderer extends GLRenderer {
         super.postFrame();
 
         if (xrFrameStarted) {
-            // Overlays are laid out for the full square, not the SBS letterbox, and the frame SBS turns on can leave its scissor set.
-            GLES20.glViewport(0, 0, surfaceWidth, surfaceHeight);
-            GLES20.glDisable(GLES20.GL_SCISSOR_TEST);
-            renderFPS();
-            // Under SBS, menus get their own full resolution layer instead of half of each eye
-            boolean overlay = sbs && !XrContentDialog.getInstances().isEmpty() && XrActivity.getInstance().beginOverlay();
-            if (overlay) {
-                sbs = false;
-                sbsTrim = 0;
-                // The overlay starts transparent, so alpha must build up as coverage, not coverage squared
-                GLES20.glBlendFuncSeparate(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA, GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+            if (screenBound) {
+                // Overlays are laid out for the full square, not the SBS letterbox, and the frame SBS turns on can leave its scissor set.
+                GLES20.glViewport(0, 0, surfaceWidth, surfaceHeight);
+                GLES20.glDisable(GLES20.GL_SCISSOR_TEST);
+                renderFPS();
+                // Under SBS, menus get their own full resolution layer instead of half of each eye
+                boolean overlay = sbs && !XrContentDialog.getInstances().isEmpty() && XrActivity.getInstance().beginOverlay();
+                if (overlay) {
+                    sbs = false;
+                    sbsTrim = 0;
+                    // The overlay starts transparent, so alpha must build up as coverage, not coverage squared
+                    GLES20.glBlendFuncSeparate(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA, GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+                }
+                renderDialog();
+                if (overlay) GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
             }
-            renderDialog();
-            if (overlay) GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
             xrFrameReady = false;
             XrActivity.getInstance().endFrame();
             xServerView.requestRender();
@@ -291,10 +316,10 @@ public class XrRenderer extends GLRenderer {
         float div = sbs ? 2 : 1;
         float fitY = getSbsFitY();
         float aspect = fullscreen ? xServer.screenInfo.width / (float)xServer.screenInfo.height : 1.0f;
-        int offsetX = Math.round(xServer.screenInfo.height * FPS_PANEL_MARGIN * aspect);
-        // Keep clear of the trimmed SBS eye edge
+        float margin = XrActivity.getVR() ? FPS_PANEL_MARGIN_VR : FPS_PANEL_MARGIN;
+        int offsetX = Math.round(xServer.screenInfo.height * margin * aspect);
         offsetX += Math.round(xServer.screenInfo.width / div * sbsTrim);
-        int offsetY = Math.round(xServer.screenInfo.height * FPS_PANEL_MARGIN);
+        int offsetY = Math.round(xServer.screenInfo.height * margin);
         GLES20.glBlendFuncSeparate(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA, GLES20.GL_ONE, GLES20.GL_ONE);
         renderDrawable(drawable, offsetX, offsetY, dialogMaterial, false, aspect / div, fitY);
         if (div > 1) {
@@ -376,6 +401,14 @@ public class XrRenderer extends GLRenderer {
 
     @Override
     protected void renderWindows(ShaderMaterial material, boolean forceFullscreen) {
+        if (directActive) {
+            // Nothing drawn, but the window stack is still tracked: vrWindowOnTop keeps VR mode on
+            try (XLock lock = xServer.lock(XServer.Lockable.DRAWABLE_MANAGER)) {
+                preWindows();
+                postWindows();
+            }
+            return;
+        }
         boolean fullscreen = (XrActivity.isVR && XrRenderer.vrWindowOnTop) || XrActivity.isImmersive;
         super.renderWindows(material, fullscreen);
     }

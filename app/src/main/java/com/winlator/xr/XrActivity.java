@@ -230,7 +230,26 @@ public class XrActivity extends XServerDisplayActivity {
      * at. A VR title is read from its own frame sync, anything else from how often it redraws
      * its window; either is counted whether or not the reading is being shown anywhere.
      */
+    private static int[] recommendedEyeSize = {0, 0};
+
+    /** Caches the headset's recommended eye size; only answers once XR is initialised. */
+    public void updateRecommendedEyeSize() {
+        int[] size = nativeGetRecommendedEyeSize();
+        if (size != null && size.length == 2 && size[0] > 0 && size[1] > 0) recommendedEyeSize = size;
+    }
+
+    /** Per-eye size for direct PC VR: the headset recommendation at the shortcut's render scale, or "" if unknown. */
+    public String getDirectEyeSize() {
+        if (recommendedEyeSize[0] <= 0) return "";
+        int scale = getPcvrRenderScale();
+        int width = Math.round(recommendedEyeSize[0] * scale / 100.0f) & ~1;
+        int height = Math.round(recommendedEyeSize[1] * scale / 100.0f) & ~1;
+        return width + "x" + height;
+    }
+
     public int getLastFPS() {
+        // Under direct frames the game window is not drawn, so its redraws say nothing
+        if (XrRenderer.isDirectActive()) return Math.round(nativeGetDirectFps());
         return isVR && XrRenderer.vrWindowOnTop ? XrRenderer.getLastFPS() : XrRenderer.getGuestFPS();
     }
 
@@ -239,6 +258,10 @@ public class XrActivity extends XServerDisplayActivity {
     }
     public static boolean getSBS() {
         if (isVR && !XrRenderer.vrWindowOnTop) {
+            return false;
+        }
+        // Direct PC VR frames are already per eye, so splitting the screen again would double them
+        if (XrRenderer.isDirectActive()) {
             return false;
         }
         return isSBS;
@@ -340,6 +363,9 @@ public class XrActivity extends XServerDisplayActivity {
     public native boolean nativeIsSharpeningSupported();
     public native void nativeSetUseVR(boolean enabled);
     public native void nativeSetVRApp(boolean enabled);
+    public native boolean nativeIsDirectActive();
+    public native float nativeGetDirectFps();
+    public native int[] nativeGetRecommendedEyeSize();
     public native void nativeSetFramesync(int r, int g, int b, int a);
     public native void sendManufacturer(String manufacturer);
 

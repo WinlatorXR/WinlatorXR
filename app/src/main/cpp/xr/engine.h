@@ -42,7 +42,7 @@ enum
 };
 enum
 {
-  XrMaxLayerCount = 5
+  XrMaxLayerCount = 9  // 5 of the app's, plus the direct transport's quads
 };
 enum
 {

@@ -218,6 +218,29 @@ public class ShortcutSettingsDialog extends ContentDialog {
         final CheckBox cbPcvrRuntime = findViewById(R.id.CBPcvrRuntime);
         cbPcvrRuntime.setChecked(PcvrRuntime.isEnabled(shortcut));
 
+        // The slider runs 20% to 100% in steps of 5: progress = (scale - 20) / 5
+        final View llPcvrRenderScale = findViewById(R.id.LLPcvrRenderScale);
+        final SeekBar sbPcvrRenderScale = findViewById(R.id.SBPcvrRenderScale);
+        final TextView tvPcvrRenderScale = findViewById(R.id.TVPcvrRenderScale);
+        int pcvrScale = PcvrRuntime.getRenderScale(shortcut);
+        sbPcvrRenderScale.setProgress(Math.max(0, Math.min(16, Math.round((pcvrScale - 20) / 5.0f))));
+        tvPcvrRenderScale.setText((20 + 5 * sbPcvrRenderScale.getProgress()) + "%");
+        sbPcvrRenderScale.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                tvPcvrRenderScale.setText((20 + 5 * progress) + "%");
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
+        llPcvrRenderScale.setVisibility(cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE);
+        cbPcvrRuntime.setOnCheckedChangeListener((buttonView, isChecked) ->
+                llPcvrRenderScale.setVisibility(isChecked ? View.VISIBLE : View.GONE));
+
         // Reshade integration
         int reshade = Integer.parseInt(shortcut.getExtra("useReshade", "0"));
         final Spinner SReshade = findViewById(R.id.SReshade);
@@ -480,6 +503,8 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
                 shortcut.putExtra("autoclose", cbAutoclose.isChecked() ? "1" : "0");
                 shortcut.putExtra(PcvrRuntime.EXTRA_KEY, cbPcvrRuntime.isChecked() ? "1" : null);
+                shortcut.putExtra(PcvrRuntime.RENDER_SCALE_KEY, cbPcvrRuntime.isChecked()
+                        ? String.valueOf(20 + 5 * sbPcvrRenderScale.getProgress()) : null);
                 shortcut.putExtra("useReshade", SReshade.getSelectedItemPosition() + "");
                 shortcut.putExtra("useTrackIR", STrackIR.getSelectedItemPosition() + "");
                 shortcut.putExtra("fullscreenStretched", cbFullscreenStretched.isChecked() ? "1" : null);

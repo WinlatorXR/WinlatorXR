@@ -2748,6 +2748,10 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         return getContainer().getScreenSize();
     }
 
+    public int getPcvrRenderScale() {
+        return PcvrRuntime.getRenderScale(shortcut);
+    }
+
     public void setDXWrapper(String dxwrapper) {
         this.dxwrapper = dxwrapper;
     }

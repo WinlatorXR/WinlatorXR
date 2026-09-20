@@ -24,6 +24,7 @@
 #include "engine.h"
 #include "math.h"
 #include "renderer.h"
+#include "direct_app.h"
 #include <jni.h>
 #include <stdbool.h>
 
@@ -248,6 +249,7 @@ void XrRendererLockFrame(struct XrEngine* engine, struct XrRenderer* renderer) {
     renderer->ConfigFloat[CONFIG_VIEWPORT_FOVY] = ToDegrees(fovy);
     renderer->HmdOrientation = XrQuaternionfEulerAngles(renderer->InvertedViewPose[0][renderer->FrameSync].orientation);
     renderer->EdgeGlowRendered = false;
+    renderer->FramebufferDrawn = false;
     renderer->OverlayRendered = false;
     renderer->LayerCount = 0;
     memset(renderer->Layers, 0, sizeof(XrCompositorLayer) * XrMaxLayerCount);
@@ -271,6 +273,7 @@ void XrRendererBeginFrame(struct XrRenderer* renderer, int fbo_index)
         }
     }
     renderer->ConfigInt[CONFIG_CURRENT_FBO] = fbo_index;
+    if (fbo_index >= 0) renderer->FramebufferDrawn = true;
 }
 
 /*
@@ -544,9 +547,27 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
     }
 
     XrCompositionLayerProjectionView projection_layer_elements[2] = {};
+    XrCompositionLayerProjectionView direct_views[2] = {};
+    XrCompositionLayerProjection direct_layer;
+    XrCompositionLayerQuad direct_quads[WXR_DIRECT_MAX_QUADS];
+    int direct_quad_count = 0;
     struct XrFramebuffer* framebuffer = &renderer->Framebuffer[0];
-    if (renderer->ConfigInt[CONFIG_VR])
+    bool direct = renderer->ConfigInt[CONFIG_VR] &&
+                  XrDirectBuildLayer(engine->Session, &direct_layer, direct_views, direct_quads, &direct_quad_count);
+    if (direct)
     {
+        // PC VR frames from the direct transport replace the preview window's, the game's quads on top
+        if (direct_layer.viewCount) renderer->Layers[renderer->LayerCount++].projection = direct_layer;
+        for (int i = 0; i < direct_quad_count; i++) renderer->Layers[renderer->LayerCount++].quad = direct_quads[i];
+    }
+    if (direct && !renderer->FramebufferDrawn)
+    {
+        // Nothing was drawn over the direct frames, so the screen swapchain is left out
+        renderer->ConfigFloat[CONFIG_MENU_YAW] = renderer->HmdOrientation.y;
+    }
+    else if (renderer->ConfigInt[CONFIG_VR])
+    {
+        // Under direct frames this only carries the XR menu and FPS panel, laid over them
         renderer->ConfigFloat[CONFIG_MENU_YAW] = renderer->HmdOrientation.y;
 
         for (int eye = 0; eye < XrMaxNumEyes; eye++)
@@ -554,7 +575,8 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
             if (renderer->ConfigInt[CONFIG_AER]) {
                 framebuffer = &renderer->Framebuffer[eye];
             }
-            if (renderer->ConfigInt[CONFIG_FRAMESYNC])
+            // The sync pixel comes from the game window, which is not drawn under direct frames
+            if (renderer->ConfigInt[CONFIG_FRAMESYNC] && !direct)
             {
                 static int framesync[2] = {};
                 int targetFBO = renderer->ConfigInt[CONFIG_FRAMESYNC_B] > 0 ? 1 : 0;
