@@ -218,6 +218,9 @@ public class ShortcutSettingsDialog extends ContentDialog {
         final CheckBox cbPcvrRuntime = findViewById(R.id.CBPcvrRuntime);
         cbPcvrRuntime.setChecked(PcvrRuntime.isEnabled(shortcut));
 
+        final CheckBox cbPcvrDirectTransport = findViewById(R.id.CBPcvrDirectTransport);
+        cbPcvrDirectTransport.setChecked(PcvrRuntime.isDirectTransport(shortcut));
+
         // The slider runs 20% to 100% in steps of 5: progress = (scale - 20) / 5
         final View llPcvrRenderScale = findViewById(R.id.LLPcvrRenderScale);
         final SeekBar sbPcvrRenderScale = findViewById(R.id.SBPcvrRenderScale);
@@ -237,9 +240,16 @@ public class ShortcutSettingsDialog extends ContentDialog {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {}
         });
-        llPcvrRenderScale.setVisibility(cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE);
-        cbPcvrRuntime.setOnCheckedChangeListener((buttonView, isChecked) ->
-                llPcvrRenderScale.setVisibility(isChecked ? View.VISIBLE : View.GONE));
+        cbPcvrDirectTransport.setVisibility(cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE);
+        // The render scale only has a say over direct frames
+        llPcvrRenderScale.setVisibility(cbPcvrRuntime.isChecked() && cbPcvrDirectTransport.isChecked()
+                ? View.VISIBLE : View.GONE);
+        cbPcvrRuntime.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            cbPcvrDirectTransport.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            llPcvrRenderScale.setVisibility(isChecked && cbPcvrDirectTransport.isChecked() ? View.VISIBLE : View.GONE);
+        });
+        cbPcvrDirectTransport.setOnCheckedChangeListener((buttonView, isChecked) ->
+                llPcvrRenderScale.setVisibility(isChecked && cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE));
 
         // Reshade integration
         int reshade = Integer.parseInt(shortcut.getExtra("useReshade", "0"));
@@ -503,6 +513,8 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
                 shortcut.putExtra("autoclose", cbAutoclose.isChecked() ? "1" : "0");
                 shortcut.putExtra(PcvrRuntime.EXTRA_KEY, cbPcvrRuntime.isChecked() ? "1" : null);
+                shortcut.putExtra(PcvrRuntime.DIRECT_KEY, cbPcvrRuntime.isChecked()
+                        ? (cbPcvrDirectTransport.isChecked() ? "1" : "0") : null);
                 shortcut.putExtra(PcvrRuntime.RENDER_SCALE_KEY, cbPcvrRuntime.isChecked()
                         ? String.valueOf(20 + 5 * sbPcvrRenderScale.getProgress()) : null);
                 shortcut.putExtra("useReshade", SReshade.getSelectedItemPosition() + "");

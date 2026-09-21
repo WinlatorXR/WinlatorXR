@@ -400,6 +400,12 @@
             android:layout_height="wrap_content"
             android:text="@string/pcvr_runtime" />
 
+        <CheckBox
+            android:id="@+id/CBPcvrDirectTransport"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/pcvr_direct_transport" />
+
         <LinearLayout
             android:id="@+id/LLPcvrRenderScale"
             android:layout_width="match_parent"

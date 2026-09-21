@@ -43,6 +43,8 @@ public final class PcvrRuntime {
     /** Direct PC VR renders at the headset's recommended eye size, scaled by this percentage. */
     public static final String RENDER_SCALE_KEY = "pcvrRenderScale";
     public static final int DEFAULT_RENDER_SCALE = 50;
+    /** The runtime hands its eye images to this app instead of drawing them in the preview window. */
+    public static final String DIRECT_KEY = "pcvrDirectTransport";
 
     private static final String TAG = "PcvrRuntime";
     private static final String ASSET_DIR = "pcvr";
@@ -55,11 +57,17 @@ public final class PcvrRuntime {
     private static final String STATE_FILE = ".winlatorxr_pcvr_state";
     private static final String VERSION_FILE = ".winlatorxr_payload_version";
     private static final String BACKUP_SUFFIX = ".winlatorxr-backup";
+    private static final String CONF_FILE = "Winlator/oxrwxr/conf.txt";
+    private static final String CONF_DIRECT = "direct_transport";
 
     private PcvrRuntime() {}
 
     public static boolean isEnabled(Shortcut shortcut) {
         return shortcut != null && shortcut.getExtra(EXTRA_KEY, "0").equals("1");
+    }
+
+    public static boolean isDirectTransport(Shortcut shortcut) {
+        return shortcut == null || !shortcut.getExtra(DIRECT_KEY, "1").equals("0");
     }
 
     public static int getRenderScale(Shortcut shortcut) {
@@ -71,11 +79,12 @@ public final class PcvrRuntime {
         }
     }
 
-    public static void apply(Context context, Container container, boolean enabled) {
+    public static void apply(Context context, Container container, boolean enabled, boolean directTransport) {
         try {
             File driveC = new File(container.getRootDir(), ".wine/drive_c");
             if (enabled) {
                 enable(context, container, driveC);
+                writeDirectTransport(container, directTransport);
             } else if (new File(driveC, "oxrwxr/" + STATE_FILE).isFile()) {
                 disable(container, driveC);
             }
@@ -136,6 +145,42 @@ public final class PcvrRuntime {
             vrpath.delete();
         }
         state.delete();
+    }
+
+    /**
+     * The runtime reads its options from D:\Winlator\oxrwxr\conf.txt, so the shortcut's setting is
+     * written over that file's direct_transport line; every other line is kept as it was.
+     */
+    private static void writeDirectTransport(Container container, boolean directTransport) {
+        File driveD = null;
+        for (String[] drive : container.drivesIterator()) {
+            if (drive[0].equalsIgnoreCase("D")) {
+                driveD = new File(drive[1]);
+                break;
+            }
+        }
+        // Without a D: drive the runtime has nowhere to read the file from
+        if (driveD == null) return;
+
+        File conf = new File(driveD, CONF_FILE);
+        // The runtime matches both the key and the value without trimming, so no spaces around the =
+        String line = CONF_DIRECT + "=" + (directTransport ? "1" : "0");
+        StringBuilder text = new StringBuilder();
+        boolean written = false;
+        if (conf.isFile()) {
+            for (String existing : FileUtils.readString(conf).split("\n")) {
+                if (existing.split("=", 2)[0].trim().equalsIgnoreCase(CONF_DIRECT)) {
+                    if (written) continue;
+                    text.append(line).append("\n");
+                    written = true;
+                } else if (!existing.trim().isEmpty()) {
+                    text.append(existing.replace("\r", "")).append("\n");
+                }
+            }
+        }
+        if (!written) text.append(line).append("\n");
+        conf.getParentFile().mkdirs();
+        FileUtils.writeString(conf, text.toString());
     }
 
     private static void installPayload(Context context, File driveC) {

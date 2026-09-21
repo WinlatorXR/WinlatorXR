@@ -1620,7 +1620,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         WineStartMenuCreator.create(this, container);
         WineUtils.createDosdevicesSymlinks(container);
-        PcvrRuntime.apply(this, container, PcvrRuntime.isEnabled(shortcut));
+        PcvrRuntime.apply(this, container, PcvrRuntime.isEnabled(shortcut), PcvrRuntime.isDirectTransport(shortcut));
 
         if (shortcut != null)
             startupSelection = shortcut.getExtra("startupSelection", String.valueOf(container.getStartupSelection()));

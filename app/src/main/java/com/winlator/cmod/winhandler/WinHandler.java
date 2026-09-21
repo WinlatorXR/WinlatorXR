@@ -72,6 +72,8 @@ public class WinHandler {
     private final List<Integer> gamepadClients = new CopyOnWriteArrayList<>();
 
     private boolean initReceived = false;
+    /** When the guest last reported a cursor position back, which is proof it is taking our mouse input. */
+    private volatile long lastCursorFeedback = 0;
     private boolean running = false;
     private byte inputType = DEFAULT_INPUT_TYPE;
 
@@ -692,6 +694,7 @@ public class WinHandler {
             }
 
             case RequestCodes.CURSOR_POS_FEEDBACK: {
+                lastCursorFeedback = System.currentTimeMillis();
                 short x = receiveData.getShort();
                 short y = receiveData.getShort();
                 XServer xServer = activity.getXServer();
@@ -1111,6 +1114,8 @@ public class WinHandler {
             sendPacket(CLIENT_PORT);
         });
     }
+
+    public long getLastCursorFeedback() { return lastCursorFeedback; }
 
     public void mouseEvent(int flags, int dx, int dy, int wheelDelta) {
         if (!initReceived) return;

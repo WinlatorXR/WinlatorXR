@@ -57,6 +57,9 @@ public class XrController {
     /** How long a tapped key is held down for, in frames a game will not miss. */
     private static final long TAP_KEY_MILLIS = 50;
 
+    /** How long relative motion may go unanswered before the guest is woken again. */
+    private static final long WAKE_INTERVAL_MILLIS = 1000;
+
     private static String mapping = null;
 
     private final XrActivity instance;
@@ -78,6 +81,7 @@ public class XrController {
     private final float[] smoothedMouse = new float[2];
     private final float[] relativeMouseAccumulator = new float[2];
     private boolean wasMouseRelative;
+    private long lastRelativeWake = 0;
 
     public XrController() {
         instance = XrActivity.getInstance();
@@ -362,6 +366,7 @@ public class XrController {
             int dy = (int) relativeMouseAccumulator[1];
             if (dx != 0 || dy != 0) {
                 if (wasMouseRelative) {
+                    wakeRelativeMouse();
                     instance.getWinHandler().mouseEvent(MouseEventFlags.MOVE, dx, dy, 0);
                 }
                 relativeMouseAccumulator[0] -= dx;
@@ -546,6 +551,22 @@ public class XrController {
                 keyboard.setKeyPress(xKeycode, 0);
             }
         }
+    }
+
+    /**
+     * Proton 10 and 11 drop injected mouse motion until the guest has seen a key -- a mouse button
+     * is not enough -- leaving the cursor stuck where it started. So while motion is going out and
+     * nothing is coming back, a key the games do not use is tapped once a second to wake it. The
+     * guest answers a move it took with its cursor position, so the tapping stops as soon as it does.
+     */
+    private void wakeRelativeMouse() {
+        long now = System.currentTimeMillis();
+        if ((now - instance.getWinHandler().getLastCursorFeedback() < WAKE_INTERVAL_MILLIS)
+                || (now - lastRelativeWake < WAKE_INTERVAL_MILLIS)) return;
+        lastRelativeWake = now;
+        Keyboard keyboard = instance.getXServer().keyboard;
+        keyboard.setKeyPress(XKeycode.KEY_SCROLL_LOCK.id, 0);
+        keyboard.setKeyRelease(XKeycode.KEY_SCROLL_LOCK.id);
     }
 
     private void mapKey(XrInterface.ControllerButton xrButton, byte xKeycode) {
