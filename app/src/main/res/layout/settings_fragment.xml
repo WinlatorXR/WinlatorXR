@@ -206,10 +206,55 @@
                             android:text="Theme" />
                     </FrameLayout>
 
-                    <!-- SHORTCUT -->
+                    <!-- MIDI -->
                     <FrameLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content">
+
+                        <LinearLayout style="@style/FieldSet">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/midi_sound_font" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <Spinner
+                                    android:id="@+id/SMIDISoundFont"
+                                    style="@style/ComboBox"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1" />
+
+                                <ImageButton
+                                    android:id="@+id/BTInstallSF"
+                                    style="@style/ListMenuButton"
+                                    android:src="@drawable/icon_add" />
+
+                                <ImageButton
+                                    android:id="@+id/BTRemoveSF"
+                                    style="@style/ListMenuButton"
+                                    android:layout_marginRight="0dp"
+                                    android:src="@drawable/icon_remove" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/TVSound"
+                            style="@style/FieldSetLabel"
+                            android:text="@string/sound" />
+                    </FrameLayout>
+
+                    <!-- SHORTCUT -->
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone">
                         <LinearLayout style="@style/FieldSet">
                             <TextView
                                 android:layout_width="wrap_content"
@@ -405,50 +450,6 @@
                     android:id="@+id/TVBox86Box64"
                     style="@style/FieldSetLabel"
                     android:text="@string/box86_box64" />
-            </FrameLayout>
-
-            <!-- MIDI -->
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <LinearLayout style="@style/FieldSet">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/midi_sound_font" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <Spinner
-                            android:id="@+id/SMIDISoundFont"
-                            style="@style/ComboBox"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1" />
-
-                        <ImageButton
-                            android:id="@+id/BTInstallSF"
-                            style="@style/ListMenuButton"
-                            android:src="@drawable/icon_add" />
-
-                        <ImageButton
-                            android:id="@+id/BTRemoveSF"
-                            style="@style/ListMenuButton"
-                            android:layout_marginRight="0dp"
-                            android:src="@drawable/icon_remove" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/TVSound"
-                    style="@style/FieldSetLabel"
-                    android:text="@string/sound" />
             </FrameLayout>
 
             <FrameLayout

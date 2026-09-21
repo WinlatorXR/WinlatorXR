@@ -1,239 +1,287 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/LLDialog"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
-<LinearLayout
-    android:orientation="vertical"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_margin="10dp">
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/TVToApplyClose"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/to_apply_close"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:textColor="@color/colorAccent"
-        android:gravity="center"
-        android:padding="8dp"
-        android:visibility="gone" />
-
-    <CheckBox
-        android:id="@+id/CBUseXR"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/use_xr"
-        android:visibility="gone" />
-
-    <CheckBox
-        android:id="@+id/CBEnableImmersiveMode"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/xr_selector"
-        android:text="@string/use_immersive_mode" />
-
-    <CheckBox
-        android:id="@+id/CBEnableSBS"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/xr_selector"
-        android:text="@string/use_sbs" />
-
-    <CheckBox
-        android:id="@+id/CBSBSStretch"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/xr_selector"
-        android:text="@string/use_sbs_stretch"
-        android:visibility="gone" />
-
-    <CheckBox
-        android:id="@+id/CBSBSTrim"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/xr_selector"
-        android:text="@string/sbs_edge_trim"
-        android:visibility="gone" />
-
-    <CheckBox
-        android:id="@+id/CBEnableCurvedScreen"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/xr_selector"
-        android:text="@string/use_curved_screen" />
-
-    <CheckBox
-        android:id="@+id/CBEnablePassthrough"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/xr_selector"
-        android:text="@string/use_pt" />
-
-    <CheckBox
-        android:id="@+id/CBDisableEnvironment"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/xr_selector"
-        android:text="@string/disable_environment"
-        android:visibility="gone" />
-
-    <CheckBox
-        android:id="@+id/CBShowFPS"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/xr_selector"
-        android:text="@string/xr_show_fps" />
-
-    <!-- Settings only: the hints are only ever shown while a game boots, so there is nothing
-         this could change from inside a session. XrDialog hides it. -->
-    <CheckBox
-        android:id="@+id/CBDisableStartupHints"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/xr_selector"
-        android:text="@string/xr_disable_startup_hints" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginTop="10dp"
-        android:layout_marginBottom="10dp"
-        android:padding="16dp"
-        android:background="@color/colorPrimary"/>
-
-    <CheckBox
-        android:id="@+id/CBPlayerXRGamepad"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:background="@drawable/xr_selector"
-        android:text="@string/controllers_as_gamepad" />
-
-    <CheckBox
-        android:id="@+id/CBPlayerXRKeys"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:background="@drawable/xr_selector"
-        android:text="@string/controllers_as_keys" />
-
-    <CheckBox
-        android:id="@+id/CBPlayerXRMouse"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:background="@drawable/xr_selector"
-        android:text="@string/controller_as_mouse" />
-
-    <CheckBox
-        android:id="@+id/CBPlayerXRMouseLeftHanded"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:background="@drawable/xr_selector"
-        android:text="@string/left_handed_mouse" />
-
-    <CheckBox
-        android:id="@+id/CBPlayerXRMouseLightgun"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:background="@drawable/xr_selector"
-        android:text="@string/light_gun_mouse" />
-
-    <CheckBox
-        android:id="@+id/CBRelativeMouse"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:background="@drawable/xr_selector"
-        android:text="@string/relative_mouse_movement" />
-
-    <TextView
-        android:id="@+id/TVEnvironment"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:text="@string/xr_environment" />
-
-    <LinearLayout
-        android:id="@+id/LLEnvironment"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
-
-        <Spinner
-            style="@style/ComboBox"
-            android:id="@+id/SEnvironment"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:spinnerMode="dialog" />
-
-        <ImageButton
-            style="@style/ListMenuButton"
-            android:id="@+id/BTImportEnvironment"
-            android:contentDescription="@string/xr_environment_import"
-            android:src="@drawable/icon_add" />
-
-        <ImageButton
-            style="@style/ListMenuButton"
-            android:id="@+id/BTRemoveEnvironment"
-            android:contentDescription="@string/xr_environment_remove"
-            android:layout_marginRight="0dp"
-            android:src="@drawable/icon_remove" />
-    </LinearLayout>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:text="@string/controller_profile" />
+        android:layout_height="match_parent">
 
         <LinearLayout
-            android:id="@+id/LLSpinnerLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:orientation="vertical">
 
-            <Spinner
-                style="@style/ComboBox"
-                android:id="@+id/SControllerPreset"
-                android:layout_width="0dp"
+            <TextView
+                android:id="@+id/TVToApplyClose"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:spinnerMode="dialog" />
+                android:text="@string/to_apply_close"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:textColor="@color/colorAccent"
+                android:gravity="center"
+                android:padding="8dp"
+                android:visibility="gone" />
 
-            <ImageButton
-                style="@style/ListMenuButton"
-                android:id="@+id/BTAddControllerPreset"
-                android:src="@drawable/icon_add" />
+            <!-- TWO COLUMN ROOT -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp">
 
-            <ImageButton
-                style="@style/ListMenuButton"
-                android:id="@+id/BTEditControllerPreset"
-                android:src="@drawable/icon_edit" />
+                <!-- LEFT COLUMN -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:paddingEnd="8dp">
 
-            <ImageButton
-                style="@style/ListMenuButton"
-                android:id="@+id/BTDuplicateControllerPreset"
-                android:src="@drawable/icon_duplicate" />
+                    <!-- RENDERING -->
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
 
-            <ImageButton
-                style="@style/ListMenuButton"
-                android:id="@+id/BTRemoveControllerPreset"
-                android:layout_marginRight="0dp"
-                android:src="@drawable/icon_remove" />
+                        <LinearLayout style="@style/FieldSet">
+                            <CheckBox
+                                android:id="@+id/CBUseXR"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/use_xr"
+                                android:visibility="gone" />
+
+                            <CheckBox
+                                android:id="@+id/CBEnableImmersiveMode"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/use_immersive_mode" />
+
+                            <CheckBox
+                                android:id="@+id/CBEnableSBS"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/use_sbs" />
+
+                            <CheckBox
+                                android:id="@+id/CBSBSStretch"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/use_sbs_stretch"
+                                android:visibility="gone" />
+
+                            <CheckBox
+                                android:id="@+id/CBSBSTrim"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/sbs_edge_trim"
+                                android:visibility="gone" />
+
+                            <CheckBox
+                                android:id="@+id/CBEnableCurvedScreen"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/use_curved_screen" />
+
+                            <CheckBox
+                                android:id="@+id/CBEnablePassthrough"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/use_pt" />
+
+                            <CheckBox
+                                android:id="@+id/CBDisableEnvironment"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/disable_environment"
+                                android:visibility="gone" />
+
+                            <CheckBox
+                                android:id="@+id/CBShowFPS"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/xr_show_fps" />
+
+                            <CheckBox
+                                android:id="@+id/CBDisableStartupHints"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/xr_disable_startup_hints" />
+
+                            <TextView
+                                android:id="@+id/TVEnvironment"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:text="@string/xr_environment" />
+
+                            <LinearLayout
+                                android:id="@+id/LLEnvironment"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <Spinner
+                                    style="@style/ComboBox"
+                                    android:id="@+id/SEnvironment"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:spinnerMode="dialog" />
+
+                                <ImageButton
+                                    style="@style/ListMenuButton"
+                                    android:id="@+id/BTImportEnvironment"
+                                    android:contentDescription="@string/xr_environment_import"
+                                    android:src="@drawable/icon_add" />
+
+                                <ImageButton
+                                    style="@style/ListMenuButton"
+                                    android:id="@+id/BTRemoveEnvironment"
+                                    android:contentDescription="@string/xr_environment_remove"
+                                    android:layout_marginRight="0dp"
+                                    android:src="@drawable/icon_remove" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/TVXServer"
+                            style="@style/FieldSetLabel"
+                            android:text="@string/rendering" />
+                    </FrameLayout>
+                </LinearLayout>
+
+                <!-- RIGHT COLUMN -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:paddingStart="8dp">
+
+                    <!-- INPUT -->
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <LinearLayout style="@style/FieldSet">
+
+                            <CheckBox
+                                android:id="@+id/CBPlayerXRGamepad"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="8dp"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/controllers_as_gamepad" />
+
+                            <CheckBox
+                                android:id="@+id/CBPlayerXRKeys"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="8dp"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/controllers_as_keys" />
+
+                            <CheckBox
+                                android:id="@+id/CBPlayerXRMouse"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="8dp"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/controller_as_mouse" />
+
+                            <CheckBox
+                                android:id="@+id/CBPlayerXRMouseLeftHanded"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="8dp"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/left_handed_mouse" />
+
+                            <CheckBox
+                                android:id="@+id/CBPlayerXRMouseLightgun"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="8dp"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/light_gun_mouse" />
+
+                            <CheckBox
+                                android:id="@+id/CBRelativeMouse"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="8dp"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/relative_mouse_movement" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:text="@string/controller_profile" />
+
+                            <LinearLayout
+                                android:id="@+id/LLSpinnerLayout"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <Spinner
+                                    style="@style/ComboBox"
+                                    android:id="@+id/SControllerPreset"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:spinnerMode="dialog" />
+
+                                <ImageButton
+                                    style="@style/ListMenuButton"
+                                    android:id="@+id/BTAddControllerPreset"
+                                    android:src="@drawable/icon_add" />
+
+                                <ImageButton
+                                    style="@style/ListMenuButton"
+                                    android:id="@+id/BTEditControllerPreset"
+                                    android:src="@drawable/icon_edit" />
+
+                                <ImageButton
+                                    style="@style/ListMenuButton"
+                                    android:id="@+id/BTDuplicateControllerPreset"
+                                    android:src="@drawable/icon_duplicate" />
+
+                                <ImageButton
+                                    style="@style/ListMenuButton"
+                                    android:id="@+id/BTRemoveControllerPreset"
+                                    android:layout_marginRight="0dp"
+                                    android:src="@drawable/icon_remove" />
+                            </LinearLayout>
+                            <ListView
+                                android:id="@+id/listView"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:focusable="true"
+                                android:choiceMode="singleChoice"/>
+                        </LinearLayout>
+
+                        <TextView
+                            style="@style/FieldSetLabel"
+                            android:text="@string/input" />
+                    </FrameLayout>
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
-    <ListView
-        android:id="@+id/listView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:focusable="true"
-        android:choiceMode="singleChoice"/>
+    </ScrollView>
 </LinearLayout>
-</ScrollView>

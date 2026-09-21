@@ -20,6 +20,7 @@ package com.winlator.xr.ui;
 
 import android.app.Activity;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -30,6 +31,8 @@ import android.widget.TextView;
 
 import androidx.preference.PreferenceManager;
 
+import com.winlator.cmod.core.AppUtils;
+import com.winlator.cmod.core.UnitUtils;
 import com.winlator.xr.XrActivity;
 import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.ContentDialog;
@@ -47,6 +50,13 @@ public class XrDialog extends ContentDialog {
     public XrDialog(Activity activity) {
         super(activity, R.layout.xr_dialog);
         setTitle(R.string.xr);
+
+        View parent = findViewById(R.id.LLDialog);
+        if (Build.MANUFACTURER.compareToIgnoreCase("PICO") == 0) {
+            parent.getLayoutParams().width = (int) UnitUtils.dpToPx(UnitUtils.pxToDp(AppUtils.getScreenWidth()) * 0.5f);
+        } else {
+            parent.getLayoutParams().width = 1024;
+        }
 
         CheckBox cbSBS = findViewById(R.id.CBEnableSBS);
         CheckBox cbImmersiveMode = findViewById(R.id.CBEnableImmersiveMode);
