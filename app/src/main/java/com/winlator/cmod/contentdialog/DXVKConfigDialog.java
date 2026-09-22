@@ -17,6 +17,7 @@ import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.DefaultVersion;
 import com.winlator.cmod.core.EnvVars;
 import com.winlator.cmod.core.KeyValueSet;
+import com.winlator.cmod.core.LaunchReport;
 import com.winlator.cmod.core.StringUtils;
 import com.winlator.cmod.xenvironment.ImageFs;
 
@@ -150,7 +151,10 @@ public class DXVKConfigDialog extends ContentDialog {
 
     public static void setEnvVars(Context context, KeyValueSet config, EnvVars envVars, int frameLimit) {
         envVars.put("DXVK_STATE_CACHE_PATH", context.getFilesDir() + "/imagefs/" + ImageFs.CACHE_PATH);
-        envVars.put("DXVK_LOG_LEVEL", "none");
+        // With the launch report on, errors only and on stderr only, so it can read them.
+        boolean launchReport = LaunchReport.isEnabled(context);
+        envVars.put("DXVK_LOG_LEVEL", launchReport ? "error" : "none");
+        if (launchReport) envVars.put("DXVK_LOG_PATH", "none");
 
         File rootDir = ImageFs.find(context).getRootDir();
         File dxvkConfigFile = new File(rootDir, ImageFs.CONFIG_PATH+"/dxvk.conf");

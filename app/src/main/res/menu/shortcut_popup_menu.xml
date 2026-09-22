@@ -9,5 +9,6 @@
     <item android:id="@+id/shortcut_revert_goldberg" android:title="Revert Goldberg Steam Fix" android:icon="@drawable/icon_popup_menu_remove" android:iconTint="@color/colorAccent" />
     <item android:id="@+id/shortcut_install_redist" android:title="Install Game Redistributables" android:icon="@drawable/icon_popup_menu_add" android:iconTint="@color/colorAccent" />
     <item android:id="@+id/shortcut_install_mod" android:title="@string/mod_menu_title" android:icon="@drawable/icon_popup_menu_add" android:iconTint="@color/colorAccent" />
+    <item android:id="@+id/shortcut_launch_report" android:title="Last Launch Report" android:icon="@android:drawable/ic_menu_info_details" android:iconTint="@color/colorAccent" android:visible="false" />
     <item android:id="@+id/shortcut_properties" android:title="Properties" android:icon="@android:drawable/ic_menu_info_details" android:iconTint="@color/colorAccent" />
 </menu>

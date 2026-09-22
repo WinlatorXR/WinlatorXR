@@ -84,6 +84,7 @@ import com.winlator.cmod.core.EnvVars;
 import com.winlator.cmod.core.EnvironmentManager;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.KeyValueSet;
+import com.winlator.cmod.core.LaunchReport;
 import com.winlator.cmod.core.OnExtractFileListener;
 import com.winlator.cmod.core.PreloaderDialog;
 import com.winlator.cmod.core.ProcessHelper;
@@ -528,6 +529,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         imageFs.setWinePath(wineInfo.path);
 
         ProcessHelper.removeAllDebugCallbacks();
+        if (shortcut != null && LaunchReport.isEnabled(this)) ProcessHelper.addDebugCallback(LaunchReport.start(this, shortcut));
         if (enableLogs) {
             LogView.setFilename(getExecutable());
             ProcessHelper.addDebugCallback(debugDialog = new DebugDialog(this));
@@ -643,6 +645,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                     // over the game, which is its only chance to finish a hint.
                     runOnUiThread(() -> startupDialog.onGameWindowReady());
                     winStarted[0] = true;
+                    LaunchReport.onWindowShown();
                 }
 
                 if (frameRatingWindowId == window.id) frameRating.update();
@@ -1028,6 +1031,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
             savePlaytimeData();
             handler.removeCallbacks(savePlaytimeRunnable);
+            LaunchReport.onSessionEnd();
 
             if (midiHandler != null) midiHandler.stop();
             if (sensorManager != null) sensorManager.unregisterListener(gyroListener);
@@ -1652,7 +1656,8 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         String wineDebugChannels = preferences.getString("wine_debug_channels", SettingsFragment.DEFAULT_WINE_DEBUG_CHANNELS);
         envVars.put("WINEDEBUG", enableWineDebug && !wineDebugChannels.isEmpty()
                 ? "+" + wineDebugChannels.replace(",", ",+")
-                : "-all"
+                // The launch report needs the errors that say why a game did not start
+                : LaunchReport.isEnabled(this) ? "-all,err+module,err+mscoree" : "-all"
         );
 
         // Clear any temporary directory
@@ -1818,7 +1823,10 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         // Pass final envVars to the launcher
         guestProgramLauncherComponent.setEnvVars(envVars);
-        guestProgramLauncherComponent.setTerminationCallback((status) -> finish());
+        guestProgramLauncherComponent.setTerminationCallback((status) -> {
+            LaunchReport.onSessionEnd();
+            finish();
+        });
 
         // Add the launcher to our environment
         environment.addComponent(guestProgramLauncherComponent);

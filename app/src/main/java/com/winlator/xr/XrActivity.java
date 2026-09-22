@@ -30,6 +30,7 @@ import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.ContentDialog;
+import com.winlator.cmod.core.LaunchReport;
 import com.winlator.cmod.core.SessionSettings;
 import com.winlator.cmod.xserver.XKeycode;
 import com.winlator.cmod.XServerDisplayActivity;
@@ -204,6 +205,7 @@ public class XrActivity extends XServerDisplayActivity {
     }
 
     public synchronized void closeSession() {
+        LaunchReport.onSessionEnd();
         xrInput.unload();
 
         Intent intent = getBaseContext().getPackageManager()

@@ -18,6 +18,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.FileObserver;
 import android.provider.DocumentsContract;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -55,6 +56,7 @@ import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.container.GameCopier;
 import com.winlator.cmod.container.GameUninstaller;
 import com.winlator.cmod.core.GuestScriptRunner;
+import com.winlator.cmod.core.LaunchReport;
 import com.winlator.cmod.core.MSLink;
 import com.winlator.cmod.contents.ModInstaller;
 import com.winlator.cmod.core.PreloaderDialog;
@@ -75,7 +77,9 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -1257,6 +1261,8 @@ public class ShortcutsFragment extends Fragment {
             listItemMenu.getMenu().findItem(R.id.shortcut_apply_goldberg).setVisible(goldbergApplies);
             listItemMenu.getMenu().findItem(R.id.shortcut_revert_goldberg)
                     .setVisible(goldbergApplies || GoldbergEmu.isApplied(shortcut));
+            listItemMenu.getMenu().findItem(R.id.shortcut_launch_report)
+                    .setVisible(LaunchReport.exists(context, shortcut));
 
             listItemMenu.setOnMenuItemClickListener((menuItem) -> {
                 int itemId = menuItem.getItemId();
@@ -1307,6 +1313,9 @@ public class ShortcutsFragment extends Fragment {
                 }
                 else if (itemId == R.id.shortcut_install_mod) {
                     openModZipPicker(shortcut);
+                }
+                else if (itemId == R.id.shortcut_launch_report) {
+                    showLaunchReport(shortcut);
                 }
                 else if (itemId == R.id.shortcut_properties) {
                     showShortcutProperties(shortcut);
@@ -1576,6 +1585,95 @@ public class ShortcutsFragment extends Fragment {
             });
 
             dialog.show();
+        }
+
+        /**
+         * The Steam suspicion below rests on the launch-time steam_api scan, which a shortcut
+         * made before that scan existed has never had run on it. Run it once here so the report
+         * is not reading an absence of evidence as evidence of absence.
+         */
+        private void showLaunchReport(Shortcut shortcut) {
+            if (!shortcut.getExtra("goldbergScanned", "").isEmpty()) {
+                buildLaunchReport(shortcut);
+                return;
+            }
+            final Context context = getContext();
+            Executors.newSingleThreadExecutor().execute(() -> {
+                ArrayList<File> dirs = new ArrayList<>();
+                File root = GoldbergEmu.resolveShortcutInstallDir(context, shortcut);
+                if (root != null && root.isDirectory()) GoldbergEmu.scanForSteamApiDirs(root, 0, dirs, new int[1]);
+                GoldbergEmu.saveGoldbergScanResult(shortcut, dirs);
+                Activity activity = getActivity();
+                if (activity != null) activity.runOnUiThread(() -> buildLaunchReport(shortcut));
+            });
+        }
+
+        private void buildLaunchReport(Shortcut shortcut) {
+            LaunchReport.Summary report = LaunchReport.read(getContext(), shortcut);
+            if (report == null) return;
+            boolean hasSteamFiles = !shortcut.getExtra("goldbergDllDirs", "").isEmpty();
+
+            StringBuilder msg = new StringBuilder();
+            msg.append("Launched: ").append(DateFormat.getDateTimeInstance().format(new Date(report.startTime))).append('\n');
+            msg.append("Game window appeared: ").append(report.windowShown ? "yes" : "no").append('\n');
+            msg.append("Session length: ").append(report.duration >= 0 ? report.formatDuration()
+                    : "not recorded (closed by Android, or the app crashed)").append("\n\n");
+
+            // A Steam build that finds no Steam client usually quits before drawing anything, and
+            // often takes the session down with it - so how it ended says nothing either way, and
+            // only the missing window counts here.
+            boolean steamSuspected = !report.steam && !report.windowShown
+                    && hasSteamFiles && !GoldbergEmu.isApplied(shortcut);
+
+            if (report.steam) msg.append("• The game could not reach Steam. Apply the Goldberg Steam Fix.\n\n");
+            else if (steamSuspected) msg.append("• The game closed without drawing a window and ships steam_api. It probably needs Steam; try the Goldberg Steam Fix.\n\n");
+            else if (!report.windowShown) msg.append("• The game closed before drawing anything.\n\n");
+            if (report.missingExe) msg.append("• Wine could not find or open the game's executable. Check the shortcut's target path.\n\n");
+            if (report.redist) msg.append("• Missing runtime files: ").append(TextUtils.join(", ", report.missingDlls))
+                    .append(". Install Game Redistributables (VC++ / DirectX / PhysX).\n\n");
+            if (report.dotnet) msg.append("• The game needs .NET, which this Wine could not load.\n\n");
+            if (report.render) msg.append("• DXVK reported graphics errors. Try another graphics driver or DXVK version in the shortcut settings.\n\n");
+            if (report.emulator) msg.append("• The CPU emulator hit an instruction it does not support. Try another Box64/FEX preset.\n\n");
+            if (report.crash) msg.append("• The game crashed (unhandled exception).\n\n");
+            if (!report.steam && !steamSuspected && !report.missingExe && !report.redist && !report.dotnet
+                    && !report.render && !report.emulator && !report.crash) {
+                msg.append("No known cause was found in the game's output.\n\n");
+            }
+
+            // Whatever else a failed launch printed, a Steam build that cannot reach Steam is
+            // still the first thing to rule out: the errors such a game leaves behind on its way
+            // out are as likely to be side effects as the reason it never started. So the
+            // reminder goes on every failed launch, not only the ones that point at Steam.
+            boolean failed = report.steam || report.missingExe || report.redist || report.dotnet
+                    || report.render || report.emulator || report.crash
+                    || !report.windowShown || report.duration < 0;
+            boolean goldberg = failed && !GoldbergEmu.isApplied(shortcut)
+                    && GoldbergEmu.appliesTo(getContext(), shortcut);
+            // The Steam bullets above have said this already in their own words.
+            if (goldberg && !report.steam && !steamSuspected) {
+                msg.append(hasSteamFiles
+                        ? "This game ships steam_api. If it is a Steam build, try the Goldberg Steam Fix — the errors above may be side effects rather than the reason it did not start.\n\n"
+                        : "No steam_api file was found next to this game. If it is a Steam build, the Goldberg Steam Fix is still worth a try.\n\n");
+            }
+
+            if (!report.lines.isEmpty()) {
+                msg.append("Details:\n");
+                for (String line : report.lines) msg.append(line).append('\n');
+            }
+            else msg.append("The game printed nothing before it closed.");
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext())
+                    .setTitle("Last Launch: " + shortcut.name)
+                    .setMessage(msg.toString().trim())
+                    .setNegativeButton(android.R.string.ok, null);
+            if (goldberg) {
+                builder.setPositiveButton("Apply Goldberg", (d, w) -> GoldbergEmu.showApplyGoldbergDialog(getActivity(), shortcut));
+            }
+            else if (report.redist) {
+                builder.setPositiveButton("Install Redists", (d, w) -> RedistInstaller.showDialog(getActivity(), shortcut));
+            }
+            builder.setNeutralButton(R.string.settings, (d, w) -> (new ShortcutSettingsDialog(ShortcutsFragment.this, shortcut)).show());
+            builder.show();
         }
 
         /**

@@ -426,6 +426,14 @@ public class SettingsFragment extends Fragment {
         final CheckBox cbBrowseDownloadWithWinlator = view.findViewById(R.id.CBBrowseDownloadWithWinlator);
         cbBrowseDownloadWithWinlator.setChecked(preferences.getBoolean("browse_download_with_winlator", false));
 
+        final CheckBox cbEnableLaunchReport = view.findViewById(R.id.CBEnableLaunchReport);
+        cbEnableLaunchReport.setChecked(preferences.getBoolean("enable_launch_report", false));
+        // Says where the report turns up, so it is only worth showing once it is switched on.
+        final View launchReportHint = view.findViewById(R.id.TVLaunchReportHint);
+        launchReportHint.setVisibility(cbEnableLaunchReport.isChecked() ? View.VISIBLE : View.GONE);
+        cbEnableLaunchReport.setOnCheckedChangeListener((v, checked) ->
+                launchReportHint.setVisibility(checked ? View.VISIBLE : View.GONE));
+
         final CheckBox CBEnablePebLogs = view.findViewById(R.id.CBEnablePebLogs);
         CBEnablePebLogs.setChecked(preferences.getBoolean("enable_peb_logs", false));
 
@@ -467,6 +475,7 @@ public class SettingsFragment extends Fragment {
             editor.putBoolean("share_android_clipboard", cbShareClipboard.isChecked());
             editor.putBoolean("force_kgsl_shim_all_devices", cbForceKgslShim.isChecked());
             editor.putBoolean("browse_download_with_winlator", cbBrowseDownloadWithWinlator.isChecked());
+            editor.putBoolean("enable_launch_report", cbEnableLaunchReport.isChecked());
             editor.putBoolean("enable_peb_logs", CBEnablePebLogs.isChecked());
 
 
