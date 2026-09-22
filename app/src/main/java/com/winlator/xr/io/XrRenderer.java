@@ -53,9 +53,9 @@ public class XrRenderer extends GLRenderer {
     /** How far the frame rate panel sits from the corner, as a fraction of the screen. */
     private static final float FPS_PANEL_MARGIN = 0.01f;
     /** In VR the screen is a projection layer wider than the lenses show, so its corner is out of sight. */
-    private static final float FPS_PANEL_MARGIN_VR = 0.2f;
+    private static final float FPS_PANEL_MARGIN_VR = 0.35f;
     /** Lower still, so the panel sits where the eye can read it. */
-    private static final float FPS_PANEL_MARGIN_VR_TOP = 0.35f;
+    private static final float FPS_PANEL_MARGIN_VR_TOP = 0.4f;
 
     private final BGRAMaterial dialogMaterial = new BGRAMaterial();
     private final Texture[] lastTexture = {new Texture(), new Texture()};
@@ -316,10 +316,10 @@ public class XrRenderer extends GLRenderer {
         float div = sbs ? 2 : 1;
         float fitY = getSbsFitY();
         float aspect = fullscreen ? xServer.screenInfo.width / (float)xServer.screenInfo.height : 1.0f;
-        float margin = XrActivity.getVR() ? FPS_PANEL_MARGIN_VR : FPS_PANEL_MARGIN;
+        float margin = directActive ? FPS_PANEL_MARGIN_VR : FPS_PANEL_MARGIN;
         int offsetX = Math.round(xServer.screenInfo.height * margin * aspect);
         offsetX += Math.round(xServer.screenInfo.width / div * sbsTrim);
-        int offsetY = Math.round(xServer.screenInfo.height * margin);
+        int offsetY = Math.round(xServer.screenInfo.height * (directActive ? FPS_PANEL_MARGIN_VR_TOP : FPS_PANEL_MARGIN));
         GLES20.glBlendFuncSeparate(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA, GLES20.GL_ONE, GLES20.GL_ONE);
         renderDrawable(drawable, offsetX, offsetY, dialogMaterial, false, aspect / div, fitY);
         if (div > 1) {
