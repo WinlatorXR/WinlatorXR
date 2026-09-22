@@ -119,13 +119,6 @@
                                 android:layout_height="wrap_content"
                                 android:text="Enable Touchscreen Mode Globally"
                                 android:layout_marginTop="8dp" />
-
-                            <CheckBox
-                                android:id="@+id/CBForceKgslShim"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/force_kgsl_shim"
-                                android:layout_marginTop="8dp"/>
                         </LinearLayout>
 
                         <TextView
@@ -172,6 +165,22 @@
                                 android:layout_marginTop="8.0dip"
                                 android:text="@string/enable_peb_logs" />
 
+                            <CheckBox
+                                android:id="@+id/CBEnableLaunchReport"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="@string/enable_launch_report" />
+
+                            <TextView
+                                android:id="@+id/TVLaunchReportHint"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginLeft="32dp"
+                                android:layout_marginBottom="4dp"
+                                android:textSize="12sp"
+                                android:text="@string/enable_launch_report_hint"
+                                android:visibility="gone" />
                         </LinearLayout>
 
                         <TextView
@@ -336,21 +345,11 @@
                                     android:text="@string/browse_download_with_winlator" />
 
                                 <CheckBox
-                                    android:id="@+id/CBEnableLaunchReport"
+                                    android:id="@+id/CBForceKgslShim"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_gravity="left|center"
-                                    android:text="@string/enable_launch_report" />
-
-                                <TextView
-                                    android:id="@+id/TVLaunchReportHint"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginLeft="32dp"
-                                    android:layout_marginBottom="4dp"
-                                    android:textSize="12sp"
-                                    android:text="@string/enable_launch_report_hint"
-                                    android:visibility="gone" />
+                                    android:text="@string/force_kgsl_shim" />
                             </LinearLayout>
                         </LinearLayout>
 
