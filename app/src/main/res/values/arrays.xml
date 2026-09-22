@@ -359,6 +359,14 @@
         <item>None</item>
         <item>OpenTrack-WXR</item>
     </string-array>
+    <!-- Same order as PcvrRuntime.CONTROLLER_PROFILES -->
+    <string-array name="pcvr_controller_entries">
+        <item>Automatic</item>
+        <item>Valve Index (Valve headset)</item>
+        <item>Oculus Touch (Oculus headset)</item>
+        <item>HTC Vive (HTC headset)</item>
+        <item>Windows Mixed Reality (WMR headset)</item>
+    </string-array>
     <string-array name="xr_startup_hints">
         <item>In a menu, the primary thumbstick moves the selection, the trigger chooses, and clicking the stick goes back.</item>
         <item>With the menu open, hold the primary grip and push the thumbstick forward or back to move the screen closer or further away.</item>

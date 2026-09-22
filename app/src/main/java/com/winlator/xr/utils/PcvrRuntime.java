@@ -45,6 +45,10 @@ public final class PcvrRuntime {
     public static final int DEFAULT_RENDER_SCALE = 50;
     /** The runtime hands its eye images to this app instead of drawing them in the preview window. */
     public static final String DIRECT_KEY = "pcvrDirectTransport";
+    /** OpenXR profile the runtime reports; OpenComposite presents the matching headset. Empty keeps the runtime's ranking. */
+    public static final String CONTROLLER_KEY = "pcvrController";
+    /** In the order of the pcvr_controller_entries array. */
+    public static final String[] CONTROLLER_PROFILES = {"", "/valve/index_controller", "/oculus/touch_controller", "/htc/vive_controller", "/microsoft/motion_controller"};
 
     private static final String TAG = "PcvrRuntime";
     private static final String ASSET_DIR = "pcvr";
@@ -59,6 +63,7 @@ public final class PcvrRuntime {
     private static final String BACKUP_SUFFIX = ".winlatorxr-backup";
     private static final String CONF_FILE = "Winlator/oxrwxr/conf.txt";
     private static final String CONF_DIRECT = "direct_transport";
+    private static final String CONF_CONTROLLER = "controller_profile";
 
     private PcvrRuntime() {}
 
@@ -79,12 +84,16 @@ public final class PcvrRuntime {
         }
     }
 
-    public static void apply(Context context, Container container, boolean enabled, boolean directTransport) {
+    public static String getControllerProfile(Shortcut shortcut) {
+        return shortcut != null ? shortcut.getExtra(CONTROLLER_KEY, "") : "";
+    }
+
+    public static void apply(Context context, Container container, boolean enabled, boolean directTransport, String controllerProfile) {
         try {
             File driveC = new File(container.getRootDir(), ".wine/drive_c");
             if (enabled) {
                 enable(context, container, driveC);
-                writeDirectTransport(container, directTransport);
+                writeConf(container, directTransport, controllerProfile);
             } else if (new File(driveC, "oxrwxr/" + STATE_FILE).isFile()) {
                 disable(container, driveC);
             }
@@ -149,9 +158,9 @@ public final class PcvrRuntime {
 
     /**
      * The runtime reads its options from D:\Winlator\oxrwxr\conf.txt, so the shortcut's setting is
-     * written over that file's direct_transport line; every other line is kept as it was.
+     * written over that file's direct_transport and controller_profile lines; every other line is kept as it was.
      */
-    private static void writeDirectTransport(Container container, boolean directTransport) {
+    private static void writeConf(Container container, boolean directTransport, String controllerProfile) {
         File driveD = null;
         for (String[] drive : container.drivesIterator()) {
             if (drive[0].equalsIgnoreCase("D")) {
@@ -165,20 +174,28 @@ public final class PcvrRuntime {
         File conf = new File(driveD, CONF_FILE);
         // The runtime matches both the key and the value without trimming, so no spaces around the =
         String line = CONF_DIRECT + "=" + (directTransport ? "1" : "0");
+        // Written even when empty, so an earlier shortcut's choice does not carry over
+        String controllerLine = CONF_CONTROLLER + "=" + controllerProfile;
         StringBuilder text = new StringBuilder();
-        boolean written = false;
+        boolean written = false, controllerWritten = false;
         if (conf.isFile()) {
             for (String existing : FileUtils.readString(conf).split("\n")) {
-                if (existing.split("=", 2)[0].trim().equalsIgnoreCase(CONF_DIRECT)) {
+                String key = existing.split("=", 2)[0].trim();
+                if (key.equalsIgnoreCase(CONF_DIRECT)) {
                     if (written) continue;
                     text.append(line).append("\n");
                     written = true;
+                } else if (key.equalsIgnoreCase(CONF_CONTROLLER)) {
+                    if (controllerWritten) continue;
+                    text.append(controllerLine).append("\n");
+                    controllerWritten = true;
                 } else if (!existing.trim().isEmpty()) {
                     text.append(existing.replace("\r", "")).append("\n");
                 }
             }
         }
         if (!written) text.append(line).append("\n");
+        if (!controllerWritten) text.append(controllerLine).append("\n");
         conf.getParentFile().mkdirs();
         FileUtils.writeString(conf, text.toString());
     }

@@ -407,6 +407,24 @@
             android:text="@string/pcvr_direct_transport" />
 
         <LinearLayout
+            android:id="@+id/LLPcvrController"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/pcvr_controller" />
+
+            <Spinner
+                style="@style/ComboBox"
+                android:layout_width="match_parent"
+                android:id="@+id/SPcvrController"
+                android:entries="@array/pcvr_controller_entries" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/LLPcvrRenderScale"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
