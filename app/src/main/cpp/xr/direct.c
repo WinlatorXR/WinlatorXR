@@ -377,6 +377,9 @@ static void gpu_wait(int fd)
 
 static bool ensure_eyes(XrSession session, int width, int height)
 {
+    /* An empty rect matches the unset size, so the swapchains would never be created and the
+     * layer would then use them anyway - drop the frame instead */
+    if (width <= 0 || height <= 0) return false;
     if (g_eye_width == width && g_eye_height == height) return true;
     for (int eye = 0; eye < WXR_DIRECT_MAX_VIEWS; eye++) {
         if (g_eye_width) XrFramebufferDestroy(&g_eyes[eye]);
@@ -393,6 +396,7 @@ static bool ensure_eyes(XrSession session, int width, int height)
 
 static bool ensure_quad(XrSession session, uint32_t q, int width, int height)
 {
+    if (width <= 0 || height <= 0) return false;
     if (g_quad_width[q] == width && g_quad_height[q] == height) return true;
     if (g_quad_width[q]) XrFramebufferDestroy(&g_quads[q]);
     g_quad_width[q] = g_quad_height[q] = 0;
