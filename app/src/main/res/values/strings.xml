@@ -523,6 +523,7 @@
     <string name="gpu_level">GPU level</string>
     <string name="refresh_rate">Refresh rate</string>
     <string name="light_gun_mouse">Use light gun / laser pointer mouse mapping</string>
+    <string name="light_gun_haptic">Haptic feedback on trigger press</string>
     <string name="left_handed_mouse">Use left-handed mouse mapping</string>
     <string name="wheel_emulation">Use controllers as a wheel</string>
     <string name="controllers_as_gamepad">Use XR controllers as gamepad</string>

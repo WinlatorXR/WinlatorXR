@@ -63,6 +63,7 @@ public class XrActivity extends XServerDisplayActivity {
     public static boolean mouseEmulation;
     public static boolean mouseLeftHanded;
     public static boolean mouseLightgun;
+    public static boolean lightgunHaptic;
     public static boolean mouseRelative;
     public static boolean pointerSmoothing;
     public static boolean showFPS;
@@ -110,6 +111,7 @@ public class XrActivity extends XServerDisplayActivity {
     public static final boolean DEFAULT_MOUSE = true;
     public static final boolean DEFAULT_MOUSE_LEFT_HANDED = false;
     public static final boolean DEFAULT_MOUSE_LIGHTGUN = false;
+    public static final boolean DEFAULT_LIGHTGUN_HAPTIC = false;
     public static final boolean DEFAULT_MOUSE_RELATIVE = false;
     public static final boolean DEFAULT_POINTER_SMOOTHING = false;
     public static final boolean DEFAULT_SHOW_FPS = false;
@@ -125,7 +127,7 @@ public class XrActivity extends XServerDisplayActivity {
     public static final String[] SESSION_KEYS = {
             "use_cs", "use_pt", "use_xr_gamepad", "xr_gamepad_radial_to_square",
             "use_xr_rumble_passthrough", "use_xr_keys", "use_xr_mouse", "use_xr_leftHanded",
-            "use_xr_lightgun", "use_xr_relative_mouse", "use_xr_smoothing", "use_xr_wheel",
+            "use_xr_lightgun", "use_xr_lightgun_haptic", "use_xr_relative_mouse", "use_xr_smoothing", "use_xr_wheel",
             PREF_SHOW_FPS, PREF_SBS_STRETCH, PREF_SBS_TRIM, PREF_SCREEN_DISTANCE, XrEnvironment.PREF_KEY, XrEnvironment.ENABLED_KEY,
             XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX};
 
@@ -164,6 +166,7 @@ public class XrActivity extends XServerDisplayActivity {
         mouseEmulation = SessionSettings.getBoolean(this, "use_xr_mouse", DEFAULT_MOUSE);
         mouseLeftHanded = SessionSettings.getBoolean(this, "use_xr_leftHanded", DEFAULT_MOUSE_LEFT_HANDED);
         mouseLightgun = SessionSettings.getBoolean(this, "use_xr_lightgun", DEFAULT_MOUSE_LIGHTGUN);
+        lightgunHaptic = SessionSettings.getBoolean(this, "use_xr_lightgun_haptic", DEFAULT_LIGHTGUN_HAPTIC);
         mouseRelative = SessionSettings.getBoolean(this, "use_xr_relative_mouse", DEFAULT_MOUSE_RELATIVE);
         // Proton 10/11 need relative mouse, so it is on unless this game was given its own answer.
         if (getWineInfo() != null && getWineInfo().requiresRelativeMouse() && !SessionSettings.isOverridden("use_xr_relative_mouse")) mouseRelative = true;

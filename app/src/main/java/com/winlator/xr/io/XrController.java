@@ -57,6 +57,10 @@ public class XrController {
     /** How long a tapped key is held down for, in frames a game will not miss. */
     private static final long TAP_KEY_MILLIS = 50;
 
+    /** Short "shot" pulse on trigger press in lightgun mode, same feel as XrKeyboard's click. */
+    private static final int LIGHTGUN_HAPTICS_DURATION = 50;
+    private static final float LIGHTGUN_HAPTICS_INTENSITY = 5;
+
     /** How long relative motion may go unanswered before the guest is woken again. */
     private static final long WAKE_INTERVAL_MILLIS = 1000;
 
@@ -355,6 +359,9 @@ public class XrController {
 
         // Apply buttons
         currentButtons = buttons;
+        if (XrActivity.mouseLightgun && XrActivity.lightgunHaptic && !XrActivity.isImmersive && getButtonClicked(buttons, primaryTrigger)) {
+            instance.vibrateController(LIGHTGUN_HAPTICS_DURATION, XrActivity.mouseLeftHanded ? 0 : 1, LIGHTGUN_HAPTICS_INTENSITY);
+        }
         mapButton(primaryTrigger, Pointer.Button.BUTTON_LEFT);
         mapButton(primaryGrip, Pointer.Button.BUTTON_RIGHT);
         mapButton(primaryUp, Pointer.Button.BUTTON_SCROLL_UP);

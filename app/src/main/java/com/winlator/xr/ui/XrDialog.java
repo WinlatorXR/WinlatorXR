@@ -100,11 +100,12 @@ public class XrDialog extends ContentDialog {
 
         CheckBox cbMouseLeftHanded = findViewById(R.id.CBPlayerXRMouseLeftHanded);
         CheckBox cbMouseLightgun = findViewById(R.id.CBPlayerXRMouseLightgun);
+        CheckBox cbLightgunHaptic = findViewById(R.id.CBPlayerXRLightgunHaptic);
         CheckBox cbRelativeMouse = findViewById(R.id.CBRelativeMouse);
         CheckBox cbMouse = findViewById(R.id.CBPlayerXRMouse);
         CheckBox cbGamepad = findViewById(R.id.CBPlayerXRGamepad);
         CheckBox cbKeys = findViewById(R.id.CBPlayerXRKeys);
-        controllerUI(cbMouseLeftHanded, cbMouseLightgun, cbRelativeMouse, cbMouse, cbGamepad, cbKeys);
+        controllerUI(cbMouseLeftHanded, cbMouseLightgun, cbLightgunHaptic, cbRelativeMouse, cbMouse, cbGamepad, cbKeys);
 
         // Which controller profile is in use belongs to the game; the profiles themselves
         // are a shared library and stay in the app-wide preferences.
@@ -140,7 +141,7 @@ public class XrDialog extends ContentDialog {
         });
     }
 
-    public static void controllerUI(CheckBox cbMouseLeftHanded, CheckBox cbMouseLightgun, CheckBox cbRelativeMouse, CheckBox cbMouse, CheckBox cbGamepad, CheckBox cbKeys) {
+    public static void controllerUI(CheckBox cbMouseLeftHanded, CheckBox cbMouseLightgun, CheckBox cbLightgunHaptic, CheckBox cbRelativeMouse, CheckBox cbMouse, CheckBox cbGamepad, CheckBox cbKeys) {
         loadConfig(cbMouseLeftHanded, "use_xr_leftHanded", XrActivity.DEFAULT_MOUSE_LEFT_HANDED, XrActivity.mouseLeftHanded);
         cbMouseLeftHanded.setOnCheckedChangeListener((compoundButton, checked) -> {
             saveConfig(cbMouseLeftHanded, "use_xr_leftHanded", checked);
@@ -153,7 +154,15 @@ public class XrDialog extends ContentDialog {
             XrActivity.mouseLightgun = checked;
             if (checked) cbRelativeMouse.setChecked(false);
             cbRelativeMouse.setEnabled(!checked && cbMouse.isChecked());
+            cbLightgunHaptic.setVisibility(checked ? View.VISIBLE : View.GONE);
         });
+
+        loadConfig(cbLightgunHaptic, "use_xr_lightgun_haptic", XrActivity.DEFAULT_LIGHTGUN_HAPTIC, XrActivity.lightgunHaptic);
+        cbLightgunHaptic.setOnCheckedChangeListener((compoundButton, checked) -> {
+            saveConfig(cbLightgunHaptic, "use_xr_lightgun_haptic", checked);
+            XrActivity.lightgunHaptic = checked;
+        });
+        cbLightgunHaptic.setVisibility(cbMouseLightgun.isChecked() ? View.VISIBLE : View.GONE);
 
         loadConfig(cbRelativeMouse, "use_xr_relative_mouse", XrActivity.DEFAULT_MOUSE_RELATIVE, XrActivity.mouseRelative);
         cbRelativeMouse.setOnCheckedChangeListener((compoundButton, checked) -> {
@@ -170,10 +179,12 @@ public class XrDialog extends ContentDialog {
             XrActivity.mouseEmulation = checked;
             cbMouseLeftHanded.setEnabled(checked);
             cbMouseLightgun.setEnabled(checked);
+            cbLightgunHaptic.setEnabled(checked);
             cbRelativeMouse.setEnabled(checked && !cbMouseLightgun.isChecked());
         });
         cbMouseLeftHanded.setEnabled(cbMouse.isChecked());
         cbMouseLightgun.setEnabled(cbMouse.isChecked());
+        cbLightgunHaptic.setEnabled(cbMouse.isChecked());
         cbRelativeMouse.setEnabled(cbMouse.isChecked() && !cbMouseLightgun.isChecked());
 
         loadConfig(cbGamepad, "use_xr_gamepad", XrActivity.DEFAULT_GAMEPAD, XrActivity.gamepadEmulation);

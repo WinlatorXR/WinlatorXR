@@ -219,6 +219,14 @@
                                 android:text="@string/light_gun_mouse" />
 
                             <CheckBox
+                                android:id="@+id/CBPlayerXRLightgunHaptic"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="8dp"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/light_gun_haptic" />
+
+                            <CheckBox
                                 android:id="@+id/CBRelativeMouse"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
