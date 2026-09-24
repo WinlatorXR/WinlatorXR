@@ -257,17 +257,14 @@ public class XrRenderer extends GLRenderer {
     protected void postWindows() {
         super.postWindows();
         if (!renderableWindows.isEmpty()) {
+            int top = renderableWindows.size() - 1;
+            RenderableWindow window = renderableWindows.get(top);
+            vrWindowOnTop = (window.rootX == 0) && (window.rootY == 0);
             timestampHadWindow = System.currentTimeMillis();
-            if (!renderableWindows.isEmpty()) {
-                // Skip 1x1 helper windows mapped over the game (Aperture Hand Lab), they are not what is on screen
-                int top = renderableWindows.size() - 1;
-                while (top > 0 && renderableWindows.get(top).content.width <= 1 && renderableWindows.get(top).content.height <= 1) top--;
-                RenderableWindow window = renderableWindows.get(top);
-                vrWindowOnTop = (window.rootX == 0) && (window.rootY == 0);
-                // This is the window renderWindows draws, so its redraws are the frame rate
-                // the user is watching - not those of a launcher still ticking away behind it.
-                fpsOverlay.setTrackedContent(window.content);
-            }
+
+            // Skip 1x1 helper windows mapped over the game (Aperture Hand Lab), they are not what is on screen
+            while (top > 0 && renderableWindows.get(top).content.width <= 1 && renderableWindows.get(top).content.height <= 1) top--;
+            fpsOverlay.setTrackedContent(renderableWindows.get(top).content);
         }  else if ((System.currentTimeMillis() - timestampHadWindow > 1000)) {
             if (autoclose && XrActivity.isEnabled(null)) {
                 XrActivity.getInstance().runOnUiThread(() -> XrActivity.getInstance().closeSession());
