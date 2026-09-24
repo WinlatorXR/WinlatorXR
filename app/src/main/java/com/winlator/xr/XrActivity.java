@@ -70,6 +70,7 @@ public class XrActivity extends XServerDisplayActivity {
     public static boolean sbsStretch;
     public static boolean sbsTrim;
     public static boolean wheelEmulation;
+    public static int headTurnSensitivity;
 
     // How far from the eye the screen sits until the user moves it.
     public static final float DEFAULT_DISTANCE = 5.0f;
@@ -118,6 +119,8 @@ public class XrActivity extends XServerDisplayActivity {
     public static final boolean DEFAULT_SBS_STRETCH = false;
     public static final boolean DEFAULT_SBS_TRIM = false;
     public static final boolean DEFAULT_WHEEL = false;
+    public static final int DEFAULT_HEAD_TURN_SENSITIVITY = 100;
+    public static final String PREF_HEAD_TURN_SENSITIVITY = "xr_head_turn_sensitivity";
 
     /**
      * Every setting the XR menu can pin to a game. Listed so "Reset to default" can drop the
@@ -128,7 +131,7 @@ public class XrActivity extends XServerDisplayActivity {
             "use_cs", "use_pt", "use_xr_gamepad", "xr_gamepad_radial_to_square",
             "use_xr_rumble_passthrough", "use_xr_keys", "use_xr_mouse", "use_xr_leftHanded",
             "use_xr_lightgun", "use_xr_lightgun_haptic", "use_xr_relative_mouse", "use_xr_smoothing", "use_xr_wheel",
-            PREF_SHOW_FPS, PREF_SBS_STRETCH, PREF_SBS_TRIM, PREF_SCREEN_DISTANCE, XrEnvironment.PREF_KEY, XrEnvironment.ENABLED_KEY,
+            PREF_SHOW_FPS, PREF_SBS_STRETCH, PREF_SBS_TRIM, PREF_SCREEN_DISTANCE, PREF_HEAD_TURN_SENSITIVITY,XrEnvironment.PREF_KEY, XrEnvironment.ENABLED_KEY,
             XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX};
 
     static {
@@ -176,7 +179,7 @@ public class XrActivity extends XServerDisplayActivity {
         sbsStretch = SessionSettings.getBoolean(this, PREF_SBS_STRETCH, DEFAULT_SBS_STRETCH);
         sbsTrim = SessionSettings.getBoolean(this, PREF_SBS_TRIM, DEFAULT_SBS_TRIM);
         lastDistance = SessionSettings.getFloat(this, PREF_SCREEN_DISTANCE, DEFAULT_DISTANCE);
-
+        headTurnSensitivity = Math.max(50, Math.min(SessionSettings.getInt(this, PREF_HEAD_TURN_SENSITIVITY, DEFAULT_HEAD_TURN_SENSITIVITY), 150));
         if (mouseLightgun) mouseRelative = false;
         setRelativeMouseMovement(mouseRelative);
 

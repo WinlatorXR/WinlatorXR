@@ -373,25 +373,28 @@ public class XrInput {
     private void updateXServer(XServer xServer, float[] axes, boolean[] buttons) {
         xServerExecutor.execute(() -> {
             try (XLock lock = xServer.lock(XServer.Lockable.WINDOW_MANAGER, XServer.Lockable.INPUT_DEVICE)) {
+                boolean headMapping = XrActivity.isImmersive && XrActivity.isHeadTrackingAllowed;
                 xrAPI.consumeInputs(xServer);
                 if (XrActivity.gamepadEmulation) {
-                    xrController.updateGamepad(axes, buttons);
+                    xrController.updateGamepad(axes, buttons, headMapping);
                 } else if (XrActivity.rumblePassthrough) {
                     // Keep the virtual XInput device "connected" so the guest sends rumble,
                     // but with a neutral state so it never drives buttons/axes (those stay on mouse/keys).
-                    xrController.updateGamepad(new float[axes.length], new boolean[buttons.length]);
+                    xrController.updateGamepad(new float[axes.length], new boolean[buttons.length], false);
                 }
                 if (XrActivity.keysEmulation) {
                     xrController.updateKeyboardButtons(buttons);
                 }
                 if (!XrActivity.getVR()) {
                     if (XrActivity.mouseEmulation) {
-                        xrController.updateMouseAxes(axes, XrActivity.isImmersive && XrActivity.isHeadTrackingAllowed);
-                        xrController.updateMouseSnapturn(buttons, XrActivity.isImmersive ? 250 : 50);
+                        if (!headMapping || !XrActivity.gamepadEmulation) {
+                            xrController.updateMouseAxes(axes, headMapping);
+                            xrController.updateMouseSnapturn(buttons, XrActivity.isImmersive ? 250 : 50);
+                        }
                         if (XrActivity.mouseLightgun && !XrActivity.isImmersive)
                             xrController.updateMouseLightgun(axes, XrActivity.lastDistance);
                         xrController.updateMouseState(buttons);
-                    } else if (XrActivity.isImmersive && XrActivity.isHeadTrackingAllowed) {
+                    } else if (headMapping) {
                         xrController.updateMouseAxes(axes, true);
                         xrController.updateMouseState(new boolean[buttons.length]);
                     }

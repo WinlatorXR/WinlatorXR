@@ -132,7 +132,7 @@ public class XrController {
 
                     if (XrActivity.gamepadEmulation) {
                         try (XLock lock = XrActivity.getInstance().getXServer().lock(XServer.Lockable.WINDOW_MANAGER, XServer.Lockable.INPUT_DEVICE)) {
-                            updateGamepad(new float[XrInterface.ControllerAxis.values().length], new boolean[buttons.length]);
+                            updateGamepad(new float[XrInterface.ControllerAxis.values().length], new boolean[buttons.length], false);
                         }
                     }
                     return false;
@@ -148,7 +148,7 @@ public class XrController {
         System.arraycopy(buttons, 0, lastButtons, 0, buttons.length);
     }
 
-    public void updateGamepad(float[] axes, boolean[] buttons) {
+    public void updateGamepad(float[] axes, boolean[] buttons, boolean headMapping) {
         GamepadState state = new GamepadState();
 
         if (buttons[XrInterface.ControllerButton.L_MENU.ordinal()]) {
@@ -191,6 +191,40 @@ public class XrController {
         state.thumbLY = dpadActive ? 0 : -axes[XrInterface.ControllerAxis.L_THUMBSTICK_Y.ordinal()];
         state.thumbRX = axes[XrInterface.ControllerAxis.R_THUMBSTICK_X.ordinal()];
         state.thumbRY = -axes[XrInterface.ControllerAxis.R_THUMBSTICK_Y.ordinal()];
+
+        if (headMapping) {
+            // Left thumbstick mapped to head position
+            float t = 100.0f;
+            float dx = axes[XrInterface.ControllerAxis.HMD_X.ordinal()] - lastAxes[XrInterface.ControllerAxis.HMD_X.ordinal()];
+            float dz = axes[XrInterface.ControllerAxis.HMD_Z.ordinal()] - lastAxes[XrInterface.ControllerAxis.HMD_Z.ordinal()];
+            // Rotate the world-space step into the head's heading so walking follows where you face
+            float qx = axes[XrInterface.ControllerAxis.HMD_QX.ordinal()];
+            float qy = axes[XrInterface.ControllerAxis.HMD_QY.ordinal()];
+            float qz = axes[XrInterface.ControllerAxis.HMD_QZ.ordinal()];
+            float qw = axes[XrInterface.ControllerAxis.HMD_QW.ordinal()];
+            float fx = -2.0f * (qx * qz + qw * qy);
+            float fz = -(1.0f - 2.0f * (qx * qx + qy * qy));
+            float len = (float) Math.sqrt(fx * fx + fz * fz);
+            float dy = dz;
+            if (len > 0.001f) {
+                fx /= len;
+                fz /= len;
+                dy = -(dx * fx + dz * fz);
+                dx = dz * fx - dx * fz;
+            }
+            state.thumbLX = Math.max(-1.0f, Math.min(state.thumbLX + dx * t, 1.0f));
+            state.thumbLY = Math.max(-1.0f, Math.min(state.thumbLY + dy * t, 1.0f));
+
+            // Right thumbstick mapped to head angle
+            float r = 0.1f * XrActivity.headTurnSensitivity / 100.0f;
+            float yaw = getAngleDiff(lastAxes[XrInterface.ControllerAxis.HMD_YAW.ordinal()], axes[XrInterface.ControllerAxis.HMD_YAW.ordinal()]);
+            float pitch = getAngleDiff(lastAxes[XrInterface.ControllerAxis.HMD_PITCH.ordinal()], axes[XrInterface.ControllerAxis.HMD_PITCH.ordinal()]);
+            if (Float.isNaN(pitch)) {
+                pitch = 0;
+            }
+            state.thumbRX = Math.max(-1.0f, Math.min(state.thumbRX + yaw * r, 1.0f));
+            state.thumbRY = Math.max(-1.0f, Math.min(state.thumbRY - pitch * r, 1.0f));
+        }
 
         if (XrActivity.gamepadRadialToSquare) {
             float lenL = (float) Math.sqrt(state.thumbLX * state.thumbLX + state.thumbLY * state.thumbLY);
@@ -293,6 +327,8 @@ public class XrController {
         // Mouse control with head
         if (headMapping) {
             float angle2px = instance.getXServer().screenInfo.width * 0.05f / f;
+            // The sensitivity slider only exists in 5DoF, so plain 3DoF head-look keeps its speed
+            if (XrActivity.gamepadEmulation) angle2px *= XrActivity.headTurnSensitivity / 100.0f;
             dx = getAngleDiff(lastAxes[XrInterface.ControllerAxis.HMD_YAW.ordinal()], axes[XrInterface.ControllerAxis.HMD_YAW.ordinal()]) * angle2px;
             dy = getAngleDiff(lastAxes[XrInterface.ControllerAxis.HMD_PITCH.ordinal()], axes[XrInterface.ControllerAxis.HMD_PITCH.ordinal()]) * angle2px;
             if (Float.isNaN(dy)) {

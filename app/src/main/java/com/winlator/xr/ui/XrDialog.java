@@ -33,6 +33,7 @@ import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.UnitUtils;
+import com.winlator.cmod.widget.SeekBar;
 import com.winlator.xr.XrActivity;
 import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.ContentDialog;
@@ -76,8 +77,15 @@ public class XrDialog extends ContentDialog {
                     int sbsVisibility = XrActivity.isActive() && !XrActivity.isVR && cbSBS.isChecked() ? View.VISIBLE : View.GONE;
                     cbSBSStretch.setVisibility(sbsVisibility);
                     cbSBSTrim.setVisibility(sbsVisibility);
+                    updateImmersiveLabel(cbImmersiveMode, XrActivity.gamepadEmulation);
                 });
-        loadConfig(cbSBSStretch, XrActivity.PREF_SBS_STRETCH, XrActivity.DEFAULT_SBS_STRETCH, XrActivity.sbsStretch);
+        SeekBar sbHeadTurn = findViewById(R.id.SBHeadTurnSensitivity);
+        sbHeadTurn.setSuffix("%");
+        sbHeadTurn.setValue(XrActivity.headTurnSensitivity);
+        sbHeadTurn.setOnValueChangeListener((seekBar, value) -> {
+            XrActivity.headTurnSensitivity = Math.round(value);
+            SessionSettings.putInt(activity, XrActivity.PREF_HEAD_TURN_SENSITIVITY, XrActivity.headTurnSensitivity);
+        });        loadConfig(cbSBSStretch, XrActivity.PREF_SBS_STRETCH, XrActivity.DEFAULT_SBS_STRETCH, XrActivity.sbsStretch);
         cbSBSStretch.setOnCheckedChangeListener((compoundButton, checked) -> {
             saveConfig(cbSBSStretch, XrActivity.PREF_SBS_STRETCH, checked);
             XrActivity.sbsStretch = checked;
@@ -188,9 +196,11 @@ public class XrDialog extends ContentDialog {
         cbRelativeMouse.setEnabled(cbMouse.isChecked() && !cbMouseLightgun.isChecked());
 
         loadConfig(cbGamepad, "use_xr_gamepad", XrActivity.DEFAULT_GAMEPAD, XrActivity.gamepadEmulation);
+        updateImmersiveLabel(cbGamepad, cbGamepad.isChecked());
         cbGamepad.setOnCheckedChangeListener((compoundButton, checked) -> {
             saveConfig(cbGamepad, "use_xr_gamepad", checked);
             XrActivity.gamepadEmulation = checked;
+            updateImmersiveLabel(cbGamepad, checked);
             if (checked && XrActivity.isActive()) {
                 XrInput.ensureVirtualControllerAttached();
             }
@@ -363,6 +373,18 @@ public class XrDialog extends ContentDialog {
     public static void setViewEnabled(View view, boolean enabled) {
         view.setEnabled(enabled);
         view.setAlpha(enabled ? 1.0f : 0.4f);
+    }
+
+    // Gamepad head-look adds walking to the head tracking, so immersive mode becomes 5DoF
+    private static void updateImmersiveLabel(View anyView, boolean gamepad) {
+        View root = anyView.getRootView();
+        CheckBox cbImmersiveMode = root.findViewById(R.id.CBEnableImmersiveMode);
+        if (cbImmersiveMode == null) return;
+        cbImmersiveMode.setText(gamepad ? R.string.use_immersive_mode_5dof : R.string.use_immersive_mode);
+        // The head-turn slider only does anything in 5DoF
+        int visibility = XrActivity.isActive() && gamepad && cbImmersiveMode.isChecked() ? View.VISIBLE : View.GONE;
+        View headTurnSensitivity = root.findViewById(R.id.LLHeadTurnSensitivity);
+        if (headTurnSensitivity != null) headTurnSensitivity.setVisibility(visibility);
     }
 
     public static void hmdUI(Activity activity, CheckBox cbSBS, CheckBox cbImmersiveMode, CheckBox cbCurvedScreen, CheckBox cbPassthrough, TextView tvToApplyClose, Runnable onChanged) {
