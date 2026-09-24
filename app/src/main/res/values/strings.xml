@@ -904,7 +904,7 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="mod_profile_shortcut_unreadable">the new shortcut could not be read back.</string>
 
     <!-- Installers and mods share one tab, so which kind is being added is asked after the button. -->
-    <string name="installers_and_mods">Installers &amp; Mods</string>
+    <string name="installers_and_mods">Mods</string>
     <string name="no_installers_or_mods_to_display">No installers or mods yet. Add one of your own, or download one from the list.</string>
     <string name="add_kind_title">What kind of package do you want to add?</string>
     <string name="add_kind_installer">Installer — a program that installs a game</string>
