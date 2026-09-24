@@ -97,13 +97,6 @@ public class XrDevice {
         return XrDevice.getRuntime() != null;
     }
 
-    public static boolean requiresKgslShim() {
-        return switch (getDevice()) {
-            case QUEST_3, QUEST_UNKNOWN -> true;
-            default -> false;
-        };
-    }
-
     private static XrDevice.HmdModel getPicoDevice() {
         return switch (Build.PRODUCT) {
             case "Pico Neo 3", "Pico_Neo_3", "A7P10", "A7H10" -> HmdModel.PICO_NEO_3_LINK;
