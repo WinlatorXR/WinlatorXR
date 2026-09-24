@@ -2,6 +2,7 @@
 #
 # Builds both halves of the bridge:
 #   build/wxr_bridge.dll  arm64ec PE, stamped as a Wine builtin
+#   build/i386/wxr_bridge.dll  i386 PE for 32-bit games, stamped the same
 #   build/wxr_bridge.so   aarch64 bionic unixlib
 #
 #   LLVM_MINGW=/path/to/llvm-mingw \
@@ -32,6 +33,12 @@ mkdir -p "$out"
 # server compares the terminating NUL too.
 printf 'Wine builtin DLL\000' | dd of="$out/wxr_bridge.dll" bs=1 seek=64 conv=notrunc 2>/dev/null
 
+# 32-bit games load this one from lib/wine/i386-windows; --kill-at keeps the export undecorated.
+mkdir -p "$out/i386"
+"$LLVM_MINGW/bin/i686-w64-mingw32-clang" -O2 -Wall -Wextra -shared -Wl,--kill-at \
+    -o "$out/i386/wxr_bridge.dll" "$here/wxr_bridge_pe.c"
+printf 'Wine builtin DLL\000' | dd of="$out/i386/wxr_bridge.dll" bs=1 seek=64 conv=notrunc 2>/dev/null
+
 cc=""
 for candidate in \
     "$ANDROID_NDK/toolchains/llvm/prebuilt/windows-x86_64/bin/clang.exe" \
@@ -52,4 +59,5 @@ done
     "$WINE_LIB/ntdll.so" -lnativewindow -ldl
 
 echo "  -> $out/wxr_bridge.dll"
+echo "  -> $out/i386/wxr_bridge.dll"
 echo "  -> $out/wxr_bridge.so"

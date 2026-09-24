@@ -96,6 +96,8 @@ struct XrRenderer {
     int LayerCount;
     int RecenterCount;
     bool RecenterPending;
+    bool RecenterEventPending;
+    XrTime RecenterChangeTime;
     XrCompositorLayer Layers[XrMaxLayerCount];
     XrPassthroughFB Passthrough;
     XrPassthroughLayerFB PassthroughLayer;

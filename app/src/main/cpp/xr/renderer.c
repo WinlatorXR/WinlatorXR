@@ -245,6 +245,13 @@ void XrRendererLockFrame(struct XrEngine* engine, struct XrRenderer* renderer) {
     OXR(xrLocateSpace(engine->HeadSpace, engine->StageSpace, engine->PredictedDisplayTime, &loc));
     renderer->HmdStage = loc.pose;
 
+    // Tell the game only once the poses include the recenter, or it offsets from stale ones
+    if (renderer->RecenterEventPending && engine->PredictedDisplayTime >= renderer->RecenterChangeTime)
+    {
+        renderer->RecenterCount++;
+        renderer->RecenterEventPending = false;
+    }
+
     renderer->ConfigFloat[CONFIG_VIEWPORT_FOVX] = ToDegrees(fovx);
     renderer->ConfigFloat[CONFIG_VIEWPORT_FOVY] = ToDegrees(fovy);
     renderer->HmdOrientation = XrQuaternionfEulerAngles(renderer->InvertedViewPose[0][renderer->FrameSync].orientation);
@@ -1000,7 +1007,8 @@ void XrRendererHandleXrEvents(struct XrEngine* engine, struct XrRenderer* render
                 break;
             case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING:
                 XrRendererRecenter(engine, renderer);
-                renderer->RecenterCount++;
+                renderer->RecenterChangeTime = ((XrEventDataReferenceSpaceChangePending*)base_event_handler)->changeTime;
+                renderer->RecenterEventPending = true;
                 break;
             case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED:
             {

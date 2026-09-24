@@ -37,6 +37,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -432,9 +433,11 @@ static void take_frame(XrSession session, struct wxr_direct_frame* frame, int* f
         ok = (src[v] = find_buffer(frame->views[v].slot, frame->views[v].layer)) != NULL;
     for (q = 0; ok && q < frame->quad_count; q++)
         ok = (src[frame->view_count + q] = find_buffer(frame->quads[q].slot, frame->quads[q].layer)) != NULL;
-    if (ok && frame->view_count) ok = ensure_eyes(session, frame->views[0].rect[2], frame->views[0].rect[3]);
+    /* A negative extent is a flipped image (inverted texture bounds): the blit flips it back */
+    if (ok && frame->view_count)
+        ok = ensure_eyes(session, abs(frame->views[0].rect[2]), abs(frame->views[0].rect[3]));
     for (q = 0; ok && q < frame->quad_count; q++)
-        ok = ensure_quad(session, q, frame->quads[q].rect[2], frame->quads[q].rect[3]);
+        ok = ensure_quad(session, q, abs(frame->quads[q].rect[2]), abs(frame->quads[q].rect[3]));
     if (!ok) {
         for (int i = 0; i < fd_count; i++) close(fds[i]);
         return;

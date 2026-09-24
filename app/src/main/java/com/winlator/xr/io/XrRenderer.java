@@ -183,7 +183,8 @@ public class XrRenderer extends GLRenderer {
             XrActivity.getInstance().updateFrame();
             // PC VR frames arriving directly replace the game window, so the screen swapchain
             // is only needed for what is drawn over them: the FPS panel and XR dialogs
-            directActive = xrFrameStarted && XrActivity.getInstance().nativeIsDirectActive();
+            // Native only shows them in VR mode, so another window on top (the task manager) is drawn instead
+            directActive = xrFrameStarted && fullscreen && XrActivity.getInstance().nativeIsDirectActive();
             screenBound = !directActive || XrActivity.showFPS || !XrContentDialog.getInstances().isEmpty();
             if (!screenBound) {
                 GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
@@ -258,7 +259,10 @@ public class XrRenderer extends GLRenderer {
         if (!renderableWindows.isEmpty()) {
             timestampHadWindow = System.currentTimeMillis();
             if (!renderableWindows.isEmpty()) {
-                RenderableWindow window = renderableWindows.get(renderableWindows.size() - 1);
+                // Skip 1x1 helper windows mapped over the game (Aperture Hand Lab), they are not what is on screen
+                int top = renderableWindows.size() - 1;
+                while (top > 0 && renderableWindows.get(top).content.width <= 1 && renderableWindows.get(top).content.height <= 1) top--;
+                RenderableWindow window = renderableWindows.get(top);
                 vrWindowOnTop = (window.rootX == 0) && (window.rootY == 0);
                 // This is the window renderWindows draws, so its redraws are the frame rate
                 // the user is watching - not those of a launcher still ticking away behind it.

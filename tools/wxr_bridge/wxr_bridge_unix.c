@@ -857,3 +857,13 @@ const unixlib_entry_t __wine_unix_call_funcs[] = {
     bridge_dump,
     bridge_present,
 };
+
+/* 32-bit games reach the same calls through WoW64; the args structs are fixed-size, so no thunks. */
+const unixlib_entry_t __wine_unix_call_wow64_funcs[] = {
+    bridge_init,
+    bridge_import,
+    bridge_copy_readback,
+    bridge_submit,
+    bridge_dump,
+    bridge_present,
+};

@@ -17,6 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -152,6 +153,38 @@ static XrSpace direct_space(uint64_t id) {
     return it == xr_spaces.end() ? XR_NULL_HANDLE : it->second;
 }
 
+// The headset recenter only moves LOCAL, so standing (STAGE) games get the head's yaw and floor spot applied here
+static XrPosef xr_stage_recenter = {{0.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}};
+
+static XrReferenceSpaceCreateInfo stage_recentered(XrReferenceSpaceCreateInfo info) {
+    if (info.referenceSpaceType != XR_REFERENCE_SPACE_TYPE_STAGE) return info;
+    XrPosef pose = info.poseInReferenceSpace;
+    XrQuaternionf q = xr_stage_recenter.orientation;
+    float c = 1.0f - 2.0f * q.y * q.y, s = 2.0f * q.w * q.y;
+    info.poseInReferenceSpace.orientation = XrQuaternionfMultiply(q, pose.orientation);
+    info.poseInReferenceSpace.position.x = xr_stage_recenter.position.x + pose.position.x * c + pose.position.z * s;
+    info.poseInReferenceSpace.position.z = xr_stage_recenter.position.z - pose.position.x * s + pose.position.z * c;
+    return info;
+}
+
+static void recenter_stage_spaces() {
+    XrPosef head = xr_module_renderer.HmdStage;
+    XrQuaternionf h = head.orientation;
+    // Yaw about +Y that turns -Z (OpenXR forward) to where the head faces
+    float yaw = atan2f(2.0f * (h.x * h.z + h.w * h.y), 1.0f - 2.0f * (h.x * h.x + h.y * h.y));
+    xr_stage_recenter.orientation = {0.0f, sinf(yaw / 2), 0.0f, cosf(yaw / 2)};
+    xr_stage_recenter.position = {head.position.x, 0.0f, head.position.z};
+
+    for (auto& it : xr_info) {
+        if (it.second.referenceSpaceType != XR_REFERENCE_SPACE_TYPE_STAGE) continue;
+        XrReferenceSpaceCreateInfo space_info = stage_recentered(it.second);
+        XrSpace output = XR_NULL_HANDLE;
+        if (xrCreateReferenceSpace(xr_module_engine.Session, &space_info, &output) != XR_SUCCESS) continue;
+        xrDestroySpace(xr_spaces[it.first]);
+        xr_spaces[it.first] = output;
+    }
+}
+
 JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_sendManufacturer(JNIEnv *env, jobject thiz, jstring manufacturer) {
     const char *nativeStr = env->GetStringUTFChars(manufacturer, 0);
@@ -234,6 +267,12 @@ Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean imm
     if (XrRendererInitFrame(&xr_module_engine, &xr_module_renderer)) {
         // Update controllers state
         XrInputUpdate(&xr_module_engine, &xr_module_input);
+
+        static int last_recenter = 0;
+        if (last_recenter != xr_module_renderer.RecenterCount) {
+            last_recenter = xr_module_renderer.RecenterCount;
+            recenter_stage_spaces();
+        }
 
         // Get poses for XrAPI
         updatePoses();
@@ -665,11 +704,19 @@ Java_com_winlator_xr_XrActivity_increaseReferenceSpacesOffset(JNIEnv *env, jobje
         }
         space_info.poseInReferenceSpace = XrPosefMultiply(space_info.poseInReferenceSpace, offset);
 
-        xrCreateReferenceSpace(xr_module_engine.Session, &space_info, &output);
+        XrReferenceSpaceCreateInfo recentered = stage_recentered(space_info);
+        xrCreateReferenceSpace(xr_module_engine.Session, &recentered, &output);
         xrDestroySpace(xr_spaces[space]);
         xr_info[space] = space_info;
         xr_spaces[space] = output;
     }
+}
+
+// The runtime sends poses to 3 decimals, which the Pico runtime rejects as not unit length (recenter)
+static void normalize_orientation(XrQuaternionf* q) {
+    float len = sqrtf(q->x * q->x + q->y * q->y + q->z * q->z + q->w * q->w);
+    if (len > 0.0f) { q->x /= len; q->y /= len; q->z /= len; q->w /= len; }
+    else *q = {0.0f, 0.0f, 0.0f, 1.0f};
 }
 
 JNIEXPORT void JNICALL
@@ -687,6 +734,7 @@ Java_com_winlator_xr_XrActivity_updateActionSpace(JNIEnv *env, jobject thiz, jin
         space_info.poseInActionSpace.orientation.y = qy;
         space_info.poseInActionSpace.orientation.z = qz;
         space_info.poseInActionSpace.orientation.w = qw;
+        normalize_orientation(&space_info.poseInActionSpace.orientation);
         space_info.poseInActionSpace.position.x = x;
         space_info.poseInActionSpace.position.y = y;
         space_info.poseInActionSpace.position.z = z;
@@ -712,10 +760,12 @@ Java_com_winlator_xr_XrActivity_updateReferenceSpace(JNIEnv *env, jobject thiz, 
         space_info.poseInReferenceSpace.orientation.y = qy;
         space_info.poseInReferenceSpace.orientation.z = qz;
         space_info.poseInReferenceSpace.orientation.w = qw;
+        normalize_orientation(&space_info.poseInReferenceSpace.orientation);
         space_info.poseInReferenceSpace.position.x = x;
         space_info.poseInReferenceSpace.position.y = y;
         space_info.poseInReferenceSpace.position.z = z;
-        if (xrCreateReferenceSpace(xr_module_engine.Session, &space_info, &output) != XR_SUCCESS) {
+        XrReferenceSpaceCreateInfo recentered = stage_recentered(space_info);
+        if (xrCreateReferenceSpace(xr_module_engine.Session, &recentered, &output) != XR_SUCCESS) {
             ALOGE("Failed to create reference space %d", space);
             std::exit(-1);
         }
