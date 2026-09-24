@@ -80,6 +80,7 @@ public class ContainerDetailFragment extends Fragment {
 
     private ContainerManager manager;
     private ContentsManager contentsManager;
+    private boolean proton11Defaults;
     private final int containerId;
     private static Container container;
     private PreloaderDialog preloaderDialog;
@@ -1143,15 +1144,25 @@ public class ContainerDetailFragment extends Fragment {
                 loadBox64VersionSpinner(context, container, contentsManager, sBox64Version, wineInfo.isArm64EC());
                 cbWoW64Mode.setEnabled(true); // Always allow user to toggle WoW64 mode
                 updateArchitecture(wineInfo);
+                // Before the Proton 11 default below, which needs the arm64 list to find Wrapper-v2
+                updateGraphicsDriverSpinner(context, sGraphicsDriver);
                 // The default DXVK version is architecture-specific, and the tag was seeded with
                 // the x86_64 default before this listener first ran, so re-seed it on every
                 // selection. In edit mode the container's saved config stands.
                 if (!isEditMode()) {
+                    boolean proton11 = DefaultVersion.isProton11(wineVersion);
                     View vDXWrapperConfig = view.findViewById(R.id.BTDXWrapperConfig);
                     if (vDXWrapperConfig != null)
-                        vDXWrapperConfig.setTag(Container.defaultDXWrapperConfig(wineInfo.isArm64EC()));
+                        vDXWrapperConfig.setTag(proton11 ? Container.defaultDXWrapperConfig(DefaultVersion.PROTON11_DXVK, DefaultVersion.PROTON11_VKD3D) : Container.defaultDXWrapperConfig(wineInfo.isArm64EC()));
+                    // Only swap the other defaults when crossing into or out of Proton 11, so edits survive re-picking.
+                    if (proton11 != proton11Defaults) {
+                        proton11Defaults = proton11;
+                        AppUtils.setSpinnerSelectionFromIdentifier(sGraphicsDriver, proton11 ? DefaultVersion.PROTON11_GRAPHICS_DRIVER : Container.DEFAULT_GRAPHICS_DRIVER);
+                        view.findViewById(R.id.BTGraphicsDriverConfig).setTag(proton11 ? Container.defaultGraphicsDriverConfig(DefaultVersion.PROTON11_WRAPPER) : Container.DEFAULT_GRAPHICSDRIVERCONFIG);
+                        AppUtils.setSpinnerSelectionFromValue(view.findViewById(R.id.SFEXCoreVersion), proton11 ? DefaultVersion.PROTON11_FEXCORE : DefaultVersion.FEXCORE);
+                        ((EnvVarsView)view.findViewById(R.id.EnvVarsView)).setEnvVars(new EnvVars(proton11 ? DefaultVersion.PROTON11_ENV_VARS : Container.DEFAULT_ENV_VARS));
+                    }
                 }
-                updateGraphicsDriverSpinner(context, sGraphicsDriver);
             }
             @Override
             public void onNothingSelected(AdapterView<?> parent) {

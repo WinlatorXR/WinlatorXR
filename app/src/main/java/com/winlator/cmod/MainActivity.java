@@ -51,6 +51,7 @@ import com.winlator.cmod.contentdialog.SaveSettingsDialog;
 import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.core.Callback;
+import com.winlator.cmod.core.DefaultVersion;
 import com.winlator.cmod.core.PreloaderDialog;
 import com.winlator.cmod.container.ShortcutProfile;
 import com.winlator.cmod.core.WineInfo;
@@ -71,6 +72,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -533,8 +535,19 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         containerManager.loadContainers();
         if (!containerManager.getContainers().isEmpty()) return;
 
-        String[] wineVersions = getResources().getStringArray(R.array.wine_entries);
         ContentsManager contentsManager = new ContentsManager(this);
+        contentsManager.syncContents();
+        // Bundled contents/ packages listed here get a default container too, if they installed.
+        List<String> versionList = new ArrayList<>(Arrays.asList(getResources().getStringArray(R.array.wine_entries)));
+        Map<String, String> names = new HashMap<>();
+        String[] contentEntries = getResources().getStringArray(R.array.default_container_content_entries);
+        String[] contentNames = getResources().getStringArray(R.array.default_container_content_names);
+        for (int i = 0; i < contentEntries.length; i++) {
+            if (contentsManager.getProfileByEntryName(contentEntries[i]) == null) continue;
+            versionList.add(contentEntries[i]);
+            if (i < contentNames.length) names.put(contentEntries[i], contentNames[i]);
+        }
+        String[] wineVersions = versionList.toArray(new String[0]);
 
         List<String> bundledContainers = containerManager.listBundledContainerAssets();
         if (!bundledContainers.isEmpty()) {
@@ -546,13 +559,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     }
                 } else {
                     Log.e("MainActivity", "Failed to auto-import bundled container asset; falling back to default containers");
-                    createDefaultContainer(wineVersions, 0, contentsManager);
+                    createDefaultContainer(wineVersions, names, 0, contentsManager);
                 }
             });
             return;
         }
 
-        createDefaultContainer(wineVersions, 0, contentsManager);
+        createDefaultContainer(wineVersions, names, 0, contentsManager);
     }
 
     /**
@@ -560,16 +573,23 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
      * Creation is sequential because container ids come from ContainerManager's in-memory
      * counter, which overlapping creations would hand out twice.
      */
-    private void createDefaultContainer(String[] wineVersions, int index, ContentsManager contentsManager) {
+    private void createDefaultContainer(String[] wineVersions, Map<String, String> names, int index, ContentsManager contentsManager) {
         if (index >= wineVersions.length) return;
         final String wineVersion = wineVersions[index];
 
         try {
             JSONObject data = new JSONObject();
-            data.put("name", wineVersion);
+            data.put("name", names.getOrDefault(wineVersion, wineVersion));
             data.put("wineVersion", wineVersion);
             data.put("emulator", Container.DEFAULT_EMULATOR);
             data.put("dxwrapperConfig", Container.defaultDXWrapperConfig(WineInfo.fromIdentifier(this, contentsManager, wineVersion).isArm64EC()));
+            if (DefaultVersion.isProton11(wineVersion)) {
+                data.put("dxwrapperConfig", Container.defaultDXWrapperConfig(DefaultVersion.PROTON11_DXVK, DefaultVersion.PROTON11_VKD3D));
+                data.put("graphicsDriver", DefaultVersion.PROTON11_GRAPHICS_DRIVER);
+                data.put("graphicsDriverConfig", Container.defaultGraphicsDriverConfig(DefaultVersion.PROTON11_WRAPPER));
+                data.put("fexcoreVersion", DefaultVersion.PROTON11_FEXCORE);
+                data.put("envVars", DefaultVersion.PROTON11_ENV_VARS);
+            }
 
             containerManager.createContainerAsync(data, contentsManager, (container) -> {
                 if (container == null) Log.e("MainActivity", "Failed to auto-create default container for " + wineVersion);
@@ -579,7 +599,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     ((ContainersFragment) currentFragment).loadContainersList();
                 }
 
-                createDefaultContainer(wineVersions, index + 1, contentsManager);
+                createDefaultContainer(wineVersions, names, index + 1, contentsManager);
             });
         } catch (JSONException e) {
             e.printStackTrace();

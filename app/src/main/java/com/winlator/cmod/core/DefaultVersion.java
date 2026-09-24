@@ -5,9 +5,10 @@ import com.winlator.xr.utils.XrDevice;
 public abstract class DefaultVersion {
     public static final String BOX86 = "0.4.2";
     public static final String BOX64 = "0.4.2";
-    public static final String FEXCORE = "2605";
+    public static final String FEXCORE = "2609";
     public static final String WRAPPER = switch(XrDevice.getDevice()) {
-        case PICO_4_ULTRA, QUEST_2, PICO_NEO_3_LINK, PICO_4, PICO_UNKNOWN -> "adrenotools-Turnip_v26.3.0_r9";
+        case PICO_4_ULTRA, QUEST_2, PICO_NEO_3_LINK, PICO_4 -> "adrenotools-Turnip_v26.3.0_r9";
+        case PICO_UNKNOWN -> "adrenotools-Turnip_Gen8_V31";
         case QUEST_3, QUEST_UNKNOWN -> "Turnip_Adreno_Driver_T26_(@Mr_Purple_666)";
         default -> "System";
     };
@@ -39,7 +40,40 @@ public abstract class DefaultVersion {
     public static final String VKD3D = "2.12-0";
 
     public static final String ENV_VARS = switch(XrDevice.getDevice()) {
-        case PICO_4_ULTRA, PICO_UNKNOWN -> "ZINK_DESCRIPTORS=lazy ZINK_DEBUG=compact MESA_SHADER_CACHE_DISABLE=false MESA_SHADER_CACHE_MAX_SIZE=1024MB mesa_glthread=true WINEESYNC=1 MESA_VK_WSI_PRESENT_MODE=mailbox DXVK_DISABLE_TIMELINE_SEMAPHORES=1 FEX_DISKCACHE=0 WINE_FAST_YIELD=0 TU_DEBUG=noconform DXVK_HUD=0 MANGOHUD=0 MANGOHUD_CONFIG=horizontal,ram,procmem,gpu_temp,frame_timing,engine_version,gpu_stats=0";
+        case PICO_4_ULTRA, PICO_UNKNOWN -> "ZINK_DESCRIPTORS=lazy ZINK_DEBUG=compact MESA_SHADER_CACHE_DISABLE=false MESA_SHADER_CACHE_MAX_SIZE=1024MB mesa_glthread=true WINEESYNC=1 MESA_VK_WSI_PRESENT_MODE=mailbox DXVK_DISABLE_TIMELINE_SEMAPHORES=1 FEX_DISKCACHE=1 WINE_FAST_YIELD=0 TU_DEBUG=noconform DXVK_HUD=0 MANGOHUD=0 MANGOHUD_CONFIG=horizontal,ram,procmem,gpu_temp,frame_timing,engine_version,gpu_stats=0";
         default -> "ZINK_DESCRIPTORS=lazy ZINK_DEBUG=compact MESA_SHADER_CACHE_DISABLE=false MESA_SHADER_CACHE_MAX_SIZE=512MB mesa_glthread=true WINEESYNC=1 MESA_VK_WSI_PRESENT_MODE=mailbox DXVK_DISABLE_TIMELINE_SEMAPHORES=1 FEX_DISKCACHE=0 WINE_FAST_YIELD=0 TU_DEBUG=noconform,sysmem DXVK_HUD=0 MANGOHUD=0 MANGOHUD_CONFIG=horizontal,ram,procmem,gpu_temp,frame_timing,engine_version,gpu_stats=0";
+    };
+
+    // Defaults for new Proton 11 containers, add headset cases to override.
+    public static boolean isProton11(String wineVersion) {
+        return wineVersion != null && wineVersion.toLowerCase().startsWith("proton-11");
+    }
+
+    public static final String PROTON11_GRAPHICS_DRIVER = "wrapper-v2";
+
+    public static final String PROTON11_WRAPPER = switch(XrDevice.getDevice()) {
+        case PICO_4_ULTRA, QUEST_2, PICO_NEO_3_LINK, PICO_4 -> "adrenotools-Turnip_v26.3.0_r9";
+        case PICO_UNKNOWN -> "adrenotools-Turnip_Gen8_V31";
+        case QUEST_3, QUEST_UNKNOWN -> "Turnip_Adreno_Driver_T26_(@Mr_Purple_666)";
+        default -> "system";
+    };
+
+    public static final String PROTON11_DXVK = switch(XrDevice.getDevice()) {
+        case PICO_4_ULTRA, QUEST_3, PICO_UNKNOWN -> "2.6.2-binsem-gplasync-arm64ec";
+        default -> "sarek-dyasync-arm64ec-1.12.0";
+    };
+
+    public static final String PROTON11_VKD3D = switch(XrDevice.getDevice()) {
+        default -> VKD3D;
+    };
+
+    public static final String PROTON11_FEXCORE = switch(XrDevice.getDevice()) {
+        default -> FEXCORE;
+    };
+
+    public static final String PROTON11_ENV_VARS = switch(XrDevice.getDevice()) {
+        case PICO_4_ULTRA, PICO_UNKNOWN -> "ZINK_DESCRIPTORS=lazy ZINK_DEBUG=compact MESA_SHADER_CACHE_DISABLE=false MESA_SHADER_CACHE_MAX_SIZE=1024MB mesa_glthread=true WINEESYNC=1 MESA_VK_WSI_PRESENT_MODE=mailbox DXVK_DISABLE_TIMELINE_SEMAPHORES=1 FEX_DISKCACHE=1 WINE_FAST_YIELD=1 TU_DEBUG=noconform DXVK_HUD=0 MANGOHUD=0 MANGOHUD_CONFIG=horizontal,ram,procmem,gpu_temp,frame_timing,engine_version,gpu_stats=0";
+        case QUEST_3 -> "ZINK_DESCRIPTORS=lazy ZINK_DEBUG=compact MESA_SHADER_CACHE_DISABLE=false MESA_SHADER_CACHE_MAX_SIZE=512MB mesa_glthread=true WINEESYNC=1 MESA_VK_WSI_PRESENT_MODE=mailbox DXVK_DISABLE_TIMELINE_SEMAPHORES=1 FEX_DISKCACHE=1 WINE_FAST_YIELD=1 TU_DEBUG=noconform DXVK_HUD=0 MANGOHUD=0 MANGOHUD_CONFIG=horizontal,ram,procmem,gpu_temp,frame_timing,engine_version,gpu_stats=0";
+        default -> "ZINK_DESCRIPTORS=lazy ZINK_DEBUG=compact MESA_SHADER_CACHE_DISABLE=false MESA_SHADER_CACHE_MAX_SIZE=512MB mesa_glthread=true WINEESYNC=1 MESA_VK_WSI_PRESENT_MODE=mailbox DXVK_DISABLE_TIMELINE_SEMAPHORES=1 FEX_DISKCACHE=1 WINE_FAST_YIELD=1 TU_DEBUG=noconform DXVK_HUD=0 MANGOHUD=0 MANGOHUD_CONFIG=horizontal,ram,procmem,gpu_temp,frame_timing,engine_version,gpu_stats=0";
     };
 }

@@ -40,6 +40,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         private const val COLOR_CANCEL    = 0xFFCC3333.toInt()
         private const val COLOR_UNINSTALL = 0xFFB71C1C.toInt()
         private const val COLOR_LAUNCH    = 0xFF2E7D32.toInt()
+        private const val VR_NOTE = "To play in VR, please launch in the WXR VR version of proton 11"
     }
 
     private val ui = Handler(Looper.getMainLooper())
@@ -75,6 +76,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
     private lateinit var nameText: TextView
     private lateinit var typeText: TextView
     private lateinit var sizeText: TextView
+    private lateinit var vrNoteText: TextView
     private lateinit var statusText: TextView
     private lateinit var installBtn: Button
     private lateinit var launchBtn: Button
@@ -438,6 +440,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         updateVariantButtons()
 
         val androidSelected = selectedOs == SteamDepotDownloader.OS_ANDROID
+        vrNoteText.visibility = if (!androidSelected && isVrGame()) View.VISIBLE else View.GONE
         autoGoldbergCheck.visibility = if (androidSelected) View.GONE else View.VISIBLE
         branchBtn.visibility = if (!androidSelected && branches.size > 1) View.VISIBLE else View.GONE
         branchBtn.text = "Branch: $selectedBranch"
@@ -783,7 +786,10 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         for (sub in subDirs) scanForSteamApiDirs(sub, depth + 1, found, visited)
     }
 
-    private fun onLaunchClicked() {
+    private fun isVrGame(): Boolean =
+        SteamRepository.getInstance().database.getVrSupport(appId) != SteamDatabase.VR_NONE
+
+    private fun onLaunchClicked(vrNoteSeen: Boolean = false) {
         val g = game ?: return
         if (!g.isInstalled || g.installDir.isEmpty()) {
             Toast.makeText(this, "Game not installed", Toast.LENGTH_SHORT).show()
@@ -793,6 +799,15 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         // rather than the Wine/Box64 exe launcher.
         if (g.isAndroidInstall) {
             installApkFromDir(File(g.installDir))
+            return
+        }
+        if (!vrNoteSeen && isVrGame()) {
+            AlertDialog.Builder(this)
+                .setTitle("VR game")
+                .setMessage(VR_NOTE)
+                .setPositiveButton("OK") { _, _ -> onLaunchClicked(true) }
+                .setNegativeButton("Cancel", null)
+                .show()
             return
         }
         val installDir = File(g.installDir)
@@ -1345,6 +1360,15 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         row1.addView(typeText)
         row1.addView(sizeText)
         info.addView(row1)
+
+        vrNoteText = TextView(this).apply {
+            text = VR_NOTE
+            textSize = 13f
+            setTextColor(Color.parseColor("#FF9800"))
+            setPadding(0, dp(4), 0, dp(4))
+            visibility = View.GONE
+        }
+        info.addView(vrNoteText)
 
         // Version selector (PC vs Android APK) — hidden unless the title ships an Android build.
         versionRow = LinearLayout(this).apply {

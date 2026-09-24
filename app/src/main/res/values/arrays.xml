@@ -130,6 +130,7 @@
     </string-array>
     <string-array name="fexcore_version_entries">
         <item>2605</item>
+        <item>2609</item>
     </string-array>
     <string-array name="dinput_mapper_type_entries">
         <item>@string/dinput_legacy</item>
@@ -343,6 +344,12 @@
     <string-array name="wine_entries">
         <item>proton-9.0-x86_64</item>
         <item>proton-9.0-arm64ec</item>
+    </string-array>
+    <string-array name="default_container_content_entries">
+        <item>Proton-11.0-2-arm64ec-4</item>
+    </string-array>
+    <string-array name="default_container_content_names">
+        <item>Proton-11.0-2-arm64ec-WXR-VR</item>
     </string-array>
     <string-array name="vkbasalt_sharpness_entries">
         <item>None</item>

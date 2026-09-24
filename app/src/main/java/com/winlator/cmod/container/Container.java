@@ -26,7 +26,7 @@ public class Container {
     public static final String DEFAULT_EMULATOR = "FEXCore";
     public static final String DEFAULT_DXWRAPPER = "dxvk";
     public static final String DEFAULT_DXWRAPPERCONFIG = defaultDXWrapperConfig(false);
-    public static final String DEFAULT_GRAPHICSDRIVERCONFIG = "version=" + DefaultVersion.WRAPPER + ";blacklistedExtensions=" + ";maxDeviceMemory=0" + ";adrenotoolsTurnip=1" + ";frameSync=Never";
+    public static final String DEFAULT_GRAPHICSDRIVERCONFIG = defaultGraphicsDriverConfig(DefaultVersion.WRAPPER);
     public static final String DEFAULT_DDRAWRAPPER = "dd7to9-v1.7";
     public static final String DEFAULT_WINCOMPONENTS = "direct3d=1,directsound=0,directmusic=0,directshow=0,directplay=0,xaudio=0,vcrun2005=1,vcrun2010=1,wmdecoder=1";
     public static final String FALLBACK_WINCOMPONENTS = "direct3d=1,directsound=1,directmusic=1,directshow=1,directplay=1,xaudio=1,vcrun2005=1,vcrun2010=1,wmdecoder=1";
@@ -154,7 +154,15 @@ public class Container {
      * listed for both architectures, so it needs no split.
      */
     public static String defaultDXWrapperConfig(boolean arm64ec) {
-        return "version=" + DefaultVersion.dxvk(arm64ec) + ",framerate=0,maxDeviceMemory=0,async=1,asyncCache=1" + ",vkd3dVersion=" + DefaultVersion.VKD3D + ",vkd3dLevel=12_1";
+        return defaultDXWrapperConfig(DefaultVersion.dxvk(arm64ec), DefaultVersion.VKD3D);
+    }
+
+    public static String defaultDXWrapperConfig(String dxvkVersion, String vkd3dVersion) {
+        return "version=" + dxvkVersion + ",framerate=0,maxDeviceMemory=0,async=1,asyncCache=1" + ",vkd3dVersion=" + vkd3dVersion + ",vkd3dLevel=12_1";
+    }
+
+    public static String defaultGraphicsDriverConfig(String wrapperVersion) {
+        return "version=" + wrapperVersion + ";blacklistedExtensions=" + ";maxDeviceMemory=0" + ";adrenotoolsTurnip=1" + ";frameSync=Never";
     }
 
     public String getDXWrapperConfig() {

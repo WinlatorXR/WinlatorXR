@@ -25,6 +25,8 @@ public class FrameRating extends FrameLayout implements Runnable {
     private float lastFPS = 0;
     private String renderer = null;
     private String gpuName = null;
+    // Looked up once: each GPUInformation call creates and destroys a whole VkInstance
+    private static String systemGpuName = null;
     private String totalRAM = null;
     private final TextView tvFPS;
     private final TextView tvRenderer;
@@ -111,8 +113,10 @@ public class FrameRating extends FrameLayout implements Runnable {
             tvRenderer.setText("OpenGL");
         if (gpuName != null)
             tvGPU.setText(gpuName);
-        else
-            tvGPU.setText(GPUInformation.getRenderer());
+        else {
+            if (systemGpuName == null) systemGpuName = GPUInformation.getRenderer();
+            tvGPU.setText(systemGpuName);
+        }
         tvRAM.setText(getAvailableRAM() + " GB Used / " + totalRAM + " Total");
     }
 }
