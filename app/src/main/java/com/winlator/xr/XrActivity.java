@@ -22,6 +22,7 @@ import android.app.Activity;
 import android.app.ActivityOptions;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.Display;
@@ -366,7 +367,7 @@ public class XrActivity extends XServerDisplayActivity {
     public native void nativeSetSbsTrim(int percent);
     public native void nativeSetPointerSmoothing(boolean enabled);
     public native boolean nativeIsEnvironmentSupported();
-    public native void nativeSetEnvironment(byte[] rgba, int width, int height);
+    public native void nativeSetEnvironment(Bitmap bitmap);
     public native void nativeSetEnvironmentEnabled(boolean enabled);
     public native boolean nativeIsSharpeningSupported();
     public native void nativeSetUseVR(boolean enabled);

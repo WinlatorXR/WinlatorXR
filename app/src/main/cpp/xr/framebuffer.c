@@ -32,7 +32,18 @@ bool XrFramebufferCreate(struct XrFramebuffer *framebuffer, XrSession session, i
     memset(framebuffer, 0, sizeof(framebuffer));
 
 #if XR_USE_GRAPHICS_API_OPENGL_ES
-    return XrFramebufferCreateGL(framebuffer, session, width, height);
+    return XrFramebufferCreateGL(framebuffer, session, width, height, 0);
+#else
+    return false;
+#endif
+}
+
+bool XrFramebufferCreateStatic(struct XrFramebuffer *framebuffer, XrSession session, int width, int height)
+{
+    memset(framebuffer, 0, sizeof(*framebuffer));
+
+#if XR_USE_GRAPHICS_API_OPENGL_ES
+    return XrFramebufferCreateGL(framebuffer, session, width, height, XR_SWAPCHAIN_CREATE_STATIC_IMAGE_BIT);
 #else
     return false;
 #endif
@@ -102,7 +113,8 @@ void XrFramebufferSetCurrent(struct XrFramebuffer *framebuffer)
 
 #if XR_USE_GRAPHICS_API_OPENGL_ES
 #define GL_FRAMEBUFFER_SRGB               0x8DB9
-bool XrFramebufferCreateGL(struct XrFramebuffer *framebuffer, XrSession session, int width, int height)
+bool XrFramebufferCreateGL(struct XrFramebuffer *framebuffer, XrSession session, int width, int height,
+                           XrSwapchainCreateFlags create_flags)
 {
     glDisable(GL_FRAMEBUFFER_SRGB);
     XrSwapchainCreateInfo swapchain_info;
@@ -114,6 +126,7 @@ bool XrFramebufferCreateGL(struct XrFramebuffer *framebuffer, XrSession session,
     swapchain_info.faceCount = 1;
     swapchain_info.mipCount = 1;
     swapchain_info.arraySize = 1;
+    swapchain_info.createFlags = create_flags;
 
     framebuffer->Width = swapchain_info.width;
     framebuffer->Height = swapchain_info.height;
@@ -121,7 +134,9 @@ bool XrFramebufferCreateGL(struct XrFramebuffer *framebuffer, XrSession session,
     // Create the color swapchain.
     swapchain_info.format = GL_SRGB8_ALPHA8;;
     swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
-    OXR(xrCreateSwapchain(session, &swapchain_info, &framebuffer->Handle));
+    XrResult result;
+    OXR(result = xrCreateSwapchain(session, &swapchain_info, &framebuffer->Handle));
+    if (XR_FAILED(result)) return false;
     OXR(xrEnumerateSwapchainImages(framebuffer->Handle, 0, &framebuffer->SwapchainLength, NULL));
     framebuffer->SwapchainImage = malloc(framebuffer->SwapchainLength * sizeof(XrSwapchainImageOpenGLESKHR));
 

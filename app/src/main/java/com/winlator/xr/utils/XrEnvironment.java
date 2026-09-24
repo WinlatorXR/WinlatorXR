@@ -29,7 +29,6 @@ import com.winlator.cmod.core.SessionSettings;
 import com.winlator.xr.XrActivity;
 
 import java.io.File;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -48,10 +47,10 @@ public class XrEnvironment {
     private static final String DIR_NAME = "environments";
     private static final String TAG = "XrEnvironment";
 
-    // A 4096x2048 panorama costs 32MB of swapchain, which is as much as is worth spending
-    // on something the user is not looking directly at.
-    private static final int MAX_WIDTH = 4096;
-    private static final int MAX_HEIGHT = 2048;
+    // 8192 across 360 degrees roughly matches headset pixel density; past that, with no
+    // mipmaps, extra detail only shimmers. It is a single 128MB static swapchain image.
+    private static final int MAX_WIDTH = 8192;
+    private static final int MAX_HEIGHT = 4096;
 
     private static final List<String> EXTENSIONS = Arrays.asList(".jpg", ".jpeg", ".png", ".webp");
 
@@ -192,7 +191,7 @@ public class XrEnvironment {
     }
 
     /**
-     * Decodes the named panorama and hands it to the native layer. Decoding a 4K image takes
+     * Decodes the named panorama and hands it to the native layer. Decoding an 8K image takes
      * long enough to stutter the UI, so it happens on a worker thread; the native side only
      * copies the pixels and defers the actual upload to the render thread.
      */
@@ -202,7 +201,7 @@ public class XrEnvironment {
         if (!activity.nativeIsEnvironmentSupported()) return;
 
         if (name == null || name.isEmpty()) {
-            activity.nativeSetEnvironment(null, 0, 0);
+            activity.nativeSetEnvironment(null);
             return;
         }
 
@@ -211,14 +210,12 @@ public class XrEnvironment {
             Bitmap bitmap = decode(file);
             if (bitmap == null) {
                 Log.e(TAG, "Could not decode environment " + file);
-                activity.nativeSetEnvironment(null, 0, 0);
+                activity.nativeSetEnvironment(null);
                 return;
             }
 
             // ARGB_8888 is laid out as R,G,B,A bytes in memory, which is what GL_RGBA wants.
-            ByteBuffer buffer = ByteBuffer.allocate(bitmap.getWidth() * bitmap.getHeight() * 4);
-            bitmap.copyPixelsToBuffer(buffer);
-            activity.nativeSetEnvironment(buffer.array(), bitmap.getWidth(), bitmap.getHeight());
+            activity.nativeSetEnvironment(bitmap);
             bitmap.recycle();
         }, "XrEnvironmentLoader").start();
     }

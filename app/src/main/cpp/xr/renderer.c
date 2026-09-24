@@ -797,8 +797,19 @@ bool XrRendererSetEnvironment(struct XrEngine* engine, struct XrRenderer* render
     // The panorama never changes once uploaded, so it lives in its own swapchain that
     // is acquired and released exactly once. The compositor keeps sampling the last
     // released image, which is what lets the layer cost us nothing per frame.
-    if (renderer->EnvironmentCreated &&
-        ((renderer->Environment.Width != width) || (renderer->Environment.Height != height)))
+    // A static swapchain holds one image instead of several, but can only be acquired
+    // once, so every upload gets a fresh one.
+#if XR_USE_GRAPHICS_API_OPENGL_ES
+    GLint max_size = 0;
+    GL(glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_size));
+    if ((width > max_size) || (height > max_size))
+    {
+        ALOGE("The %dx%d environment exceeds the %d texture limit", width, height, max_size);
+        return false;
+    }
+#endif
+
+    if (renderer->EnvironmentCreated)
     {
         XrFramebufferDestroy(&renderer->Environment);
         renderer->EnvironmentCreated = false;
@@ -807,7 +818,8 @@ bool XrRendererSetEnvironment(struct XrEngine* engine, struct XrRenderer* render
 
     if (!renderer->EnvironmentCreated)
     {
-        if (!XrFramebufferCreate(&renderer->Environment, engine->Session, width, height))
+        if (!XrFramebufferCreateStatic(&renderer->Environment, engine->Session, width, height) &&
+            !XrFramebufferCreate(&renderer->Environment, engine->Session, width, height))
         {
             ALOGE("Failed to create the %dx%d environment swapchain", width, height);
             return false;

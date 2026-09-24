@@ -46,6 +46,7 @@ target_link_libraries(xr
         EGL
         GLESv3
         nativewindow
+        jnigraphics
 )
 
 

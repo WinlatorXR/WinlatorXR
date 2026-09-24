@@ -24,6 +24,7 @@
 #include <map>
 #include <vector>
 #include <mutex>
+#include <android/bitmap.h>
 
 #include "openxr.h"
 
@@ -185,6 +186,25 @@ static void recenter_stage_spaces() {
     }
 }
 
+// Averages each 2x2 block in place; every write lands at or before the pixels it reads.
+static void halve_environment() {
+    const int width = xr_environment_width / 2;
+    const int height = xr_environment_height / 2;
+    const size_t stride = (size_t) xr_environment_width * 4;
+    uint8_t *pixels = xr_environment_pixels.data();
+    for (int y = 0; y < height; y++) {
+        const uint8_t *row0 = pixels + (size_t) (y * 2) * stride;
+        const uint8_t *row1 = row0 + stride;
+        uint8_t *out = pixels + (size_t) y * width * 4;
+        for (int x = 0; x < width * 4; x++) {
+            int c = (x / 4) * 8 + (x % 4);
+            out[x] = (uint8_t) ((row0[c] + row0[c + 4] + row1[c] + row1[c + 4] + 2) / 4);
+        }
+    }
+    xr_environment_width = width;
+    xr_environment_height = height;
+}
+
 JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_sendManufacturer(JNIEnv *env, jobject thiz, jstring manufacturer) {
     const char *nativeStr = env->GetStringUTFChars(manufacturer, 0);
@@ -289,9 +309,14 @@ Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean imm
                 if (xr_environment_pixels.empty()) {
                     XrRendererClearEnvironment(&xr_module_renderer);
                 } else {
-                    XrRendererSetEnvironment(&xr_module_engine, &xr_module_renderer,
-                                             xr_environment_pixels.data(),
-                                             xr_environment_width, xr_environment_height);
+                    // Halve to the old 4096 cap if the runtime or GPU refuses a larger one.
+                    while (!XrRendererSetEnvironment(&xr_module_engine, &xr_module_renderer,
+                                                     xr_environment_pixels.data(),
+                                                     xr_environment_width, xr_environment_height) &&
+                           xr_module_engine.PlatformFlag[PLATFORM_EXTENSION_EQUIRECT] &&
+                           (xr_environment_width > 4096)) {
+                        halve_environment();
+                    }
                     std::vector<uint8_t>().swap(xr_environment_pixels);
                 }
             }
@@ -510,10 +535,9 @@ Java_com_winlator_xr_XrActivity_nativeSetEnvironmentEnabled(JNIEnv *env, jobject
 }
 
 JNIEXPORT void JNICALL
-Java_com_winlator_xr_XrActivity_nativeSetEnvironment(JNIEnv *env, jobject obj, jbyteArray rgba,
-                                                     jint width, jint height) {
-    std::lock_guard<std::mutex> lock(xr_environment_mutex);
-    if (rgba == nullptr) {
+Java_com_winlator_xr_XrActivity_nativeSetEnvironment(JNIEnv *env, jobject obj, jobject bitmap) {
+    if (bitmap == nullptr) {
+        std::lock_guard<std::mutex> lock(xr_environment_mutex);
         std::vector<uint8_t>().swap(xr_environment_pixels);
         xr_environment_width = 0;
         xr_environment_height = 0;
@@ -522,31 +546,34 @@ Java_com_winlator_xr_XrActivity_nativeSetEnvironment(JNIEnv *env, jobject obj, j
         return;
     }
 
-    jsize length = env->GetArrayLength(rgba);
-    if (length != (jsize) width * height * 4) {
-        ALOGE("Environment payload is %d bytes, expected %d for %dx%d", (int) length,
-              width * height * 4, width, height);
+    // Reading the bitmap directly keeps an 8K panorama from needing a copy on the Java heap.
+    AndroidBitmapInfo info;
+    void *source = nullptr;
+    if ((AndroidBitmap_getInfo(env, bitmap, &info) != ANDROID_BITMAP_RESULT_SUCCESS) ||
+        (info.format != ANDROID_BITMAP_FORMAT_RGBA_8888) ||
+        (AndroidBitmap_lockPixels(env, bitmap, &source) != ANDROID_BITMAP_RESULT_SUCCESS)) {
+        ALOGE("Could not read the environment bitmap");
         return;
     }
-
-    xr_environment_pixels.resize((size_t) length);
-    env->GetByteArrayRegion(rgba, 0, length, (jbyte *) xr_environment_pixels.data());
 
     // GL texture rows run bottom-up while the decoded bitmap is top-down, so the panorama
     // reached the compositor vertically mirrored - sky underfoot. Reverse the rows on the
     // way in. This is a vertical flip rather than a 180 degree rotation on purpose: the
     // defect is only in the row order, and mirroring horizontally as well would leave any
     // text or signage in the panorama reading backwards.
+    const int width = (int) info.width;
+    const int height = (int) info.height;
     const size_t stride = (size_t) width * 4;
-    std::vector<uint8_t> scratch(stride);
-    for (int y = 0; y < height / 2; y++) {
-        uint8_t *top = xr_environment_pixels.data() + (size_t) y * stride;
-        uint8_t *bottom = xr_environment_pixels.data() + (size_t) (height - 1 - y) * stride;
-        memcpy(scratch.data(), top, stride);
-        memcpy(top, bottom, stride);
-        memcpy(bottom, scratch.data(), stride);
+    std::vector<uint8_t> pixels(stride * height);
+    for (int y = 0; y < height; y++) {
+        memcpy(pixels.data() + (size_t) (height - 1 - y) * stride,
+               (const uint8_t *) source + (size_t) y * info.stride, stride);
     }
+    AndroidBitmap_unlockPixels(env, bitmap);
 
+    // Copied outside the lock, which the render thread takes every frame.
+    std::lock_guard<std::mutex> lock(xr_environment_mutex);
+    xr_environment_pixels.swap(pixels);
     xr_environment_width = width;
     xr_environment_height = height;
     xr_environment_enabled = true;

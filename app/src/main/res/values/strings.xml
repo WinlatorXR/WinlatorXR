@@ -490,7 +490,7 @@
     <string name="disable_environment">Disable environment</string>
     <string name="xr_environment_none">None</string>
     <string name="xr_environment_import">Import panorama</string>
-    <string name="xr_environment_import_message">Choose an equirectangular 360 panorama.\n\nSupported formats: JPG, PNG and WebP. The image must have a 2:1 width to height ratio, such as 4096x2048; anything larger is scaled down to that, and transparency is ignored.</string>
+    <string name="xr_environment_import_message">Choose an equirectangular 360 panorama.\n\nSupported formats: JPG, PNG and WebP. The image must have a 2:1 width to height ratio, such as 8192x4096; anything larger is scaled down to that, and transparency is ignored.</string>
     <string name="xr_environment_imported">Panorama imported</string>
     <string name="xr_environment_import_failed">That file could not be imported. It must be a JPG, PNG or WebP image.</string>
     <string name="xr_environment_import_duplicate">A panorama named \"%1$s\" is already installed.\n\nReplace it?</string>

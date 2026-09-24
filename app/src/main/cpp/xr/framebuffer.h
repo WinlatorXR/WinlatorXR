@@ -35,6 +35,8 @@ struct XrFramebuffer {
 };
 
 bool XrFramebufferCreate(struct XrFramebuffer *framebuffer, XrSession session, int width, int height);
+// One image that can be acquired only once, for content uploaded once and never redrawn.
+bool XrFramebufferCreateStatic(struct XrFramebuffer *framebuffer, XrSession session, int width, int height);
 void XrFramebufferDestroy(struct XrFramebuffer *framebuffer);
 
 void XrFramebufferAcquire(struct XrFramebuffer *framebuffer);
@@ -42,5 +44,6 @@ void XrFramebufferRelease(struct XrFramebuffer *framebuffer);
 void XrFramebufferSetCurrent(struct XrFramebuffer *framebuffer);
 
 #if XR_USE_GRAPHICS_API_OPENGL_ES
-bool XrFramebufferCreateGL(struct XrFramebuffer *framebuffer, XrSession session, int width, int height);
+bool XrFramebufferCreateGL(struct XrFramebuffer *framebuffer, XrSession session, int width, int height,
+                           XrSwapchainCreateFlags create_flags);
 #endif
