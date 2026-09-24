@@ -72,6 +72,7 @@ public class XrRenderer extends GLRenderer {
     private boolean sbsStretch = false;
     private float sbsTrim = 0;
     private final Set<Integer> taskManagerWindows = ConcurrentHashMap.newKeySet();
+    private boolean taskManagerOnTop = false;
     private final XrFramesync xrFramesync;
     private final XrFpsOverlay fpsOverlay = new XrFpsOverlay();
 
@@ -174,7 +175,7 @@ public class XrRenderer extends GLRenderer {
 
         if (XrActivity.isEnabled(null)) {
             fullscreen = XrActivity.getVR();
-            sbs = XrActivity.getSBS() && taskManagerWindows.isEmpty();
+            sbs = XrActivity.getSBS() && !taskManagerOnTop;
             sbsStretch = XrActivity.sbsStretch && !XrActivity.isVR;
             sbsTrim = sbs && XrActivity.sbsTrim ? XrActivity.SBS_TRIM_PERCENT / 100.0f : 0;
             xrFrameReady = xrFrameStarted = XrActivity.getInstance().initFrame(
@@ -257,14 +258,24 @@ public class XrRenderer extends GLRenderer {
     protected void postWindows() {
         super.postWindows();
         if (!renderableWindows.isEmpty()) {
-            int top = renderableWindows.size() - 1;
-            RenderableWindow window = renderableWindows.get(top);
-            vrWindowOnTop = (window.rootX == 0) && (window.rootY == 0);
             timestampHadWindow = System.currentTimeMillis();
-
-            // Skip 1x1 helper windows mapped over the game (Aperture Hand Lab), they are not what is on screen
-            while (top > 0 && renderableWindows.get(top).content.width <= 1 && renderableWindows.get(top).content.height <= 1) top--;
-            fpsOverlay.setTrackedContent(renderableWindows.get(top).content);
+            if (!renderableWindows.isEmpty()) {
+                // Skip 1x1 helper windows mapped over the game (Aperture Hand Lab), they are not what is on screen
+                int top = renderableWindows.size() - 1;
+                while (top > 0 && renderableWindows.get(top).content.width <= 1 && renderableWindows.get(top).content.height <= 1) top--;
+                RenderableWindow window = renderableWindows.get(top);
+                vrWindowOnTop = (window.rootX == 0) && (window.rootY == 0);
+                // This is the window renderWindows draws, so its redraws are the frame rate
+                // the user is watching - not those of a launcher still ticking away behind it.
+                fpsOverlay.setTrackedContent(window.content);
+                // SBS only pauses while the task manager is in front; clicking back into the game leaves it open behind
+                boolean onTop = false;
+                for (int id : taskManagerWindows) {
+                    Window taskManager = xServer.windowManager.getWindow(id);
+                    if (taskManager != null && taskManager.getContent() == window.content) onTop = true;
+                }
+                taskManagerOnTop = onTop;
+            }
         }  else if ((System.currentTimeMillis() - timestampHadWindow > 1000)) {
             if (autoclose && XrActivity.isEnabled(null)) {
                 XrActivity.getInstance().runOnUiThread(() -> XrActivity.getInstance().closeSession());
