@@ -48,7 +48,7 @@
 #define LOG(...) __android_log_print(ANDROID_LOG_INFO, "WxrDirect", __VA_ARGS__)
 
 #define MAX_BUFFERS 128
-#define FRAME_TIMEOUT_MS 500.0  /* no frame for this long and the caller's own layer returns */
+#define FRAME_TIMEOUT_MS 5000.0  /* no frame for this long and the caller's own layer returns */
 
 /* Filled by the socket thread; the GL half is created and destroyed only on the
  * render thread. Entries of an older generation are released there too. */
@@ -412,6 +412,8 @@ static bool ensure_quad(XrSession session, uint32_t q, int width, int height)
 static void blit(struct XrFramebuffer* target, int width, int height, struct buffer* src, const int32_t* r, int fd)
 {
     gpu_wait(fd);
+    target->SwapchainIndex++;
+    target->SwapchainIndex %= target->SwapchainLength;
     XrFramebufferAcquire(target);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, src->fbo);
     /* The buffer's rows run top-down, a GL swapchain image's bottom-up. */
