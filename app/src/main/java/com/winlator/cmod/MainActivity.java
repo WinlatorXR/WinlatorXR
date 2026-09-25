@@ -45,11 +45,14 @@ import androidx.fragment.app.FragmentTransaction;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.navigation.NavigationView;
+import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.contentdialog.ControllerAssignmentDialog;
 import com.winlator.cmod.contentdialog.SaveEditDialog;
 import com.winlator.cmod.contentdialog.SaveSettingsDialog;
 import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
+import com.winlator.cmod.contents.Downloader;
+import com.winlator.cmod.contents.VrContentUpdates;
 import com.winlator.cmod.core.Callback;
 import com.winlator.cmod.core.DefaultVersion;
 import com.winlator.cmod.core.PreloaderDialog;
@@ -106,6 +109,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private boolean isDarkMode;
 
     private boolean allAccessFilesDialogDismissed = false;
+    private static boolean vrContentUpdatesChecked = false;
 
 
     @Override
@@ -513,6 +517,35 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         // creates it, or there is nowhere to put the profile a friend just sent.
         ShortcutProfile.ensureProfilesDir();
         autoCreateDefaultContainersIfNeeded();
+        checkVrContentUpdates();
+    }
+
+    /** Tells the user when the Downloader lists a newer Proton WXR, OXRWXR or OpenComposite. */
+    private void checkVrContentUpdates() {
+        // Once per app start, so "Not now" reminds again on the next start
+        if (vrContentUpdatesChecked) return;
+        vrContentUpdatesChecked = true;
+        new Thread(() -> {
+            String json = Downloader.downloadString(ContentsManager.REMOTE_PROFILES);
+            if (json == null) return;
+            ContentsManager contentsManager = new ContentsManager(this);
+            contentsManager.setRemoteProfiles(json);
+            List<ContentProfile> updates = VrContentUpdates.find(this, contentsManager);
+            if (updates.isEmpty()) return;
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                StringBuilder names = new StringBuilder();
+                for (ContentProfile profile : updates)
+                    names.append("\n• ").append(profile.type).append(": ").append(profile.verName).append(" (").append(profile.verCode).append(")");
+                ContentDialog dialog = new ContentDialog(this);
+                dialog.setTitle(R.string.vr_content_updates_title);
+                dialog.setMessage(getString(R.string.vr_content_updates_message) + "\n" + names);
+                ((TextView) dialog.findViewById(R.id.BTConfirm)).setText(R.string.vr_content_updates_open);
+                ((TextView) dialog.findViewById(R.id.BTCancel)).setText(R.string.vr_content_updates_later);
+                dialog.setOnConfirmCallback(() -> showDownloader(updates.get(0).type != ContentProfile.ContentType.CONTENT_TYPE_PROTON));
+                dialog.show();
+            });
+        }).start();
     }
 
     /**
@@ -750,6 +783,22 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         };
     }
 
+
+    /** Opens the Downloader on the Wine/Proton tab, or the one listing the PC VR runtimes. */
+    private void showDownloader(boolean runtimesTab) {
+        NavigationView navigation = findViewById(R.id.NavigationView);
+        MenuItem item = navigation.getMenu().findItem(R.id.main_menu_contents);
+        PreferenceManager.getDefaultSharedPreferences(this).edit()
+                .putString("tab_last", item.getTitle().toString())
+                .commit();
+        navigation.setCheckedItem(R.id.main_menu_contents);
+
+        ContentsFragment fragment = new ContentsFragment();
+        Bundle args = new Bundle();
+        args.putInt(ContentsFragment.ARG_TAB, runtimesTab ? 1 : 0);
+        fragment.setArguments(args);
+        getSupportFragmentManager().beginTransaction().replace(R.id.FLFragmentContainer, fragment).commit();
+    }
 
     /** Opens the Downloader on its Installers tab and goes straight to adding an installer. */
     public void showAddInstaller() {

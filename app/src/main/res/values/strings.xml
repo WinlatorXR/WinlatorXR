@@ -349,6 +349,11 @@
     <string name="installer_toast">Installer downloaded into\n Z:\\installers. Use its menu to install it into a container.</string>
     <string name="select_installer">Select an installer (.exe or .msi) from your Download folder. Nothing is copied: it is run where it sits, so any data files it comes with, such as the .bin parts of a GOG offline installer, only have to stay in the same folder as it.\n\nA .zip holding an installer can be selected too. That one is extracted first, into Z:\\extracted, and the installer inside it is listed from there.</string>
     <string name="not_downloaded_yet">Not downloaded yet</string>
+    <string name="update_available">Update available</string>
+    <string name="vr_content_updates_title">VR updates available</string>
+    <string name="vr_content_updates_message">The Downloader has newer versions of:</string>
+    <string name="vr_content_updates_open">Open Downloader</string>
+    <string name="vr_content_updates_later">Not now</string>
     <string name="installer_added">\"%1$s\" added. Use its menu to run it in a container.</string>
     <string name="installer_not_local_file">Could not work out where that file is stored. Please pick one from your Download folder.</string>
     <string name="installer_must_be_in_downloads">An installer has to be somewhere a container can reach: your Download folder (%1$s), a folder inside it, or Z:\\extracted, where a .zip is unpacked to. Move it into one of those and add it again.</string>

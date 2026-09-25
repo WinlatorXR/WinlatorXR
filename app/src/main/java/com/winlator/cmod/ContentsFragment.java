@@ -41,6 +41,7 @@ import com.winlator.cmod.contents.AdrenotoolsManager;
 import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.contents.Downloader;
+import com.winlator.cmod.contents.VrContentUpdates;
 import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.PreloaderDialog;
@@ -61,6 +62,8 @@ import java.util.concurrent.Executors;
 public class ContentsFragment extends Fragment {
     /** Argument that opens the fragment on the Installers &amp; Mods tab, ready to add an installer. */
     public static final String ARG_ADD_INSTALLER = "add_installer";
+    /** Argument naming the tab to open on. */
+    public static final String ARG_TAB = "tab";
 
     private RecyclerView recyclerView;
     private View emptyText;
@@ -68,6 +71,7 @@ public class ContentsFragment extends Fragment {
     private ContentsManager manager;
     private PreloaderDialog preloaderDialog;
     private ArrayList<ContentProfile.ContentType> currentContentType = new ArrayList<>();
+    private List<ContentProfile> vrUpdates = new ArrayList<>();
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -168,7 +172,7 @@ public class ContentsFragment extends Fragment {
             // asking again would be asking a question the caller brought the answer to.
             promptAddInstaller();
         }
-        else tabLayout.getTabAt(0).select();
+        else tabLayout.getTabAt(args != null ? args.getInt(ARG_TAB, 0) : 0).select();
 
         return layout;
     }
@@ -673,6 +677,7 @@ public class ContentsFragment extends Fragment {
         }
 
         List<ContentProfile> profiles = manager.getProfiles(currentContentType);
+        vrUpdates = VrContentUpdates.find(getContext(), manager);
         if (profiles.isEmpty()) {
             emptyText.setVisibility(View.VISIBLE);
             recyclerView.setVisibility(View.GONE);
@@ -783,7 +788,9 @@ public class ContentsFragment extends Fragment {
             }
             else {
                 holder.tvVersionName.setText(getContext().getString(R.string.version) + ": " + profile.verName);
-                holder.tvVersionCode.setText(getContext().getString(R.string.version_code) + ": " + profile.verCode);
+                String versionCode = getContext().getString(R.string.version_code) + ": " + profile.verCode;
+                if (vrUpdates.contains(profile)) versionCode += " · " + getString(R.string.update_available);
+                holder.tvVersionCode.setText(versionCode);
             }
             holder.ibMenu.setVisibility(profile.remoteUrl == null ? View.VISIBLE : View.GONE);
             // Content already here has no address behind it, so the row offers its menu rather
