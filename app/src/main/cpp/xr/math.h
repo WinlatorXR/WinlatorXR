@@ -34,6 +34,7 @@ float ToRadians(float deg);
 XrQuaternionf XrQuaternionfCreateFromVectorAngle(const XrVector3f axis, const float angle);
 XrQuaternionf XrQuaternionfInvert(const XrQuaternionf q);
 XrQuaternionf XrQuaternionfMultiply(const XrQuaternionf a, const XrQuaternionf b);
+void XrQuaternionfNormalize(XrQuaternionf* q);
 XrVector3f XrQuaternionfEulerAngles(const XrQuaternionf q);
 XrVector3f XrQuaternionfRotateVector3f(const XrQuaternionf a, const XrVector3f v);
 void XrQuaternionfToMatrix4f(const XrQuaternionf* q, float* m);

@@ -92,6 +92,18 @@ XrQuaternionf XrQuaternionfMultiply(const XrQuaternionf a, const XrQuaternionf b
     return c;
 }
 
+
+void XrQuaternionfNormalize(XrQuaternionf* q)
+{
+    float x = q->x * q->x + q->y * q->y + q->z * q->z + q->w * q->w;
+    const float SMALLEST_NON_DENORMAL = 1.1754943508222875e-038f;  // ( 1U << 23 )
+    const float lengthRcp = (x >= SMALLEST_NON_DENORMAL) ? 1.0f / sqrtf(x) : 1.0f;
+    q->x *= lengthRcp;
+    q->y *= lengthRcp;
+    q->z *= lengthRcp;
+    q->w *= lengthRcp;
+}
+
 XrVector3f XrQuaternionfEulerAngles(const XrQuaternionf q)
 {
     float M[16];

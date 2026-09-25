@@ -26,6 +26,7 @@
 #include "direct.h"
 #include "direct_app.h"
 #include "framebuffer.h"
+#include "math.h"
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -529,6 +530,7 @@ bool XrDirectBuildLayer(XrSession session, XrCompositionLayerProjection* layer,
         views[v].subImage.swapchain = g_eyes[v].Handle;
         views[v].subImage.imageRect.extent.width = g_eye_width;
         views[v].subImage.imageRect.extent.height = g_eye_height;
+        XrQuaternionfNormalize(&views[v].pose.orientation);
     }
 
     /* Opaque: the game's eye textures carry alpha 0 (Beat Saber's do). */
