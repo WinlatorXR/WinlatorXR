@@ -276,7 +276,7 @@ public class XrRenderer extends GLRenderer {
                 }
                 taskManagerOnTop = onTop;
             }
-        }  else if ((System.currentTimeMillis() - timestampHadWindow > 1000)) {
+        }  else if ((System.currentTimeMillis() - timestampHadWindow > 5000)) {
             if (autoclose && XrActivity.isEnabled(null)) {
                 XrActivity.getInstance().runOnUiThread(() -> XrActivity.getInstance().closeSession());
             }
