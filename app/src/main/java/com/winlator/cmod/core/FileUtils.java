@@ -401,6 +401,9 @@ public abstract class FileUtils {
             return Environment.getExternalStorageDirectory() + "/" + path;
         } else if ("raw".equalsIgnoreCase(type) && split.length > 1) {
             return documentId.substring(4);
+        } else if (new File("/storage/" + type).isDirectory()) {
+            // The app cannot read /mnt/media_rw, only the /storage mount of the same volume.
+            return "/storage/" + type + "/" + path;
         } else {
             return "/mnt/media_rw/" + type + "/" + path;
         }

@@ -287,6 +287,8 @@ public abstract class GuestScriptRunner {
 
         for (String[] drive : container.drivesIterator()) {
             String root = new File(drive[1]).getAbsolutePath();
+            // A USB drive mapped by the folder picker is /mnt/media_rw/<id>, the same volume as /storage/<id>.
+            if (root.startsWith("/mnt/media_rw/") && abs.startsWith("/storage/")) root = "/storage/" + root.substring("/mnt/media_rw/".length());
             if (abs.startsWith(root)) return drive[0] + ":" + abs.substring(root.length()).replace('/', '\\');
         }
 
