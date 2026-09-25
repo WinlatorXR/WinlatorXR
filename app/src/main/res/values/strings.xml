@@ -900,6 +900,14 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <!-- A mod archive that packed a settings profile beside its files. -->
     <string name="mod_profile_included">\n\nIt also brought settings of its own (%1$s), which will be applied to that shortcut.</string>
     <string name="mod_profile_unused">\n\nIt also brought settings of its own (%1$s), but with no program added there is no mod shortcut to apply them to. Your game\'s own settings are untouched.</string>
+    <string name="mod_confirm_registry_note">\n\nIt also carries registry settings (%1$s), which are added to this container\'s registry.</string>
+    <string name="mod_registry_imported">\n\n%1$s: %2$d registry entries added to the container.</string>
+    <string name="mod_registry_skipped"> %1$d lines it could not use were skipped.</string>
+    <string name="mod_registry_failed">\n\n%1$s could not be added to the registry: %2$s</string>
+    <string name="mod_registry_not_reg_file">it is not a Windows registry file.</string>
+    <string name="mod_coldclient_configured">\n\nColdClientLoader.ini is set up to start this game (AppId %1$s). Start the game from the loader\'s shortcut rather than the game\'s own.</string>
+    <string name="mod_coldclient_no_appid">\n\nColdClientLoader.ini is set up to start this game, but its Steam AppID could not be found. Put it after AppId= in that file, or apply the Goldberg fix to the game first and install the mod again.</string>
+    <string name="mod_coldclient_failed">\n\nColdClientLoader.ini could not be set up: %1$s</string>
     <string name="mod_profile_applied">\n\nThe mod\'s own settings were applied to it (%1$d settings). Use Remove Custom Profile on its row to put the game\'s settings back.</string>
     <string name="mod_profile_arch_mismatch">\n\nNote: those settings are %1$s based and this game\'s container is %2$s based, so they may need adjusting.</string>
     <string name="mod_profile_unreadable">\n\nIts settings file (%1$s) could not be used, so the shortcut kept the game\'s settings: %2$s</string>

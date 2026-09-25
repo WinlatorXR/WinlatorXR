@@ -2690,6 +2690,10 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                     filename = filename.substring(0, spaceIndex);
                 }
 
+                // Goldberg's ColdClientLoader sits beside the game's exe and starts it (see GoldbergEmu)
+                String loader = shortcut.getExtra("goldbergLoader");
+                if (!loader.isEmpty()) filename = loader;
+
                 args += "/dir " + StringUtils.escapeDOSPath(exeDir) + " \"" + filename + "\"" + execArgs;
             }
         } else {

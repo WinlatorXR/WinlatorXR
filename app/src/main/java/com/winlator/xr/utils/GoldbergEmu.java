@@ -32,10 +32,12 @@ import android.widget.Toast;
 
 import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.contentdialog.ContentDialog;
+import com.winlator.cmod.contents.ColdClientLoaderIni;
 import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.contents.Downloader;
 import com.winlator.cmod.core.FileUtils;
+import com.winlator.cmod.core.GuestScriptRunner;
 import com.winlator.cmod.container.GameUninstaller;
 import com.winlator.cmod.store.SteamDatabase;
 import com.winlator.cmod.store.StoreGameInstall;
@@ -48,11 +50,13 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.Executors;
 
 public class GoldbergEmu {
@@ -226,6 +230,13 @@ public class GoldbergEmu {
     public static void showApplyGoldbergDialog(Activity activity, final Shortcut shortcut) {
         final Context context = activity;
 
+        // A second fix on top of the first backs up the first one's files as the originals, so
+        // revert would put them back rather than restore the game's own.
+        if (isApplied(shortcut)) {
+            Toast.makeText(context, "A Goldberg fix is already applied. Use \"Revert Goldberg Steam Fix\" first.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
         ContentsManager contentsManager = new ContentsManager(context);
         contentsManager.syncContents();
 
@@ -269,7 +280,7 @@ public class GoldbergEmu {
      * always keeps steamapps/appmanifest_<appid>.acf next to steamapps/common/<installDir>/,
      * and that pairing survives a raw folder copy, so it's the most reliable source here.
      */
-    private static String detectAppIdFromAcf(File targetDir) {
+    public static String detectAppIdFromAcf(File targetDir) {
         File dir = targetDir;
         while (dir != null) {
             File parent = dir.getParentFile();
@@ -465,9 +476,13 @@ public class GoldbergEmu {
                 ? "\"" + targetDir.getName() + "\""
                 : targetDirs.size() + " locations within this game's folder (it has more than one copy of the Steam files)";
 
+        String message = isColdClientLoader(profile)
+                ? "This puts Goldberg's ColdClientLoader beside the game's exe, and this shortcut then starts the game through it. It is for games whose exe will not start without Steam running (SteamStub DRM), which replacing steam_api(64).dll does not fix. \"Revert Goldberg Steam Fix\" removes it.\n\nEnter this game's Steam AppID:"
+                : "This replaces steam_api(64).dll in " + locationsMsg + " with Goldberg's emulated version and adds a steam_settings folder there. Originals are backed up and can be restored with \"Revert Goldberg Steam Fix\".\n\nEnter this game's Steam AppID:";
+
         new AlertDialog.Builder(context)
                 .setTitle("Apply Goldberg Steam Fix")
-                .setMessage("This replaces steam_api(64).dll in " + locationsMsg + " with Goldberg's emulated version and adds a steam_settings folder there. Originals are backed up and can be restored with \"Revert Goldberg Steam Fix\".\n\nEnter this game's Steam AppID:")
+                .setMessage(message)
                 .setView(layout)
                 .setPositiveButton("Apply", (d, which) -> {
                     String appId = input.getText().toString().trim();
@@ -483,6 +498,10 @@ public class GoldbergEmu {
 
     private static void applyGoldberg(Activity activity, final Shortcut shortcut, final ContentProfile profile, final List<File> targetDirs, final String appId) {
         final Context context = activity;
+        if (isColdClientLoader(profile)) {
+            Executors.newSingleThreadExecutor().execute(() -> applyColdClientLoader(activity, shortcut, profile, appId));
+            return;
+        }
         Executors.newSingleThreadExecutor().execute(() -> {
             int succeeded = 0;
             for (File targetDir : targetDirs) {
@@ -515,6 +534,67 @@ public class GoldbergEmu {
         });
     }
 
+    /**
+     * Whether a Goldberg package is the ColdClientLoader one. It goes beside the game's exe
+     * rather than over its steam_api, and the game is started through it, which is what gets a
+     * SteamStub-wrapped exe past its check for a running Steam client.
+     */
+    private static boolean isColdClientLoader(ContentProfile profile) {
+        for (ContentProfile.ContentFile file : profile.fileList)
+            if (file.target.equalsIgnoreCase(ColdClientLoaderIni.FILE_NAME)) return true;
+        return false;
+    }
+
+    /**
+     * The shortcut keeps pointing at the game's exe, so everything that reads its path still finds
+     * the game; goldbergLoader only swaps the program started at launch for the loader beside it.
+     */
+    private static void applyColdClientLoader(Activity activity, Shortcut shortcut, ContentProfile profile, String appId) {
+        File exeFile = GameUninstaller.resolveExecutable(activity, shortcut.container, shortcut);
+        File exeDir = exeFile == null ? null : exeFile.getParentFile();
+        String exePath = exeFile == null ? null : GuestScriptRunner.toWinPath(activity, shortcut.container, exeFile);
+        String exeDirPath = exeDir == null ? null : GuestScriptRunner.toWinPath(activity, shortcut.container, exeDir);
+
+        String failure = null;
+        if (exePath == null || exeDirPath == null || exeFile.getName().toLowerCase(Locale.ENGLISH).endsWith(".lnk")) {
+            failure = "Couldn't locate this shortcut's game folder.";
+        }
+        else if (!applyContentToDir(activity, profile, exeDir)) {
+            failure = "Failed to apply Goldberg fix.";
+        }
+        else {
+            try {
+                ColdClientLoaderIni.fill(new File(exeDir, ColdClientLoaderIni.FILE_NAME), exePath, exeDirPath, appId);
+            } catch (IOException e) {
+                failure = "Couldn't set up ColdClientLoader.ini: " + e.getMessage();
+            }
+
+            shortcut.putExtra("goldbergApplied", ContentsManager.getEntryName(profile));
+            shortcut.putExtra("goldbergAppId", appId);
+            // The loader has to match the game's bitness to inject into it.
+            if (failure == null)
+                shortcut.putExtra("goldbergLoader", isPe32(exeFile) ? "steamclient_loader_x86.exe" : "steamclient_loader_x64.exe");
+            shortcut.saveData();
+        }
+
+        final String error = failure;
+        activity.runOnUiThread(() -> Toast.makeText(activity, error != null ? error
+                : "ColdClientLoader set up. The game's shortcut now starts it through the loader.",
+                Toast.LENGTH_LONG).show());
+    }
+
+    /** Whether a Windows exe is 32-bit, from the machine field of its PE header. */
+    private static boolean isPe32(File exe) {
+        try (RandomAccessFile file = new RandomAccessFile(exe, "r")) {
+            file.seek(0x3C);
+            int peOffset = Integer.reverseBytes(file.readInt());
+            file.seek(peOffset + 4);
+            return Short.reverseBytes(file.readShort()) == 0x014c;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     public static void showRevertGoldbergDialog(Activity activity, final Shortcut shortcut) {
         final Context context = activity;
         String entryName = shortcut.getExtra("goldbergApplied", "");
@@ -535,8 +615,15 @@ public class GoldbergEmu {
                 contentsManager.syncContents();
                 ContentProfile profile = contentsManager.getProfileByEntryName(entryName);
 
+                List<File> dirs = targetDirs;
+                if (profile != null && isColdClientLoader(profile)) {
+                    File exeFile = GameUninstaller.resolveExecutable(context, shortcut.container, shortcut);
+                    dirs = new ArrayList<>();
+                    if (exeFile != null && exeFile.getParentFile() != null) dirs.add(exeFile.getParentFile());
+                }
+
                 int reverted = 0;
-                for (File targetDir : targetDirs) {
+                for (File targetDir : dirs) {
                     if (profile != null && revertGoldberg(profile, targetDir)) reverted++;
 
                     FileUtils.delete(new File(targetDir, "steam_settings/steam_appid.txt"));
@@ -546,6 +633,7 @@ public class GoldbergEmu {
 
                 shortcut.putExtra("goldbergApplied", "");
                 shortcut.putExtra("goldbergAppId", "");
+                shortcut.putExtra("goldbergLoader", null);
                 shortcut.saveData();
 
                 final int finalReverted = reverted;

@@ -19,6 +19,7 @@ import com.winlator.cmod.core.WineInfo;
 import com.winlator.cmod.core.ZipExtractor;
 import com.winlator.cmod.core.ZipImport;
 import com.winlator.cmod.store.StoreGameInstall;
+import com.winlator.xr.utils.GoldbergEmu;
 
 import java.io.File;
 import java.io.IOException;
@@ -233,6 +234,13 @@ public abstract class ModInstaller {
         if (stripPrefix != null)
             message.append(activity.getString(R.string.mod_confirm_wrapper_note, stripPrefix));
 
+        // Registry settings are written outside the game's folder, so they are said up front too.
+        List<String> regFiles = new ArrayList<>();
+        for (String entry : files)
+            if (!entry.contains("/") && entry.toLowerCase(Locale.ENGLISH).endsWith(".reg")) regFiles.add(entry);
+        if (!regFiles.isEmpty())
+            message.append(activity.getString(R.string.mod_confirm_registry_note, String.join(", ", regFiles)));
+
         message.append(activity.getString(R.string.mod_confirm_no_undo));
 
         ContentDialog dialog = new ContentDialog(activity);
@@ -295,6 +303,8 @@ public abstract class ModInstaller {
             final List<String> exeEntries = failure == null
                     ? ZipExtractor.exeEntries(zip, stripPrefix) : new ArrayList<>();
             final File bundled = failure == null ? bundledProfile(zip, stripPrefix, targetDir) : null;
+            final String setupNote = failure == null
+                    ? gameSetup(activity, shortcut, zip, stripPrefix, exeFile, targetDir) : "";
             final String error = failure;
 
             activity.runOnUiThread(() -> {
@@ -307,7 +317,7 @@ public abstract class ModInstaller {
                 }
 
                 offerShortcut(activity, shortcut, zip, exeFile, targetDir, exeEntries, bundled,
-                        onShortcutCreated);
+                        setupNote, onShortcutCreated);
             });
         });
     }
@@ -335,13 +345,68 @@ public abstract class ModInstaller {
     }
 
     /**
+     * What a game copied in from a PC is missing that its installer would have set up: registry
+     * keys, from any .reg at the top of the archive, and a Steam client for a SteamStub-wrapped
+     * exe, from Goldberg's ColdClientLoader when the archive packs one. Returns what was done, to
+     * go in the closing dialog.
+     */
+    private static String gameSetup(Activity activity, Shortcut shortcut, File zip, String stripPrefix,
+                                    File exeFile, File targetDir) {
+        StringBuilder note = new StringBuilder();
+        String gameDir = winPathOf(activity, shortcut.container, targetDir);
+
+        for (String entry : ZipExtractor.fileEntries(zip, stripPrefix)) {
+            if (entry.contains("/")) continue;
+            File file = new File(targetDir, entry);
+            if (!file.isFile()) continue;
+
+            if (entry.toLowerCase(Locale.ENGLISH).endsWith(".reg")) {
+                RegFileImport.Result result = RegFileImport.importFile(shortcut.container, file, gameDir);
+                if (result.error != null || result.notRegFile) {
+                    note.append(activity.getString(R.string.mod_registry_failed, entry, result.error != null
+                            ? result.error : activity.getString(R.string.mod_registry_not_reg_file)));
+                    continue;
+                }
+                note.append(activity.getString(R.string.mod_registry_imported, entry, result.applied));
+                if (result.skipped > 0) note.append(activity.getString(R.string.mod_registry_skipped, result.skipped));
+            }
+            else if (entry.equalsIgnoreCase(ColdClientLoaderIni.FILE_NAME)) {
+                note.append(fillColdClientLoader(activity, shortcut, file, exeFile));
+            }
+        }
+        return note.toString();
+    }
+
+    private static String fillColdClientLoader(Activity activity, Shortcut shortcut, File ini, File exeFile) {
+        String exePath = winPathOf(activity, shortcut.container, exeFile);
+        String exeDir = winPathOf(activity, shortcut.container, exeFile.getParentFile());
+        if (exePath == null || exeDir == null) return "";
+
+        String appId = shortcut.getExtra("goldbergAppId", "");
+        if (appId.isEmpty()) appId = GoldbergEmu.detectAppIdFromAcf(exeFile.getParentFile());
+
+        try {
+            String finalAppId = ColdClientLoaderIni.fill(ini, exePath, exeDir,
+                    appId == null || appId.isEmpty() ? null : appId);
+            return finalAppId == null
+                    ? activity.getString(R.string.mod_coldclient_no_appid)
+                    : activity.getString(R.string.mod_coldclient_configured, finalAppId);
+        }
+        catch (IOException e) {
+            Log.e(TAG, "Could not fill in " + ini.getAbsolutePath(), e);
+            return activity.getString(R.string.mod_coldclient_failed,
+                    e.getMessage() != null ? e.getMessage() : e.toString());
+        }
+    }
+
+    /**
      * Says what the mod did, and offers a second shortcut when it brought a program of its own --
      * a mod loader, a launcher, a configuration tool. Most mods bring none, and saying so is the
      * whole of what they need.
      */
     private static void offerShortcut(Activity activity, Shortcut shortcut, File zip, File exeFile,
                                       File targetDir, List<String> exeEntries, File bundledProfile,
-                                      Runnable onShortcutCreated) {
+                                      String setupNote, Runnable onShortcutCreated) {
         String winPath = winPathOf(activity, shortcut.container, targetDir);
 
         List<File> added = new ArrayList<>();
@@ -356,10 +421,10 @@ public abstract class ModInstaller {
         // A profile is settings for a program, so with no program added there is nothing of the
         // mod's to apply them to. The game's own shortcut is not offered as a substitute: it is
         // working now, and quietly replacing the settings behind it is not what was asked for.
-        String profileNote = bundledProfile == null ? ""
+        String profileNote = setupNote + (bundledProfile == null ? ""
                 : activity.getString(added.isEmpty()
                         ? R.string.mod_profile_unused : R.string.mod_profile_included,
-                        bundledProfile.getName());
+                        bundledProfile.getName()));
 
         if (added.isEmpty()) {
             ContentDialog.alert(activity, activity.getString(R.string.mod_installed_no_programs,
@@ -488,7 +553,7 @@ public abstract class ModInstaller {
     private static final String[] NOT_INHERITED = {
             "uuid",
             "goldbergScanned", "goldbergDllDirs",
-            "goldbergApplied", "goldbergAppId"};
+            "goldbergApplied", "goldbergAppId", "goldbergLoader"};
 
     /**
      * Whether a line of the game's entry names one of those keys.

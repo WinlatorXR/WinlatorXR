@@ -1385,18 +1385,19 @@ public class ShortcutsFragment extends Fragment {
          * when both happened back-to-back with no gap.
          */
         private void launchAfterGoldbergHint(Shortcut shortcut) {
-            if (GoldbergEmu.maybeShowGoldbergHint(getContext(), shortcut)) {
+            // Held here: the fragment can detach during the delay, leaving getActivity() null
+            Activity activity = getActivity();
+            if (activity == null) return;
+            if (GoldbergEmu.maybeShowGoldbergHint(activity, shortcut)) {
                 new android.os.Handler(android.os.Looper.getMainLooper())
-                        .postDelayed(() -> launchShortcut(shortcut), GOLDBERG_HINT_DELAY_MS);
+                        .postDelayed(() -> launchShortcut(activity, shortcut), GOLDBERG_HINT_DELAY_MS);
             } else {
-                launchShortcut(shortcut);
+                launchShortcut(activity, shortcut);
             }
         }
 
-        private void launchShortcut(Shortcut shortcut) {
-            Activity activity = getActivity();
-
-            if (!XrActivity.isEnabled(getContext())) {
+        private void launchShortcut(Activity activity, Shortcut shortcut) {
+            if (!XrActivity.isEnabled(activity)) {
                 Intent intent = new Intent(activity, XServerDisplayActivity.class);
                 intent.putExtra("container_id", shortcut.container.id);
                 intent.putExtra("shortcut_path", shortcut.file.getPath());
