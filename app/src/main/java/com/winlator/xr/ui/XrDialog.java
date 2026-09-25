@@ -400,7 +400,6 @@ public class XrDialog extends ContentDialog {
             cbImmersiveMode.setVisibility(View.GONE);
         }
         cbCurvedScreen.setChecked(SessionSettings.getBoolean(activity, "use_cs", XrActivity.DEFAULT_CURVED_SCREEN));
-        cbPassthrough.setEnabled(!isImmersive);
         cbPassthrough.setChecked(SessionSettings.getBoolean(activity, "use_pt", XrActivity.DEFAULT_PASSTHROUGH));
 
         Runnable applyAll = () -> {
