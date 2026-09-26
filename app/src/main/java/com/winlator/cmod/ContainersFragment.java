@@ -34,12 +34,15 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.tabs.TabLayout;
 import com.winlator.cmod.contents.Downloader;
 import com.winlator.xr.XrActivity;
+import com.winlator.xr.utils.PcvrRuntime;
 import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.ContainerManager;
 import com.winlator.cmod.container.Shortcut;
+import com.winlator.cmod.contentdialog.ContainerVrDialog;
 import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.contentdialog.StorageInfoDialog;
 import com.winlator.cmod.core.AppUtils;
+import com.winlator.cmod.core.DefaultVersion;
 import com.winlator.cmod.core.DxvkProbeRunner;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.PreloaderDialog;
@@ -413,7 +416,10 @@ public class ContainersFragment extends Fragment {
         public void onBindViewHolder(final ViewHolder holder, int position) {
             final Container item = data.get(position); // Use 'item' instead of undefined 'container'
             holder.imageView.setImageResource(R.drawable.icon_container);
-            holder.title.setText(item.getName());
+            // Tagged like a shortcut's custom profile; the Proton 11 check matches the launch gate without the WCP scan
+            holder.title.setText(currentTab == 0 && PcvrRuntime.isEnabled(item) && DefaultVersion.isProton11(item.getWineVersion())
+                    ? getString(R.string.shortcut_subtitle_with_source, item.getName(), getString(R.string.container_vr_badge))
+                    : item.getName());
 
             holder.runButton.setOnClickListener(view -> proceedWithLaunch(item)); // Correct item reference
 
@@ -460,6 +466,8 @@ public class ContainersFragment extends Fragment {
                     break;
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) listItemMenu.setForceShowIcon(true);
+            if (currentTab == 0)
+                listItemMenu.getMenu().findItem(R.id.container_vr).setVisible(PcvrRuntime.isWxrContainer(context, container));
 
             File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Winlator/Backups/Containers");
             listItemMenu.setOnMenuItemClickListener((menuItem) -> {
@@ -523,6 +531,9 @@ public class ContainersFragment extends Fragment {
                         ContentDialog.confirm(getContext(), R.string.do_you_want_to_reconfigure_wine, () -> {
                             new File(container.getRootDir(), ".wine/.update-timestamp").delete();
                         });
+                        break;
+                    case R.id.container_vr:
+                        new ContainerVrDialog(context, container, () -> loadContainersList()).show();
                         break;
                     case R.id.container_dxvk_probe:
                         // tryCreate on: the inspection pass alone cannot tell a patched DXVK

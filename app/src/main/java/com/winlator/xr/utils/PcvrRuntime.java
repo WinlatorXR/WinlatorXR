@@ -25,12 +25,14 @@ import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
+import com.winlator.cmod.core.DefaultVersion;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.WineRegistryEditor;
 import com.winlator.cmod.xenvironment.ImageFs;
 
 import java.io.File;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Installs and registers the bundled OXRWXR (OpenXR) and OpenComposite (OpenVR) runtimes for
@@ -79,8 +81,40 @@ public final class PcvrRuntime {
     }
 
     public static int getRenderScale(Shortcut shortcut) {
+        return parseRenderScale(shortcut != null ? shortcut.getExtra(RENDER_SCALE_KEY, "") : "");
+    }
+
+    public static boolean isEnabled(Container container) {
+        return container != null && container.getExtra(EXTRA_KEY, "0").equals("1");
+    }
+
+    public static boolean isDirectTransport(Container container) {
+        return container == null || !container.getExtra(DIRECT_KEY, "1").equals("0");
+    }
+
+    public static int getRenderScale(Container container) {
+        return parseRenderScale(container != null ? container.getExtra(RENDER_SCALE_KEY, "") : "");
+    }
+
+    public static String getControllerProfile(Container container) {
+        return container != null ? container.getExtra(CONTROLLER_KEY, "") : "";
+    }
+
+    // The container's own VR options are only for a Proton 11 WXR container
+    public static boolean isWxrContainer(Context context, Container container) {
+        String wineVersion = container.getWineVersion();
+        if (!DefaultVersion.isProton11(wineVersion)) return false;
+        if (wineVersion.toLowerCase(Locale.ROOT).contains("wxr")) return true;
+        // An installed WCP keeps its own profile.json name, which may not say wxr, so the bridge it carries counts too
+        ContentsManager manager = new ContentsManager(context);
+        manager.syncContents();
+        ContentProfile profile = manager.getProfileByEntryName(wineVersion);
+        return profile != null && new File(ContentsManager.getInstallDir(context, profile), "lib/wine/aarch64-unix/wxr_bridge.so").isFile();
+    }
+
+    private static int parseRenderScale(String value) {
         try {
-            int scale = Integer.parseInt(shortcut != null ? shortcut.getExtra(RENDER_SCALE_KEY, "") : "");
+            int scale = Integer.parseInt(value);
             return Math.max(10, Math.min(200, scale));
         } catch (NumberFormatException e) {
             return DEFAULT_RENDER_SCALE;

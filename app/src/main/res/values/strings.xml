@@ -482,6 +482,8 @@
         <i><b>File Provider</b></i> allows access to Winlator\'s internal data through android file manager.<br/><br/>
     ]]></string>
     <string name="reconfigure">Reconfigure</string>
+    <string name="enable_vr_for_container">Enable VR for container</string>
+    <string name="container_vr_badge">Container Wide VR enabled</string>
     <string name="do_you_want_to_reconfigure_wine">Rebuild this container\'s Wine setup the next time it starts?\n\nWine will re-register its built-in DLLs, restore its default registry entries and replace missing system files. Your games, saves and other files are kept, but manual DLL overrides or registry changes may be reset.\n\nThe next startup will take longer than usual.</string>
 
     <!-- OpenXR specific text -->

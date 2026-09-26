@@ -1624,8 +1624,13 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         WineStartMenuCreator.create(this, container);
         WineUtils.createDosdevicesSymlinks(container);
-        PcvrRuntime.apply(this, container, PcvrRuntime.isEnabled(shortcut), PcvrRuntime.isDirectTransport(shortcut),
-                PcvrRuntime.getControllerProfile(shortcut));
+        // A container launch with no shortcut takes the container's own VR options
+        if (shortcut != null)
+            PcvrRuntime.apply(this, container, PcvrRuntime.isEnabled(shortcut), PcvrRuntime.isDirectTransport(shortcut),
+                    PcvrRuntime.getControllerProfile(shortcut));
+        else
+            PcvrRuntime.apply(this, container, PcvrRuntime.isEnabled(container) && PcvrRuntime.isWxrContainer(this, container), PcvrRuntime.isDirectTransport(container),
+                    PcvrRuntime.getControllerProfile(container));
 
         if (shortcut != null)
             startupSelection = shortcut.getExtra("startupSelection", String.valueOf(container.getStartupSelection()));
@@ -2762,7 +2767,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     }
 
     public int getPcvrRenderScale() {
-        return PcvrRuntime.getRenderScale(shortcut);
+        return shortcut != null ? PcvrRuntime.getRenderScale(shortcut) : PcvrRuntime.getRenderScale(container);
     }
 
     public int getPcvrFovScale() {

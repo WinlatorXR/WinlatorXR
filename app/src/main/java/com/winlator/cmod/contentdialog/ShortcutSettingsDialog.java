@@ -228,6 +228,11 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
         final CheckBox cbPcvrDirectTransport = findViewById(R.id.CBPcvrDirectTransport);
         cbPcvrDirectTransport.setChecked(PcvrRuntime.isDirectTransport(shortcut));
+        // Direct frames need the Proton 11 WXR bridge, so other containers get the box greyed out and off
+        if (!PcvrRuntime.isWxrContainer(context, shortcut.container)) {
+            cbPcvrDirectTransport.setChecked(false);
+            cbPcvrDirectTransport.setEnabled(false);
+        }
 
         final View llPcvrController = findViewById(R.id.LLPcvrController);
         final Spinner sPcvrController = findViewById(R.id.SPcvrController);
