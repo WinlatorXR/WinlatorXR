@@ -354,6 +354,9 @@
     <string name="vr_content_updates_message">The Downloader has newer versions of:</string>
     <string name="vr_content_updates_open">Open Downloader</string>
     <string name="vr_content_updates_later">Not now</string>
+    <string name="apk_update_title">WinlatorXR update available</string>
+    <string name="apk_update_message">A new version, %1$s, is available to download.</string>
+    <string name="apk_update_open">Open Release Page</string>
     <string name="installer_added">\"%1$s\" added. Use its menu to run it in a container.</string>
     <string name="installer_not_local_file">Could not work out where that file is stored. Please pick one from your Download folder.</string>
     <string name="installer_must_be_in_downloads">An installer has to be somewhere a container can reach: your Download folder (%1$s), a folder inside it, or Z:\\extracted, where a .zip is unpacked to. Move it into one of those and add it again.</string>
@@ -475,7 +478,7 @@
         <i><b>File Provider</b></i> allows access to Winlator\'s internal data through android file manager.<br/><br/>
     ]]></string>
     <string name="reconfigure">Reconfigure</string>
-    <string name="do_you_want_to_reconfigure_wine">Do you want to reconfigure this container on the next startup? This will remove the timestamp to trigger Wine Configuration.</string>
+    <string name="do_you_want_to_reconfigure_wine">Rebuild this container\'s Wine setup the next time it starts?\n\nWine will re-register its built-in DLLs, restore its default registry entries and replace missing system files. Your games, saves and other files are kept, but manual DLL overrides or registry changes may be reset.\n\nThe next startup will take longer than usual.</string>
 
     <!-- OpenXR specific text -->
     <string name="use_xr">Use OpenXR integration</string>

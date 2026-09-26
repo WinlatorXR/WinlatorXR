@@ -8,6 +8,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.DocumentsContract;
+import android.text.SpannableStringBuilder;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -24,6 +26,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.DividerItemDecoration;
@@ -788,8 +791,12 @@ public class ContentsFragment extends Fragment {
             }
             else {
                 holder.tvVersionName.setText(getContext().getString(R.string.version) + ": " + profile.verName);
-                String versionCode = getContext().getString(R.string.version_code) + ": " + profile.verCode;
-                if (vrUpdates.contains(profile)) versionCode += " · " + getString(R.string.update_available);
+                SpannableStringBuilder versionCode = new SpannableStringBuilder(getContext().getString(R.string.version_code) + ": " + profile.verCode);
+                if (vrUpdates.contains(profile)) {
+                    versionCode.append(" · ");
+                    // Same colour as the row's buttons so it stands out from the rest of the list
+                    versionCode.append(getString(R.string.update_available), new ForegroundColorSpan(ContextCompat.getColor(getContext(), R.color.colorPrimaryDark)), 0);
+                }
                 holder.tvVersionCode.setText(versionCode);
             }
             holder.ibMenu.setVisibility(profile.remoteUrl == null ? View.VISIBLE : View.GONE);

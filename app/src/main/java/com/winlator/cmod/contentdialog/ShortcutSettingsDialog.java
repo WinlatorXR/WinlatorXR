@@ -40,6 +40,7 @@ import com.winlator.cmod.inputcontrols.InputControlsManager;
 import com.winlator.cmod.audio.MidiManager;
 import com.winlator.cmod.widget.CPUListView;
 import com.winlator.cmod.widget.EnvVarsView;
+import com.winlator.xr.XrActivity;
 import com.winlator.xr.utils.PcvrRuntime;
 
 import java.io.File;
@@ -434,6 +435,11 @@ public class ShortcutSettingsDialog extends ContentDialog {
         final SeekBar sbSharpnessDenoise = findViewById(R.id.SBSharpnessDenoise);
         final TextView tvSharpnessLevel = findViewById(R.id.TVSharpnessLevel);
         final TextView tvSharpnessDenoise = findViewById(R.id.TVSharpnessDenoise);
+        // In XR these are controlled from the XR menu (screen effects, controller emulation)
+        if (XrActivity.isEnabled(context)) {
+            findViewById(R.id.FLVkBasalt).setVisibility(View.GONE);
+            findViewById(R.id.FLInputControls).setVisibility(View.GONE);
+        }
 
         AppUtils.setSpinnerSelectionFromValue(sSharpnessEffect, shortcut.getExtra("sharpnessEffect", "None"));
 

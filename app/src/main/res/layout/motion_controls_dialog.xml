@@ -230,6 +230,8 @@
                         android:id="@+id/tvGyroXSensitivity"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:minEms="4"
+                        android:gravity="end"
                         android:text="100%"/>
                 </LinearLayout>
 
@@ -257,6 +259,8 @@
                         android:id="@+id/tvGyroYSensitivity"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:minEms="4"
+                        android:gravity="end"
                         android:text="100%"/>
                 </LinearLayout>
 
@@ -291,6 +295,8 @@
                         android:id="@+id/tvGyroSmoothing"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:minEms="4"
+                        android:gravity="end"
                         android:text="90%"/>
                 </LinearLayout>
 
@@ -318,6 +324,8 @@
                         android:id="@+id/tvGyroDeadzone"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:minEms="4"
+                        android:gravity="end"
                         android:text="5%"/>
                 </LinearLayout>
 

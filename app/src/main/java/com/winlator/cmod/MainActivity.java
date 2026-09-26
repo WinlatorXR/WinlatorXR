@@ -49,6 +49,7 @@ import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.contentdialog.ControllerAssignmentDialog;
 import com.winlator.cmod.contentdialog.SaveEditDialog;
 import com.winlator.cmod.contentdialog.SaveSettingsDialog;
+import com.winlator.cmod.contents.ApkUpdate;
 import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.contents.Downloader;
@@ -110,6 +111,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     private boolean allAccessFilesDialogDismissed = false;
     private static boolean vrContentUpdatesChecked = false;
+    private boolean vrUpdateCheckOnResume = false;
 
 
     @Override
@@ -203,6 +205,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
 
         restoreTab();
+
+        // Back from the system All Files Access page
+        if (vrUpdateCheckOnResume) {
+            vrUpdateCheckOnResume = false;
+            checkVrContentUpdatesDelayed();
+        }
     }
 
     private void restoreTab() {
@@ -481,10 +489,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 .setPositiveButton("Okay", (dialog, which) -> {
                     Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
                     intent.setData(Uri.parse("package:" + getPackageName()));
+                    vrUpdateCheckOnResume = true;
                     startActivity(intent);
                     allAccessFilesDialogDismissed = true;
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton("Cancel", (dialog, which) -> checkVrContentUpdatesDelayed())
+                .setOnCancelListener(dialog -> checkVrContentUpdatesDelayed())
                 .show();
     }
 
@@ -511,13 +521,19 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         if (!allAccessFilesDialogDismissed
                 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
                 && !Environment.isExternalStorageManager()) {
+            // The update check waits until this dialog (and the system page it opens) is dealt with
             showAllFilesAccessDialog();
+        } else {
+            checkVrContentUpdatesDelayed();
         }
         // A folder someone is meant to copy profiles into has to be there before the first export
         // creates it, or there is nowhere to put the profile a friend just sent.
         ShortcutProfile.ensureProfilesDir();
         autoCreateDefaultContainersIfNeeded();
-        checkVrContentUpdates();
+    }
+
+    private void checkVrContentUpdatesDelayed() {
+        getWindow().getDecorView().postDelayed(this::checkVrContentUpdates, 1500);
     }
 
     /** Tells the user when the Downloader lists a newer Proton WXR, OXRWXR or OpenComposite. */
@@ -528,24 +544,48 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         new Thread(() -> {
             String json = Downloader.downloadString(ContentsManager.REMOTE_PROFILES);
             if (json == null) return;
+            ApkUpdate apkUpdate = null;
+            try {
+                apkUpdate = ApkUpdate.find(json, getPackageManager().getPackageInfo(getPackageName(), 0).versionName);
+            } catch (PackageManager.NameNotFoundException e) {
+                e.printStackTrace();
+            }
             ContentsManager contentsManager = new ContentsManager(this);
             contentsManager.setRemoteProfiles(json);
             List<ContentProfile> updates = VrContentUpdates.find(this, contentsManager);
-            if (updates.isEmpty()) return;
+            if (apkUpdate == null && updates.isEmpty()) return;
+            final ApkUpdate apk = apkUpdate;
             runOnUiThread(() -> {
                 if (isFinishing() || isDestroyed()) return;
-                StringBuilder names = new StringBuilder();
-                for (ContentProfile profile : updates)
-                    names.append("\n• ").append(profile.type).append(": ").append(profile.verName).append(" (").append(profile.verCode).append(")");
-                ContentDialog dialog = new ContentDialog(this);
-                dialog.setTitle(R.string.vr_content_updates_title);
-                dialog.setMessage(getString(R.string.vr_content_updates_message) + "\n" + names);
-                ((TextView) dialog.findViewById(R.id.BTConfirm)).setText(R.string.vr_content_updates_open);
-                ((TextView) dialog.findViewById(R.id.BTCancel)).setText(R.string.vr_content_updates_later);
-                dialog.setOnConfirmCallback(() -> showDownloader(updates.get(0).type != ContentProfile.ContentType.CONTENT_TYPE_PROTON));
-                dialog.show();
+                // The VR prompt waits until the app update prompt is closed
+                if (apk != null) {
+                    ContentDialog apkDialog = new ContentDialog(this);
+                    apkDialog.setTitle(R.string.apk_update_title);
+                    apkDialog.setMessage(getString(R.string.apk_update_message, apk.verName));
+                    ((TextView) apkDialog.findViewById(R.id.BTConfirm)).setText(R.string.apk_update_open);
+                    ((TextView) apkDialog.findViewById(R.id.BTCancel)).setText(R.string.vr_content_updates_later);
+                    apkDialog.setOnConfirmCallback(() -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(apk.url))));
+                    apkDialog.setOnDismissListener(d -> showVrContentUpdates(updates));
+                    apkDialog.show();
+                } else {
+                    showVrContentUpdates(updates);
+                }
             });
         }).start();
+    }
+
+    private void showVrContentUpdates(List<ContentProfile> updates) {
+        if (updates.isEmpty() || isFinishing() || isDestroyed()) return;
+        StringBuilder names = new StringBuilder();
+        for (ContentProfile profile : updates)
+            names.append("\n• ").append(profile.type).append(": ").append(profile.verName).append(" (").append(profile.verCode).append(")");
+        ContentDialog dialog = new ContentDialog(this);
+        dialog.setTitle(R.string.vr_content_updates_title);
+        dialog.setMessage(getString(R.string.vr_content_updates_message) + "\n" + names);
+        ((TextView) dialog.findViewById(R.id.BTConfirm)).setText(R.string.vr_content_updates_open);
+        ((TextView) dialog.findViewById(R.id.BTCancel)).setText(R.string.vr_content_updates_later);
+        dialog.setOnConfirmCallback(() -> showDownloader(updates.get(0).type != ContentProfile.ContentType.CONTENT_TYPE_PROTON));
+        dialog.show();
     }
 
     /**

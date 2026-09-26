@@ -52,6 +52,7 @@ import com.winlator.cmod.container.ContainerManager;
 import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.contentdialog.ShortcutSettingsDialog;
+import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.container.GameCopier;
 import com.winlator.cmod.container.GameUninstaller;
@@ -1571,6 +1572,8 @@ public class ShortcutsFragment extends Fragment {
 
             TextView playCountTextView = dialog.findViewById(R.id.play_count);
             TextView playtimeTextView = dialog.findViewById(R.id.playtime);
+            // The dialog wraps its content, so without a set width the paths wrap into a narrow column.
+            ((View) playCountTextView.getParent()).getLayoutParams().width = AppUtils.getPreferredDialogWidth(getContext());
 
             playCountTextView.setText("Number of times played: " + playCount);
             playtimeTextView.setText("Playtime: " + playtimeFormatted);
