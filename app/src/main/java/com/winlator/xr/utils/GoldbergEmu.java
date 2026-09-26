@@ -539,7 +539,7 @@ public class GoldbergEmu {
      * rather than over its steam_api, and the game is started through it, which is what gets a
      * SteamStub-wrapped exe past its check for a running Steam client.
      */
-    private static boolean isColdClientLoader(ContentProfile profile) {
+    public static boolean isColdClientLoader(ContentProfile profile) {
         for (ContentProfile.ContentFile file : profile.fileList)
             if (file.target.equalsIgnoreCase(ColdClientLoaderIni.FILE_NAME)) return true;
         return false;
@@ -584,7 +584,7 @@ public class GoldbergEmu {
     }
 
     /** Whether a Windows exe is 32-bit, from the machine field of its PE header. */
-    private static boolean isPe32(File exe) {
+    public static boolean isPe32(File exe) {
         try (RandomAccessFile file = new RandomAccessFile(exe, "r")) {
             file.seek(0x3C);
             int peOffset = Integer.reverseBytes(file.readInt());

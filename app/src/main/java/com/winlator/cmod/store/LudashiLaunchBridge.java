@@ -26,6 +26,8 @@ import java.io.FileWriter;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Launch bridge for Ludashi-plus store integrations.
@@ -64,6 +66,17 @@ public final class LudashiLaunchBridge {
     /** @param vrSupport a SteamDatabase.VR_* value, or VrGameScanner.UNKNOWN to scan the game; VR only turns on PC VR, optional VR asks once */
     public static void addToLauncher(Activity activity, String gameName, String exePath,
                                      String userAgent, int vrSupport, String... artUrls) {
+        addToLauncher(activity, gameName, exePath, userAgent, vrSupport, null, artUrls);
+    }
+
+    /** Runs once the container is picked; calling proceed with extra [Extra Data] entries (or null) writes the shortcut and launches. */
+    public interface BeforeRun {
+        void run(Container container, String exePath, Consumer<Map<String, String>> proceed);
+    }
+
+    /** @param beforeRun may be null */
+    public static void addToLauncher(Activity activity, String gameName, String exePath,
+                                     String userAgent, int vrSupport, BeforeRun beforeRun, String... artUrls) {
         new Thread(() -> {
             Handler h = new Handler(Looper.getMainLooper());
             try {
@@ -90,9 +103,12 @@ public final class LudashiLaunchBridge {
 
                 h.post(() -> new AlertDialog.Builder(activity)
                         .setTitle("Select container for \"" + gameName + "\"")
-                        .setItems(names, (dialog, which) ->
-                                writeShortcut(activity, containers.get(which), gameName, exePath,
-                                        userAgent, vrSupport, artUrls, h))
+                        .setItems(names, (dialog, which) -> {
+                            Container container = containers.get(which);
+                            if (beforeRun == null) writeShortcut(activity, container, gameName, exePath, userAgent, vrSupport, null, artUrls, h);
+                            else beforeRun.run(container, exePath, extraData ->
+                                    writeShortcut(activity, container, gameName, exePath, userAgent, vrSupport, extraData, artUrls, h));
+                        })
                         .setNegativeButton("Cancel", null)
                         .show());
 
@@ -256,7 +272,7 @@ public final class LudashiLaunchBridge {
 
     private static void writeShortcut(Activity activity, Container container,
                                       String gameName, String exePath,
-                                      String userAgent, int knownVrSupport, String[] artUrls, Handler h) {
+                                      String userAgent, int knownVrSupport, Map<String, String> extraData, String[] artUrls, Handler h) {
         new Thread(() -> {
             try {
                 int vrSupport = knownVrSupport == VrGameScanner.UNKNOWN
@@ -310,6 +326,9 @@ public final class LudashiLaunchBridge {
                         + "\n"
                         + "[Extra Data]\n"
                         + (pcvr != null ? PcvrRuntime.EXTRA_KEY + "=" + pcvr + "\n" : "");
+                if (extraData != null) {
+                    for (Map.Entry<String, String> e : extraData.entrySet()) content += e.getKey() + "=" + e.getValue() + "\n";
+                }
 
                 try (FileWriter fw = new FileWriter(shortcutFile)) {
                     fw.write(content);

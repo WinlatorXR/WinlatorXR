@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import com.winlator.cmod.R
+import com.winlator.cmod.contents.ColdClientLoaderIni
 import com.winlator.cmod.contents.ContentProfile
 import com.winlator.cmod.contents.ContentsManager
 import com.winlator.xr.utils.GoldbergEmu
@@ -91,8 +92,8 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
     // Branch picker — visible only when the PC build has more than the public branch.
     private lateinit var branchBtn: Button
 
-    // Auto-applies the Goldberg Steam fix (steam_api.dll swap) right after a PC install
-    // finishes — persisted globally so it carries over to every Steam store download.
+    // Asks for a Goldberg version and applies it on Launch, after the exe and container are picked —
+    // persisted globally so it carries over to every Steam store game.
     private lateinit var autoGoldbergCheck: CheckBox
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -314,11 +315,6 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
 
                 resetRetryState()
 
-                if (lastOs == SteamDepotDownloader.OS_WINDOWS &&
-                    goldbergPrefs().getBoolean(K_AUTO_APPLY_GOLDBERG, false)) {
-                    applyGoldbergAutomatically(id)
-                }
-
                 ui.post {
 
                     progressBar.isIndeterminate = false
@@ -474,7 +470,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
             installBtn.isEnabled = true
             launchBtn.isEnabled  = true
             launchBtn.alpha      = 1f
-            launchBtn.text       = if (androidSelected) "Install APK" else "Launch"
+            launchBtn.text       = if (androidSelected) "Install APK" else "Create Shortcut & Launch"
         } else {
             if (progressBar.visibility != View.VISIBLE) {
                 statusText.text = if (g.isInstalled)
@@ -487,7 +483,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
             installBtn.isEnabled = true
             launchBtn.isEnabled  = false
             launchBtn.alpha      = 0.4f
-            launchBtn.text       = "Launch"
+            launchBtn.text       = "Create Shortcut & Launch"
         }
     }
 
@@ -714,77 +710,10 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
     }
 
     // -------------------------------------------------------------------------
-    // Goldberg Steam fix (auto-apply)
+    // Goldberg Steam fix (before launch)
     // -------------------------------------------------------------------------
 
     private fun goldbergPrefs() = getSharedPreferences(GOLDBERG_PREFS, android.content.Context.MODE_PRIVATE)
-
-    /**
-     * Auto-applies the Goldberg Steam fix right after a PC/Windows install finishes. Unlike
-     * the manual "Apply Goldberg Steam Fix" shortcut-menu flow, this needs no AppID prompt —
-     * it's already known here, since this whole screen is keyed off it.
-     */
-    private fun applyGoldbergAutomatically(id: Int) {
-        Thread {
-            val row = SteamRepository.getInstance().database.getGame(id) ?: return@Thread
-            if (row.installDir.isEmpty()) return@Thread
-            val installDir = File(row.installDir)
-            if (!installDir.isDirectory) return@Thread
-
-            val contentsManager = ContentsManager(applicationContext)
-            contentsManager.syncContents()
-            val installed = contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_GOLDBERG)
-                ?.filter { ContentsManager.getInstallDir(applicationContext, it).isDirectory }
-                ?: emptyList()
-
-            if (installed.isEmpty()) {
-                ui.post {
-                    Toast.makeText(this,
-                        "Auto Goldberg fix skipped: install a Goldberg profile from Downloader → Goldberg first.",
-                        Toast.LENGTH_LONG).show()
-                }
-                return@Thread
-            }
-            val profile = installed[0]
-
-            val targetDirs = mutableListOf<File>()
-            scanForSteamApiDirs(installDir, 0, targetDirs, intArrayOf(0))
-            if (targetDirs.isEmpty()) targetDirs.add(installDir)
-
-            var succeeded = 0
-            for (targetDir in targetDirs) {
-                if (!GoldbergEmu.applyContentToDir(applicationContext, profile, targetDir)) continue
-                val settingsDir = File(targetDir, "steam_settings")
-                settingsDir.mkdirs()
-                try {
-                    java.io.FileWriter(File(settingsDir, "steam_appid.txt")).use { it.write(id.toString()) }
-                } catch (_: Exception) {}
-                succeeded++
-            }
-
-            ui.post {
-                Toast.makeText(this,
-                    if (succeeded > 0) "Goldberg Steam fix auto-applied." else "Auto Goldberg fix failed.",
-                    Toast.LENGTH_SHORT).show()
-            }
-        }.start()
-    }
-
-    /** Same bounded recursive steam_api(64).dll scan the manual shortcut-menu flow uses. */
-    private fun scanForSteamApiDirs(dir: File, depth: Int, found: MutableList<File>, visited: IntArray) {
-        if (!dir.isDirectory || depth > GOLDBERG_SCAN_MAX_DEPTH) return
-        if (++visited[0] > GOLDBERG_SCAN_MAX_VISITED_DIRS) return
-
-        val children = dir.listFiles() ?: return
-        var hasApi = false
-        val subDirs = mutableListOf<File>()
-        for (f in children) {
-            if (f.isDirectory) subDirs.add(f)
-            else if (f.name.equals("steam_api.dll", true) || f.name.equals("steam_api64.dll", true)) hasApi = true
-        }
-        if (hasApi) found.add(dir)
-        for (sub in subDirs) scanForSteamApiDirs(sub, depth + 1, found, visited)
-    }
 
     private fun isVrGame(): Boolean =
         SteamRepository.getInstance().database.getVrSupport(appId) != SteamDatabase.VR_NONE
@@ -814,6 +743,8 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         Thread {
             val exeFiles = mutableListOf<File>()
             AmazonLaunchHelper.collectExe(installDir, exeFiles)
+            // A ColdClientLoader set up on an earlier Launch leaves its own exes beside the game's
+            exeFiles.removeAll { it.name.startsWith("steamclient_loader", ignoreCase = true) }
 
             if (exeFiles.isEmpty()) {
                 ui.post {
@@ -828,18 +759,128 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
                 AmazonLaunchHelper.scoreExe(b, lowerTitle) - AmazonLaunchHelper.scoreExe(a, lowerTitle)
             }
             val vrSupport = SteamRepository.getInstance().database.getVrSupport(g.appId)
+            // Asked after the exe and container are picked, just before the shortcut is written and run
+            val beforeRun = if (goldbergPrefs().getBoolean(K_AUTO_APPLY_GOLDBERG, false))
+                LudashiLaunchBridge.BeforeRun { _, exePath, proceed -> pickAndApplyGoldberg(installDir, File(exePath), proceed) }
+                else null
 
             if (exeFiles.size == 1) {
-                ui.post { LudashiLaunchBridge.addToLauncher(this, g.name, exeFiles[0].absolutePath, null, vrSupport, *g.artworkUrls) }
+                ui.post { LudashiLaunchBridge.addToLauncher(this, g.name, exeFiles[0].absolutePath, null, vrSupport, beforeRun, *g.artworkUrls) }
                 return@Thread
             }
 
             // Multiple exes — show picker
             val candidates = exeFiles.map { it.absolutePath }
             showExePicker(candidates) { chosen ->
-                ui.post { LudashiLaunchBridge.addToLauncher(this, g.name, chosen, null, vrSupport, *g.artworkUrls) }
+                ui.post { LudashiLaunchBridge.addToLauncher(this, g.name, chosen, null, vrSupport, beforeRun, *g.artworkUrls) }
             }
         }.start()
+    }
+
+    /** Asks which installed Goldberg version to use, applies it, then hands the shortcut extras to proceed. */
+    private fun pickAndApplyGoldberg(installDir: File, exe: File, proceed: java.util.function.Consumer<Map<String, String>?>) {
+        Thread {
+            val contentsManager = ContentsManager(applicationContext)
+            contentsManager.syncContents()
+            val installed = contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_GOLDBERG)
+                ?.filter { ContentsManager.getInstallDir(applicationContext, it).isDirectory }
+                ?: emptyList()
+
+            ui.post {
+                when (installed.size) {
+                    0 -> {
+                        Toast.makeText(this, "Goldberg fix skipped: install a Goldberg profile from Downloader → Goldberg first.",
+                            Toast.LENGTH_LONG).show()
+                        proceed.accept(null)
+                    }
+                    1 -> applyGoldbergThenLaunch(installed[0], installDir, exe, proceed)
+                    else -> {
+                        val names = installed.map {
+                            if (GoldbergEmu.isColdClientLoader(it)) "${it.verName} (ColdClientLoader)" else it.verName
+                        }.toTypedArray()
+                        AlertDialog.Builder(this)
+                            .setTitle("Select Goldberg version")
+                            .setItems(names) { _, which -> applyGoldbergThenLaunch(installed[which], installDir, exe, proceed) }
+                            .setNegativeButton("Don't apply") { _, _ -> proceed.accept(null) }
+                            .setCancelable(false)
+                            .show()
+                    }
+                }
+            }
+        }.start()
+    }
+
+    private fun applyGoldbergThenLaunch(profile: ContentProfile, installDir: File, exe: File,
+                                        proceed: java.util.function.Consumer<Map<String, String>?>) {
+        Thread {
+            val extras = if (GoldbergEmu.isColdClientLoader(profile)) setUpColdClientLoader(profile, exe)
+                else applyGoldbergSwap(profile, installDir)
+            if (extras != null) {
+                proceed.accept(extras)
+                return@Thread
+            }
+            ui.post {
+                AlertDialog.Builder(this)
+                    .setTitle("Goldberg fix failed")
+                    .setMessage("Couldn't apply ${profile.verName}. Launch without it?")
+                    .setPositiveButton("Launch") { _, _ -> proceed.accept(null) }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            }
+        }.start()
+    }
+
+    /** Swaps steam_api(64).dll wherever the game has one; returns the shortcut extras, or null if nothing was patched. */
+    private fun applyGoldbergSwap(profile: ContentProfile, installDir: File): Map<String, String>? {
+        val targetDirs = mutableListOf<File>()
+        scanForSteamApiDirs(installDir, 0, targetDirs, intArrayOf(0))
+        if (targetDirs.isEmpty()) targetDirs.add(installDir)
+
+        var succeeded = 0
+        for (targetDir in targetDirs) {
+            if (!GoldbergEmu.applyContentToDir(applicationContext, profile, targetDir)) continue
+            val settingsDir = File(targetDir, "steam_settings")
+            settingsDir.mkdirs()
+            try {
+                java.io.FileWriter(File(settingsDir, "steam_appid.txt")).use { it.write(appId.toString()) }
+            } catch (_: Exception) {}
+            succeeded++
+        }
+        if (succeeded == 0) return null
+        return mapOf("goldbergApplied" to ContentsManager.getEntryName(profile), "goldbergAppId" to appId.toString())
+    }
+
+    /** Same bounded recursive steam_api(64).dll scan the manual shortcut-menu flow uses. */
+    private fun scanForSteamApiDirs(dir: File, depth: Int, found: MutableList<File>, visited: IntArray) {
+        if (!dir.isDirectory || depth > GOLDBERG_SCAN_MAX_DEPTH) return
+        if (++visited[0] > GOLDBERG_SCAN_MAX_VISITED_DIRS) return
+
+        val children = dir.listFiles() ?: return
+        var hasApi = false
+        val subDirs = mutableListOf<File>()
+        for (f in children) {
+            if (f.isDirectory) subDirs.add(f)
+            else if (f.name.equals("steam_api.dll", true) || f.name.equals("steam_api64.dll", true)) hasApi = true
+        }
+        if (hasApi) found.add(dir)
+        for (sub in subDirs) scanForSteamApiDirs(sub, depth + 1, found, visited)
+    }
+
+    /** Puts the loader beside exe and points its ini at it; returns the shortcut extras, or null on failure. */
+    private fun setUpColdClientLoader(profile: ContentProfile, exe: File): Map<String, String>? {
+        val exeDir = exe.parentFile ?: return null
+        if (!GoldbergEmu.applyContentToDir(applicationContext, profile, exeDir)) return null
+        try {
+            ColdClientLoaderIni.fill(File(exeDir, ColdClientLoaderIni.FILE_NAME),
+                GogInstallPath.toWinePath(this, exe.absolutePath),
+                GogInstallPath.toWinePath(this, exeDir.absolutePath), appId.toString())
+        } catch (_: Exception) {
+            return null
+        }
+        return mapOf(
+            "goldbergApplied" to ContentsManager.getEntryName(profile),
+            "goldbergAppId" to appId.toString(),
+            "goldbergLoader" to if (GoldbergEmu.isPe32(exe)) "steamclient_loader_x86.exe" else "steamclient_loader_x64.exe")
     }
 
     /** Locate the downloaded APK under [dir] and hand it to Android's package installer. */
@@ -1420,7 +1461,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         info.addView(branchBtn)
 
         autoGoldbergCheck = CheckBox(this).apply {
-            text = "Auto-apply Goldberg Steam fix after install"
+            text = "Apply Goldberg Steam fix when creating the shortcut"
             textSize = 12f
             setTextColor(Color.parseColor("#AAAAAA"))
             isChecked = goldbergPrefs().getBoolean(K_AUTO_APPLY_GOLDBERG, false)
@@ -1475,7 +1516,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         }
 
         launchBtn = Button(this).apply {
-            text = "Launch"
+            text = "Create Shortcut & Launch"
             setTextColor(Color.WHITE)
             setBackgroundColor(COLOR_LAUNCH)
             isEnabled = false
