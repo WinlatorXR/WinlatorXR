@@ -666,6 +666,10 @@ public class ContentsFragment extends Fragment {
         });
     }
 
+    private void confirmDownload(String url, Runnable onConfirm) {
+        Downloader.confirmDownload(getActivity(), preloaderDialog, url, onConfirm);
+    }
+
     private void loadContentList() {
         if (currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS)) {
             emptyText.setVisibility(View.GONE);
@@ -876,7 +880,7 @@ public class ContentsFragment extends Fragment {
             holder.ibDownload.setOnClickListener(v -> {
                 Intent intent = new Intent();
                 intent.setData(Uri.parse(profile.remoteUrl));
-                new Thread(() -> {
+                confirmDownload(profile.remoteUrl, new Thread(() -> {
                     long timestamp = System.currentTimeMillis();
                     File output = new File(getContext().getCacheDir(), "temp_" + timestamp);
 
@@ -922,7 +926,7 @@ public class ContentsFragment extends Fragment {
                     } catch (Exception e) {
                         //Expected to fail when the fragment is no longer visible
                     }
-                }).start();
+                })::start);
             });
         }
 
@@ -971,7 +975,7 @@ public class ContentsFragment extends Fragment {
             }
             viewHolder.btMenu.setOnClickListener((v) -> {
                 if (adrenotoolsManager.isRemote(driver)) {
-                    new Thread(() -> {
+                    confirmDownload(adrenotoolsManager.getDriverUrl(driver), new Thread(() -> {
                         long timestamp = System.currentTimeMillis();
                         File output = new File(getContext().getCacheDir(), "temp_" + timestamp);
                         try {
@@ -982,7 +986,7 @@ public class ContentsFragment extends Fragment {
                         } catch (Exception e) {
                             //Expected to fail when the fragment is no longer visible
                         }
-                    }).start();
+                    })::start);
                 } else {
                     removeAtIndex(position);
                     reload();

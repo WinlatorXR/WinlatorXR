@@ -205,6 +205,10 @@
     <string name="download_file">Download File</string>
     <string name="do_you_want_to_download_the_selected_profiles">Do you want to download the selected profiles?</string>
     <string name="downloading_file">Downloading file...</string>
+    <string name="checking_download_size">Checking download size...</string>
+    <string name="download_size_confirm">This download is %1$s.\n\n%2$s is free on this device. Download it?</string>
+    <string name="download_size_unknown">of unknown size</string>
+    <string name="download_not_enough_space">There is not enough room for this download. It needs %1$s and only %2$s is free.</string>
     <string name="unable_to_load_profile_list">Unable to load profile list</string>
     <string name="copy">Copy</string>
     <string name="installed_version">Installed Version</string>
