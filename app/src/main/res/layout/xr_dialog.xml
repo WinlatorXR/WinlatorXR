@@ -137,6 +137,59 @@
                                 android:text="@string/xr_show_fps" />
 
                             <CheckBox
+                                android:id="@+id/CBFovPassthrough"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/use_fov_passthrough"
+                                android:visibility="gone" />
+
+                            <LinearLayout
+                                android:id="@+id/LLColourKey"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:visibility="gone">
+
+                                <!-- Above the list, so it can be reached without scrolling through the colours -->
+                                <LinearLayout
+                                    android:id="@+id/LLColourKeyTolerance"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="8dp"
+                                        android:text="@string/xr_colour_key_tolerance" />
+
+                                    <com.winlator.cmod.widget.SeekBar
+                                        android:id="@+id/SBColourKeyTolerance"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="30dp"
+                                        android:background="@drawable/xr_selector"
+                                        app:sbMaxValue="100"
+                                        app:sbMinValue="10"
+                                        app:sbStep="5" />
+                                </LinearLayout>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="8dp"
+                                    android:text="@string/xr_colour_key" />
+
+                                <!-- Same single-choice list as the controller profiles, in XrActivity's colour key mode order -->
+                                <ListView
+                                    android:id="@+id/LVColourKey"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:focusable="true"
+                                    android:choiceMode="singleChoice"/>
+                            </LinearLayout>
+
+                            <CheckBox
                                 android:id="@+id/CBDisableStartupHints"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"

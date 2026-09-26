@@ -30,6 +30,7 @@ import com.winlator.cmod.renderer.RenderableWindow;
 import com.winlator.cmod.renderer.Texture;
 import com.winlator.cmod.renderer.material.BGRAMaterial;
 import com.winlator.cmod.renderer.material.ShaderMaterial;
+import com.winlator.cmod.renderer.material.WindowMaterial;
 import com.winlator.cmod.widget.XServerView;
 import com.winlator.cmod.xserver.Drawable;
 import com.winlator.cmod.xserver.Window;
@@ -422,6 +423,11 @@ public class XrRenderer extends GLRenderer {
             return;
         }
         boolean fullscreen = (XrActivity.isVR && XrRenderer.vrWindowOnTop) || XrActivity.isImmersive;
+        if (material instanceof WindowMaterial) {
+            // Only the VR view is keyed, and only while passthrough is there to show through it
+            boolean key = XrActivity.isEnabled(null) && XrActivity.isVR && XrRenderer.vrWindowOnTop && XrActivity.isPassthrough;
+            ((WindowMaterial) material).setColourKey(key ? XrActivity.colourKey : 0, XrActivity.getColourKeyThreshold());
+        }
         super.renderWindows(material, fullscreen);
     }
 }

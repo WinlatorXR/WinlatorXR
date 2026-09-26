@@ -289,6 +289,143 @@ static struct XrFramebuffer g_quads[WXR_DIRECT_MAX_QUADS];
 static int g_quad_width[WXR_DIRECT_MAX_QUADS], g_quad_height[WXR_DIRECT_MAX_QUADS];
 static struct wxr_direct_frame g_shown;
 static bool g_shown_valid;
+bool XrDirectOpaqueEyes;
+int XrDirectKeyMode;
+float XrDirectKeyThreshold;
+
+/* Colour key, kept in step with WindowMaterial.java: alpha 0 where the pixel matches the key.
+ * Modes 1-3 match hue (green, blue, pink) with saturation and brightness guards, 4 is black. */
+#define KEY_ALPHA_GLSL \
+    "float keyAlpha(vec3 c) {\n" \
+    "    if (keyMode == 0) return 1.0;\n" \
+    "    float v = max(c.r, max(c.g, c.b));\n" \
+    "    if (keyMode == 4) return smoothstep(keyThreshold, keyThreshold + 0.04, v);\n" \
+    "    float d = v - min(c.r, min(c.g, c.b));\n" \
+    "    float s = v > 0.0 ? d / v : 0.0;\n" \
+    "    float h = 0.0;\n" \
+    "    if (d > 0.0) {\n" \
+    "        if (v == c.r) h = mod((c.g - c.b) / d, 6.0);\n" \
+    "        else if (v == c.g) h = (c.b - c.r) / d + 2.0;\n" \
+    "        else h = (c.r - c.g) / d + 4.0;\n" \
+    "    }\n" \
+    "    float key = keyMode == 1 ? 2.0 : (keyMode == 2 ? 4.0 : 5.0);\n" \
+    "    float dh = abs(h - key) / 6.0;\n" \
+    "    dh = min(dh, 1.0 - dh);\n" \
+    "    float match = 1.0 - smoothstep(keyThreshold, keyThreshold + 0.03, dh);\n" \
+    "    return 1.0 - match * smoothstep(0.2, 0.3, s) * smoothstep(0.1, 0.2, v);\n" \
+    "}\n"
+
+static const char* KEY_VS =
+    "#version 300 es\n"
+    "void main() {\n"
+    "    vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));\n"
+    "    gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);\n"
+    "}\n";
+
+static const char* KEY_FS =
+    "#version 300 es\n"
+    "precision highp float;\n"
+    "uniform highp sampler2D src;\n"
+    "uniform ivec4 rect;\n"
+    "uniform vec2 size;\n"
+    "uniform int keyMode;\n"
+    "uniform float keyThreshold;\n"
+    "out vec4 color;\n"
+    KEY_ALPHA_GLSL
+    "void main() {\n"
+    "    vec2 st = gl_FragCoord.xy / size;\n"
+    /* Same mapping as the blit: the buffer's rows run top-down */
+    "    vec2 p = vec2(rect.xy) + vec2(st.x, 1.0 - st.y) * vec2(rect.zw);\n"
+    "    vec3 c = texelFetch(src, ivec2(floor(p)), 0).rgb;\n"
+    "    color = vec4(c, keyAlpha(c));\n"
+    "}\n";
+
+static GLuint g_key_program, g_key_vao;
+static GLint g_key_rect, g_key_size, g_key_mode, g_key_threshold;
+
+static GLuint key_shader(GLenum type, const char* source)
+{
+    GLint ok = 0;
+    GLuint shader = glCreateShader(type);
+    glShaderSource(shader, 1, &source, NULL);
+    glCompileShader(shader);
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
+    if (!ok) {
+        char log[512];
+        glGetShaderInfoLog(shader, sizeof(log), NULL, log);
+        LOG("colour key shader: %s", log);
+    }
+    return shader;
+}
+
+static bool key_program(void)
+{
+    static bool failed;
+    GLint ok = 0;
+    if (g_key_program || failed) return g_key_program != 0;
+    GLuint vs = key_shader(GL_VERTEX_SHADER, KEY_VS), fs = key_shader(GL_FRAGMENT_SHADER, KEY_FS);
+    GLuint program = glCreateProgram();
+    glAttachShader(program, vs);
+    glAttachShader(program, fs);
+    glLinkProgram(program);
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+    glGetProgramiv(program, GL_LINK_STATUS, &ok);
+    if (!ok) {
+        LOG("colour key program failed to link");
+        glDeleteProgram(program);
+        failed = true;
+        return false;
+    }
+    g_key_rect = glGetUniformLocation(program, "rect");
+    g_key_size = glGetUniformLocation(program, "size");
+    g_key_mode = glGetUniformLocation(program, "keyMode");
+    g_key_threshold = glGetUniformLocation(program, "keyThreshold");
+    glGenVertexArrays(1, &g_key_vao);
+    g_key_program = program;
+    return true;
+}
+
+/* Draws rect of src into the bound target with the colour key applied; leaves GL state as found. */
+static void key_copy(int width, int height, struct buffer* src, const int32_t* r)
+{
+    GLint program, vao, active, texture, viewport[4];
+    GLboolean blend = glIsEnabled(GL_BLEND), depth = glIsEnabled(GL_DEPTH_TEST);
+    GLboolean cull = glIsEnabled(GL_CULL_FACE), scissor = glIsEnabled(GL_SCISSOR_TEST);
+    glGetIntegerv(GL_CURRENT_PROGRAM, &program);
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
+    glActiveTexture(GL_TEXTURE0);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
+    glGetIntegerv(GL_VIEWPORT, viewport);
+
+    glDisable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_SCISSOR_TEST);
+    glViewport(0, 0, width, height);
+    glUseProgram(g_key_program);
+    glBindVertexArray(g_key_vao);
+    glBindTexture(GL_TEXTURE_2D, src->texture);
+    /* Only level 0 exists: the default mipmap filter would leave the texture incomplete */
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glUniform4i(g_key_rect, r[0], r[1], r[2], r[3]);
+    glUniform2f(g_key_size, (float)width, (float)height);
+    glUniform1i(g_key_mode, XrDirectKeyMode);
+    glUniform1f(g_key_threshold, XrDirectKeyThreshold);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glActiveTexture(active);
+    glBindVertexArray(vao);
+    glUseProgram(program);
+    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    if (blend) glEnable(GL_BLEND);
+    if (depth) glEnable(GL_DEPTH_TEST);
+    if (cull) glEnable(GL_CULL_FACE);
+    if (scissor) glEnable(GL_SCISSOR_TEST);
+}
 
 static bool load_egl(void)
 {
@@ -409,17 +546,30 @@ static bool ensure_quad(XrSession session, uint32_t q, int width, int height)
 }
 
 /* Waits for the bridge's copy (taking the fd), then copies rect of src into the whole of target. */
-static void blit(struct XrFramebuffer* target, int width, int height, struct buffer* src, const int32_t* r, int fd)
+static void blit(struct XrFramebuffer* target, int width, int height, struct buffer* src, const int32_t* r, int fd, bool opaque, bool key)
 {
     gpu_wait(fd);
     target->SwapchainIndex++;
     target->SwapchainIndex %= target->SwapchainLength;
     XrFramebufferAcquire(target);
+    if (key && key_program()) {
+        key_copy(width, height, src, r);
+        XrFramebufferRelease(target);
+        return;
+    }
     glBindFramebuffer(GL_READ_FRAMEBUFFER, src->fbo);
     /* The buffer's rows run top-down, a GL swapchain image's bottom-up. */
     glBlitFramebuffer(r[0], r[1], r[0] + r[2], r[1] + r[3],
                       0, height, width, 0, GL_COLOR_BUFFER_BIT, GL_NEAREST);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    if (opaque) {
+        /* Games leave alpha 0 in their eyes (Beat Saber does), which would show passthrough through them */
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    }
     XrFramebufferRelease(target);
 }
 
@@ -447,10 +597,11 @@ static void take_frame(XrSession session, struct wxr_direct_frame* frame, int* f
     }
 
     for (v = 0; v < frame->view_count; v++)
-        blit(&g_eyes[v], g_eye_width, g_eye_height, src[v], frame->views[v].rect, fds[v]);
+        blit(&g_eyes[v], g_eye_width, g_eye_height, src[v], frame->views[v].rect, fds[v], XrDirectOpaqueEyes,
+             XrDirectOpaqueEyes && XrDirectKeyMode);
     for (q = 0; q < frame->quad_count; q++)
         blit(&g_quads[q], g_quad_width[q], g_quad_height[q], src[frame->view_count + q],
-             frame->quads[q].rect, fds[frame->view_count + q]);
+             frame->quads[q].rect, fds[frame->view_count + q], false, false);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);  /* the released images are not a place to draw */
     g_shown = *frame;
     g_shown_valid = true;

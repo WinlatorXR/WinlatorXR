@@ -70,6 +70,9 @@ public class XrActivity extends XServerDisplayActivity {
     public static boolean showFPS;
     public static boolean sbsStretch;
     public static boolean sbsTrim;
+    public static boolean fovPassthrough;
+    public static int colourKey;
+    public static int colourKeyTolerance;
     public static boolean wheelEmulation;
     public static int headTurnSensitivity;
 
@@ -100,6 +103,14 @@ public class XrActivity extends XServerDisplayActivity {
     /** How much of each eye's width is trimmed from each edge; enough for a 3D shader at default strength. */
     public static final int SBS_TRIM_PERCENT = 2;
 
+    /** Whether a VR title's reduced field of view shows passthrough, not black, around it. */
+    public static final String PREF_FOV_PASSTHROUGH = "use_xr_fov_passthrough";
+
+    /** Colour a VR title's view shows passthrough through: 0 off, then green, blue, pink, black. */
+    public static final String PREF_COLOUR_KEY = "xr_colour_key";
+    public static final String PREF_COLOUR_KEY_TOLERANCE = "xr_colour_key_tolerance";
+    public static final int COLOUR_KEY_BLACK = 4;
+
     // Defaults for everything the XR and motion control menus can change. They live here
     // because both the menus and this activity have to agree on what an untouched setting
     // means; when they did not, the menu showed key emulation off while the session ran it
@@ -119,6 +130,9 @@ public class XrActivity extends XServerDisplayActivity {
     public static final boolean DEFAULT_SHOW_FPS = false;
     public static final boolean DEFAULT_SBS_STRETCH = false;
     public static final boolean DEFAULT_SBS_TRIM = false;
+    public static final boolean DEFAULT_FOV_PASSTHROUGH = false;
+    public static final int DEFAULT_COLOUR_KEY = 0;
+    public static final int DEFAULT_COLOUR_KEY_TOLERANCE = 50;
     public static final boolean DEFAULT_WHEEL = false;
     public static final int DEFAULT_HEAD_TURN_SENSITIVITY = 100;
     public static final String PREF_HEAD_TURN_SENSITIVITY = "xr_head_turn_sensitivity";
@@ -132,7 +146,7 @@ public class XrActivity extends XServerDisplayActivity {
             "use_cs", "use_pt", "use_xr_gamepad", "xr_gamepad_radial_to_square",
             "use_xr_rumble_passthrough", "use_xr_keys", "use_xr_mouse", "use_xr_leftHanded",
             "use_xr_lightgun", "use_xr_lightgun_haptic", "use_xr_relative_mouse", "use_xr_smoothing", "use_xr_wheel",
-            PREF_SHOW_FPS, PREF_SBS_STRETCH, PREF_SBS_TRIM, PREF_SCREEN_DISTANCE, PREF_HEAD_TURN_SENSITIVITY,XrEnvironment.PREF_KEY, XrEnvironment.ENABLED_KEY,
+            PREF_SHOW_FPS, PREF_SBS_STRETCH, PREF_SBS_TRIM, PREF_FOV_PASSTHROUGH, PREF_COLOUR_KEY, PREF_COLOUR_KEY_TOLERANCE, PREF_SCREEN_DISTANCE, PREF_HEAD_TURN_SENSITIVITY,XrEnvironment.PREF_KEY, XrEnvironment.ENABLED_KEY,
             XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX};
 
     static {
@@ -179,6 +193,9 @@ public class XrActivity extends XServerDisplayActivity {
         showFPS = SessionSettings.getBoolean(this, PREF_SHOW_FPS, DEFAULT_SHOW_FPS);
         sbsStretch = SessionSettings.getBoolean(this, PREF_SBS_STRETCH, DEFAULT_SBS_STRETCH);
         sbsTrim = SessionSettings.getBoolean(this, PREF_SBS_TRIM, DEFAULT_SBS_TRIM);
+        fovPassthrough = SessionSettings.getBoolean(this, PREF_FOV_PASSTHROUGH, DEFAULT_FOV_PASSTHROUGH);
+        colourKey = Math.max(0, Math.min(SessionSettings.getInt(this, PREF_COLOUR_KEY, DEFAULT_COLOUR_KEY), COLOUR_KEY_BLACK));
+        colourKeyTolerance = Math.max(10, Math.min(SessionSettings.getInt(this, PREF_COLOUR_KEY_TOLERANCE, DEFAULT_COLOUR_KEY_TOLERANCE), 100));
         lastDistance = SessionSettings.getFloat(this, PREF_SCREEN_DISTANCE, DEFAULT_DISTANCE);
         headTurnSensitivity = Math.max(50, Math.min(SessionSettings.getInt(this, PREF_HEAD_TURN_SENSITIVITY, DEFAULT_HEAD_TURN_SENSITIVITY), 150));
         if (mouseLightgun) mouseRelative = false;
@@ -189,6 +206,9 @@ public class XrActivity extends XServerDisplayActivity {
         nativeSetSharpening(sharpening);
         nativeSetEdgeGlow(edgeGlow);
         nativeSetSbsTrim(sbsTrim ? SBS_TRIM_PERCENT : 0);
+        nativeSetFovScale(getPcvrFovScale());
+        nativeSetFovPassthrough(fovPassthrough);
+        nativeSetColourKey(colourKey, getColourKeyThreshold());
         nativeSetPointerSmoothing(pointerSmoothing);
         nativeSetEnvironmentEnabled(XrEnvironment.isEnabled(this));
     }
@@ -365,6 +385,15 @@ public class XrActivity extends XServerDisplayActivity {
     public native void nativeSetSharpening(int level);
     public native void nativeSetEdgeGlow(int intensity);
     public native void nativeSetSbsTrim(int percent);
+    public native void nativeSetFovScale(int percent);
+    public native void nativeSetFovPassthrough(boolean enabled);
+    public native void nativeSetColourKey(int mode, float threshold);
+
+    /** The tolerance as the shaders use it: hue distance for a colour, brightness for black. */
+    public static float getColourKeyThreshold() {
+        float t = colourKeyTolerance / 100.0f;
+        return colourKey == COLOUR_KEY_BLACK ? 0.02f + t * 0.25f : 0.02f + t * 0.13f;
+    }
     public native void nativeSetPointerSmoothing(boolean enabled);
     public native boolean nativeIsEnvironmentSupported();
     public native void nativeSetEnvironment(Bitmap bitmap);

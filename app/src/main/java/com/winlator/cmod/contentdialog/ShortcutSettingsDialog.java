@@ -218,6 +218,13 @@ public class ShortcutSettingsDialog extends ContentDialog {
         final CheckBox cbPcvrRuntime = findViewById(R.id.CBPcvrRuntime);
         cbPcvrRuntime.setChecked(PcvrRuntime.isEnabled(shortcut));
 
+        // XrAPI VR games run only in the Proton 9 x86_64 container, which has no PC VR setup
+        final boolean xrapiContainer = wineVersion.startsWith(WineInfo.MAIN_WINE_VERSION.identifier());
+        final CheckBox cbXrapiVr = findViewById(R.id.CBXrapiVr);
+        cbXrapiVr.setChecked(xrapiContainer && shortcut.getExtra("xrapiVr", "0").equals("1"));
+        cbXrapiVr.setVisibility(xrapiContainer ? View.VISIBLE : View.GONE);
+        if (xrapiContainer && !cbPcvrRuntime.isChecked()) cbPcvrRuntime.setVisibility(View.GONE);
+
         final CheckBox cbPcvrDirectTransport = findViewById(R.id.CBPcvrDirectTransport);
         cbPcvrDirectTransport.setChecked(PcvrRuntime.isDirectTransport(shortcut));
 
@@ -244,16 +251,38 @@ public class ShortcutSettingsDialog extends ContentDialog {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {}
         });
+        // 30% to 125% in steps of 5 of the default field of view: progress = (scale - 30) / 5
+        final View llPcvrFovScale = findViewById(R.id.LLPcvrFovScale);
+        final SeekBar sbPcvrFovScale = findViewById(R.id.SBPcvrFovScale);
+        final TextView tvPcvrFovScale = findViewById(R.id.TVPcvrFovScale);
+        sbPcvrFovScale.setProgress(Math.round((PcvrRuntime.getFovScale(shortcut) - 30) / 5.0f));
+        tvPcvrFovScale.setText((30 + 5 * sbPcvrFovScale.getProgress()) + "%");
+        sbPcvrFovScale.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                tvPcvrFovScale.setText((30 + 5 * progress) + "%");
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
         cbPcvrDirectTransport.setVisibility(cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE);
         llPcvrController.setVisibility(cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE);
+        llPcvrFovScale.setVisibility(cbPcvrRuntime.isChecked() || cbXrapiVr.isChecked() ? View.VISIBLE : View.GONE);
         // The render scale only has a say over direct frames
         llPcvrRenderScale.setVisibility(cbPcvrRuntime.isChecked() && cbPcvrDirectTransport.isChecked()
                 ? View.VISIBLE : View.GONE);
         cbPcvrRuntime.setOnCheckedChangeListener((buttonView, isChecked) -> {
             cbPcvrDirectTransport.setVisibility(isChecked ? View.VISIBLE : View.GONE);
             llPcvrController.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            llPcvrFovScale.setVisibility(isChecked || cbXrapiVr.isChecked() ? View.VISIBLE : View.GONE);
             llPcvrRenderScale.setVisibility(isChecked && cbPcvrDirectTransport.isChecked() ? View.VISIBLE : View.GONE);
         });
+        cbXrapiVr.setOnCheckedChangeListener((buttonView, isChecked) ->
+                llPcvrFovScale.setVisibility(isChecked || cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE));
         cbPcvrDirectTransport.setOnCheckedChangeListener((buttonView, isChecked) ->
                 llPcvrRenderScale.setVisibility(isChecked && cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE));
 
@@ -525,6 +554,10 @@ public class ShortcutSettingsDialog extends ContentDialog {
                 shortcut.putExtra(PcvrRuntime.CONTROLLER_KEY, cbPcvrRuntime.isChecked() && !pcvrController.isEmpty() ? pcvrController : null);
                 shortcut.putExtra(PcvrRuntime.RENDER_SCALE_KEY, cbPcvrRuntime.isChecked()
                         ? String.valueOf(20 + 5 * sbPcvrRenderScale.getProgress()) : null);
+                int pcvrFov = 30 + 5 * sbPcvrFovScale.getProgress();
+                shortcut.putExtra("xrapiVr", cbXrapiVr.isChecked() ? "1" : null);
+                shortcut.putExtra(PcvrRuntime.FOV_SCALE_KEY, (cbPcvrRuntime.isChecked() || cbXrapiVr.isChecked()) && pcvrFov != PcvrRuntime.DEFAULT_FOV_SCALE
+                        ? String.valueOf(pcvrFov) : null);
                 shortcut.putExtra("useReshade", SReshade.getSelectedItemPosition() + "");
                 shortcut.putExtra("useTrackIR", STrackIR.getSelectedItemPosition() + "");
                 shortcut.putExtra("fullscreenStretched", cbFullscreenStretched.isChecked() ? "1" : null);

@@ -67,6 +67,8 @@ public class XrDialog extends ContentDialog {
         CheckBox cbDisableEnvironment = findViewById(R.id.CBDisableEnvironment);
         CheckBox cbSBSStretch = findViewById(R.id.CBSBSStretch);
         CheckBox cbSBSTrim = findViewById(R.id.CBSBSTrim);
+        CheckBox cbFovPassthrough = findViewById(R.id.CBFovPassthrough);
+        View llColourKey = findViewById(R.id.LLColourKey);
         // Passthrough already covers the space the environment would occupy, so the switch
         // would do nothing visible while it is on.
         hmdUI(activity, cbSBS, cbImmersiveMode, cbCurvedScreen, cbPassthrough, tvToApplyClose,
@@ -77,6 +79,9 @@ public class XrDialog extends ContentDialog {
                     int sbsVisibility = XrActivity.isActive() && !XrActivity.isVR && cbSBS.isChecked() ? View.VISIBLE : View.GONE;
                     cbSBSStretch.setVisibility(sbsVisibility);
                     cbSBSTrim.setVisibility(sbsVisibility);
+                    // Only a VR title has an outer FOV, and it rides on the passthrough toggle
+                    cbFovPassthrough.setVisibility(isVRGameRunning() && cbPassthrough.isChecked() ? View.VISIBLE : View.GONE);
+                    llColourKey.setVisibility(cbFovPassthrough.getVisibility());
                     updateImmersiveLabel(cbImmersiveMode, XrActivity.gamepadEmulation);
                 });
         SeekBar sbHeadTurn = findViewById(R.id.SBHeadTurnSensitivity);
@@ -95,6 +100,37 @@ public class XrDialog extends ContentDialog {
             saveConfig(cbSBSTrim, XrActivity.PREF_SBS_TRIM, checked);
             XrActivity.sbsTrim = checked;
             if (XrActivity.isActive()) XrActivity.getInstance().nativeSetSbsTrim(checked ? XrActivity.SBS_TRIM_PERCENT : 0);
+        });
+        loadConfig(cbFovPassthrough, XrActivity.PREF_FOV_PASSTHROUGH, XrActivity.DEFAULT_FOV_PASSTHROUGH, XrActivity.fovPassthrough);
+        cbFovPassthrough.setOnCheckedChangeListener((compoundButton, checked) -> {
+            saveConfig(cbFovPassthrough, XrActivity.PREF_FOV_PASSTHROUGH, checked);
+            XrActivity.fovPassthrough = checked;
+            if (XrActivity.isActive()) XrActivity.getInstance().nativeSetFovPassthrough(checked);
+        });
+        ListView lvColourKey = findViewById(R.id.LVColourKey);
+        View llColourKeyTolerance = findViewById(R.id.LLColourKeyTolerance);
+        SeekBar sbColourKeyTolerance = findViewById(R.id.SBColourKeyTolerance);
+        // In XrActivity's colour key mode order, so the index is the mode
+        lvColourKey.setAdapter(new ArrayAdapter<>(activity, android.R.layout.simple_list_item_single_choice, new String[] {
+                activity.getString(R.string.xr_colour_key_off), activity.getString(R.string.xr_colour_key_green),
+                activity.getString(R.string.xr_colour_key_blue), activity.getString(R.string.xr_colour_key_pink),
+                activity.getString(R.string.xr_colour_key_black)}));
+        lvColourKey.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
+        lvColourKey.setItemChecked(XrActivity.colourKey, true);
+        llColourKeyTolerance.setVisibility(XrActivity.colourKey > 0 ? View.VISIBLE : View.GONE);
+        lvColourKey.setOnItemClickListener((adapterView, view, mode, l) -> {
+            if (mode == XrActivity.colourKey) return;
+            XrActivity.colourKey = mode;
+            SessionSettings.putInt(activity, XrActivity.PREF_COLOUR_KEY, mode);
+            llColourKeyTolerance.setVisibility(mode > 0 ? View.VISIBLE : View.GONE);
+            applyColourKey();
+        });
+        sbColourKeyTolerance.setSuffix("%");
+        sbColourKeyTolerance.setValue(XrActivity.colourKeyTolerance);
+        sbColourKeyTolerance.setOnValueChangeListener((seekBar, value) -> {
+            XrActivity.colourKeyTolerance = Math.round(value);
+            SessionSettings.putInt(activity, XrActivity.PREF_COLOUR_KEY_TOLERANCE, XrActivity.colourKeyTolerance);
+            applyColourKey();
         });
         environmentToggleUI(activity, cbDisableEnvironment);
         frameRateUI(findViewById(R.id.CBShowFPS));
@@ -369,6 +405,10 @@ public class XrDialog extends ContentDialog {
         view.setAlpha(0.8f);
     }
 
+    private static void applyColourKey() {
+        if (XrActivity.isActive()) XrActivity.getInstance().nativeSetColourKey(XrActivity.colourKey, XrActivity.getColourKeyThreshold());
+    }
+
     /** Disables a control and dims it, since setEnabled alone is easy to miss. */
     public static void setViewEnabled(View view, boolean enabled) {
         view.setEnabled(enabled);
@@ -382,7 +422,8 @@ public class XrDialog extends ContentDialog {
         if (cbImmersiveMode == null) return;
         cbImmersiveMode.setText(gamepad ? R.string.use_immersive_mode_5dof : R.string.use_immersive_mode);
         // The head-turn slider only does anything in 5DoF
-        int visibility = XrActivity.isActive() && gamepad && cbImmersiveMode.isChecked() ? View.VISIBLE : View.GONE;
+        int visibility = XrActivity.isActive() && gamepad && cbImmersiveMode.isChecked() &&
+                cbImmersiveMode.getVisibility() == View.VISIBLE ? View.VISIBLE : View.GONE;
         View headTurnSensitivity = root.findViewById(R.id.LLHeadTurnSensitivity);
         if (headTurnSensitivity != null) headTurnSensitivity.setVisibility(visibility);
     }
@@ -395,6 +436,11 @@ public class XrDialog extends ContentDialog {
             cbSBS.setChecked(XrActivity.isSBS);
             cbImmersiveMode.setEnabled(!XrActivity.isUDP);
             cbImmersiveMode.setChecked(isImmersive);
+            // Neither can be changed while a VR title runs, so they give their space to its options
+            if (isVRGameRunning()) {
+                cbSBS.setVisibility(View.GONE);
+                cbImmersiveMode.setVisibility(View.GONE);
+            }
         } else {
             cbSBS.setVisibility(View.GONE);
             cbImmersiveMode.setVisibility(View.GONE);

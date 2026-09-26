@@ -43,6 +43,9 @@ public final class PcvrRuntime {
     /** Direct PC VR renders at the headset's recommended eye size, scaled by this percentage. */
     public static final String RENDER_SCALE_KEY = "pcvrRenderScale";
     public static final int DEFAULT_RENDER_SCALE = 50;
+    /** Percentage of the default VR field of view, which already overscans the headset by 10%. */
+    public static final String FOV_SCALE_KEY = "pcvrFovScale";
+    public static final int DEFAULT_FOV_SCALE = 100;
     /** The runtime hands its eye images to this app instead of drawing them in the preview window. */
     public static final String DIRECT_KEY = "pcvrDirectTransport";
     /** OpenXR profile the runtime reports; OpenComposite presents the matching headset. Empty keeps the runtime's ranking. */
@@ -81,6 +84,15 @@ public final class PcvrRuntime {
             return Math.max(10, Math.min(200, scale));
         } catch (NumberFormatException e) {
             return DEFAULT_RENDER_SCALE;
+        }
+    }
+
+    public static int getFovScale(Shortcut shortcut) {
+        try {
+            int scale = Integer.parseInt(shortcut != null ? shortcut.getExtra(FOV_SCALE_KEY, "") : "");
+            return Math.max(30, Math.min(125, scale));
+        } catch (NumberFormatException e) {
+            return DEFAULT_FOV_SCALE;
         }
     }
 

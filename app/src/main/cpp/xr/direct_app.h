@@ -49,5 +49,12 @@ bool XrDirectBuildLayer(XrSession session, XrCompositionLayerProjection* layer,
  * app need not draw the game window into its own screen swapchain. */
 bool XrDirectIsActive(void);
 
+/* Render thread: forces the eye copies' alpha to 1, for blending over passthrough. */
+extern bool XrDirectOpaqueEyes;
+
+/* Colour key for the eye copies (0 off, 1 green, 2 blue, 3 pink, 4 black), applied over passthrough. */
+extern int XrDirectKeyMode;
+extern float XrDirectKeyThreshold;
+
 /* Frames per second the bridge is delivering, while direct frames are active. */
 float XrDirectFps(void);

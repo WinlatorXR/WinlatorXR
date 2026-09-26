@@ -37,9 +37,13 @@ XrVector3f xr_camera_offset = {};
 bool xr_initialized = false;
 bool xr_curvedScreen = false;
 bool xr_usePassthrough = false;
+bool xr_fovPassthrough = false;
+int xr_colour_key = 0;
+float xr_colour_key_threshold = 0;
 int xr_sharpening = 0;
 int xr_edge_glow = 0;
 int xr_sbs_trim = 0;
+int xr_fov_scale = 100;
 bool xr_vr = false;
 // xr_vr tracks whether the VR path is live this frame, so it drops out while a dialog is
 // up or the VR window is not on top. This one stays set for as long as the XrAPI title
@@ -332,10 +336,14 @@ Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean imm
         xr_module_renderer.ConfigInt[CONFIG_EDGE_GLOW] = xr_vr_app ? 0 : xr_edge_glow;
         xr_module_renderer.ConfigFloat[CONFIG_CANVAS_DISTANCE] = distance;
         xr_module_renderer.ConfigFloat[CONFIG_CANVAS_SIZE] = xr_aspect;
-        xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOV_SCALE] = 1.1f;
+        xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOV_SCALE] = 1.1f * xr_fov_scale / 100.0f;
         if (xr_fovx > 1) xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOVX] = xr_fovx;
         if (xr_fovy > 1) xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOVY] = xr_fovy;
-        xr_module_renderer.ConfigInt[CONFIG_PASSTHROUGH] = !xr_vr && xr_usePassthrough;
+        // In VR it only shows where a reduced field of view leaves the view uncovered
+        xr_module_renderer.ConfigInt[CONFIG_PASSTHROUGH] = xr_usePassthrough && (!xr_vr || xr_fovPassthrough || xr_colour_key);
+        // The colour key only applies to the VR view, where passthrough sits under it
+        XrDirectKeyMode = xr_vr ? xr_colour_key : 0;
+        XrDirectKeyThreshold = xr_colour_key_threshold;
         xr_module_renderer.ConfigInt[CONFIG_IMMERSIVE] = immersive && !xr_vr;
         xr_module_renderer.ConfigInt[CONFIG_FRAMESYNC] = xr_vr;
         xr_module_renderer.ConfigInt[CONFIG_AER] = aer;
@@ -514,6 +522,22 @@ Java_com_winlator_xr_XrActivity_nativeSetEdgeGlow(JNIEnv *env, jobject obj, jint
 JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_nativeSetSbsTrim(JNIEnv *env, jobject obj, jint percent) {
     xr_sbs_trim = percent < 0 ? 0 : (percent > 20 ? 20 : percent);
+}
+
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_nativeSetFovScale(JNIEnv *env, jobject obj, jint percent) {
+    xr_fov_scale = percent < 30 ? 30 : (percent > 125 ? 125 : percent);
+}
+
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_nativeSetFovPassthrough(JNIEnv *env, jobject obj, jboolean enabled) {
+    xr_fovPassthrough = enabled;
+}
+
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_nativeSetColourKey(JNIEnv *env, jobject obj, jint mode, jfloat threshold) {
+    xr_colour_key = mode < 0 || mode > 4 ? 0 : mode;
+    xr_colour_key_threshold = threshold;
 }
 
 JNIEXPORT jboolean JNICALL

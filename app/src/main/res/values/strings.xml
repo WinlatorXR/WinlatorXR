@@ -480,6 +480,14 @@
     <!-- OpenXR specific text -->
     <string name="use_xr">Use OpenXR integration</string>
     <string name="use_pt">Use passthrough</string>
+    <string name="use_fov_passthrough">Show passthrough in outer FOV</string>
+    <string name="xr_colour_key">Colour key (shows passthrough through this colour)</string>
+    <string name="xr_colour_key_tolerance">Colour key tolerance</string>
+    <string name="xr_colour_key_off">Off</string>
+    <string name="xr_colour_key_green">Green</string>
+    <string name="xr_colour_key_blue">Blue</string>
+    <string name="xr_colour_key_pink">Pink</string>
+    <string name="xr_colour_key_black">Black</string>
     <string name="use_curved_screen">Use curved screen</string>
     <string name="use_immersive_mode">3DoF immersive mode (experimental)</string>
     <string name="use_immersive_mode_5dof">5DoF immersive mode (experimental)</string>
@@ -560,6 +568,8 @@
     <string name="pcvr_direct_transport">Direct PC VR frames (eye images go straight to the headset, skipping the game window)</string>
     <string name="pcvr_controller">PC VR controller type (the headset type shown to the game follows it)</string>
     <string name="pcvr_render_scale">PC VR render scale (of the headset\'s own resolution, with direct PC VR)</string>
+    <string name="pcvr_fov_scale">VR field of view</string>
+    <string name="xrapi_vr_game">VR game (XrAPI title)</string>
     <string name="reshade_plugin">3D rendering plugin</string>
     <string name="camera_adjust">Camera adjust</string>
     <string name="reshade">Reshade</string>
