@@ -3,6 +3,7 @@ package com.winlator.cmod.renderer;
 import androidx.annotation.Keep;
 import com.winlator.cmod.xserver.Drawable;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 public class GPUImage extends Texture {
     private long hardwareBufferPtr;
@@ -53,13 +54,18 @@ public class GPUImage extends Texture {
                 System.err.println("Error: Failed to create EGL image");
                 destroyHardwareBuffer(hardwareBufferPtr);
                 hardwareBufferPtr = 0;
+                // Releasing the buffer unmaps it, so nothing may keep reading or writing the old mapping
+                virtualData = null;
             }
         }
     }
 
     @Override
     public void updateFromDrawable(Drawable drawable) {
-        if (!isAllocated()) allocateTexture(drawable.width, drawable.height, null);
+        if (!isAllocated()) {
+            allocateTexture(drawable.width, drawable.height, null);
+            if (virtualData == null) drawable.setData(ByteBuffer.allocateDirect(stride * drawable.height * 4).order(ByteOrder.LITTLE_ENDIAN));
+        }
         needsUpdate = false;
     }
 

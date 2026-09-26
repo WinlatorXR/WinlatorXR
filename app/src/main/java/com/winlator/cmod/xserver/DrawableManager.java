@@ -3,6 +3,7 @@ package com.winlator.cmod.xserver;
 import android.util.SparseArray;
 
 import com.winlator.cmod.core.Callback;
+import com.winlator.cmod.renderer.GPUImage;
 import com.winlator.cmod.renderer.Texture;
 
 public class DrawableManager extends XResourceManager implements XResourceManager.OnResourceLifecycleListener {
@@ -44,6 +45,15 @@ public class DrawableManager extends XResourceManager implements XResourceManage
         return drawable;
     }
 
+    // True when a live pixmap other than this drawable owns the texture, i.e. a Present flip lent it
+    public boolean isPixmapTexture(Drawable drawable, Texture texture) {
+        for (int i = 0; i < drawables.size(); i++) {
+            Drawable other = drawables.valueAt(i);
+            if (other != drawable && other.getTexture() == texture && xServer.pixmapManager.getPixmap(other.id) != null) return true;
+        }
+        return false;
+    }
+
     public void removeDrawable(int id) {
         Drawable drawable = drawables.get(id);
         if (drawable == null) {
@@ -54,7 +64,15 @@ public class DrawableManager extends XResourceManager implements XResourceManage
         }
 
         final Texture texture = drawable.getTexture();
-        if (texture != null) xServer.getRenderer().xServerView.queueEvent(texture::destroy);
+        // A Present flip leaves window content borrowing a pixmap's buffer: keep it while the pixmap lives, and move the content off it before a freed pixmap's buffer is destroyed
+        boolean borrowed = false;
+        for (int i = 0; texture != null && i < drawables.size(); i++) {
+            Drawable other = drawables.valueAt(i);
+            if (other == drawable || other.getTexture() != texture) continue;
+            if (xServer.pixmapManager.getPixmap(other.id) != null) borrowed = true;
+            else synchronized (other.renderLock) { other.setTexture(new GPUImage(other.width, other.height)); }
+        }
+        if (texture != null && !borrowed) xServer.getRenderer().xServerView.queueEvent(texture::destroy);
 
         Callback<Drawable> onDestroyListener = drawable.getOnDestroyListener();
         if (onDestroyListener != null) onDestroyListener.call(drawable);

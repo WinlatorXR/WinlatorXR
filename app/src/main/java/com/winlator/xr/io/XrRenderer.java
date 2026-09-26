@@ -26,6 +26,7 @@ import android.util.Pair;
 
 import com.winlator.cmod.math.XForm;
 import com.winlator.cmod.renderer.GLRenderer;
+import com.winlator.cmod.renderer.GPUImage;
 import com.winlator.cmod.renderer.RenderableWindow;
 import com.winlator.cmod.renderer.Texture;
 import com.winlator.cmod.renderer.material.BGRAMaterial;
@@ -159,7 +160,10 @@ public class XrRenderer extends GLRenderer {
 
     @Override
     protected boolean preDrawable(ShaderMaterial material, Drawable drawable) {
-        if (XrActivity.isEnabled(null) && XrActivity.isVR && vrWindowOnTop && xrFrameReady) {
+        // A window resized or closed this frame can still be listed after its buffer was freed; reading it would crash
+        if (drawable.getTexture() instanceof GPUImage && ((GPUImage)drawable.getTexture()).getVirtualData() == null) return false;
+        // Only X windows carry the framesync pixel; dialogs, the FPS panel and the cursor are id 0
+        if (XrActivity.isEnabled(null) && XrActivity.isVR && vrWindowOnTop && xrFrameReady && drawable.id != 0) {
             xrFramesync.process(drawable, (r, g, b, a) -> XrActivity.getInstance().nativeSetFramesync(r, g, b, a));
             xrFrameReady = false;
             if (XrActivity.getAER()) {

@@ -386,9 +386,15 @@ public class GoldbergEmu {
 
         Executors.newSingleThreadExecutor().execute(() -> {
             List<String[]> results = new ArrayList<>(); // {appid, name}
+            // Unreal exes end in -Win64-Shipping, which is never part of the title
+            String base = query.replaceAll("(?i)(\\.exe)?$", "").replaceAll("(?i)(-(Win64|Win32|WinGDK))?-Shipping$|-(Win64|Win32|WinGDK)$", "").trim();
+            // Exe and folder names often run the words together, which Steam's search can miss, so retry with them split
+            String spaced = base.replaceAll("[_.]+", " ").replaceAll("(?<=[a-z])(?=[A-Z])|(?<=[A-Za-z])(?=[0-9])|(?<=[0-9])(?=[A-Za-z])", " ").trim();
+            for (String term : spaced.equals(base) ? new String[]{base} : new String[]{base, spaced}) {
+            if (!results.isEmpty()) break;
             try {
                 String url = "https://store.steampowered.com/api/storesearch/?term="
-                        + URLEncoder.encode(query, StandardCharsets.UTF_8.name())
+                        + URLEncoder.encode(term, StandardCharsets.UTF_8.name())
                         + "&l=english&cc=US";
                 String json = Downloader.downloadString(url);
                 if (json != null) {
@@ -401,6 +407,7 @@ public class GoldbergEmu {
                     }
                 }
             } catch (Exception ignored) {}
+            }
 
             if (activity == null) return;
             activity.runOnUiThread(() -> {
@@ -408,7 +415,12 @@ public class GoldbergEmu {
                 searchBtn.setText(originalLabel);
 
                 if (results.isEmpty()) {
-                    Toast.makeText(context, "No Steam results for \"" + query + "\".", Toast.LENGTH_SHORT).show();
+                    // Steam's search only lists games still on sale, so a delisted game never shows up
+                    String message = "No Steam results for \"" + query + "\". Games no longer sold on Steam don't show up here; look up the AppID on steamdb.info and type it in.";
+                    Toast toast = Toast.makeText(context, message, Toast.LENGTH_LONG);
+                    toast.show();
+                    // A toast can't be made longer, so show it again 2 seconds in to keep it up 2 seconds more
+                    searchBtn.postDelayed(() -> { toast.cancel(); Toast.makeText(context, message, Toast.LENGTH_LONG).show(); }, 2000);
                     promptSteamSearchQuery(activity, query, input, searchBtn);
                     return;
                 }

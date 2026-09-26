@@ -200,8 +200,9 @@ public class PresentExtension implements Extension {
         if (GPUImage.isSupported() && !mask.isEmpty()) {
             Drawable content = window.getContent();
             final Texture oldTexture = content.getTexture();
-            client.xServer.getRenderer().xServerView.queueEvent(oldTexture::destroy);
-            content.setTexture(new GPUImage(content.width, content.height));
+            // After a flip the content holds a pixmap's buffer, which the client is still using
+            if (!client.xServer.drawableManager.isPixmapTexture(content, oldTexture)) client.xServer.getRenderer().xServerView.queueEvent(oldTexture::destroy);
+            synchronized (content.renderLock) { content.setTexture(new GPUImage(content.width, content.height)); }
         }
 
         synchronized (events) {
@@ -240,7 +241,7 @@ public class PresentExtension implements Extension {
                 }
                 break;
             case ClientOpcodes.SELECT_INPUT:
-                try (XLock lock = client.xServer.lock(XServer.Lockable.WINDOW_MANAGER)) {
+                try (XLock lock = client.xServer.lock(XServer.Lockable.WINDOW_MANAGER, XServer.Lockable.PIXMAP_MANAGER, XServer.Lockable.DRAWABLE_MANAGER)) {
                     selectInput(client, inputStream, outputStream);
                 }
                 break;

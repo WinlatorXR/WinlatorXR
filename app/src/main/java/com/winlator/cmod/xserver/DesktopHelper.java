@@ -37,6 +37,9 @@ public abstract class DesktopHelper {
     }
 
     private static void setFocusedWindow(XServer xServer, Window window) {
+        // Wine activates its own windows, so never pull focus within a process: the OXRWXR mirror would take it from the game
+        Window focusedWindow = xServer.windowManager.getFocusedWindow();
+        if (focusedWindow != null && focusedWindow != window && focusedWindow.getProcessId() != 0 && focusedWindow.getProcessId() == window.getProcessId()) return;
         if (window.isApplicationWindow()) {
             boolean parentIsRoot = window.getParent() == xServer.windowManager.rootWindow;
             xServer.windowManager.setFocus(window, parentIsRoot ? WindowManager.FocusRevertTo.POINTER_ROOT : WindowManager.FocusRevertTo.PARENT);
