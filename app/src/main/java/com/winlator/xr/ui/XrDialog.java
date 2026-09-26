@@ -26,6 +26,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.ListView;
+import android.widget.RadioButton;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -107,24 +108,17 @@ public class XrDialog extends ContentDialog {
             XrActivity.fovPassthrough = checked;
             if (XrActivity.isActive()) XrActivity.getInstance().nativeSetFovPassthrough(checked);
         });
-        ListView lvColourKey = findViewById(R.id.LVColourKey);
+
         View llColourKeyTolerance = findViewById(R.id.LLColourKeyTolerance);
         SeekBar sbColourKeyTolerance = findViewById(R.id.SBColourKeyTolerance);
-        // In XrActivity's colour key mode order, so the index is the mode
-        lvColourKey.setAdapter(new ArrayAdapter<>(activity, android.R.layout.simple_list_item_single_choice, new String[] {
-                activity.getString(R.string.xr_colour_key_off), activity.getString(R.string.xr_colour_key_green),
-                activity.getString(R.string.xr_colour_key_blue), activity.getString(R.string.xr_colour_key_pink),
-                activity.getString(R.string.xr_colour_key_black)}));
-        lvColourKey.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
-        lvColourKey.setItemChecked(XrActivity.colourKey, true);
-        llColourKeyTolerance.setVisibility(XrActivity.colourKey > 0 ? View.VISIBLE : View.GONE);
-        lvColourKey.setOnItemClickListener((adapterView, view, mode, l) -> {
-            if (mode == XrActivity.colourKey) return;
-            XrActivity.colourKey = mode;
-            SessionSettings.putInt(activity, XrActivity.PREF_COLOUR_KEY, mode);
-            llColourKeyTolerance.setVisibility(mode > 0 ? View.VISIBLE : View.GONE);
-            applyColourKey();
-        });
+
+
+        setColorButton(activity, llColourKeyTolerance, findViewById(R.id.color_none), 0);
+        setColorButton(activity, llColourKeyTolerance, findViewById(R.id.color_green), 1);
+        setColorButton(activity, llColourKeyTolerance, findViewById(R.id.color_blue), 2);
+        setColorButton(activity, llColourKeyTolerance, findViewById(R.id.color_pink), 3);
+        setColorButton(activity, llColourKeyTolerance, findViewById(R.id.color_black), 4);
+
         sbColourKeyTolerance.setSuffix("%");
         sbColourKeyTolerance.setValue(XrActivity.colourKeyTolerance);
         sbColourKeyTolerance.setOnValueChangeListener((seekBar, value) -> {
@@ -493,5 +487,16 @@ public class XrDialog extends ContentDialog {
      */
     private static void saveConfig(CheckBox cb, String key, boolean value) {
         SessionSettings.putBoolean(cb.getContext(), key, value);
+    }
+
+    private void setColorButton(Activity activity, View llColourKeyTolerance, RadioButton button, int mode) {
+        button.setChecked(XrActivity.colourKey == mode);
+        button.setOnClickListener(view -> {
+            if (mode == XrActivity.colourKey) return;
+            XrActivity.colourKey = mode;
+            SessionSettings.putInt(activity, XrActivity.PREF_COLOUR_KEY, mode);
+            llColourKeyTolerance.setVisibility(mode > 0 ? View.VISIBLE : View.GONE);
+            applyColourKey();
+        });
     }
 }

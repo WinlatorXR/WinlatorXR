@@ -180,13 +180,59 @@
                                     android:layout_marginTop="8dp"
                                     android:text="@string/xr_colour_key" />
 
-                                <!-- Same single-choice list as the controller profiles, in XrActivity's colour key mode order -->
-                                <ListView
-                                    android:id="@+id/LVColourKey"
+                                <RadioGroup
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
-                                    android:focusable="true"
-                                    android:choiceMode="singleChoice"/>
+                                    android:orientation="horizontal">
+
+                                    <RadioButton
+                                        android:id="@+id/color_none"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:text="@string/xr_colour_key_off"
+                                        android:textSize="8dp" />
+
+                                    <RadioButton
+                                        android:id="@+id/color_green"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:button="@drawable/radio_square"
+                                        android:buttonTint="#00FF00"
+                                        android:text="@string/xr_colour_key_green"
+                                        android:textSize="8dp" />
+
+                                    <RadioButton
+                                        android:id="@+id/color_blue"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:button="@drawable/radio_square"
+                                        android:buttonTint="#0000FF"
+                                        android:text="@string/xr_colour_key_blue"
+                                        android:textSize="8dp" />
+
+                                    <RadioButton
+                                        android:id="@+id/color_pink"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:button="@drawable/radio_square"
+                                        android:buttonTint="#FF00FF"
+                                        android:text="@string/xr_colour_key_pink"
+                                        android:textSize="8dp" />
+
+                                    <RadioButton
+                                        android:id="@+id/color_black"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:button="@drawable/radio_square"
+                                        android:buttonTint="#000000"
+                                        android:text="@string/xr_colour_key_black"
+                                        android:textSize="8dp"/>
+                                </RadioGroup>
                             </LinearLayout>
 
                             <CheckBox
