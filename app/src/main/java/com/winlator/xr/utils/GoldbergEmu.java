@@ -416,29 +416,7 @@ public class GoldbergEmu {
         searchBtn.setText("Searching Steam…");
 
         Executors.newSingleThreadExecutor().execute(() -> {
-            List<String[]> results = new ArrayList<>(); // {appid, name}
-            // Unreal exes end in -Win64-Shipping, which is never part of the title
-            String base = query.replaceAll("(?i)(\\.exe)?$", "").replaceAll("(?i)(-(Win64|Win32|WinGDK))?-Shipping$|-(Win64|Win32|WinGDK)$", "").trim();
-            // Exe and folder names often run the words together, which Steam's search can miss, so retry with them split
-            String spaced = base.replaceAll("[_.]+", " ").replaceAll("(?<=[a-z])(?=[A-Z])|(?<=[A-Za-z])(?=[0-9])|(?<=[0-9])(?=[A-Za-z])", " ").trim();
-            for (String term : spaced.equals(base) ? new String[]{base} : new String[]{base, spaced}) {
-            if (!results.isEmpty()) break;
-            try {
-                String url = "https://store.steampowered.com/api/storesearch/?term="
-                        + URLEncoder.encode(term, StandardCharsets.UTF_8.name())
-                        + "&l=english&cc=US";
-                String json = Downloader.downloadString(url);
-                if (json != null) {
-                    JSONArray items = new JSONObject(json).optJSONArray("items");
-                    if (items != null) {
-                        for (int i = 0; i < items.length(); i++) {
-                            JSONObject item = items.getJSONObject(i);
-                            results.add(new String[]{String.valueOf(item.getInt("id")), item.optString("name", "?")});
-                        }
-                    }
-                }
-            } catch (Exception ignored) {}
-            }
+            List<String[]> results = searchSteamStore(query);
 
             if (activity == null) return;
             activity.runOnUiThread(() -> {
@@ -469,6 +447,34 @@ public class GoldbergEmu {
                         .show();
             });
         });
+    }
+
+    /** Steam storefront search by game or exe name, as {appid, name} pairs. Not for the UI thread. */
+    public static List<String[]> searchSteamStore(String query) {
+        List<String[]> results = new ArrayList<>(); // {appid, name}
+        // Unreal exes end in -Win64-Shipping, which is never part of the title
+        String base = query.replaceAll("(?i)(\\.exe)?$", "").replaceAll("(?i)(-(Win64|Win32|WinGDK))?-Shipping$|-(Win64|Win32|WinGDK)$", "").trim();
+        // Exe and folder names often run the words together, which Steam's search can miss, so retry with them split
+        String spaced = base.replaceAll("[_.]+", " ").replaceAll("(?<=[a-z])(?=[A-Z])|(?<=[A-Za-z])(?=[0-9])|(?<=[0-9])(?=[A-Za-z])", " ").trim();
+        for (String term : spaced.equals(base) ? new String[]{base} : new String[]{base, spaced}) {
+            if (!results.isEmpty()) break;
+            try {
+                String url = "https://store.steampowered.com/api/storesearch/?term="
+                        + URLEncoder.encode(term, StandardCharsets.UTF_8.name())
+                        + "&l=english&cc=US";
+                String json = Downloader.downloadString(url);
+                if (json != null) {
+                    JSONArray items = new JSONObject(json).optJSONArray("items");
+                    if (items != null) {
+                        for (int i = 0; i < items.length(); i++) {
+                            JSONObject item = items.getJSONObject(i);
+                            results.add(new String[]{String.valueOf(item.getInt("id")), item.optString("name", "?")});
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        return results;
     }
 
     private static void promptGoldbergAppId(Activity activity, final Shortcut shortcut, final ContentProfile profile, final List<File> targetDirs) {
@@ -638,7 +644,11 @@ public class GoldbergEmu {
         }
         else {
             try {
-                ColdClientLoaderIni.fill(new File(exeDir, ColdClientLoaderIni.FILE_NAME), exePath, exeDirPath, appId);
+                // The loader only injects into the process it starts, so it has to start the exe SteamStub guards
+                File gameExe = unrealShippingExe(exeFile);
+                ColdClientLoaderIni.fill(new File(exeDir, ColdClientLoaderIni.FILE_NAME),
+                        GuestScriptRunner.toWinPath(activity, shortcut.container, gameExe),
+                        GuestScriptRunner.toWinPath(activity, shortcut.container, gameExe.getParentFile()), appId);
             } catch (IOException e) {
                 failure = "Couldn't set up ColdClientLoader.ini: " + e.getMessage();
             }
@@ -655,6 +665,17 @@ public class GoldbergEmu {
         activity.runOnUiThread(() -> Toast.makeText(activity, error != null ? error
                 : "ColdClientLoader set up. The game's shortcut now starts it through the loader.",
                 Toast.LENGTH_LONG).show());
+    }
+
+    /** An Unreal root exe is a bootstrap that starts <project>/Binaries/Win64/*-Shipping.exe; any other exe is returned as is. */
+    private static File unrealShippingExe(File exeFile) {
+        File[] projects = exeFile.getParentFile().listFiles(File::isDirectory);
+        if (projects == null) return exeFile;
+        for (File project : projects) {
+            File[] exes = new File(project, "Binaries/Win64").listFiles((dir, name) -> name.toLowerCase(Locale.ROOT).endsWith("-shipping.exe"));
+            if (exes != null && exes.length == 1) return exes[0];
+        }
+        return exeFile;
     }
 
     /** Whether a Windows exe is 32-bit, from the machine field of its PE header. */

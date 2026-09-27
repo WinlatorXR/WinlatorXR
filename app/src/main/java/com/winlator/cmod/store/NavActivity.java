@@ -114,6 +114,24 @@ public class NavActivity extends AppCompatActivity {
                 getResources().getDisplayMetrics());
     }
 
+    // A store library opened within this long of its last sync isn't resynced, same as Steam's
+    protected static final long STORE_AUTO_SYNC_MS = 4 * 60 * 60 * 1000L;
+
+    // Adds a "stay on this page" hint after a download's progress label, shown whenever the label is.
+    protected void addStayOnPageHint(TextView progressLabel) {
+        TextView hint = new TextView(this);
+        hint.setText("It's recommended to stay on this page while downloading for download speed and stability.");
+        hint.setTextColor(0xFFFFB74D);
+        hint.setTextSize(11f);
+        hint.setPadding(progressLabel.getPaddingLeft(), 0, progressLabel.getPaddingRight(), dp(4));
+        hint.setVisibility(progressLabel.getVisibility());
+        ViewGroup parent = (ViewGroup) progressLabel.getParent();
+        parent.addView(hint, parent.indexOfChild(progressLabel) + 1);
+        progressLabel.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+            if (hint.getVisibility() != progressLabel.getVisibility()) hint.setVisibility(progressLabel.getVisibility());
+        });
+    }
+
     public int dpToPx(float dp, Context context){
         return (int) (dp * context.getResources().getDisplayMetrics().densityDpi / DisplayMetrics.DENSITY_DEFAULT);
     }

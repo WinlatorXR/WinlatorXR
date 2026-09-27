@@ -37,11 +37,10 @@
                 android:text="@string/store" />
         </com.google.android.material.tabs.TabLayout>
 
-        <LinearLayout
+        <FrameLayout
             android:id="@+id/LLTabShortcuts"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+            android:layout_height="match_parent">
 
             <androidx.recyclerview.widget.RecyclerView
                 xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -60,7 +59,7 @@
                 android:text="@string/no_items_to_display_shortcuts"
                 android:textSize="24sp"
                 android:visibility="gone" />
-        </LinearLayout>
+        </FrameLayout>
 
         <fragment
             android:id="@+id/LLTabSaves"

@@ -239,6 +239,10 @@ public final class SteamRepository {
     // Accumulated PICS responses (multiple callbacks may arrive for one request)
     private final Map<Integer, PICSProductInfo> pendingPackages = new ConcurrentHashMap<>();
     private final Map<Integer, PICSProductInfo> pendingApps     = new ConcurrentHashMap<>();
+    // App info is fetched in batches so a few-thousand-game library isn't held in memory all at once
+    private static final int PICS_APP_BATCH = 200;
+    private final List<Integer> remainingAppIds = new ArrayList<>();
+    private int syncedAppCount;
 
     // -------------------------------------------------------------------------
     // Initialisation
@@ -455,6 +459,7 @@ public final class SteamRepository {
             reconnectAttempts++;
             long delayMs = reconnectAttempts * 2000L;  // 2s, 4s, 6s, 8s, 10s
             Log.i(TAG, "Auto-reconnect in " + delayMs + "ms (attempt " + reconnectAttempts + ")");
+            emit("Reconnecting");
             if (pumpHandler != null) {
                 pumpHandler.postDelayed(() -> {
                     if (pumping.get() && !connected) {
@@ -539,12 +544,22 @@ public final class SteamRepository {
             return;
         }
         syncPhase = SYNC_APPS;
+        remainingAppIds.clear();
+        remainingAppIds.addAll(appIds);
+        syncedAppCount = 0;
+        requestNextAppBatch();
+    }
+
+    private void requestNextAppBatch() {
         pendingApps.clear();
+        emit("LibraryProgress:1:" + remainingAppIds.size());
+        List<Integer> batch = remainingAppIds.subList(0, Math.min(PICS_APP_BATCH, remainingAppIds.size()));
         List<PICSRequest> appRequests = new ArrayList<>();
-        for (int id : appIds) {
+        for (int id : batch) {
             appRequests.add(new PICSRequest(id));
         }
-        Log.i(TAG, "PICS: requesting info for " + appRequests.size() + " apps");
+        batch.clear();
+        Log.i(TAG, "PICS: requesting info for " + appRequests.size() + " apps, " + remainingAppIds.size() + " left after");
         steamApps.picsGetProductInfo(appRequests, Collections.emptyList(), false);
     }
 
@@ -592,7 +607,7 @@ public final class SteamRepository {
             if (!cb.isResponsePending()) {
                 // All package info received — extract appIds and persist mappings
                 SteamDatabase db = SteamDatabase.getInstance();
-                List<Integer> appIds = new ArrayList<>();
+                java.util.Set<Integer> appIds = new java.util.LinkedHashSet<>();
                 for (PICSProductInfo pkg : pendingPackages.values()) {
                     KeyValue appidsKv = pkg.getKeyValues().get("appids");
                     List<KeyValue> children = appidsKv.getChildren();
@@ -602,15 +617,14 @@ public final class SteamRepository {
                                 String raw = child.getValue();
                                 if (raw == null || raw.isEmpty()) continue;
                                 int appId = Integer.parseInt(raw);
-                                if (!appIds.contains(appId)) appIds.add(appId);
+                                appIds.add(appId);
                                 db.linkLicenseApp(pkg.getId(), appId);
                             } catch (NumberFormatException ignored) {}
                         }
                     }
                 }
                 Log.i(TAG, "PICS packages resolved " + appIds.size() + " unique app IDs");
-                emit("LibraryProgress:1:" + appIds.size());
-                syncApps(appIds);
+                syncApps(new ArrayList<>(appIds));
             }
 
         } else if (syncPhase == SYNC_APPS) {
@@ -765,6 +779,12 @@ public final class SteamRepository {
                         Log.w(TAG, "Skipping app " + app.getId() + ": " + e.getMessage());
                     }
                 }
+                syncedAppCount += count;
+                if (!remainingAppIds.isEmpty() && steamApps != null) {
+                    requestNextAppBatch();
+                    return;
+                }
+                count = syncedAppCount;
                 syncPhase = SYNC_IDLE;
                 pendingPackages.clear();
                 pendingApps.clear();

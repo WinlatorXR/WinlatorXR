@@ -81,7 +81,13 @@ public class AmazonGamesActivity extends NavActivity {
         List<AmazonGame> cached = loadCachedGames();
         if (cached != null && !cached.isEmpty()) {
             showGames(cached);
-            int cn = cached.size(); setSync(cn + (cn == 1 ? " game" : " games") + " — cached  •  tap ↺ to refresh");
+            int cn = cached.size();
+            // Like Steam, a library synced in the last few hours isn't resynced on open
+            if (System.currentTimeMillis() - prefs.getLong(CACHE_KEY + "_time", 0) < STORE_AUTO_SYNC_MS) {
+                setSync(cn + (cn == 1 ? " game" : " games") + " — tap Refresh to update");
+                return;
+            }
+            setSync(cn + (cn == 1 ? " game" : " games") + " from last sync  •  updating…");
         }
         startSync(cached == null || cached.isEmpty());
     }
@@ -160,7 +166,7 @@ public class AmazonGamesActivity extends NavActivity {
         // Sync status
         syncText = new TextView(this);
         syncText.setText("Loading Amazon library…");
-        syncText.setTextColor(0xFFCCCCCC);
+        syncText.setTextColor(0xFFFFB74D);
         syncText.setTextSize(13f);
         syncText.setPadding(dp(12), dp(6), dp(12), dp(6));
         syncText.setBackgroundColor(0xFF111111);
@@ -219,7 +225,7 @@ public class AmazonGamesActivity extends NavActivity {
 
     private void startSync(boolean showProgress) {
         uiHandler.post(() -> {
-            if (refreshBtn != null) refreshBtn.setEnabled(false);
+            if (refreshBtn != null) { refreshBtn.setEnabled(false); refreshBtn.setAlpha(0.5f); }
             if (showProgress) setSync("Loading Amazon library…");
         });
         new Thread(() -> syncLibrary(showProgress), "amazon-sync").start();
@@ -385,7 +391,7 @@ public class AmazonGamesActivity extends NavActivity {
     }
 
     private void enableRefresh() {
-        uiHandler.post(() -> { if (refreshBtn != null) refreshBtn.setEnabled(true); });
+        uiHandler.post(() -> { if (refreshBtn != null) { refreshBtn.setEnabled(true); refreshBtn.setAlpha(1f); } });
     }
 
     // ── GRID view: shared store cells + per-store actions ─────────────────────
@@ -530,7 +536,7 @@ public class AmazonGamesActivity extends NavActivity {
                 j.put("installSize",   g.installSize);
                 arr.put(j);
             }
-            prefs.edit().putString(CACHE_KEY, arr.toString()).apply();
+            prefs.edit().putString(CACHE_KEY, arr.toString()).putLong(CACHE_KEY + "_time", System.currentTimeMillis()).apply();
         } catch (Exception e) { Log.e(TAG, "saveCachedGames failed", e); }
     }
 
@@ -582,7 +588,7 @@ public class AmazonGamesActivity extends NavActivity {
             } else if (msg.contains("game") && (msg.contains("tap") || msg.contains("cached"))) {
                 syncText.setTextColor(0xFF81C784);
             } else {
-                syncText.setTextColor(0xFFCCCCCC);
+                syncText.setTextColor(0xFFFFB74D);
             }
         });
     }

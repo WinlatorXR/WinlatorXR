@@ -28,6 +28,8 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
 
     companion object {
         const val EXTRA_APP_ID = "steam_app_id"
+        // Runs Create Shortcut & Launch as soon as the page opens (the library's play icon)
+        const val EXTRA_LAUNCH = "steam_launch"
         // pending obb copy (package + source dir), keyed by appId
         private const val OBB_PREFS = "steam_obb_pending"
         private const val WARN_PREFS = "steam_apk_warning"
@@ -104,6 +106,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         setContentView(buildUI())
         SteamRepository.getInstance().addListener(this)
         loadGame()
+        if (savedInstanceState == null && intent.getBooleanExtra(EXTRA_LAUNCH, false)) onLaunchClicked()
     }
 
     override fun onResume() {
@@ -402,26 +405,26 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
 
         // Check for an active / paused download
         val dlRow = SteamRepository.getInstance().database.getDownload(appId)
-        if (dlRow != null) {
-            val pct = if (dlRow.bytesTotal > 0) (dlRow.bytesDownloaded * 100 / dlRow.bytesTotal).toInt().coerceIn(0, 100) else 0
-            when (dlRow.status) {
-                SteamDatabase.DL_DOWNLOADING -> {
-                    if (SteamDepotDownloader.isDownloading(appId)) {
-                        progressBar.visibility  = View.VISIBLE
-                        progressBar.progress    = pct
-                        progressText.visibility = View.VISIBLE
-                        progressText.text       = "Downloading… $pct%"
-                        installBtn.isEnabled    = true
-                        installBtn.text         = "Cancel"
-                        installBtn.setBackgroundColor(COLOR_CANCEL)
-                    } else {
-                        // Stale record (app was killed mid-download) — clean up
-                        val dlKey = "steam:${appId}"
-                        SteamRepository.getInstance().database.deleteDownload(appId)
-                        StoreDownloadQueue.stopDownload(dlKey)
-                    }
-                }
+        // A download still initialising has no row yet, but is already running and cancellable
+        if (SteamDepotDownloader.isDownloading(appId)) {
+            val pct = if (dlRow != null && dlRow.bytesTotal > 0) (dlRow.bytesDownloaded * 100 / dlRow.bytesTotal).toInt().coerceIn(0, 100) else 0
+            progressBar.visibility  = View.VISIBLE
+            progressBar.progress    = pct
+            progressText.visibility = View.VISIBLE
+            progressText.text       = if (dlRow == null) "Initializing download…" else "Downloading… $pct%"
+            installBtn.isEnabled    = true
+            installBtn.text         = "Cancel"
+            installBtn.setBackgroundColor(COLOR_CANCEL)
+        } else if (dlRow != null) {
+            // Stale record (app killed mid-download, or it failed after this page was left, which drops
+            // the auto retry) — clean up, or the button would cancel it instead of downloading
+            if (dlRow.status == SteamDatabase.DL_FAILED && dlRow.errorMsg.isNotEmpty()) {
+                statusText.text = "Last download failed: ${dlRow.errorMsg}"
+                statusText.setTextColor(Color.parseColor("#FF9800"))
             }
+            val dlKey = "steam:${appId}"
+            SteamRepository.getInstance().database.deleteDownload(appId)
+            StoreDownloadQueue.stopDownload(dlKey)
         }
     }
 
@@ -447,7 +450,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
             selectedBranch != SteamDepotDownloader.BRANCH_PUBLIC && branchSize > 0 -> "~${fmtSize(branchSize)}"
             g.sizeBytes > 0                          -> "~${fmtSize(g.sizeBytes)}"
             else                                     -> "Size unknown"
-        }
+        } + if (androidSelected && !g.androidDownloadable) "" else "  ·  ${fmtSize(filesDir.usableSpace)} free"
 
         // installed_variant is "" for legacy rows — treat a bare installed flag as the PC build.
         val installedOs = if (g.isInstalled)
@@ -579,7 +582,8 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         // -------------------------------------------------------------
         // ACTIVE DOWNLOAD -> CANCEL
         // -------------------------------------------------------------
-        if (dlRow != null) {
+        // A download still running without its row must be cancelled, not started a second time
+        if (dlRow != null || SteamDepotDownloader.isDownloading(appId)) {
 
             // Try active runtime cancel first
             val dlKey = "steam:${appId}"
@@ -589,7 +593,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
             db.deleteDownload(appId)
 
             // Delete partial files
-            val dir = dlRow.installDir
+            val dir = dlRow?.installDir ?: ""
             // A cancelled branch switch leaves a half-updated install, so it's removed like an uninstall
             val cancelledSwitch = g.isInstalled && dir.isNotEmpty() && dir == g.installDir
             if (cancelledSwitch) db.markUninstalled(appId)
@@ -1498,6 +1502,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
             visibility = View.GONE
         }
         root.addView(progressText)
+        addStayOnPageHint(progressText)
 
         // Buttons
         val btnRow = LinearLayout(this).apply {

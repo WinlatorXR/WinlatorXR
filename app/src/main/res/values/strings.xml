@@ -21,7 +21,7 @@
     <string name="input_controls">Input Controls</string>
     <string name="no_items_to_display">No items to display.</string>
     <string name="no_items_to_display_envvars">No environmental variables activated.</string>
-    <string name="no_items_to_display_shortcuts">Create a container, right click an executable, create a shortcut!</string>
+    <string name="no_items_to_display_shortcuts">No shortcuts yet. Tap + at the top right to add local game files or run a game installer, game shortcuts created from the store pages also appear here, along with any shortcuts created from within a container desktop with a right click.</string>
     <string name="no_items_to_display_containers">Create a container to get started!</string>
     <string name="no_items_to_display_saves">Register a save file directory from one of your containers to get started!</string>
     <string name="no_items_to_display_input">No external controllers detected.</string>
@@ -975,6 +975,11 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <!-- Carrying one shortcut's settings to another as a file. -->
     <string name="remove_profile">Remove Profile</string>
     <string name="settings_profile_badge">Custom Profile</string>
+    <string name="shortcut_badge_pcvr">PC VR</string>
+    <string name="shortcut_badge_direct_pcvr">Direct PC VR</string>
+    <string name="shortcut_badge_xrapi">XrAPI VR</string>
+    <string name="shortcut_badge_trackir">TrackIR</string>
+    <string name="shortcut_badge_reshade">ReShade</string>
     <string name="settings_profile_exported">The settings for \"%1$s\" were saved to:\n\n%2$s\n\nImporting that file onto another game applies these settings to it — it never renames it.</string>
     <string name="settings_profile_export_failed">The profile could not be saved.\n\n%1$s</string>
     <string name="settings_profile_export_replace">%1$s is already in %2$s.\n\nReplace it with this game\'s current settings?</string>

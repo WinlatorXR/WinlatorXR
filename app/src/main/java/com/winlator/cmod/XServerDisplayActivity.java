@@ -2778,11 +2778,11 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     }
 
     public int getPcvrFovScale() {
-        return PcvrRuntime.getFovScale(shortcut);
+        return shortcut != null ? PcvrRuntime.getFovScale(shortcut) : PcvrRuntime.getFovScale(container);
     }
 
     public int getPcvrFovScaleY() {
-        return PcvrRuntime.getFovScaleY(shortcut);
+        return shortcut != null ? PcvrRuntime.getFovScaleY(shortcut) : PcvrRuntime.getFovScaleY(container);
     }
 
     public void setDXWrapper(String dxwrapper) {

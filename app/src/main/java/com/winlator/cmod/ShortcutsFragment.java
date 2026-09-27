@@ -19,6 +19,7 @@ import android.os.Environment;
 import android.os.FileObserver;
 import android.provider.DocumentsContract;
 import android.text.TextUtils;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -27,8 +28,10 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -69,9 +72,11 @@ import com.winlator.cmod.core.StringUtils;
 import com.winlator.cmod.core.WineInfo;
 import com.winlator.cmod.core.ZipExtractor;
 import com.winlator.cmod.core.ZipImport;
+import com.winlator.cmod.store.LudashiLaunchBridge;
 import com.winlator.cmod.store.StoreGameInstall;
 import com.winlator.xr.utils.XrDevice;
 import com.winlator.xr.utils.GoldbergEmu;
+import com.winlator.xr.utils.PcvrRuntime;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -710,13 +715,78 @@ public class ShortcutsFragment extends Fragment {
     private void showIconPickerConfirmation(final Shortcut shortcut) {
         new AlertDialog.Builder(getContext())
                 .setTitle("Custom Icon")
-                .setMessage("You will be prompted to select an icon file. Please choose a valid .ico file.")
-                .setPositiveButton("Continue", (dialog, which) -> {
+                .setMessage("Search online for the game's artwork, or pick a .ico file yourself.")
+                .setPositiveButton("Search online", (dialog, which) -> promptIconSearch(shortcut, shortcut.name))
+                .setNeutralButton("Pick .ico file", (dialog, which) -> {
                     // This will launch the file picker
                     openIconPicker(shortcut);
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private void promptIconSearch(final Shortcut shortcut, String query) {
+        final EditText input = new EditText(getContext());
+        input.setSingleLine(true);
+        input.setText(query);
+        input.setSelection(input.getText().length());
+        new AlertDialog.Builder(getContext())
+                .setTitle("Game name")
+                .setView(input)
+                .setPositiveButton("Search", (dialog, which) -> {
+                    String q = input.getText().toString().trim();
+                    if (!q.isEmpty()) searchIcon(shortcut, q);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    /** Looks the game up on the Steam store, the same search Goldberg uses, and sets its art as the icon. */
+    private void searchIcon(final Shortcut shortcut, final String query) {
+        preloaderDialog.show(R.string.loading);
+        Executors.newSingleThreadExecutor().execute(() -> {
+            List<String[]> results = GoldbergEmu.searchSteamStore(query);
+            if (getActivity() == null) return;
+            getActivity().runOnUiThread(() -> {
+                preloaderDialog.close();
+                if (results.isEmpty()) {
+                    // Steam's search only lists games still on sale
+                    new AlertDialog.Builder(getContext())
+                            .setMessage("No Steam results for \"" + query + "\". Try another name, or pick a .ico file.")
+                            .setPositiveButton("Search again", (d, w) -> promptIconSearch(shortcut, query))
+                            .setNegativeButton("Cancel", null)
+                            .show();
+                    return;
+                }
+                String[] labels = new String[results.size()];
+                for (int i = 0; i < results.size(); i++) labels[i] = results.get(i)[1];
+                new AlertDialog.Builder(getContext())
+                        .setTitle("Select the matching game")
+                        .setItems(labels, (d, which) -> downloadIcon(shortcut, results.get(which)[0]))
+                        .setNegativeButton("Cancel", null)
+                        .show();
+            });
+        });
+    }
+
+    private void downloadIcon(final Shortcut shortcut, final String appId) {
+        preloaderDialog.show(R.string.loading);
+        Executors.newSingleThreadExecutor().execute(() -> {
+            File iconFile = new File(new File(shortcut.container.getIconsDir(0).getParentFile(), "custom_icons"),
+                    shortcut.name + "_" + System.currentTimeMillis() + ".png");
+            String art = "https://shared.steamstatic.com/store_item_assets/steam/apps/" + appId + "/";
+            boolean saved = LudashiLaunchBridge.saveIcon(iconFile, null, art + "library_600x900.jpg", art + "header.jpg");
+            if (getActivity() == null) return;
+            getActivity().runOnUiThread(() -> {
+                preloaderDialog.close();
+                if (!saved) {
+                    showLocalGameMessage("Could not download artwork for this game.");
+                    return;
+                }
+                shortcut.setCustomIconPath(iconFile.getAbsolutePath());
+                loadShortcutsList();
+            });
+        });
     }
 
     private void handleSelectedIcon(Uri icoFileUri) {
@@ -1167,6 +1237,7 @@ public class ShortcutsFragment extends Fragment {
             private final TextView title;
             private final TextView subtitle;
             private final View innerArea;
+            private final Button playButton;
 
             private ViewHolder(View view) {
                 super(view);
@@ -1175,6 +1246,24 @@ public class ShortcutsFragment extends Fragment {
                 this.subtitle = view.findViewById(R.id.TVSubtitle);
                 this.menuButton = view.findViewById(R.id.BTMenu);
                 this.innerArea = view.findViewById(R.id.LLInnerArea);
+                this.playButton = view.findViewById(R.id.BTPlay);
+
+                // Only the play button starts the game; the rest of the row was too easy to hit by mistake
+                innerArea.setClickable(false);
+                innerArea.setFocusable(false);
+                view.findViewById(R.id.FLPlay).setVisibility(View.VISIBLE);
+                // The name and its container/source/profile line get all the room the button
+                // doesn't need, and wrap rather than being cut off
+                LinearLayout.LayoutParams playParams = (LinearLayout.LayoutParams) view.findViewById(R.id.FLPlay).getLayoutParams();
+                playParams.width = ViewGroup.LayoutParams.WRAP_CONTENT;
+                playParams.weight = 0;
+                DisplayMetrics metrics = view.getResources().getDisplayMetrics();
+                playButton.setMaxWidth((int) (metrics.widthPixels * 0.4f));
+                for (TextView text : new TextView[]{title, subtitle}) {
+                    text.setSingleLine(false);
+                    text.setMaxLines(Integer.MAX_VALUE);
+                    text.setEllipsize(null);
+                }
             }
         }
 
@@ -1192,7 +1281,7 @@ public class ShortcutsFragment extends Fragment {
         @Override
         public void onViewRecycled(@NonNull ViewHolder holder) {
             holder.menuButton.setOnClickListener(null);
-            holder.innerArea.setOnClickListener(null);
+            holder.playButton.setOnClickListener(null);
             super.onViewRecycled(holder);
         }
 
@@ -1218,9 +1307,21 @@ public class ShortcutsFragment extends Fragment {
                 subtitle = getString(R.string.shortcut_subtitle_with_source, subtitle,
                         getString(R.string.settings_profile_badge));
             }
+            // The launch features set in shortcut settings, so a row says how its game will start
+            List<Integer> badges = new ArrayList<>();
+            if (PcvrRuntime.isEnabled(item)) badges.add(PcvrRuntime.isDirectTransport(item)
+                    ? R.string.shortcut_badge_direct_pcvr : R.string.shortcut_badge_pcvr);
+            if (item.getExtra("xrapiVr", "0").equals("1")) badges.add(R.string.shortcut_badge_xrapi);
+            if (item.getExtra("useTrackIR", "0").equals("1")) badges.add(R.string.shortcut_badge_trackir);
+            if (!item.getExtra("useReshade", "0").equals("0")) badges.add(R.string.shortcut_badge_reshade);
+            for (int badge : badges) {
+                subtitle = getString(R.string.shortcut_subtitle_with_source, subtitle, getString(badge));
+            }
             holder.subtitle.setText(subtitle);
             holder.menuButton.setOnClickListener((v) -> showListItemMenu(v, item));
-            holder.innerArea.setOnClickListener((v) -> runFromShortcut(item));
+            // Set on every bind, so a renamed shortcut's button follows its new name
+            holder.playButton.setText(item.name);
+            holder.playButton.setOnClickListener((v) -> runFromShortcut(item));
 
             // Get the context from the item view
             Context context = holder.itemView.getContext();

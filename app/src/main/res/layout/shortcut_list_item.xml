@@ -28,6 +28,7 @@
             android:scaleType="fitCenter" />
 
         <LinearLayout
+            android:id="@+id/LLText"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -50,6 +51,36 @@
                 android:ellipsize="end"
                 android:maxLines="1" />
         </LinearLayout>
+
+        <!-- Shortcuts tab only: the one place a tap starts the game -->
+        <FrameLayout
+            android:id="@+id/FLPlay"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginLeft="12dp"
+            android:layout_marginRight="24dp"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/BTPlay"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:layout_gravity="end|center_vertical"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:background="@drawable/shortcut_play_button_bg"
+                android:drawableLeft="@drawable/ic_game_launch"
+                android:drawableTint="@android:color/black"
+                android:drawablePadding="4dp"
+                android:paddingLeft="8dp"
+                android:paddingRight="12dp"
+                android:textSize="13sp"
+                android:textAllCaps="false"
+                android:textColor="@android:color/black"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </FrameLayout>
     </LinearLayout>
 
     <ImageButton

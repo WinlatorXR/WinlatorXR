@@ -195,6 +195,7 @@ public class EpicGameDetailActivity extends NavActivity {
         sizeTV.setTextSize(13f);
         sizeTV.setText("Fetching…");
         card.addView(makeInfoRowWithRef("Install size", sizeTV));
+        card.addView(makeInfoRow("Free space", formatBytes(getFilesDir().getUsableSpace())));
 
         if (description != null && !description.isEmpty()) {
             // Strip HTML tags first, then truncate clean text
@@ -257,6 +258,7 @@ public class EpicGameDetailActivity extends NavActivity {
         LinearLayout.LayoutParams plLp = new LinearLayout.LayoutParams(-1, -2);
         plLp.bottomMargin = dp(8);
         card.addView(progressLabel, plLp);
+        addStayOnPageHint(progressLabel);
 
         launchBtn = makeBtn("Launch", 0xFF2E7D32);
         launchBtn.setOnClickListener(v -> {

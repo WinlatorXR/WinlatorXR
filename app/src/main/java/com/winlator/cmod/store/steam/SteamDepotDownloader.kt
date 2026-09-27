@@ -18,6 +18,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
@@ -370,7 +372,8 @@ object SteamDepotDownloader {
 
         dlog("Calling startDownloading()...")
         try {
-            downloader.startDownloading()
+            // A cancel or pause pressed during setup had no downloader to close, so don't start it
+            if (!cancelled.get() && !paused.get()) downloader.startDownloading()
             dlog("startDownloading() returned (download loop running in background)")
         } catch (e: Exception) {
             dlog("FAIL: startDownloading() threw")
@@ -384,9 +387,13 @@ object SteamDepotDownloader {
         dlog("Blocking on getCompletion().get()...")
         var completedNormally = false
         try {
-            downloader.getCompletion().get()
-            completedNormally = true
-            dlog("getCompletion() returned — download finished")
+            // close() never completes this future, so poll it or a cancel/pause would wait forever
+            val completion = downloader.getCompletion()
+            while (!completedNormally && !cancelled.get() && !paused.get()) {
+                try { completion.get(500, TimeUnit.MILLISECONDS); completedNormally = true }
+                catch (_: TimeoutException) {}
+            }
+            if (completedNormally) dlog("getCompletion() returned — download finished")
         } catch (e: ExecutionException) {
             dlog("getCompletion() ExecutionException: ${e.cause?.message ?: e.message}")
             dlogError("ExecutionException.cause", e.cause ?: e)

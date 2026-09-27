@@ -145,7 +145,7 @@ public class StoreDownloadQueue {
         int appId = Integer.parseInt(dlKey.substring(6));
         if (hasHandle(appId)) {
             SteamDepotDownloader.DownloadControl handle = downloadHandles.get(appId);
-            downloadHandles.remove(handle);
+            downloadHandles.remove(appId);
             handle.getCancel().run();
 
             DownloadEntry e = entries.get(dlKey);

@@ -69,5 +69,59 @@
                 android:id="@+id/SBPcvrRenderScale"
                 android:max="16" />
         </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/LLPcvrFovScale"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/pcvr_fov_scale" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/TVPcvrFovScale" />
+            </LinearLayout>
+
+            <!-- 30% to 125% in steps of 5: progress = (scale - 30) / 5 -->
+            <SeekBar
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/SBPcvrFovScale"
+                android:max="19" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/pcvr_fov_scale_y" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/TVPcvrFovScaleY" />
+            </LinearLayout>
+
+            <SeekBar
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/SBPcvrFovScaleY"
+                android:max="19" />
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>

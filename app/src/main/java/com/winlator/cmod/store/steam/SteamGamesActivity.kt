@@ -28,6 +28,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
     private lateinit var searchBar: EditText
     private lateinit var gridView: GridView
     private lateinit var emptyText: TextView
+    private lateinit var refreshBtn: Button
     private var games: List<SteamGame> = emptyList()
     private var searchQuery: String = ""
     private var installFilter = InstallFilter.ALL
@@ -72,6 +73,8 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
                 val phase = parts.getOrNull(1)?.toIntOrNull() ?: 0
                 val count = parts.getOrNull(2)?.toIntOrNull() ?: 0
                 ui.post {
+                    // Auto and reconnect syncs never went through the button, so grey it here too
+                    setRefreshing(true)
                     statusText.text = if (phase == 0)
                         "Syncing packages ($count)…"
                     else
@@ -83,8 +86,9 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
                 // the event count can be 0 if Steam returned empty "no change" buffers
                 // for apps that haven't changed since last request.
                 ui.post {
+                    setRefreshing(false)
                     loadGames()
-                    statusText.text = "${games.size} games in library"
+                    showCount("${games.size} games in library")
                 }
             }
             event.startsWith(SteamCollectionStore.EVENT_SYNCED) -> {
@@ -98,17 +102,34 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             event == "LoggedOut" -> {
                 ui.post { finish() }
             }
-            event == "Disconnected" -> {
+            event == "Reconnecting" -> {
                 // Transient disconnect — auto-reconnect is in progress.
                 // Don't close the activity; just show status.
-                ui.post { statusText.text = "Disconnected — reconnecting…" }
+                ui.post {
+                    setRefreshing(false)
+                    statusText.setTextColor(HINT_ORANGE)
+                    statusText.text = "Reconnecting now…"
+                }
+            }
+            event == "Disconnected" -> {
+                // Only sent once auto-reconnect has given up
+                ui.post {
+                    setRefreshing(false)
+                    statusText.setTextColor(ERROR_RED)
+                    statusText.text = "Disconnected from Steam"
+                }
             }
             event == "Connected" -> {
                 // After reconnect, retry sync if still empty.
                 val repo = SteamRepository.getInstance()
                 if (games.isEmpty() && repo.isLoggedIn) {
-                    ui.post { statusText.text = "Reconnected — syncing library…" }
+                    ui.post {
+                        statusText.setTextColor(HINT_ORANGE)
+                        statusText.text = "Reconnected — syncing library…"
+                    }
                     repo.syncLibrary()
+                } else if (games.isNotEmpty()) {
+                    ui.post { showCount("${games.size} games in library") }
                 }
             }
         }
@@ -139,7 +160,7 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             .map { SteamGame.fromGameRow(it) }
             .sortedBy { it.name.lowercase() }
         if (games.isNotEmpty()) {
-            statusText.text = "${games.size} games in library"
+            showCount("${games.size} games in library")
         }
         refreshList()
     }
@@ -160,9 +181,22 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         val elapsed = System.currentTimeMillis() / 1000L - repo.lastSyncTime
         // Libraries synced before VR support was stored have none, so sync once now rather than in 4 hours
         if (games.isEmpty() || elapsed > staleThresholdSec || !repo.database.hasVrSupportData()) {
+            statusText.setTextColor(HINT_ORANGE)
             statusText.text = if (games.isEmpty()) "Syncing library…" else "Refreshing library…"
             repo.syncLibrary()
         }
+    }
+
+    private fun setRefreshing(refreshing: Boolean) {
+        refreshBtn.isEnabled = !refreshing
+        refreshBtn.alpha = if (refreshing) 0.5f else 1f
+        if (refreshing) statusText.setTextColor(HINT_ORANGE)
+    }
+
+    /** Game counts are green, like the other stores' finished-sync text. */
+    private fun showCount(text: String) {
+        statusText.text = text
+        statusText.setTextColor(COUNT_GREEN)
     }
 
     private fun refreshList() {
@@ -189,9 +223,9 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         val filtered = seq.sortedWith(if (sortAsc) cmp else cmp.reversed()).toList()
 
         if (filtered.size != games.size) {
-            statusText.text = "${filtered.size} of ${games.size} games"
+            showCount("${filtered.size} of ${games.size} games")
         } else if (games.isNotEmpty()) {
-            statusText.text = "${games.size} games in library"
+            showCount("${games.size} games in library")
         }
         val adapter = object : ArrayAdapter<SteamGame>(this, 0, filtered) {
             override fun getView(pos: Int, convertView: View?, parent: ViewGroup): View {
@@ -390,13 +424,25 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             setPadding(dp(8), 0, 0, 0)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
-        val refreshBtn = Button(this).apply {
+        refreshBtn = Button(this).apply {
             text = "Refresh"
             textSize = 13f
             setTextColor(Color.WHITE)
             setBackgroundColor(Color.TRANSPARENT)
             setPadding(dp(12), 0, dp(12), 0)
-            setOnClickListener { SteamRepository.getInstance().syncLibrary() }
+            setOnClickListener {
+                val repo = SteamRepository.getInstance()
+                // syncLibrary() does nothing until the licence list has arrived
+                if (repo.licenses.isEmpty()) {
+                    statusText.text = "Steam is still connecting, try Refresh again in a moment"
+                    statusText.setTextColor(HINT_ORANGE)
+                    return@setOnClickListener
+                }
+                // Greyed out until the sync ends, so the tap visibly did something
+                setRefreshing(true)
+                statusText.text = "Refreshing library…"
+                repo.syncLibrary()
+            }
         }
         val logoutBtn = Button(this).apply {
             text = "Logout"
@@ -548,33 +594,11 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
         return root
     }
 
-    /** Resolve the best .exe in the install dir and hand it to the launcher. */
+    /** Runs the game page's Create Shortcut & Launch, so the play icon asks the same questions. */
     private fun launchGame(game: SteamGame) {
-        if (game.installDir.isEmpty()) {
-            Toast.makeText(this, "Install directory not found", Toast.LENGTH_SHORT).show()
-            return
-        }
-        val installDir = java.io.File(game.installDir)
-        val exeFiles   = mutableListOf<java.io.File>()
-        AmazonLaunchHelper.collectExe(installDir, exeFiles)
-        if (exeFiles.isEmpty()) {
-            Toast.makeText(this, "No .exe found in install directory", Toast.LENGTH_SHORT).show()
-            return
-        }
-        val lowerTitle = game.name.lowercase()
-        exeFiles.sortWith(compareByDescending { AmazonLaunchHelper.scoreExe(it, lowerTitle) })
-        val vrSupport = SteamRepository.getInstance().database.getVrSupport(game.appId)
-        if (exeFiles.size == 1) {
-            LudashiLaunchBridge.addToLauncher(this, game.name, exeFiles[0].absolutePath, null, vrSupport, *game.artworkUrls)
-        } else {
-            val labels = exeFiles.map { it.name }.toTypedArray()
-            android.app.AlertDialog.Builder(this)
-                .setTitle("Choose executable")
-                .setItems(labels) { _, which ->
-                    LudashiLaunchBridge.addToLauncher(this, game.name, exeFiles[which].absolutePath, null, vrSupport, *game.artworkUrls)
-                }
-                .show()
-        }
+        startActivity(Intent(this, SteamGameDetailActivity::class.java)
+            .putExtra(SteamGameDetailActivity.EXTRA_APP_ID, game.appId)
+            .putExtra(SteamGameDetailActivity.EXTRA_LAUNCH, true))
     }
 
     /** Mark the game uninstalled in the DB and delete its install directory off-thread. */
@@ -594,6 +618,11 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
 
         private val BG      = Color.parseColor("#1B1B1B")
         private val GRAY    = Color.parseColor("#AAAAAA")
+        // Same orange as the store pages' stay-on-page download hint
+        private const val HINT_ORANGE = 0xFFFFB74D.toInt()
+        private const val COUNT_GREEN = 0xFF81C784.toInt()
+        // Same red as the other stores' sync errors
+        private const val ERROR_RED = 0xFFFF6B6B.toInt()
 
         // Byte-bounded LRU image cache (≈1/8 of the heap) and fixed thread pool across
         // instances. sizeOf() must report bytes, or the cap counts entries and the cache

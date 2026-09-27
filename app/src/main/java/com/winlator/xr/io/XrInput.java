@@ -27,6 +27,7 @@ import com.winlator.xr.api.XrAPI;
 import com.winlator.xr.api.XrInterface;
 import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.xr.ui.XrKeyboard;
+import com.winlator.xr.utils.PcvrRuntime;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
@@ -383,7 +384,9 @@ public class XrInput {
                     xrController.updateGamepad(new float[axes.length], new boolean[buttons.length], false);
                 }
                 if (XrActivity.keysEmulation) {
-                    xrController.updateKeyboardButtons(buttons);
+                    // A PC VR game already gets these buttons through the runtime, so mapped keys would press twice
+                    if (PcvrRuntime.active && XrActivity.getVR()) xrController.releaseKeyboardButtons();
+                    else xrController.updateKeyboardButtons(buttons);
                 }
                 if (!XrActivity.getVR()) {
                     if (XrActivity.mouseEmulation) {

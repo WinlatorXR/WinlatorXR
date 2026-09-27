@@ -633,6 +633,8 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
                 // Save all changes to the shortcut
                 shortcut.saveData();
+                // Redraw the list so the row's PC VR / TrackIR / ReShade labels match
+                fragment.loadShortcutsList();
 //
                 FEXCoreManager.saveFEXCoreSpinners(shortcut.container, sFEXCoreTSOPreset, sFEXCoreMultiBlock, sFEXCoreX87ReducedPrecision); 
             }

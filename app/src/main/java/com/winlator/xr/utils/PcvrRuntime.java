@@ -72,6 +72,9 @@ public final class PcvrRuntime {
     private static final String CONF_DIRECT = "direct_transport";
     private static final String CONF_CONTROLLER = "controller_profile";
 
+    /** Whether this launch set the PC VR runtime up; the game then reads every controller button through it. */
+    public static boolean active;
+
     private PcvrRuntime() {}
 
     public static boolean isEnabled(Shortcut shortcut) {
@@ -141,11 +144,30 @@ public final class PcvrRuntime {
         }
     }
 
+    public static int getFovScale(Container container) {
+        try {
+            int scale = Integer.parseInt(container != null ? container.getExtra(FOV_SCALE_KEY, "") : "");
+            return Math.max(30, Math.min(125, scale));
+        } catch (NumberFormatException e) {
+            return DEFAULT_FOV_SCALE;
+        }
+    }
+
+    public static int getFovScaleY(Container container) {
+        try {
+            int scale = Integer.parseInt(container != null ? container.getExtra(FOV_SCALE_Y_KEY, "") : "");
+            return Math.max(30, Math.min(125, scale));
+        } catch (NumberFormatException e) {
+            return getFovScale(container);
+        }
+    }
+
     public static String getControllerProfile(Shortcut shortcut) {
         return shortcut != null ? shortcut.getExtra(CONTROLLER_KEY, "") : "";
     }
 
     public static void apply(Context context, Container container, boolean enabled, boolean directTransport, String controllerProfile) {
+        active = enabled;
         try {
             File driveC = new File(container.getRootDir(), ".wine/drive_c");
             if (enabled) {
