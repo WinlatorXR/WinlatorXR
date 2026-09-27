@@ -139,6 +139,7 @@ import com.winlator.cmod.xserver.XServer;
 import com.winlator.xr.io.XrRenderer;
 import com.winlator.xr.ui.XrStartupDialog;
 import com.winlator.xr.ui.XrDialog;
+import com.winlator.xr.utils.GoldbergEmu;
 import com.winlator.xr.utils.ModdingUtils;
 import com.winlator.xr.utils.PcvrRuntime;
 
@@ -1624,6 +1625,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         WineStartMenuCreator.create(this, container);
         WineUtils.createDosdevicesSymlinks(container);
+        GoldbergEmu.clearStaleLoaderRegistry(new File(container.getRootDir(), ".wine"));
         // A container launch with no shortcut takes the container's own VR options
         if (shortcut != null)
             PcvrRuntime.apply(this, container, PcvrRuntime.isEnabled(shortcut), PcvrRuntime.isDirectTransport(shortcut),

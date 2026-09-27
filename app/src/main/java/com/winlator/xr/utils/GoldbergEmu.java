@@ -38,6 +38,7 @@ import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.contents.Downloader;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.GuestScriptRunner;
+import com.winlator.cmod.core.WineRegistryEditor;
 import com.winlator.cmod.container.GameUninstaller;
 import com.winlator.cmod.store.SteamDatabase;
 import com.winlator.cmod.store.StoreGameInstall;
@@ -555,6 +556,37 @@ public class GoldbergEmu {
         for (ContentProfile.ContentFile file : profile.fileList)
             if (file.target.equalsIgnoreCase(ColdClientLoaderIni.FILE_NAME)) return true;
         return false;
+    }
+
+    /**
+     * ColdClientLoader points Steam's registry keys at itself and only puts them back when it
+     * exits cleanly, so a killed session sends every later game's steam:// launch to that loader.
+     * A loader launch writes them again, so leftovers are dropped before Wine starts.
+     */
+    public static void clearStaleLoaderRegistry(File wineDir) {
+        String steamKey = "Software\\Valve\\Steam";
+        String loaderDir = "";
+        try (WineRegistryEditor editor = new WineRegistryEditor(new File(wineDir, "user.reg"))) {
+            String steamExe = editor.getStringValue(steamKey, "SteamExe", "");
+            if (steamExe.toLowerCase(Locale.ROOT).contains("steamclient_loader")) {
+                loaderDir = steamExe.substring(0, Math.max(steamExe.lastIndexOf('\\') - 1, 0));
+                editor.removeValue(steamKey, "SteamExe");
+                for (String name : new String[]{"SteamPath", "SourceModInstallPath"})
+                    if (loaderDir.equalsIgnoreCase(editor.getStringValue(steamKey, name, ""))) editor.removeValue(steamKey, name);
+                for (String name : new String[]{"SteamClientDll", "SteamClientDll64", "PID"})
+                    editor.removeValue(steamKey + "\\ActiveProcess", name);
+            }
+        }
+        try (WineRegistryEditor editor = new WineRegistryEditor(new File(wineDir, "system.reg"))) {
+            String commandKey = "Software\\Classes\\steam\\shell\\open\\command";
+            if (editor.getStringValue(commandKey, null, "").toLowerCase(Locale.ROOT).contains("steamclient_loader"))
+                editor.removeValue(commandKey, null);
+            String wowKey = "Software\\Wow6432Node\\Valve\\Steam";
+            if (!loaderDir.isEmpty() && loaderDir.equalsIgnoreCase(editor.getStringValue(wowKey, "InstallPath", ""))) {
+                editor.removeValue(wowKey, "InstallPath");
+                editor.removeValue(wowKey, "SteamPID");
+            }
+        }
     }
 
     /**
