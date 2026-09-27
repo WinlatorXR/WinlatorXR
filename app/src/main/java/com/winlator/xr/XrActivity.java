@@ -206,7 +206,7 @@ public class XrActivity extends XServerDisplayActivity {
         nativeSetSharpening(sharpening);
         nativeSetEdgeGlow(edgeGlow);
         nativeSetSbsTrim(sbsTrim ? SBS_TRIM_PERCENT : 0);
-        nativeSetFovScale(getPcvrFovScale());
+        nativeSetFovScale(getPcvrFovScale(), getPcvrFovScaleY());
         nativeSetFovPassthrough(fovPassthrough);
         nativeSetColourKey(colourKey, getColourKeyThreshold());
         nativeSetPointerSmoothing(pointerSmoothing);
@@ -385,7 +385,7 @@ public class XrActivity extends XServerDisplayActivity {
     public native void nativeSetSharpening(int level);
     public native void nativeSetEdgeGlow(int intensity);
     public native void nativeSetSbsTrim(int percent);
-    public native void nativeSetFovScale(int percent);
+    public native void nativeSetFovScale(int percent, int percentY);
     public native void nativeSetFovPassthrough(boolean enabled);
     public native void nativeSetColourKey(int mode, float threshold);
 

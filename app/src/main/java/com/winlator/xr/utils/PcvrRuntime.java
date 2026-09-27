@@ -48,6 +48,8 @@ public final class PcvrRuntime {
     /** Percentage of the default VR field of view, which already overscans the headset by 10%. */
     public static final String FOV_SCALE_KEY = "pcvrFovScale";
     public static final int DEFAULT_FOV_SCALE = 100;
+    /** Vertical field of view for letterboxing; shortcuts without it follow the horizontal one. */
+    public static final String FOV_SCALE_Y_KEY = "pcvrFovScaleY";
     /** The runtime hands its eye images to this app instead of drawing them in the preview window. */
     public static final String DIRECT_KEY = "pcvrDirectTransport";
     /** OpenXR profile the runtime reports; OpenComposite presents the matching headset. Empty keeps the runtime's ranking. */
@@ -127,6 +129,15 @@ public final class PcvrRuntime {
             return Math.max(30, Math.min(125, scale));
         } catch (NumberFormatException e) {
             return DEFAULT_FOV_SCALE;
+        }
+    }
+
+    public static int getFovScaleY(Shortcut shortcut) {
+        try {
+            int scale = Integer.parseInt(shortcut != null ? shortcut.getExtra(FOV_SCALE_Y_KEY, "") : "");
+            return Math.max(30, Math.min(125, scale));
+        } catch (NumberFormatException e) {
+            return getFovScale(shortcut);
         }
     }
 

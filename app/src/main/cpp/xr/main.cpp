@@ -44,6 +44,7 @@ int xr_sharpening = 0;
 int xr_edge_glow = 0;
 int xr_sbs_trim = 0;
 int xr_fov_scale = 100;
+int xr_fov_scale_y = 100;
 bool xr_vr = false;
 // xr_vr tracks whether the VR path is live this frame, so it drops out while a dialog is
 // up or the VR window is not on top. This one stays set for as long as the XrAPI title
@@ -337,6 +338,7 @@ Java_com_winlator_xr_XrActivity_initFrame(JNIEnv *env, jobject obj, jboolean imm
         xr_module_renderer.ConfigFloat[CONFIG_CANVAS_DISTANCE] = distance;
         xr_module_renderer.ConfigFloat[CONFIG_CANVAS_SIZE] = xr_aspect;
         xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOV_SCALE] = 1.1f * xr_fov_scale / 100.0f;
+        xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOV_SCALE_Y] = 1.1f * xr_fov_scale_y / 100.0f;
         if (xr_fovx > 1) xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOVX] = xr_fovx;
         if (xr_fovy > 1) xr_module_renderer.ConfigFloat[CONFIG_VIEWPORT_FOVY] = xr_fovy;
         // In VR it only shows where a reduced field of view leaves the view uncovered
@@ -525,8 +527,9 @@ Java_com_winlator_xr_XrActivity_nativeSetSbsTrim(JNIEnv *env, jobject obj, jint 
 }
 
 JNIEXPORT void JNICALL
-Java_com_winlator_xr_XrActivity_nativeSetFovScale(JNIEnv *env, jobject obj, jint percent) {
+Java_com_winlator_xr_XrActivity_nativeSetFovScale(JNIEnv *env, jobject obj, jint percent, jint percentY) {
     xr_fov_scale = percent < 30 ? 30 : (percent > 125 ? 125 : percent);
+    xr_fov_scale_y = percentY < 30 ? 30 : (percentY > 125 ? 125 : percentY);
 }
 
 JNIEXPORT void JNICALL

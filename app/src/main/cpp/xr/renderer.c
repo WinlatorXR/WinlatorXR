@@ -237,7 +237,7 @@ void XrRendererLockFrame(struct XrEngine* engine, struct XrRenderer* renderer) {
     renderer->FovScale = renderer->ConfigFloat[CONFIG_VIEWPORT_FOV_SCALE];
     if (renderer->FovScale > 0.1f) {
         fovx *= renderer->FovScale;
-        fovy *= renderer->FovScale;
+        fovy *= renderer->ConfigFloat[CONFIG_VIEWPORT_FOV_SCALE_Y];
     }
 
     XrSpaceLocation loc = {};

@@ -275,6 +275,22 @@ public class ShortcutSettingsDialog extends ContentDialog {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {}
         });
+        final SeekBar sbPcvrFovScaleY = findViewById(R.id.SBPcvrFovScaleY);
+        final TextView tvPcvrFovScaleY = findViewById(R.id.TVPcvrFovScaleY);
+        sbPcvrFovScaleY.setProgress(Math.round((PcvrRuntime.getFovScaleY(shortcut) - 30) / 5.0f));
+        tvPcvrFovScaleY.setText((30 + 5 * sbPcvrFovScaleY.getProgress()) + "%");
+        sbPcvrFovScaleY.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                tvPcvrFovScaleY.setText((30 + 5 * progress) + "%");
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
         cbPcvrDirectTransport.setVisibility(cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE);
         llPcvrController.setVisibility(cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE);
         llPcvrFovScale.setVisibility(cbPcvrRuntime.isChecked() || cbXrapiVr.isChecked() ? View.VISIBLE : View.GONE);
@@ -569,6 +585,9 @@ public class ShortcutSettingsDialog extends ContentDialog {
                 shortcut.putExtra("xrapiVr", cbXrapiVr.isChecked() ? "1" : null);
                 shortcut.putExtra(PcvrRuntime.FOV_SCALE_KEY, (cbPcvrRuntime.isChecked() || cbXrapiVr.isChecked()) && pcvrFov != PcvrRuntime.DEFAULT_FOV_SCALE
                         ? String.valueOf(pcvrFov) : null);
+                int pcvrFovY = 30 + 5 * sbPcvrFovScaleY.getProgress();
+                shortcut.putExtra(PcvrRuntime.FOV_SCALE_Y_KEY, (cbPcvrRuntime.isChecked() || cbXrapiVr.isChecked()) && pcvrFovY != pcvrFov
+                        ? String.valueOf(pcvrFovY) : null);
                 shortcut.putExtra("useReshade", SReshade.getSelectedItemPosition() + "");
                 shortcut.putExtra("useTrackIR", STrackIR.getSelectedItemPosition() + "");
                 shortcut.putExtra("fullscreenStretched", cbFullscreenStretched.isChecked() ? "1" : null);

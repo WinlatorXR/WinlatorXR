@@ -490,6 +490,29 @@
                 android:layout_height="wrap_content"
                 android:id="@+id/SBPcvrFovScale"
                 android:max="19" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/pcvr_fov_scale_y" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/TVPcvrFovScaleY" />
+            </LinearLayout>
+
+            <SeekBar
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/SBPcvrFovScaleY"
+                android:max="19" />
         </LinearLayout>
 
         <LinearLayout
