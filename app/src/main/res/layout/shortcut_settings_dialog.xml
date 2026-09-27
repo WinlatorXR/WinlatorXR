@@ -734,6 +734,27 @@
                             android:src="@drawable/icon_menu" />
                     </LinearLayout>
 
+                    <LinearLayout
+                        android:id="@+id/LLGoldbergFriendIps"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="@string/goldberg_friend_ips" />
+
+                        <EditText
+                            style="@style/EditText"
+                            android:layout_width="match_parent"
+                            android:id="@+id/ETGoldbergFriendIps"
+                            android:hint="@string/goldberg_friend_ips_hint"
+                            android:inputType="text" />
+                    </LinearLayout>
+
                     <CheckBox
                         android:id="@+id/CBFullscreenStretched"
                         android:layout_width="wrap_content"

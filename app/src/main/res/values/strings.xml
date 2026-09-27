@@ -153,6 +153,8 @@
     <string name="wmdecoder">Windows Media Decoder</string>
     <string name="settings">Settings</string>
     <string name="exec_arguments">Exec Arguments</string>
+    <string name="goldberg_friend_ips">Online Play: Friend IPs (Goldberg)</string>
+    <string name="goldberg_friend_ips_hint">e.g. 100.64.0.2 (Tailscale IP)</string>
     <string name="win_components">Win Components</string>
     <string name="drives">Drives</string>
     <string name="force_fullscreen">Force Fullscreen for Windowed Apps</string>

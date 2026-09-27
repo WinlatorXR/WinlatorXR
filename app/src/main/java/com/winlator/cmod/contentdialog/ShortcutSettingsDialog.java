@@ -41,6 +41,7 @@ import com.winlator.cmod.audio.MidiManager;
 import com.winlator.cmod.widget.CPUListView;
 import com.winlator.cmod.widget.EnvVarsView;
 import com.winlator.xr.XrActivity;
+import com.winlator.xr.utils.GoldbergEmu;
 import com.winlator.xr.utils.PcvrRuntime;
 
 import java.io.File;
@@ -109,6 +110,10 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
         final EditText etExecArgs = findViewById(R.id.ETExecArgs);
         etExecArgs.setText(shortcut.getExtra("execArgs"));
+
+        final EditText etGoldbergFriendIps = findViewById(R.id.ETGoldbergFriendIps);
+        etGoldbergFriendIps.setText(shortcut.getExtra("goldbergFriendIps"));
+        findViewById(R.id.LLGoldbergFriendIps).setVisibility(GoldbergEmu.isApplied(shortcut) ? View.VISIBLE : View.GONE);
 
         ContainerDetailFragment containerDetailFragment = new ContainerDetailFragment(shortcut.container.id);
 //        containerDetailFragment.loadScreenSizeSpinner(getContentView(), shortcut.getExtra("screenSize", shortcut.container.getScreenSize()));
@@ -552,6 +557,8 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
                 String execArgs = etExecArgs.getText().toString();
                 shortcut.putExtra("execArgs", !execArgs.isEmpty() ? execArgs : null);
+                String goldbergFriendIps = etGoldbergFriendIps.getText().toString().trim();
+                shortcut.putExtra("goldbergFriendIps", !goldbergFriendIps.isEmpty() ? goldbergFriendIps : null);
                 shortcut.putExtra("screenSize", !screenSize.equals(shortcut.container.getScreenSize()) ? screenSize : null);
                 shortcut.putExtra("graphicsDriver", !graphicsDriver.equals(shortcut.container.getGraphicsDriver()) ? graphicsDriver : null);
                 shortcut.putExtra("graphicsDriverConfig", !graphicsDriverConfig.equals(shortcut.container.getGraphicsDriverConfig()) ? graphicsDriverConfig : null);
@@ -735,6 +742,7 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
 //        applyDarkThemeToEditText(etLC_ALL, isDarkMode);
         applyDarkThemeToEditText(etExecArgs, isDarkMode);
+        applyDarkThemeToEditText(view.findViewById(R.id.ETGoldbergFriendIps), isDarkMode);
 
     }
 

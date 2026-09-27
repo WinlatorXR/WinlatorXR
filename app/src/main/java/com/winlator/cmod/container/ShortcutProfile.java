@@ -78,7 +78,7 @@ public abstract class ShortcutProfile {
     private static final Set<String> NOT_SETTINGS = new HashSet<>(Arrays.asList(
             "uuid", "customIconPath", "customCoverArtPath",
             "goldbergScanned", "goldbergDllDirs", "goldbergApplied", "goldbergAppId",
-            "goldbergHintShownCount", "goldbergLoader",
+            "goldbergHintShownCount", "goldbergLoader", "goldbergFriendIps",
             MARKER, BACKUP));
 
     private ShortcutProfile() {}

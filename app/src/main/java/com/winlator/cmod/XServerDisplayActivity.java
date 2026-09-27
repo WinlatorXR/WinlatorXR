@@ -1626,6 +1626,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         WineStartMenuCreator.create(this, container);
         WineUtils.createDosdevicesSymlinks(container);
         GoldbergEmu.clearStaleLoaderRegistry(new File(container.getRootDir(), ".wine"));
+        if (shortcut != null) GoldbergEmu.writeFriendIps(this, shortcut);
         // A container launch with no shortcut takes the container's own VR options
         if (shortcut != null)
             PcvrRuntime.apply(this, container, PcvrRuntime.isEnabled(shortcut), PcvrRuntime.isDirectTransport(shortcut),

@@ -199,6 +199,36 @@ public class GoldbergEmu {
     }
 
     /**
+     * Writes the shortcut's friend IPs into custom_broadcasts.txt, so Goldberg's LAN discovery
+     * reaches a friend over a VPN like Tailscale that carries no broadcasts; an empty field removes it.
+     */
+    public static void writeFriendIps(Context context, Shortcut shortcut) {
+        if (!isApplied(shortcut)) return;
+        String[] ips = shortcut.getExtra("goldbergFriendIps", "").trim().split("[\\s,;]+");
+        boolean hasIps = !ips[0].isEmpty();
+
+        List<File> dirs = new ArrayList<>();
+        // The loader's steamclient reads steam_settings beside the game's exe, not beside steam_api
+        boolean loader = !shortcut.getExtra("goldbergLoader", "").isEmpty();
+        File exeFile = loader ? GameUninstaller.resolveExecutable(context, shortcut.container, shortcut) : null;
+        if (exeFile != null && exeFile.getParentFile() != null) dirs.add(exeFile.getParentFile());
+        else if (!loader) dirs.addAll(resolveGoldbergTargetDirs(context, shortcut));
+
+        for (File dir : dirs) {
+            File settingsDir = new File(dir, "steam_settings");
+            File file = new File(settingsDir, "custom_broadcasts.txt");
+            if (!hasIps) {
+                if (file.isFile()) file.delete();
+                continue;
+            }
+            if (!settingsDir.isDirectory() && !(loader && settingsDir.mkdirs())) continue;
+            try (FileWriter fw = new FileWriter(file)) {
+                for (String ip : ips) fw.write(ip + "\n");
+            } catch (IOException ignored) {}
+        }
+    }
+
+    /**
      * Lightweight, dismiss-by-ignoring hint shown on the first GOLDBERG_HINT_MAX_SHOWS
      * launches of a shortcut (not a blocking gate — we can't know in advance whether a
      * game actually needs the fix to start, only that it plausibly could, so it's a
