@@ -40,6 +40,7 @@ public class ModdingUtils {
     private static final String RESHADE_PLUGINS_PKG = "reshade-plugins.tzst";
     private static final String TRACKIR_DESTIONATION = "/sdcard/Download/Winlator";
     private static final String TRACKIR_PATH = "D:\\Winlator\\opentrack_wxr\\opentrack.exe";
+    private static final String TRACKIR_TRAY_PATH = "D:\\Winlator\\opentrack_wxr\\opentrack_tray.exe";
     private static final String TRACKIR_PKG = "opentrack_wxr.tzst";
     private static final String TAG = "ModdingUtils";
 
@@ -64,6 +65,10 @@ public class ModdingUtils {
 
     public static String getRuntimeForTrackIR() {
         return TRACKIR_PATH;
+    }
+
+    public static String getTrayToggleForTrackIR() {
+        return TRACKIR_TRAY_PATH;
     }
 
     public static void unpackTrackIR(Context context) {

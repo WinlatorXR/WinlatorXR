@@ -585,6 +585,7 @@
     <string name="reshade_plugin">3D rendering plugin</string>
     <string name="camera_adjust">Camera adjust</string>
     <string name="reshade">Reshade</string>
+    <string name="opentrack">OpenTrack</string>
     <string name="rendering">Rendering</string>
     <string name="input">Input</string>
 

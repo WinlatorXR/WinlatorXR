@@ -20,4 +20,8 @@
         android:id="@+id/main_menu_reshade"
         android:title="@string/reshade"
         android:icon="@drawable/icon_popup_menu_bring_to_front" />
+    <item
+        android:id="@+id/main_menu_opentrack"
+        android:title="@string/opentrack"
+        android:icon="@drawable/icon_popup_menu_bring_to_front" />
 </menu>

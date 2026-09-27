@@ -521,6 +521,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 || preferences.getBoolean("enable_box86_64_logs", false);
         useReshade = XrActivity.isEnabled(this) &&(shortcut != null) &&
                 (Integer.parseInt(shortcut.getExtra("useReshade", "0")) > 0);
+        useTrackIR = XrActivity.isEnabled(this) && (shortcut != null) && shortcut.getExtra("useTrackIR", "0").equals("1");
 
         firstTimeBoot = container.getExtra("appVersion").isEmpty();
 
@@ -1093,6 +1094,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     private LayoutAnimationController navLayoutAnim;
 
     private boolean useReshade = false;
+    private boolean useTrackIR = false;
     private boolean enableLogs = false;
     private boolean allowMagnifier = true;
 
@@ -1437,6 +1439,8 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 advancedMenu.findItem(R.id.main_menu_logs).setEnabled(enableLogs);
                 advancedMenu.findItem(R.id.main_menu_reshade).setVisible(useReshade);
                 advancedMenu.findItem(R.id.main_menu_reshade).setEnabled(useReshade);
+                advancedMenu.findItem(R.id.main_menu_opentrack).setVisible(useTrackIR);
+                advancedMenu.findItem(R.id.main_menu_opentrack).setEnabled(useTrackIR);
                 advancedMenu.findItem(R.id.main_menu_camera).setVisible(XrActivity.isVR);
                 advancedMenu.findItem(R.id.main_menu_camera).setEnabled(XrActivity.isVR);
                 new NavigationAdvDialog(this).show();

@@ -40,6 +40,7 @@ import com.winlator.xr.io.XrRenderer;
 import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.xr.ui.XrControllerDialog;
 import com.winlator.xr.ui.XrKeyboard;
+import com.winlator.xr.utils.ModdingUtils;
 import com.winlator.xr.utils.XrDevice;
 import com.winlator.xr.utils.XrEnvironment;
 
@@ -336,6 +337,12 @@ public class XrActivity extends XServerDisplayActivity {
                 isImmersive = false;
                 isSBS = false;
                 XrKeyboard.sendKey(XKeycode.KEY_HOME);
+                break;
+            case R.id.main_menu_opentrack:
+                // OpenTrack lives in the tray, so the helper clicks its tray icon to show the window (restarting it if closed)
+                isImmersive = false;
+                isSBS = false;
+                getWinHandler().exec(ModdingUtils.getTrayToggleForTrackIR());
                 break;
         }
     }
