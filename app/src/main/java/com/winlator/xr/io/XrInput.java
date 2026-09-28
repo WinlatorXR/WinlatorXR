@@ -401,9 +401,10 @@ public class XrInput {
                         xrController.updateMouseAxes(axes, true);
                         xrController.updateMouseState(new boolean[buttons.length]);
                     }
-                    if (XrActivity.wheelEmulation) {
-                        xrController.updateWheelEmulation(axes);
-                    }
+                }
+                // Also in VR when gamepad mode is on, for PC VR games that have no VR hands
+                if (XrActivity.wheelEmulation && (!XrActivity.getVR() || XrActivity.gamepadEmulation)) {
+                    xrController.updateWheelEmulation(axes);
                 }
                 xrController.updateFinished(axes, buttons);
             }

@@ -387,6 +387,5 @@
         <item>In gamepad mode, hold both grips for a moment to turn the thumbsticks into a d-pad.</item>
         <item>Left-handed? Turn on left-handed mouse mapping and every primary control moves to your other hand.</item>
         <item>Camera adjust: the primary thumbstick moves the view up and down, the secondary one moves it around you.</item>
-        <item>Seen enough of these? Turn them off under Settings, on the XR tab.</item>
     </string-array>
 </resources>

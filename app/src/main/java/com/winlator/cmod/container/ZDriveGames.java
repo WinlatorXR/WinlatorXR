@@ -97,6 +97,23 @@ public abstract class ZDriveGames {
         return games;
     }
 
+    /**
+     * How many games {@link #scan} would list, without measuring or matching them.
+     *
+     * Still reads the disk, so not for the UI thread.
+     */
+    public static int count(Context context) {
+        int count = 0;
+        for (File root : gameRoots(context).keySet()) {
+            File[] folders = root.listFiles(File::isDirectory);
+            if (folders == null) continue;
+            for (File folder : folders) {
+                if (!FileUtils.isEmpty(folder)) count++;
+            }
+        }
+        return count;
+    }
+
     /** The folders on Z: that hold one game each, against what put them there. */
     private static Map<File, String> gameRoots(Context context) {
         File imageFs = ImageFs.find(context).getRootDir();

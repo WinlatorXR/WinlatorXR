@@ -51,6 +51,7 @@ import com.winlator.cmod.xenvironment.ImageFs;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 public class ContainersFragment extends Fragment {
@@ -155,12 +156,31 @@ public class ContainersFragment extends Fragment {
                     activity.runOnUiThread(() -> {
                         recyclerView.setAdapter(new ContainersAdapter(containers));
                         emptyTextView.setVisibility(containers.isEmpty() ? View.VISIBLE : View.GONE);
+                        AppUtils.setTabCount(tabLayout, 2, R.string.downloader, containers.size());
                     });
                 }).start();
             }
             recyclerView.setAdapter(new ContainersAdapter(containers));
             emptyTextView.setVisibility(containers.isEmpty() ? View.VISIBLE : View.GONE);
+            updateTabCounts();
         }
+    }
+
+    /**
+     * Shows how many containers and backups there are on their tabs, whichever tab is open. The
+     * downloader's list comes from the network, so its count only appears once it is opened.
+     */
+    private void updateTabCounts() {
+        AppUtils.setTabCount(tabLayout, 0, R.string.container_list, manager.getContainers().size());
+
+        int backups = 0;
+        File[] files = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Winlator/Backups/Containers").listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (!file.isDirectory() && file.getAbsolutePath().endsWith(".tzst")) backups++;
+            }
+        }
+        AppUtils.setTabCount(tabLayout, 1, R.string.backup_images, backups);
     }
 
     @Override
@@ -179,7 +199,7 @@ public class ContainersFragment extends Fragment {
         switch (menuItem.getItemId()) {
             case R.id.containers_menu_add:
                 if (!ImageFs.find(getContext()).isValid()) return false;
-                openCreateContainer();
+                offerMissingDefaultContainersOrCreate();
                 return true;
 
             case R.id.containers_menu_import:
@@ -238,6 +258,39 @@ public class ContainersFragment extends Fragment {
                 AppUtils.showToast(getContext(), getString(R.string.import_container_failed));
             }
         });
+    }
+
+    // If any of the containers first boot creates are gone, offer to make them again under the
+    // same names before falling through to a blank new container.
+    private void offerMissingDefaultContainersOrCreate() {
+        if (!(getActivity() instanceof MainActivity)) {
+            openCreateContainer();
+            return;
+        }
+        MainActivity activity = (MainActivity) getActivity();
+        if (activity.isCreatingDefaultContainers()) {
+            AppUtils.showToast(getContext(), getString(R.string.recreate_default_containers_busy));
+            return;
+        }
+        Map<String, String> missing = activity.missingDefaultContainers();
+        if (missing.isEmpty()) {
+            openCreateContainer();
+            return;
+        }
+
+        StringBuilder names = new StringBuilder();
+        for (String name : missing.values()) names.append("\n• ").append(name);
+        ContentDialog dialog = new ContentDialog(getContext());
+        dialog.setTitle(R.string.recreate_default_containers_title);
+        dialog.setMessage(getString(R.string.recreate_default_containers_message) + "\n" + names);
+        ((TextView) dialog.findViewById(R.id.BTConfirm)).setText(R.string.recreate_default_containers_recreate);
+        ((TextView) dialog.findViewById(R.id.BTCancel)).setText(R.string.recreate_default_containers_new);
+        dialog.setOnConfirmCallback(() -> {
+            AppUtils.showToast(getContext(), getString(R.string.recreate_default_containers_started));
+            activity.recreateDefaultContainers(missing);
+        });
+        dialog.setOnCancelCallback(this::openCreateContainer);
+        dialog.show();
     }
 
     private void openCreateContainer() {

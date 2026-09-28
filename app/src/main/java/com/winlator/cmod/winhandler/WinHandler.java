@@ -334,6 +334,14 @@ public class WinHandler {
             return;
         }
 
+        // XR gamepad mode writes P1 through sendVirtualGamepadState without a virtual profile.
+        // Falling through would write an idle fallback controller over it, dropping triggers and
+        // buttons whenever motion controls or wheel emulation push a stick offset.
+        if (XrActivity.isActive() && XrActivity.gamepadEmulation && hasVirtualState && lastVirtualState != null) {
+            writeStateToMappedBuffer(lastVirtualState, gamepadBuffer, true, 0);
+            return;
+        }
+
         ensureP1Controller();
         if (currentController != null) {
             writeStateToMappedBuffer(currentController.state, gamepadBuffer, true, 0);

@@ -39,11 +39,11 @@ public class XrContentDialog extends Dialog {
     protected View contentView;
 
     private int counter;
-    private int[] pixels;
     private Bitmap bitmap;
     private Bitmap bitmapCopy;
     private boolean bitmapDirty;
     private Canvas canvas;
+    private Canvas canvasCopy;
     private Drawable drawable;
     private static ArrayList<XrContentDialog> instances = new ArrayList<>();
 
@@ -74,9 +74,8 @@ public class XrContentDialog extends Dialog {
     }
 
     public Drawable getDrawable() {
-        if (counter++ > 10) {
+        if (shouldRedraw()) {
             XrActivity.getInstance().runOnUiThread(this::redraw);
-            counter = 0;
         }
         synchronized (this) {
             if (bitmapCopy != null && bitmapDirty) {
@@ -85,6 +84,15 @@ public class XrContentDialog extends Dialog {
             }
         }
         return drawable;
+    }
+
+    /** Called every frame from the render thread; true queues a redraw on the UI thread. */
+    protected boolean shouldRedraw() {
+        if (counter++ > 10) {
+            counter = 0;
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -116,12 +124,18 @@ public class XrContentDialog extends Dialog {
         }
 
         //Allocate render arrays
-        if ((pixels == null) || (bitmap.getWidth() != w) || (bitmap.getHeight() != h)) {
-            pixels = new int[w * h];
-            bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        float renderScale = getRenderScale();
+        int bw = Math.round(w * renderScale);
+        int bh = Math.round(h * renderScale);
+        if ((bitmap == null) || (bitmap.getWidth() != bw) || (bitmap.getHeight() != bh)) {
+            bitmap = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888);
             canvas = new Canvas(bitmap);
+        }
+        if ((drawable == null) || (drawable.width != bw) || (drawable.height != bh)) {
             drawable = Drawable.fromBitmap(bitmap);
         }
+        canvas.save();
+        canvas.scale(renderScale, renderScale);
 
         //Apply background
         android.graphics.drawable.Drawable background = v.getBackground();
@@ -137,14 +151,24 @@ public class XrContentDialog extends Dialog {
 
         //Render window
         v.draw(canvas);
+        canvas.restore();
 
-        //Double buffering
+        //Double buffering: hand the finished bitmap over and draw the next frame into the
+        //one it replaces, rather than allocating a full copy on every redraw
         synchronized (this) {
-            if (bitmap != null) {
-                bitmapCopy = bitmap.copy(bitmap.getConfig(), true);
-                bitmapDirty = true;
-            }
+            Bitmap spare = bitmapCopy;
+            Canvas spareCanvas = canvasCopy;
+            bitmapCopy = bitmap;
+            canvasCopy = canvas;
+            bitmap = spare;
+            canvas = spareCanvas;
+            bitmapDirty = true;
         }
+    }
+
+    /** How many bitmap pixels each view pixel is drawn with; above 1 keeps text sharp when magnified. */
+    protected float getRenderScale() {
+        return 1;
     }
 
     public static XrContentDialog getFrontInstance() {

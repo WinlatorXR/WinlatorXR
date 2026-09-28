@@ -79,6 +79,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -91,6 +92,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public static final byte EDIT_INPUT_CONTROLS_REQUEST_CODE = 3;
     public static final byte OPEN_DIRECTORY_REQUEST_CODE = 4;
     private static final String PREF_AUTO_DEFAULT_CONTAINER_CREATED = "auto_default_container_created";
+    private static final String PREF_UPGRADE_CONTAINERS_OFFERED = "upgrade_containers_offered";
+    private static final String PREF_XR_MENU_LONG_PRESS_NOTICE_SHOWN = "xr_menu_long_press_notice_shown";
     private DrawerLayout drawerLayout;
     private GridLayout gridLayout;
     public final PreloaderDialog preloaderDialog = new PreloaderDialog(this);
@@ -111,6 +114,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     private boolean allAccessFilesDialogDismissed = false;
     private static boolean vrContentUpdatesChecked = false;
+    // True while the default containers are being created, so "+" can't offer them a second time
+    private boolean creatingDefaultContainers = false;
+    // The update check is held back while the one-time upgrade prompts are on screen
+    private boolean upgradePromptsShowing = false;
+    private boolean vrContentUpdatesPending = false;
     private boolean vrUpdateCheckOnResume = false;
 
 
@@ -538,6 +546,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     /** Tells the user when the Downloader lists a newer Proton WXR, OXRWXR or OpenComposite. */
     private void checkVrContentUpdates() {
+        // Waits for the upgrade prompts to finish, which call this again when they do
+        if (upgradePromptsShowing) {
+            vrContentUpdatesPending = true;
+            return;
+        }
         // Once per app start, so "Not now" reminds again on the next start
         if (vrContentUpdatesChecked) return;
         vrContentUpdatesChecked = true;
@@ -600,19 +613,115 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
      * are still created if that import fails.
      */
     private void autoCreateDefaultContainersIfNeeded() {
-        if (sharedPreferences.getBoolean(PREF_AUTO_DEFAULT_CONTAINER_CREATED, false)) return;
         if (containerManager == null) return;
+        if (sharedPreferences.getBoolean(PREF_AUTO_DEFAULT_CONTAINER_CREATED, false)) {
+            offerDefaultContainersToUpgradersIfNeeded();
+            return;
+        }
 
         sharedPreferences.edit().putBoolean(PREF_AUTO_DEFAULT_CONTAINER_CREATED, true).apply();
 
         containerManager.loadContainers();
-        if (!containerManager.getContainers().isEmpty()) return;
+        if (!containerManager.getContainers().isEmpty()) {
+            offerDefaultContainersToUpgradersIfNeeded();
+            return;
+        }
+        // A fresh install gets them now, so it never needs the upgrade offer or the menu notice
+        sharedPreferences.edit()
+                .putBoolean(PREF_UPGRADE_CONTAINERS_OFFERED, true)
+                .putBoolean(PREF_XR_MENU_LONG_PRESS_NOTICE_SHOWN, true)
+                .apply();
+        createDefaultContainers();
+    }
 
+    /**
+     * Someone upgrading from an older build already has containers, so the first-boot creation
+     * above skips them. Once, offer to create this version's default containers alongside theirs,
+     * unless they already have a container for every default version.
+     */
+    private void offerDefaultContainersToUpgradersIfNeeded() {
+        if (sharedPreferences.getBoolean(PREF_UPGRADE_CONTAINERS_OFFERED, false)) return;
+        sharedPreferences.edit().putBoolean(PREF_UPGRADE_CONTAINERS_OFFERED, true).apply();
+        upgradePromptsShowing = true;
+
+        containerManager.loadContainers();
         ContentsManager contentsManager = new ContentsManager(this);
         contentsManager.syncContents();
-        // Bundled contents/ packages listed here get a default container too, if they installed.
+        boolean missingAny = false;
+        for (String wineVersion : defaultContainerVersions(contentsManager, new HashMap<>())) {
+            boolean found = false;
+            for (Container container : containerManager.getContainers()) {
+                if (wineVersion.equalsIgnoreCase(container.getWineVersion())) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                missingAny = true;
+                break;
+            }
+        }
+        if (!missingAny) {
+            showXrMenuLongPressNoticeIfNeeded();
+            return;
+        }
+
+        ContentDialog dialog = new ContentDialog(this);
+        dialog.setTitle(R.string.upgrade_containers_title);
+        dialog.setMessage(R.string.upgrade_containers_message);
+        ((TextView) dialog.findViewById(R.id.BTConfirm)).setText(R.string.upgrade_containers_create);
+        ((TextView) dialog.findViewById(R.id.BTCancel)).setText(R.string.vr_content_updates_later);
+        boolean[] created = {false};
+        dialog.setOnConfirmCallback(() -> {
+            created[0] = true;
+            createDefaultContainers();
+        });
+        // "Not now", back or tapping outside all get one last chance
+        dialog.setOnDismissListener(d -> {
+            if (isFinishing() || isDestroyed()) return;
+            if (created[0]) {
+                showXrMenuLongPressNoticeIfNeeded();
+                return;
+            }
+            ContentDialog finalDialog = new ContentDialog(this);
+            finalDialog.setTitle(R.string.upgrade_containers_title);
+            finalDialog.setMessage(R.string.upgrade_containers_final_message);
+            ((TextView) finalDialog.findViewById(R.id.BTConfirm)).setText(R.string.upgrade_containers_create);
+            ((TextView) finalDialog.findViewById(R.id.BTCancel)).setText(R.string.upgrade_containers_im_sure);
+            finalDialog.setOnConfirmCallback(this::createDefaultContainers);
+            finalDialog.setOnDismissListener(fd -> showXrMenuLongPressNoticeIfNeeded());
+            finalDialog.show();
+        });
+        dialog.show();
+    }
+
+    /** Once, tells someone upgrading from an older build that the XR menu moved to a long press. */
+    private void showXrMenuLongPressNoticeIfNeeded() {
+        if (sharedPreferences.getBoolean(PREF_XR_MENU_LONG_PRESS_NOTICE_SHOWN, false) || isFinishing() || isDestroyed()) {
+            finishUpgradePrompts();
+            return;
+        }
+        sharedPreferences.edit().putBoolean(PREF_XR_MENU_LONG_PRESS_NOTICE_SHOWN, true).apply();
+        ContentDialog dialog = new ContentDialog(this);
+        dialog.setTitle(R.string.xr_menu_long_press_notice_title);
+        dialog.setMessage(R.string.xr_menu_long_press_notice_message);
+        dialog.findViewById(R.id.BTCancel).setVisibility(View.GONE);
+        dialog.setOnDismissListener(d -> finishUpgradePrompts());
+        dialog.show();
+    }
+
+    /** The last upgrade prompt closed, so run the update check if it was held back. */
+    private void finishUpgradePrompts() {
+        upgradePromptsShowing = false;
+        if (vrContentUpdatesPending) {
+            vrContentUpdatesPending = false;
+            checkVrContentUpdatesDelayed();
+        }
+    }
+
+    /** Bundled Wine versions plus bundled contents/ packages that installed, in creation order. */
+    private String[] defaultContainerVersions(ContentsManager contentsManager, Map<String, String> names) {
         List<String> versionList = new ArrayList<>(Arrays.asList(getResources().getStringArray(R.array.wine_entries)));
-        Map<String, String> names = new HashMap<>();
         String[] contentEntries = getResources().getStringArray(R.array.default_container_content_entries);
         String[] contentNames = getResources().getStringArray(R.array.default_container_content_names);
         for (int i = 0; i < contentEntries.length; i++) {
@@ -620,7 +729,50 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             versionList.add(contentEntries[i]);
             if (i < contentNames.length) names.put(contentEntries[i], contentNames[i]);
         }
-        String[] wineVersions = versionList.toArray(new String[0]);
+        return versionList.toArray(new String[0]);
+    }
+
+    /**
+     * The first-boot default containers (version → name) that no longer have a container of that
+     * name, for the "+" button's offer to recreate them. Empty when a container image is bundled,
+     * since first boot imported that instead.
+     */
+    public Map<String, String> missingDefaultContainers() {
+        Map<String, String> missing = new LinkedHashMap<>();
+        if (containerManager == null || !containerManager.listBundledContainerAssets().isEmpty()) return missing;
+        containerManager.loadContainers();
+        ContentsManager contentsManager = new ContentsManager(this);
+        contentsManager.syncContents();
+        Map<String, String> names = new HashMap<>();
+        for (String wineVersion : defaultContainerVersions(contentsManager, names)) {
+            String name = names.getOrDefault(wineVersion, wineVersion);
+            boolean found = false;
+            for (Container container : containerManager.getContainers()) {
+                if (name.equalsIgnoreCase(container.getName())) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) missing.put(wineVersion, name);
+        }
+        return missing;
+    }
+
+    /** Recreates the given default containers (version → name) the same way first boot made them. */
+    public void recreateDefaultContainers(Map<String, String> missing) {
+        // Container ids come from the manager's counter, which must see containers made since startup
+        containerManager.loadContainers();
+        ContentsManager contentsManager = new ContentsManager(this);
+        contentsManager.syncContents();
+        createDefaultContainer(missing.keySet().toArray(new String[0]), missing, 0, contentsManager);
+    }
+
+    private void createDefaultContainers() {
+        ContentsManager contentsManager = new ContentsManager(this);
+        contentsManager.syncContents();
+        // Bundled contents/ packages listed here get a default container too, if they installed.
+        Map<String, String> names = new HashMap<>();
+        String[] wineVersions = defaultContainerVersions(contentsManager, names);
 
         List<String> bundledContainers = containerManager.listBundledContainerAssets();
         if (!bundledContainers.isEmpty()) {
@@ -647,7 +799,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
      * counter, which overlapping creations would hand out twice.
      */
     private void createDefaultContainer(String[] wineVersions, Map<String, String> names, int index, ContentsManager contentsManager) {
-        if (index >= wineVersions.length) return;
+        if (index >= wineVersions.length) {
+            creatingDefaultContainers = false;
+            return;
+        }
+        creatingDefaultContainers = true;
         final String wineVersion = wineVersions[index];
 
         try {
@@ -676,7 +832,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             });
         } catch (JSONException e) {
             e.printStackTrace();
+            creatingDefaultContainers = false;
         }
+    }
+
+    public boolean isCreatingDefaultContainers() {
+        return creatingDefaultContainers;
     }
 
     @Override

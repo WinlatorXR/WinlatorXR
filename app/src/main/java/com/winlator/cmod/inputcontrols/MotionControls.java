@@ -269,6 +269,12 @@ public class MotionControls implements SensorEventListener {
                     XrActivity.wheelEmulation = checked;
                     if (checked) {
                         XrInput.ensureVirtualControllerAttached();
+                        // Wheel steering drives the left stick, so point the target there too.
+                        if (rgTarget.getCheckedRadioButtonId() != R.id.rbTargetLeft) {
+                            rgTarget.check(R.id.rbTargetLeft);
+                        }
+                    } else if (rgTarget.getCheckedRadioButtonId() != R.id.rbTargetRight) {
+                        rgTarget.check(R.id.rbTargetRight);
                     }
                 });
 
@@ -383,9 +389,37 @@ public class MotionControls implements SensorEventListener {
         });
         rgMode.setOnCheckedChangeListener((g, id) -> pushAll.run());
 
-        // Persist on OK. One batched write: pinning these to a shortcut rewrites its
-        // .desktop file, which is not worth doing a dozen times over.
-        cd.setOnConfirmCallback(() -> SessionSettings.edit(ctx)
+        // Everything saves on close, so Cancel had nothing left to undo - reset instead
+        cd.findViewById(R.id.BTCancel).setVisibility(View.GONE);
+        View btReset = cd.findViewById(R.id.BTReset);
+        btReset.setVisibility(View.VISIBLE);
+        btReset.setOnClickListener(view -> {
+            cbEnabled.setChecked(DEFAULT_ENABLED);
+            rgTarget.check(DEFAULT_TO_LEFT_STICK ? R.id.rbTargetLeft : R.id.rbTargetRight);
+            sbXSens.setValue(Math.round(DEFAULT_X_SENSITIVITY * 100f));
+            sbYSens.setValue(Math.round(DEFAULT_Y_SENSITIVITY * 100f));
+            sbSmooth.setValue(Math.round(DEFAULT_SMOOTHING * 100f));
+            sbDead.setValue(Math.round(DEFAULT_DEADZONE * 100f));
+            tvXSens.setText(ctx.getString(R.string.percent_fmt, (int)sbXSens.getValue()));
+            tvYSens.setText(ctx.getString(R.string.percent_fmt, (int)sbYSens.getValue()));
+            tvSmooth.setText(ctx.getString(R.string.percent_fmt, (int)sbSmooth.getValue()));
+            tvDead.setText(ctx.getString(R.string.percent_fmt, (int)sbDead.getValue()));
+            cbInvX.setChecked(DEFAULT_INVERT_X);
+            cbInvY.setChecked(DEFAULT_INVERT_Y);
+            MotionControlsUiUtils.selectKeycodeInSpinner(ctx, spActivator, DEFAULT_TRIGGER_BUTTON);
+            rgMode.check(DEFAULT_MODE == 0 ? R.id.rbHoldMode : R.id.rbToggleMode);
+            // Only wired up, and so only saved, while XR is running
+            if (XrActivity.isActive()) cbWheel.setChecked(XrActivity.DEFAULT_WHEEL);
+            cbRadialToSquare.setChecked(XrActivity.DEFAULT_RADIAL_TO_SQUARE);
+            cbRumblePassthrough.setChecked(XrActivity.DEFAULT_RUMBLE_PASSTHROUGH);
+            cbPointerSmoothing.setChecked(XrActivity.DEFAULT_POINTER_SMOOTHING);
+            pushAll.run();
+        });
+
+        // Persist however the dialog closes - the thumbstick close in XR is a back press, and
+        // the changes are already live. One batched write: pinning these to a shortcut
+        // rewrites its .desktop file, which is not worth doing a dozen times over.
+        cd.setOnDismissListener(d -> SessionSettings.edit(ctx)
                 .putBoolean("gyro_enabled", cbEnabled.isChecked())
                 .putBoolean("gyro_to_left_stick", rgTarget.getCheckedRadioButtonId() == R.id.rbTargetLeft)
                 .putFloat("gyro_x_sensitivity", sbXSens.getValue() / 100f)

@@ -27,9 +27,11 @@ import com.winlator.cmod.XServerDisplayActivity;
 import com.winlator.cmod.core.SessionSettings;
 import com.winlator.xr.XrActivity;
 import com.winlator.xr.io.XrInput;
+import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.xr.ui.XrDialog;
 import com.winlator.xr.utils.XrEnvironment;
 
+import java.util.ArrayList;
 import java.util.Date;
 
 public class NavigationDialog extends ContentDialog {
@@ -67,8 +69,17 @@ public class NavigationDialog extends ContentDialog {
             layout.setPadding(padding, padding, padding, padding);
             layout.setOrientation(LinearLayout.VERTICAL);
             layout.setOnClickListener(view -> {
+                ArrayList<XrContentDialog> before = XrContentDialog.getInstances();
                 if (context.onNavigationItemSelected(item)) {
+                    // Pause is a toggle, so the menu stays up to show it took and to undo it.
+                    // It swaps the item's icon between pause and play, so pick that up.
+                    if (item.getItemId() == R.id.main_menu_pause) {
+                        item.getIcon().setTint(context.getColor(R.color.colorAccent));
+                        layout.getChildAt(0).setBackground(item.getIcon());
+                        return;
+                    }
                     dismiss();
+                    offerBackToMenu(context, before);
                 }
             });
 
@@ -111,6 +122,26 @@ public class NavigationDialog extends ContentDialog {
         setOnDismissListener((dialog) -> grid.removeCallbacks(updateStatus));
 
         actionLinesUI(context);
+    }
+
+    /**
+     * The thumbstick press closes whatever window is up, which from a page this menu opened
+     * means starting over with the long press. B goes back here instead. Only a window the
+     * item opened there and then gets it - one that was already up, or that comes later from
+     * a page, is not this menu's to step back from - and only if it has no use for B itself.
+     * Closing it first is what saves the page.
+     */
+    private static void offerBackToMenu(XServerDisplayActivity context, ArrayList<XrContentDialog> before) {
+        if (!XrActivity.isEnabled(context)) return;
+        XrContentDialog front = XrContentDialog.getFrontInstance();
+        if (!(front instanceof ContentDialog) || before.contains(front)) return;
+        ContentDialog page = (ContentDialog) front;
+        if (page.hasFaceButtonAction(FaceButton.B)) return;
+        page.setBackAction(context.getString(R.string.xr_back_to_menu), () -> {
+            if (!page.isShowing()) return;
+            page.dismiss();
+            new NavigationDialog(context).show();
+        });
     }
 
     /**

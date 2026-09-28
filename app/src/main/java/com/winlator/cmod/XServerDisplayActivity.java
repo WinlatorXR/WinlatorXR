@@ -2159,7 +2159,8 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             controlsEitorActivityResultLauncher.launch(intent);
         });
 
-        dialog.setOnConfirmCallback(() -> {
+        // Applied however the dialog closes, since the thumbstick close in XR is a back press
+        dialog.setOnDismissListener(d -> {
             inputControlsView.setShowTouchscreenControls(cbShowTouchscreenControls.isChecked());
             boolean isTimeoutEnabled = cbEnableTimeout.isChecked();
             boolean isHapticsEnabled = cbEnableHaptics.isChecked();
@@ -2189,7 +2190,18 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             updateProfile.run();
         });
 
-        dialog.setOnCancelCallback(updateProfile::run);
+        // Everything is applied on close, so Cancel had nothing left to undo - reset instead.
+        // The profile is left as it is: it is a choice of layout rather than a setting.
+        dialog.findViewById(R.id.BTCancel).setVisibility(View.GONE);
+        View btReset = dialog.findViewById(R.id.BTReset);
+        btReset.setVisibility(View.VISIBLE);
+        btReset.setOnClickListener(v -> {
+            cbSimTouchScreen.setChecked(false);
+            cbShowTouchscreenControls.setChecked(true);
+            cbEnableTimeout.setChecked(false);
+            cbEnableHaptics.setChecked(false);
+            cbDisableTouchscreenMouse.setChecked(false);
+        });
 
         dialog.setCanceledOnTouchOutside(false);
         dialog.show();

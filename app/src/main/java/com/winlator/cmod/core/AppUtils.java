@@ -307,6 +307,13 @@ public abstract class AppUtils {
         tabLayout.getTabAt(0).select();
     }
 
+    /** Puts how many entries a tab holds after its name, e.g. "Shortcuts (6)". */
+    public static void setTabCount(TabLayout tabLayout, int position, int labelResId, int count) {
+        TabLayout.Tab tab = tabLayout != null ? tabLayout.getTabAt(position) : null;
+        if (tab == null) return;
+        tab.setText(tabLayout.getContext().getString(labelResId) + " (" + count + ")");
+    }
+
     public static void findViewsWithClass(ViewGroup parent, Class viewClass, ArrayList<View> outViews) {
         for (int i = 0, childCount = parent.getChildCount(); i < childCount; i++) {
             View child = parent.getChildAt(i);

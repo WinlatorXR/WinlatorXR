@@ -113,6 +113,8 @@ public class ZDriveFragment extends Fragment {
 
                 recyclerView.setAdapter(adapter);
                 emptyTextView.setVisibility(games.isEmpty() ? View.VISIBLE : View.GONE);
+                if (getParentFragment() instanceof ShortcutsFragment)
+                    ((ShortcutsFragment)getParentFragment()).setTabCount(2, R.string.store, games.size());
             });
 
             // Store art may need downloading, so it fills in once the list is already showing.

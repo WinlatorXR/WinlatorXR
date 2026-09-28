@@ -387,14 +387,26 @@ public class XrRenderer extends GLRenderer {
                         offsetY = (int) (xServer.screenInfo.height - sceneOffsetY - drawable.height * scale * fitY);
                     }
                     renderDrawable(drawable, offsetX, offsetY, dialogMaterial, false, scale * aspect / div, scale * fitY);
+                    if (dialog instanceof XrKeyboard) renderKeyboardPointers(drawable, offsetX, offsetY, scale * aspect / div, scale * fitY);
                     if (div > 1) {
                         offsetX += (int) (xServer.screenInfo.width / div);
                         renderDrawable(drawable, offsetX, offsetY, dialogMaterial, false, scale * aspect / div, scale * fitY);
+                        if (dialog instanceof XrKeyboard) renderKeyboardPointers(drawable, offsetX, offsetY, scale * aspect / div, scale * fitY);
                     }
                 }
             }
         }
         quadVertices.disable();
+    }
+
+    /** The laser dots sit on top of the keyboard so moving them never re-uploads the keyboard texture. */
+    private void renderKeyboardPointers(Drawable keyboard, int offsetX, int offsetY, float sx, float sy) {
+        for (int i = 0; i < 2; i++) {
+            Drawable pointer = XrKeyboard.getPointer(i);
+            int x = Math.max(0, Math.min(keyboard.width, XrKeyboard.getPointerX(i))) - pointer.width / 2;
+            int y = Math.max(0, Math.min(keyboard.height, XrKeyboard.getPointerY(i))) - pointer.height / 2;
+            renderDrawable(pointer, offsetX + (int) (x * sx), offsetY + (int) (y * sy), dialogMaterial, false, sx, sy);
+        }
     }
 
     @Override

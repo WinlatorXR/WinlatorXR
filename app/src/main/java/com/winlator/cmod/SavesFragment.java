@@ -102,6 +102,19 @@ public class SavesFragment extends Fragment {
         } else {
             emptyTextView.setVisibility(View.GONE);
         }
+        reportCount();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        // The Games screen's tabs may not exist yet when the list is first loaded.
+        reportCount();
+    }
+
+    private void reportCount() {
+        if (getParentFragment() instanceof ShortcutsFragment)
+            ((ShortcutsFragment)getParentFragment()).setTabCount(1, R.string.saves, savesList.size());
     }
 
     @Override

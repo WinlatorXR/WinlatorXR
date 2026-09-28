@@ -38,6 +38,7 @@ import com.winlator.xr.XrActivity;
 import com.winlator.xr.api.XrInterface;
 import com.winlator.xr.ui.XrContentDialog;
 import com.winlator.xr.ui.XrControllerDialog;
+import com.winlator.xr.ui.XrStartupDialog;
 
 public class XrController {
     /**
@@ -102,6 +103,21 @@ public class XrController {
         XrInterface.ControllerButton primaryRight = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_RIGHT : XrInterface.ControllerButton.R_THUMBSTICK_RIGHT;
 
         XrContentDialog dialog = XrContentDialog.getFrontInstance();
+        // The startup dialog has nothing on it to navigate, and the hint it shows is how to open
+        // the menu, so the hold that opens the menu has to work while it is up. The menu opens
+        // over it; the hint goes on its own timer as usual.
+        if (dialog instanceof XrStartupDialog) {
+            if (buttons[primaryPress.ordinal()]) {
+                if (primaryButtonPressTime == 0) primaryButtonPressTime = System.currentTimeMillis();
+                if (System.currentTimeMillis() - primaryButtonPressTime > MENU_HOLD_MILLIS) {
+                    primaryButtonPressTime = System.currentTimeMillis() + 5000;
+                    instance.runOnUiThread(() -> new NavigationDialog(instance).show());
+                }
+            } else primaryButtonPressTime = 0;
+            lastDialogShown = System.currentTimeMillis();
+            instance.nativeSetUseVR(false);
+            return false;
+        }
         if (dialog != null) {
             primaryButtonPressTime = 0;
             if (getButtonClicked(buttons, primaryPress)) instance.runOnUiThread(dialog::onBackPressed);

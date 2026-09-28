@@ -303,6 +303,7 @@ public abstract class ModInstaller {
             final List<String> exeEntries = failure == null
                     ? ZipExtractor.exeEntries(zip, stripPrefix) : new ArrayList<>();
             final File bundled = failure == null ? bundledProfile(zip, stripPrefix, targetDir) : null;
+            final File keptCopy = bundled != null ? keepProfileCopy(zip, bundled) : null;
             final String setupNote = failure == null
                     ? gameSetup(activity, shortcut, zip, stripPrefix, exeFile, targetDir) : "";
             final String error = failure;
@@ -317,7 +318,7 @@ public abstract class ModInstaller {
                 }
 
                 offerShortcut(activity, shortcut, zip, exeFile, targetDir, exeEntries, bundled,
-                        setupNote, onShortcutCreated);
+                        keptCopy, setupNote, onShortcutCreated);
             });
         });
     }
@@ -341,6 +342,34 @@ public abstract class ModInstaller {
             File file = new File(targetDir, entry.replace('/', File.separatorChar));
             if (file.isFile()) return file;
         }
+        return null;
+    }
+
+    /**
+     * Copies the archive's profile into the profiles folder, so Import Profile can put it on a
+     * game later without the mod being installed again -- a copy of the game whose files already
+     * have the mod in them, say. The copy is never touched by Remove Custom Profile, which only
+     * ever changes a shortcut.
+     *
+     * Kept under its own name, unless a different file already has that name, in which case the
+     * archive's name is added so the user's own is not overwritten. Only a profile that reads is
+     * copied, so the folder never gains a file that Import Profile would turn away.
+     *
+     * @return the copy, or null if there is none.
+     */
+    private static File keepProfileCopy(File zip, File profile) {
+        if (ShortcutProfile.read(profile).profile == null) return null;
+        if (!ShortcutProfile.ensureProfilesDir()) return null;
+
+        File dest = new File(ShortcutProfile.profilesDir(), profile.getName());
+        if (dest.isFile() && FileUtils.contentEquals(profile, dest)) return dest;
+        if (dest.exists()) {
+            dest = new File(ShortcutProfile.profilesDir(), ShortcutProfile.nameOf(profile.getName())
+                    + " (" + FileUtils.getBasename(zip.getName()) + ")" + ShortcutProfile.EXTENSION);
+        }
+
+        if (FileUtils.copy(profile, dest)) return dest;
+        Log.w(TAG, "Could not keep a copy of " + profile.getAbsolutePath() + " at " + dest.getAbsolutePath());
         return null;
     }
 
@@ -406,7 +435,7 @@ public abstract class ModInstaller {
      */
     private static void offerShortcut(Activity activity, Shortcut shortcut, File zip, File exeFile,
                                       File targetDir, List<String> exeEntries, File bundledProfile,
-                                      String setupNote, Runnable onShortcutCreated) {
+                                      File keptCopy, String setupNote, Runnable onShortcutCreated) {
         String winPath = winPathOf(activity, shortcut.container, targetDir);
 
         List<File> added = new ArrayList<>();
@@ -418,17 +447,35 @@ public abstract class ModInstaller {
             added.add(file);
         }
 
-        // A profile is settings for a program, so with no program added there is nothing of the
-        // mod's to apply them to. The game's own shortcut is not offered as a substitute: it is
-        // working now, and quietly replacing the settings behind it is not what was asked for.
+        // With no program added there is no mod shortcut for the profile, so it is offered for the
+        // game's own shortcut -- the one the mod was installed through -- but only on a yes: that
+        // shortcut is working now, and replacing the settings behind it has to be asked for.
         String profileNote = setupNote + (bundledProfile == null ? ""
                 : activity.getString(added.isEmpty()
-                        ? R.string.mod_profile_unused : R.string.mod_profile_included,
-                        bundledProfile.getName()));
+                        ? R.string.mod_profile_offer_game : R.string.mod_profile_included,
+                        bundledProfile.getName(), shortcut.name))
+                + (keptCopy == null ? "" : activity.getString(R.string.mod_profile_kept_copy,
+                        keptCopy.getAbsolutePath()));
 
         if (added.isEmpty()) {
-            ContentDialog.alert(activity, activity.getString(R.string.mod_installed_no_programs,
-                    zip.getName(), winPath) + profileNote, null);
+            String message = activity.getString(R.string.mod_installed_no_programs,
+                    zip.getName(), winPath) + profileNote;
+            if (bundledProfile == null) {
+                ContentDialog.alert(activity, message, null);
+                return;
+            }
+
+            ContentDialog dialog = new ContentDialog(activity);
+            dialog.setTitle(zip.getName());
+            dialog.setMessage(message);
+            ((TextView) dialog.findViewById(R.id.BTConfirm)).setText(R.string.mod_apply_profile);
+            ((TextView) dialog.findViewById(R.id.BTCancel)).setText(R.string.mod_no_shortcut);
+            dialog.setOnConfirmCallback(() -> {
+                String note = applyProfile(activity, shortcut, shortcut.file, bundledProfile);
+                if (onShortcutCreated != null) onShortcutCreated.run();
+                ContentDialog.alert(activity, shortcut.name + note, null);
+            });
+            dialog.show();
             return;
         }
 
@@ -501,7 +548,8 @@ public abstract class ModInstaller {
      * settings that were inherited rather than chosen -- and because the first apply keeps what
      * it replaced, Remove Custom Profile on the mod's shortcut puts the game's settings back.
      * That is what makes this safe to do without a second question: it is reversible from the
-     * same menu, on the mod's shortcut alone, and the game's own shortcut is never touched.
+     * same menu, on the mod's shortcut alone. The game's own shortcut only gets it when the mod
+     * added no program and the user said yes to that.
      *
      * A profile that cannot be read leaves the shortcut exactly as the game had it, which is the
      * outcome a mod with no profile gets, so a bad file costs nothing but the note saying so.

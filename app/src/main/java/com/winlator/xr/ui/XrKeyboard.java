@@ -19,7 +19,11 @@
 package com.winlator.xr.ui;
 
 import android.app.Activity;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.drawable.GradientDrawable;
 import android.util.Pair;
 import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
@@ -37,12 +41,72 @@ import com.winlator.xr.XrActivity;
 import com.winlator.xr.api.XrInterface;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class XrKeyboard extends ContentDialog {
 
     private static final int HAPTICS_CLICK = 50;
     private static final int HAPTICS_HOVER = 5;
     private static final int HAPTICS_INTENSITY = 5;
+    private static final int POINTER_RADIUS = 16;
+    // The keyboard is magnified to fill the view, so it is drawn at twice its size to stay sharp
+    private static final float RENDER_SCALE = 2;
+    private static final int MAX_RENDER_WIDTH = 2048;
+    private static final float KEY_CORNER_RADIUS_DP = 6;
+    // Hover colours match the pointer dots: left blue, right red
+    private static final int KEY_COLOR = Color.rgb(52, 52, 58);
+    private static final int SPECIAL_KEY_COLOR = Color.rgb(32, 32, 38);
+    private static final int LEFT_HOVER_COLOR = Color.rgb(30, 80, 190);
+    private static final int RIGHT_HOVER_COLOR = Color.rgb(190, 40, 40);
+    private static final int BOTH_HOVER_COLOR = Color.rgb(130, 50, 150);
+    private static final int LATCHED_MODIFIER_COLOR = Color.rgb(200, 130, 20);
+
+    private static final int PAGE_LETTERS = 0;
+    private static final int PAGE_SYMBOLS = 1;
+    private static final int PAGE_PC = 2;
+    // Label of the page toggle key on each page, naming the page it goes to next
+    private static final String[] PAGE_TOGGLE_LABELS = {"?123", "PC", "ABC"};
+
+    // Keys sent by keycode rather than as a typed character
+    private static final Map<String, XKeycode> NAMED_KEYS = new HashMap<>();
+    // One-shot modifiers: held down for the next key pressed, then let go
+    private static final Map<String, XKeycode> MODIFIER_KEYS = new HashMap<>();
+    static {
+        NAMED_KEYS.put("⌫", XKeycode.KEY_BKSP);
+        NAMED_KEYS.put("Space", XKeycode.KEY_SPACE);
+        NAMED_KEYS.put("Enter", XKeycode.KEY_ENTER);
+        NAMED_KEYS.put("F1", XKeycode.KEY_F1);
+        NAMED_KEYS.put("F2", XKeycode.KEY_F2);
+        NAMED_KEYS.put("F3", XKeycode.KEY_F3);
+        NAMED_KEYS.put("F4", XKeycode.KEY_F4);
+        NAMED_KEYS.put("F5", XKeycode.KEY_F5);
+        NAMED_KEYS.put("F6", XKeycode.KEY_F6);
+        NAMED_KEYS.put("F7", XKeycode.KEY_F7);
+        NAMED_KEYS.put("F8", XKeycode.KEY_F8);
+        NAMED_KEYS.put("F9", XKeycode.KEY_F9);
+        NAMED_KEYS.put("F10", XKeycode.KEY_F10);
+        NAMED_KEYS.put("F11", XKeycode.KEY_F11);
+        NAMED_KEYS.put("F12", XKeycode.KEY_F12);
+        NAMED_KEYS.put("Esc", XKeycode.KEY_ESC);
+        NAMED_KEYS.put("Tab", XKeycode.KEY_TAB);
+        NAMED_KEYS.put("PrtSc", XKeycode.KEY_PRTSCN);
+        NAMED_KEYS.put("Ins", XKeycode.KEY_INSERT);
+        NAMED_KEYS.put("Del", XKeycode.KEY_DEL);
+        NAMED_KEYS.put("Home", XKeycode.KEY_HOME);
+        NAMED_KEYS.put("End", XKeycode.KEY_END);
+        NAMED_KEYS.put("PgUp", XKeycode.KEY_PRIOR);
+        NAMED_KEYS.put("PgDn", XKeycode.KEY_NEXT);
+        NAMED_KEYS.put("CapsLk", XKeycode.KEY_CAPS_LOCK);
+        NAMED_KEYS.put("NumLk", XKeycode.KEY_NUM_LOCK);
+        NAMED_KEYS.put("↑", XKeycode.KEY_UP);
+        NAMED_KEYS.put("↓", XKeycode.KEY_DOWN);
+        NAMED_KEYS.put("←", XKeycode.KEY_LEFT);
+        NAMED_KEYS.put("→", XKeycode.KEY_RIGHT);
+        MODIFIER_KEYS.put("Ctrl", XKeycode.KEY_CTRL_L);
+        MODIFIER_KEYS.put("Alt", XKeycode.KEY_ALT_L);
+        MODIFIER_KEYS.put("Shift", XKeycode.KEY_SHIFT_L);
+    }
 
     private static final KeyCharacterMap chars = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD);
     private static final boolean[] lastButtons = new boolean[XrInterface.ControllerButton.values().length];
@@ -52,12 +116,19 @@ public class XrKeyboard extends ContentDialog {
     private static boolean isClosing = false;
     private static boolean isShown = false;
     private static XrKeyboard keyboard;
+    private static Drawable leftPointer, rightPointer;
 
     private boolean isCaps = true;
-    private boolean isSymbols = false;
+    private int page = PAGE_LETTERS;
+    private final ArrayList<XKeycode> latchedModifiers = new ArrayList<>();
     private final ArrayList<Button> keys = new ArrayList<>();
     private int lastLeftKey = -1;
     private int lastRightKey = -1;
+    // Redraw only when the hover highlight or the key labels change, not on a timer
+    private volatile boolean needsRedraw = true;
+    private volatile boolean redrawPending = false;
+    // Bitmap pixels per view pixel; the pointer positions are in bitmap pixels
+    private volatile float renderScale = 1;
 
     public XrKeyboard(Activity activity) {
         super(activity, R.layout.xr_keyboard);
@@ -73,6 +144,8 @@ public class XrKeyboard extends ContentDialog {
     public void show() {
         super.show();
         isShown = true;
+        needsRedraw = true;
+        latchedModifiers.clear();
     }
 
     @Override
@@ -87,36 +160,92 @@ public class XrKeyboard extends ContentDialog {
         if (drawable != null) {
             width = drawable.width;
             height = drawable.height;
-            int radius = 5;
-            drawable.drawLine(x1 - radius, y1, x1 + radius, y1, Color.BLUE, radius);
-            drawable.drawLine(x1, y1 - radius, x1, y1 + radius, Color.BLUE, radius);
-            drawable.drawLine(x2 - radius, y2, x2 + radius, y2, Color.RED, radius);
-            drawable.drawLine(x2, y2 - radius, x2, y2 + radius, Color.RED, radius);
         }
         return drawable;
     }
 
     @Override
+    protected boolean shouldRedraw() {
+        if (!needsRedraw || redrawPending) {
+            return false;
+        }
+        redrawPending = true;
+        return true;
+    }
+
+    @Override
     public void redraw() {
+        redrawPending = false;
         if (isClosing) {
             return;
         }
+        View root = getContentView();
+        if (root == null || root.getMeasuredWidth() == 0) {
+            return;
+        }
+        needsRedraw = false;
         for (Button key : keys) {
             if (isInside(key, x1, y1) && isInside(key, x2, y2)) {
-                key.setBackgroundColor(Color.rgb(128, 0, 128));
+                setKeyColor(key, BOTH_HOVER_COLOR);
             } else if (isInside(key, x1, y1)) {
-                key.setBackgroundColor(Color.rgb(128, 0, 0));
+                setKeyColor(key, LEFT_HOVER_COLOR);
             } else if (isInside(key, x2, y2)) {
-                key.setBackgroundColor(Color.rgb(0, 0, 128));
+                setKeyColor(key, RIGHT_HOVER_COLOR);
+            } else if (latchedModifiers.contains(MODIFIER_KEYS.get(key.getText().toString()))) {
+                setKeyColor(key, LATCHED_MODIFIER_COLOR);
             } else {
-                key.setBackgroundColor(Color.BLACK);
+                setKeyColor(key, isModifierKey(key.getText().toString()) ? SPECIAL_KEY_COLOR : KEY_COLOR);
             }
         }
         super.redraw();
     }
 
+    @Override
+    protected float getRenderScale() {
+        int w = Math.max(1, getContentView().getMeasuredWidth());
+        renderScale = Math.min(RENDER_SCALE, MAX_RENDER_WIDTH / (float) w);
+        return renderScale;
+    }
+
+    private static void setKeyColor(Button key, int color) {
+        GradientDrawable background = (GradientDrawable) key.getBackground();
+        if (!Integer.valueOf(color).equals(key.getTag())) {
+            background.setColor(color);
+            key.setTag(color);
+        }
+    }
+
     public static boolean isShown() {
         return isShown;
+    }
+
+    /** The laser dot for a controller; the renderer draws it over the keyboard rather than into its texture. */
+    public static Drawable getPointer(int controller) {
+        if (leftPointer == null) {
+            leftPointer = createPointer(Color.BLUE);
+            rightPointer = createPointer(Color.RED);
+        }
+        return controller == 0 ? leftPointer : rightPointer;
+    }
+
+    public static int getPointerX(int controller) {
+        return controller == 0 ? x1 : x2;
+    }
+
+    public static int getPointerY(int controller) {
+        return controller == 0 ? y1 : y2;
+    }
+
+    private static Drawable createPointer(int color) {
+        int size = POINTER_RADIUS * 2;
+        Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(Color.WHITE);
+        canvas.drawCircle(POINTER_RADIUS, POINTER_RADIUS, POINTER_RADIUS, paint);
+        paint.setColor(color);
+        canvas.drawCircle(POINTER_RADIUS, POINTER_RADIUS, POINTER_RADIUS - 2, paint);
+        return Drawable.fromBitmap(bitmap);
     }
 
     public static void sendKey(XKeycode key) {
@@ -159,6 +288,8 @@ public class XrKeyboard extends ContentDialog {
         if (getButtonClicked(buttons, XrInterface.ControllerButton.L_MENU)) instance.runOnUiThread(() -> keyboard.dismiss());
         if (getButtonClicked(buttons, XrInterface.ControllerButton.L_THUMBSTICK_PRESS)) instance.runOnUiThread(() -> keyboard.dismiss());
         if (getButtonClicked(buttons, XrInterface.ControllerButton.R_THUMBSTICK_PRESS)) instance.runOnUiThread(() -> keyboard.dismiss());
+        // XrInput leaves the face buttons to the keyboard, so the XR menu's back line is run here
+        if (getButtonClicked(buttons, XrInterface.ControllerButton.R_B)) keyboard.runFaceButtonPress(ContentDialog.FaceButton.B);
         if (getButtonClicked(buttons, XrInterface.ControllerButton.L_TRIGGER)) instance.runOnUiThread(() -> keyboard.processClick(x1, y1, 0));
         if (getButtonClicked(buttons, XrInterface.ControllerButton.R_TRIGGER)) instance.runOnUiThread(() -> keyboard.processClick(x2, y2, 1));
         System.arraycopy(buttons, 0, lastButtons, 0, buttons.length);
@@ -171,20 +302,7 @@ public class XrKeyboard extends ContentDialog {
                 "a","s","d","f","g","h","j","k","l",
                 "⇧","z","x","c","v","b","n","m",",","."
         };
-
-        int index = 0;
-
-        for (Button key : keys) {
-            String text = key.getText().toString();
-
-            // Skip special keys
-            if (isSpecialKey(text)) continue;
-
-            if (index < letters.length) {
-                key.setText(letters[index]);
-                index++;
-            }
-        }
+        applyLabels(keys, letters);
     }
 
     private void applySymbols(ArrayList<Button> keys) {
@@ -192,9 +310,25 @@ public class XrKeyboard extends ContentDialog {
                 "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10",
                 "`","!","@","#","$","%","&","(",")","=",
                 "+","-","*","/","_","[","]","{","}",
-                "|","?","\"","'",";",":","<",">"
+                "|","?","\"","'",";",":","<",">",
+                ",","."
         };
+        applyLabels(keys, symbols);
+    }
 
+    // Laid out like a desktop keyboard: modifiers bottom left, arrows bottom right; "" hides a key
+    private void applyPcKeys(ArrayList<Button> keys) {
+        String[] pcKeys = {
+                "Esc","F11","F12","PrtSc","Ins","Del","Home","End","PgUp","PgDn",
+                "Tab","~","\\","^","`","","","","CapsLk","NumLk",
+                "","","","","","","↑","","",
+                "Shift","Ctrl","Alt","","","←","↓","→",
+                "",""
+        };
+        applyLabels(keys, pcKeys);
+    }
+
+    private void applyLabels(ArrayList<Button> keys, String[] labels) {
         int index = 0;
 
         for (Button key : keys) {
@@ -203,8 +337,9 @@ public class XrKeyboard extends ContentDialog {
             // Skip special keys
             if (isSpecialKey(text)) continue;
 
-            if (index < symbols.length) {
-                key.setText(symbols[index]);
+            if (index < labels.length) {
+                key.setText(labels[index]);
+                key.setVisibility(labels[index].isEmpty() ? View.INVISIBLE : View.VISIBLE);
                 index++;
             }
         }
@@ -213,59 +348,44 @@ public class XrKeyboard extends ContentDialog {
     private void bindKeyboard(View keyboardRoot) {
         collectButtons(keyboardRoot);
 
+        float cornerRadius = KEY_CORNER_RADIUS_DP * keyboardRoot.getResources().getDisplayMetrics().density;
+        for (Button key : keys) {
+            GradientDrawable background = new GradientDrawable();
+            background.setCornerRadius(cornerRadius);
+            key.setBackground(background);
+            setKeyColor(key, isModifierKey(key.getText().toString()) ? SPECIAL_KEY_COLOR : KEY_COLOR);
+        }
+
         for (Button key : keys) {
             key.setOnClickListener(v -> {
                 String text = key.getText().toString();
                 switch (text) {
-                    case "⌫":
-                        sendKey(XKeycode.KEY_BKSP);
-                        break;
-                    case "F1":
-                        sendKey(XKeycode.KEY_F1);
-                        break;
-                    case "F2":
-                        sendKey(XKeycode.KEY_F2);
-                        break;
-                    case "F3":
-                        sendKey(XKeycode.KEY_F3);
-                        break;
-                    case "F4":
-                        sendKey(XKeycode.KEY_F4);
-                        break;
-                    case "F5":
-                        sendKey(XKeycode.KEY_F5);
-                        break;
-                    case "F6":
-                        sendKey(XKeycode.KEY_F6);
-                        break;
-                    case "F7":
-                        sendKey(XKeycode.KEY_F7);
-                        break;
-                    case "F8":
-                        sendKey(XKeycode.KEY_F8);
-                        break;
-                    case "F9":
-                        sendKey(XKeycode.KEY_F9);
-                        break;
-                    case "F10":
-                        sendKey(XKeycode.KEY_F10);
-                        break;
-                    case "Space":
-                        sendKey(XKeycode.KEY_SPACE);
-                        break;
-                    case "Enter":
-                        sendKey(XKeycode.KEY_ENTER);
-                        break;
                     case "⇧":
                         toggleCaps(keyboardRoot);
-                        break;
+                        return;
                     case "?123":
+                    case "PC":
                     case "ABC":
                         toggleKeyboard(keyboardRoot);
-                        break;
-                    default:
-                        sendChar(text.charAt(0));
+                        return;
                 }
+
+                XKeycode modifier = MODIFIER_KEYS.get(text);
+                if (modifier != null) {
+                    if (!latchedModifiers.remove(modifier)) latchedModifiers.add(modifier);
+                    return;
+                }
+
+                Keyboard xKeyboard = XrActivity.getInstance().getXServer().keyboard;
+                for (XKeycode latched : latchedModifiers) xKeyboard.setKeyPress(latched.id, 0);
+                XKeycode named = NAMED_KEYS.get(text);
+                if (named != null) {
+                    sendKey(named);
+                } else if (!text.isEmpty()) {
+                    sendChar(text.charAt(0));
+                }
+                for (XKeycode latched : latchedModifiers) xKeyboard.setKeyRelease(latched.id);
+                latchedModifiers.clear();
             });
         }
     }
@@ -326,6 +446,9 @@ public class XrKeyboard extends ContentDialog {
     }
 
     private boolean isInside(View view, float x, float y) {
+        if (view.getVisibility() != View.VISIBLE) return false;
+        x /= renderScale;
+        y /= renderScale;
         float left = view.getLeft() + ((View)view.getParent()).getLeft();
         float top = view.getTop() + ((View)view.getParent()).getTop();
         float right = left + view.getWidth();
@@ -338,11 +461,16 @@ public class XrKeyboard extends ContentDialog {
         return text.length() == 1 && Character.isLetter(text.charAt(0));
     }
 
+    private boolean isModifierKey(String text) {
+        return isSpecialKey(text) || text.equals("⇧");
+    }
+
     private boolean isSpecialKey(String text) {
         return  text.equals("⌫") ||
                 text.equals("Space") ||
                 text.equals("Enter") ||
                 text.equals("?123") ||
+                text.equals("PC") ||
                 text.equals("ABC");
     }
 
@@ -351,20 +479,23 @@ public class XrKeyboard extends ContentDialog {
             if (isInside(key, x, y)) {
                 XrActivity.getInstance().vibrateController(HAPTICS_CLICK, chan, HAPTICS_INTENSITY);
                 key.callOnClick();
+                needsRedraw = true;
             }
         }
     }
 
     private void processHaptics() {
         int leftKey = getKeyPointed(x1, y1);
-        if ((lastLeftKey != leftKey) && (leftKey >= 0)) {
-            XrActivity.getInstance().vibrateController(HAPTICS_HOVER, 0, HAPTICS_INTENSITY);
+        if (lastLeftKey != leftKey) {
+            if (leftKey >= 0) XrActivity.getInstance().vibrateController(HAPTICS_HOVER, 0, HAPTICS_INTENSITY);
+            needsRedraw = true;
         }
         lastLeftKey = leftKey;
 
         int rightKey = getKeyPointed(x2, y2);
-        if ((lastRightKey != rightKey) && (rightKey >= 0)) {
-            XrActivity.getInstance().vibrateController(HAPTICS_HOVER, 1, HAPTICS_INTENSITY);
+        if (lastRightKey != rightKey) {
+            if (rightKey >= 0) XrActivity.getInstance().vibrateController(HAPTICS_HOVER, 1, HAPTICS_INTENSITY);
+            needsRedraw = true;
         }
         lastRightKey = rightKey;
     }
@@ -383,7 +514,7 @@ public class XrKeyboard extends ContentDialog {
     }
 
     private void toggleCaps(View keyboardRoot) {
-        if (isSymbols) toggleKeyboard(keyboardRoot);
+        if (page != PAGE_LETTERS) setPage(PAGE_LETTERS);
         isCaps = !isCaps;
 
         for (Button key : keys) {
@@ -397,11 +528,17 @@ public class XrKeyboard extends ContentDialog {
     }
 
     private void toggleKeyboard(View keyboardRoot) {
-        isSymbols = !isSymbols;
+        setPage((page + 1) % PAGE_TOGGLE_LABELS.length);
+    }
+
+    private void setPage(int newPage) {
+        page = newPage;
         isCaps = false;
 
-        if (isSymbols) {
+        if (page == PAGE_SYMBOLS) {
             applySymbols(keys);
+        } else if (page == PAGE_PC) {
+            applyPcKeys(keys);
         } else {
             applyLetters(keys);
         }
@@ -410,8 +547,9 @@ public class XrKeyboard extends ContentDialog {
 
     private void updateKeyboard(ArrayList<Button> keys) {
         for (Button key : keys) {
-            if (key.getText().toString().equals("?123") || key.getText().toString().equals("ABC")) {
-                key.setText(isSymbols ? "ABC" : "?123");
+            String text = key.getText().toString();
+            if (text.equals("?123") || text.equals("PC") || text.equals("ABC")) {
+                key.setText(PAGE_TOGGLE_LABELS[page]);
                 break;
             }
         }

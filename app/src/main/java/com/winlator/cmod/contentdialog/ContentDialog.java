@@ -212,6 +212,25 @@ public class ContentDialog extends XrContentDialog {
     }
 
     /**
+     * Puts a back action on B for a window opened from the XR menu. Listed as the only line,
+     * rather than with the three free buttons beside it, since this is a hint on someone
+     * else's page and not a menu of its own.
+     */
+    public void setBackAction(CharSequence label, Runnable action) {
+        faceButtonActions[FaceButton.B.ordinal()] = new FaceButtonAction(action, null, 0);
+        for (FaceButton each : FaceButton.values()) {
+            TextView view = findViewById(FACE_BUTTON_VIEW_IDS[each.ordinal()]);
+            if (each == FaceButton.B) {
+                view.setText(getContext().getString(R.string.xr_face_button_action, each.name(), label));
+                view.setAlpha(0.6f);
+            } else {
+                view.setVisibility(View.GONE);
+            }
+        }
+        findViewById(R.id.LLActionLines).setVisibility(View.VISIBLE);
+    }
+
+    /**
      * Lists a control that is not on a face button and cannot be reassigned, alongside the
      * face button lines. The user looks in one place for what the controller does while a
      * dialog is up, so a fixed gesture belongs in the same list as the assignable ones.

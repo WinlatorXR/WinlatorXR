@@ -112,7 +112,23 @@ public class ControllerAssignmentDialog {
         setupListeners();
 
         if (layout == null) {
-            dialog.setOnConfirmCallback(() -> controllerManager.saveAssignments());
+            // However it closes: the thumbstick close in XR is a back press, and changes are already live
+            dialog.setOnDismissListener(d -> controllerManager.saveAssignments());
+
+            // Cancel had nothing left to undo - reset to the defaults ControllerManager loads with
+            dialog.findViewById(R.id.BTCancel).setVisibility(View.GONE);
+            View btReset = dialog.findViewById(R.id.BTReset);
+            btReset.setVisibility(View.VISIBLE);
+            btReset.setOnClickListener(v -> {
+                for (int i = 0; i < 4; i++) {
+                    controllerManager.unassignSlot(i);
+                    controllerManager.setSlotEnabled(i, i == 0);
+                    controllerManager.setVibrationEnabled(i, i == 0);
+                }
+                populateView();
+                restartRequiredView.setVisibility(controllerManager.getEnabledPlayerCount() != initialPlayerCount
+                        ? View.VISIBLE : View.GONE);
+            });
         }
     }
 

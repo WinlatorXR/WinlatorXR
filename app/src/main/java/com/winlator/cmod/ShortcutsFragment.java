@@ -55,6 +55,7 @@ import com.winlator.cmod.container.ContainerManager;
 import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.contentdialog.ShortcutSettingsDialog;
+import com.winlator.cmod.container.ZDriveGames;
 import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.container.GameCopier;
@@ -96,6 +97,7 @@ public class ShortcutsFragment extends Fragment {
     public static final String HIDDEN_SHORTCUT = "runtime-installer";
 
     private RecyclerView recyclerView;
+    private TabLayout tabLayout;
     private TextView emptyTextView;
     private ContainerManager manager;
     private Shortcut currentShortcut;
@@ -897,6 +899,7 @@ public class ShortcutsFragment extends Fragment {
         manager = new ContainerManager(getContext());
         preloaderDialog = new PreloaderDialog(getActivity());
         loadShortcutsList();
+        countZDriveGames();
         startFileObservers(); // Start watching for new file
         ((AppCompatActivity)getActivity()).getSupportActionBar().setTitle(R.string.games);
     }
@@ -911,7 +914,7 @@ public class ShortcutsFragment extends Fragment {
         recyclerView.addItemDecoration(new DividerItemDecoration(recyclerView.getContext(), DividerItemDecoration.VERTICAL));
 
         // Tab switcher
-        TabLayout tabLayout = frameLayout.findViewById(R.id.TabLayout);
+        tabLayout = frameLayout.findViewById(R.id.TabLayout);
         tabLayout.setTabTextColors(Color.LTGRAY, Color.WHITE);
         tabLayout.setSelectedTabIndicatorColor(Color.WHITE);
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
@@ -959,6 +962,26 @@ public class ShortcutsFragment extends Fragment {
     private void refreshZDriveTab() {
         Fragment fragment = getChildFragmentManager().findFragmentById(R.id.LLTabZDrive);
         if (fragment instanceof ZDriveFragment) ((ZDriveFragment)fragment).refresh();
+    }
+
+    /** Shows how many entries one of this screen's tabs holds; the Saves and Z: tabs report their own. */
+    public void setTabCount(int position, int labelResId, int count) {
+        AppUtils.setTabCount(tabLayout, position, labelResId, count);
+    }
+
+    /**
+     * Counts the Z: tab's games so its tab shows whether anything is there before it is opened.
+     * Only the folders are counted; the full scan still waits for the tab.
+     */
+    private void countZDriveGames() {
+        final Context context = getContext();
+        if (context == null) return;
+        final Context appContext = context.getApplicationContext();
+        Executors.newSingleThreadExecutor().execute(() -> {
+            int count = ZDriveGames.count(appContext);
+            Activity activity = getActivity();
+            if (activity != null) activity.runOnUiThread(() -> setTabCount(2, R.string.store, count));
+        });
     }
 
     private Container findContainerForFile(File file) {
@@ -1206,6 +1229,7 @@ public class ShortcutsFragment extends Fragment {
 
         recyclerView.setAdapter(new ShortcutsAdapter(shortcuts, sources));
         emptyTextView.setVisibility(shortcuts.isEmpty() ? View.VISIBLE : View.GONE);
+        setTabCount(0, R.string.shortcuts, shortcuts.size());
 
         // ---- quarantine report ----
         if (!quarantined.isEmpty()) {

@@ -81,6 +81,17 @@
                 android:lineSpacingExtra="3dp"
                 android:textSize="16sp"
                 android:textColor="@color/colorPrimaryDark" />
+
+            <!-- Where the hints are turned off, tucked in the corner so it never competes with
+                 the hint itself. Goes with the panel when there is no hint. -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginTop="4dp"
+                android:text="@string/xr_startup_hint_disable_where"
+                android:textSize="11sp"
+                android:textColor="@color/colorAccent" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>
