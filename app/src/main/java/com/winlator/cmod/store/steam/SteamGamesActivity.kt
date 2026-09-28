@@ -174,6 +174,12 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
     private fun maybeAutoSync() {
         val repo = SteamRepository.getInstance()
         if (!repo.isLoggedIn) return
+        // Reopened mid-sync: show it running; its progress events keep updating this page
+        if (repo.isSyncing) {
+            setRefreshing(true)
+            statusText.text = "Syncing library…"
+            return
+        }
         // Collections otherwise refresh with the library sync below. This only covers the
         // case where no snapshot exists at all, and fires at most once per process.
         SteamCollectionStore.fetchIfNoSnapshot()
@@ -432,6 +438,13 @@ class SteamGamesActivity : NavActivity(), SteamRepository.SteamEventListener {
             setPadding(dp(12), 0, dp(12), 0)
             setOnClickListener {
                 val repo = SteamRepository.getInstance()
+                // Reconnect; the relogin's licence list starts a sync by itself
+                if (!repo.isLoggedIn) {
+                    SteamForegroundService.start(this@SteamGamesActivity)
+                    statusText.text = "Reconnecting to Steam…"
+                    statusText.setTextColor(HINT_ORANGE)
+                    return@setOnClickListener
+                }
                 // syncLibrary() does nothing until the licence list has arrived
                 if (repo.licenses.isEmpty()) {
                     statusText.text = "Steam is still connecting, try Refresh again in a moment"

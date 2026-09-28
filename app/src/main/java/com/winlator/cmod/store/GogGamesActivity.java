@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import android.content.Context;
 import android.content.Intent;
 
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -50,8 +51,7 @@ import com.winlator.cmod.R;
  *   1. Proactive token expiry check → refresh if needed
  *   2. GET user/data/games → owned game IDs
  *   3. Per ID: GET products/{id}?expand=downloads,description → metadata
- *   4. Check builds?generation=2 → store gog_gen_{id}
- *   5. Build card views on main thread
+ *   4. Build card views on main thread
  */
 public class GogGamesActivity extends NavActivity {
 
@@ -60,6 +60,10 @@ public class GogGamesActivity extends NavActivity {
     private static final int REQ_GAME_DETAIL = 1001;
 
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
+    // The sync thread outlives the page; a reopened page takes over its progress instead of starting another
+    private static volatile GogGamesActivity current;
+    private static volatile boolean syncRunning;
+    private static volatile String syncStatus = "";
     private TextView syncText;
     private LinearLayout gameListLayout;
     private ScrollView scrollView;
@@ -79,7 +83,14 @@ public class GogGamesActivity extends NavActivity {
         super.onCreate(savedInstanceState);
         prefs = getSharedPreferences("bh_gog_prefs", 0);
         buildUi();
+        current = this;
         List<GogGame> cached = loadCachedGames();
+        if (syncRunning) {
+            if (cached != null && !cached.isEmpty()) showGames(cached);
+            refreshBtn.setEnabled(false); refreshBtn.setAlpha(0.5f);
+            setSync(syncStatus);
+            return;
+        }
         if (cached != null && !cached.isEmpty()) {
             showGames(cached);
             int cn = cached.size();
@@ -91,6 +102,12 @@ public class GogGamesActivity extends NavActivity {
             setSync(cn + (cn == 1 ? " game" : " games") + " from last sync  •  updating…");
         }
         startSync(cached == null || cached.isEmpty());
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (current == this) current = null;
     }
 
     // ── UI construction ───────────────────────────────────────────────────────
@@ -215,11 +232,15 @@ public class GogGamesActivity extends NavActivity {
     // ── Library sync (background thread) ─────────────────────────────────────
 
     private void startSync(boolean showProgress) {
+        if (syncRunning) return;
+        syncRunning = true;
         uiHandler.post(() -> {
             if (refreshBtn != null) { refreshBtn.setEnabled(false); refreshBtn.setAlpha(0.5f); }
             if (showProgress) setSync("Loading GOG library…");
         });
-        new Thread(() -> syncLibrary(showProgress), "gog-sync").start();
+        new Thread(() -> {
+            try { syncLibrary(showProgress); } finally { syncRunning = false; }
+        }, "gog-sync").start();
     }
 
     private void syncLibrary(boolean showProgress) {
@@ -271,11 +292,15 @@ public class GogGamesActivity extends NavActivity {
             pool.shutdown();
 
             List<GogGame> games = new ArrayList<>();
+            int total = futures.size();
+            int done  = 0;
             for (Future<GogGame> f : futures) {
                 try {
                     GogGame g = f.get();
                     if (g != null) games.add(g);
                 } catch (Exception ignored) {}
+                done++;
+                if (showProgress && done % 5 == 0) setSync("Syncing games… (" + done + "/" + total + ")");
             }
 
             saveCachedGames(games);
@@ -285,7 +310,7 @@ public class GogGamesActivity extends NavActivity {
                 if (finalGames.isEmpty()) {
                     setSync("No compatible games found");
                 } else {
-                    showGames(finalGames);
+                    (current != null ? current : GogGamesActivity.this).showGames(finalGames);
                     int fn = finalGames.size(); setSync(fn + (fn == 1 ? " game" : " games") + " — tap a card to install");
                 }
                 enableRefresh();
@@ -338,18 +363,8 @@ public class GogGamesActivity extends NavActivity {
                 if (g != null) category = g.optString("name", "");
             }
 
-            int generation = 1;
-            try {
-                String buildsJson = httpGet(
-                        "https://api.gog.com/products/" + id + "/os/windows/builds?generation=2", token);
-                if (buildsJson != null) {
-                    JSONObject bObj = new JSONObject(buildsJson);
-                    JSONArray bitems = bObj.optJSONArray("items");
-                    if (bitems != null && bitems.length() > 0) generation = 2;
-                }
-            } catch (Exception ignored) {}
-
-            prefs.edit().putInt("gog_gen_" + id, generation).apply();
+            // 0 = not checked yet; the detail page looks it up on first open
+            int generation = prefs.getInt("gog_gen_" + id, 0);
             return new GogGame(id, titleStr, imageUrl, desc, developer, category, generation);
         } catch (Exception e) {
             Log.w(TAG, "fetchGame " + id + " error: " + e.getMessage());
@@ -433,6 +448,8 @@ public class GogGamesActivity extends NavActivity {
     }
 
     private void enableRefresh() {
+        GogGamesActivity page = current;
+        if (page != null && page != this) { page.enableRefresh(); return; }
         uiHandler.post(() -> { if (refreshBtn != null) { refreshBtn.setEnabled(true); refreshBtn.setAlpha(1f); } });
     }
 
@@ -587,6 +604,9 @@ public class GogGamesActivity extends NavActivity {
     // ── Utilities ─────────────────────────────────────────────────────────────
 
     private void setSync(String msg) {
+        syncStatus = msg;
+        GogGamesActivity page = current;
+        if (page != null && page != this) { page.setSync(msg); return; }
         uiHandler.post(() -> {
             syncText.setText(msg);
             if (msg.startsWith("Error") || msg.startsWith("Session expired")
@@ -645,7 +665,12 @@ public class GogGamesActivity extends NavActivity {
     // ── Full-screen detail ────────────────────────────────────────────────────
 
     private void openDetailScreen(GogGame game) {
-        Intent intent = new Intent(this, GogGameDetailActivity.class);
+        startActivityForResult(detailIntent(this, game), REQ_GAME_DETAIL);
+    }
+
+    /** Also used by the Downloads screen's View in Store button. */
+    static Intent detailIntent(Context ctx, GogGame game) {
+        Intent intent = new Intent(ctx, GogGameDetailActivity.class);
         intent.putExtra("game_id",     game.gameId);
         intent.putExtra("title",       game.title);
         intent.putExtra("image_url",   game.imageUrl);
@@ -653,7 +678,7 @@ public class GogGamesActivity extends NavActivity {
         intent.putExtra("developer",   game.developer);
         intent.putExtra("category",    game.category);
         intent.putExtra("generation",  game.generation);
-        startActivityForResult(intent, REQ_GAME_DETAIL);
+        return intent;
     }
 
     @Override

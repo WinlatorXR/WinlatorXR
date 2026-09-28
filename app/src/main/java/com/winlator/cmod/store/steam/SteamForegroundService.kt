@@ -53,7 +53,8 @@ class SteamForegroundService : Service() {
 
         try {
             SteamRepository.getInstance().initialize(this)
-            SteamRepository.getInstance().connect()
+            // Reopening the store calls this again; reconnecting would drop the live session
+            if (!SteamRepository.getInstance().isConnected) SteamRepository.getInstance().connect()
             updateNotification("Connected to Stream");
         } catch (e: AssertionError) {
             e.printStackTrace()

@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import android.content.Context;
 import android.content.Intent;
 
 import androidx.annotation.NonNull;
@@ -56,6 +57,10 @@ public class AmazonGamesActivity extends NavActivity {
     private static final int REQ_GAME_DETAIL  = 1001;
 
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
+    // The sync thread outlives the page; a reopened page takes over its progress instead of starting another
+    private static volatile AmazonGamesActivity current;
+    private static volatile boolean syncRunning;
+    private static volatile String syncStatus = "";
 
     private SharedPreferences prefs;
     private TextView    syncText;
@@ -78,7 +83,14 @@ public class AmazonGamesActivity extends NavActivity {
         super.onCreate(savedInstanceState);
         prefs    = getSharedPreferences(PREFS_NAME, 0);
         buildUi();
+        current = this;
         List<AmazonGame> cached = loadCachedGames();
+        if (syncRunning) {
+            if (cached != null && !cached.isEmpty()) showGames(cached);
+            refreshBtn.setEnabled(false); refreshBtn.setAlpha(0.5f);
+            setSync(syncStatus);
+            return;
+        }
         if (cached != null && !cached.isEmpty()) {
             showGames(cached);
             int cn = cached.size();
@@ -90,6 +102,12 @@ public class AmazonGamesActivity extends NavActivity {
             setSync(cn + (cn == 1 ? " game" : " games") + " from last sync  •  updating…");
         }
         startSync(cached == null || cached.isEmpty());
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (current == this) current = null;
     }
 
     // ── UI construction ───────────────────────────────────────────────────────
@@ -224,11 +242,15 @@ public class AmazonGamesActivity extends NavActivity {
     // ── Library sync ──────────────────────────────────────────────────────────
 
     private void startSync(boolean showProgress) {
+        if (syncRunning) return;
+        syncRunning = true;
         uiHandler.post(() -> {
             if (refreshBtn != null) { refreshBtn.setEnabled(false); refreshBtn.setAlpha(0.5f); }
             if (showProgress) setSync("Loading Amazon library…");
         });
-        new Thread(() -> syncLibrary(showProgress), "amazon-sync").start();
+        new Thread(() -> {
+            try { syncLibrary(showProgress); } finally { syncRunning = false; }
+        }, "amazon-sync").start();
     }
 
     private void syncLibrary(boolean showProgress) {
@@ -286,7 +308,7 @@ public class AmazonGamesActivity extends NavActivity {
 
             final List<AmazonGame> finalGames = games;
             uiHandler.post(() -> {
-                showGames(finalGames);
+                (current != null ? current : AmazonGamesActivity.this).showGames(finalGames);
                 int fn = finalGames.size(); setSync(fn + (fn == 1 ? " game" : " games") + " — tap a card to install");
                 enableRefresh();
             });
@@ -391,6 +413,8 @@ public class AmazonGamesActivity extends NavActivity {
     }
 
     private void enableRefresh() {
+        AmazonGamesActivity page = current;
+        if (page != null && page != this) { page.enableRefresh(); return; }
         uiHandler.post(() -> { if (refreshBtn != null) { refreshBtn.setEnabled(true); refreshBtn.setAlpha(1f); } });
     }
 
@@ -579,6 +603,9 @@ public class AmazonGamesActivity extends NavActivity {
     // ── Utilities ─────────────────────────────────────────────────────────────
 
     private void setSync(String msg) {
+        syncStatus = msg;
+        AmazonGamesActivity page = current;
+        if (page != null && page != this) { page.setSync(msg); return; }
         uiHandler.post(() -> {
             if (syncText == null) return;
             syncText.setText(msg);
@@ -596,7 +623,12 @@ public class AmazonGamesActivity extends NavActivity {
     // ── Full-screen detail ────────────────────────────────────────────────────
 
     private void openDetailScreen(AmazonGame game) {
-        Intent intent = new Intent(this, AmazonGameDetailActivity.class);
+        startActivityForResult(detailIntent(this, game), REQ_GAME_DETAIL);
+    }
+
+    /** Also used by the Downloads screen's View in Store button. */
+    static Intent detailIntent(Context ctx, AmazonGame game) {
+        Intent intent = new Intent(ctx, AmazonGameDetailActivity.class);
         intent.putExtra("product_id",     game.productId);
         intent.putExtra("entitlement_id", game.entitlementId);
         intent.putExtra("title",          game.title);
@@ -604,7 +636,7 @@ public class AmazonGamesActivity extends NavActivity {
         intent.putExtra("publisher",      game.publisher);
         intent.putExtra("art_url",        game.artUrl);
         intent.putExtra("product_sku",    game.productSku);
-        startActivityForResult(intent, REQ_GAME_DETAIL);
+        return intent;
     }
 
     @Override

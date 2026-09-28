@@ -41,6 +41,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
+import android.content.Context;
 import android.content.Intent;
 
 import androidx.annotation.NonNull;
@@ -71,6 +72,10 @@ public class EpicGamesActivity extends NavActivity {
     private static final int REQ_GAME_DETAIL  = 1001;
 
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
+    // The sync thread outlives the page; a reopened page takes over its progress instead of starting another
+    private static volatile EpicGamesActivity current;
+    private static volatile boolean syncRunning;
+    private static volatile String syncStatus = "";
 
     private SharedPreferences prefs;
     private TextView     syncText;
@@ -93,7 +98,14 @@ public class EpicGamesActivity extends NavActivity {
         super.onCreate(savedInstanceState);
         prefs    = getSharedPreferences(PREFS_NAME, 0);
         buildUi();
+        current = this;
         List<EpicGame> cached = loadCachedGames();
+        if (syncRunning) {
+            if (cached != null && !cached.isEmpty()) showGames(cached);
+            refreshBtn.setEnabled(false); refreshBtn.setAlpha(0.5f);
+            setSync(syncStatus);
+            return;
+        }
         if (cached != null && !cached.isEmpty()) {
             showGames(cached);
             int cn = cached.size();
@@ -105,6 +117,12 @@ public class EpicGamesActivity extends NavActivity {
             setSync(cn + (cn == 1 ? " game" : " games") + " from last sync  •  updating…");
         }
         startSync(cached == null || cached.isEmpty());
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (current == this) current = null;
     }
 
     // ── UI construction ───────────────────────────────────────────────────────
@@ -234,11 +252,15 @@ public class EpicGamesActivity extends NavActivity {
     // ── Library sync ──────────────────────────────────────────────────────────
 
     private void startSync(boolean showProgress) {
+        if (syncRunning) return;
+        syncRunning = true;
         uiHandler.post(() -> {
             if (refreshBtn != null) { refreshBtn.setEnabled(false); refreshBtn.setAlpha(0.5f); }
             if (showProgress) setSync("Loading Epic library…");
         });
-        new Thread(() -> syncLibrary(showProgress), "epic-sync").start();
+        new Thread(() -> {
+            try { syncLibrary(showProgress); } finally { syncRunning = false; }
+        }, "epic-sync").start();
     }
 
     private void syncLibrary(boolean showProgress) {
@@ -314,7 +336,7 @@ public class EpicGamesActivity extends NavActivity {
 
             final List<EpicGame> finalGames = mainGames;
             uiHandler.post(() -> {
-                showGames(finalGames);
+                (current != null ? current : EpicGamesActivity.this).showGames(finalGames);
                 int fn = finalGames.size(); setSync(fn + (fn == 1 ? " game" : " games") + " — tap a card to install");
                 enableRefresh();
             });
@@ -400,6 +422,8 @@ public class EpicGamesActivity extends NavActivity {
     }
 
     private void enableRefresh() {
+        EpicGamesActivity page = current;
+        if (page != null && page != this) { page.enableRefresh(); return; }
         uiHandler.post(() -> { if (refreshBtn != null) { refreshBtn.setEnabled(true); refreshBtn.setAlpha(1f); } });
     }
 
@@ -673,6 +697,9 @@ public class EpicGamesActivity extends NavActivity {
     // ── Utilities ─────────────────────────────────────────────────────────────
 
     private void setSync(String msg) {
+        syncStatus = msg;
+        EpicGamesActivity page = current;
+        if (page != null && page != this) { page.setSync(msg); return; }
         uiHandler.post(() -> {
             if (syncText == null) return;
             syncText.setText(msg);
@@ -690,7 +717,12 @@ public class EpicGamesActivity extends NavActivity {
     // ── Full-screen detail ────────────────────────────────────────────────────
 
     private void openDetailScreen(EpicGame game) {
-        Intent intent = new Intent(this, EpicGameDetailActivity.class);
+        startActivityForResult(detailIntent(this, game), REQ_GAME_DETAIL);
+    }
+
+    /** Also used by the Downloads screen's View in Store button. */
+    static Intent detailIntent(Context ctx, EpicGame game) {
+        Intent intent = new Intent(ctx, EpicGameDetailActivity.class);
         intent.putExtra("app_name",        game.appName);
         intent.putExtra("title",           game.title);
         intent.putExtra("description",     game.description);
@@ -698,7 +730,7 @@ public class EpicGamesActivity extends NavActivity {
         intent.putExtra("art_cover",       game.artCover);
         intent.putExtra("namespace",       game.namespace);
         intent.putExtra("catalog_item_id", game.catalogItemId);
-        startActivityForResult(intent, REQ_GAME_DETAIL);
+        return intent;
     }
 
     @Override

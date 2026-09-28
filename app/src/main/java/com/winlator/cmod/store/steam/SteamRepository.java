@@ -95,6 +95,7 @@ public final class SteamRepository {
 
     public boolean isConnected() { return connected; }
     public boolean isLoggedIn()  { return loggedIn; }
+    public boolean isSyncing()   { return syncPhase != SYNC_IDLE; }
 
     // -------------------------------------------------------------------------
     // SharedPreferences (set on initialize)
@@ -455,6 +456,8 @@ public final class SteamRepository {
         Log.i(TAG, "Disconnected (userInitiated=" + cb.isUserInitiated() + ", attempt=" + reconnectAttempts + ")");
         connected = false;
         loggedIn  = false;
+        // A sync cut off here never finishes; the relogin's licence list starts a fresh one
+        syncPhase = SYNC_IDLE;
         if (!cb.isUserInitiated() && pumping.get() && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
             reconnectAttempts++;
             long delayMs = reconnectAttempts * 2000L;  // 2s, 4s, 6s, 8s, 10s
@@ -812,6 +815,10 @@ public final class SteamRepository {
 
     /** Trigger a full library re-sync (e.g. from pull-to-refresh). Safe to call from any thread. */
     public void syncLibrary() {
+        // A second sync would reset remainingAppIds under the running one
+        if (isSyncing()) return;
+        // Sending on a dropped connection throws on the pump thread and kills the app
+        if (!loggedIn) return;
         List<License> copy;
         synchronized (licenses) { copy = new ArrayList<>(licenses); }
         if (copy.isEmpty()) {

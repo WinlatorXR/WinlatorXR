@@ -35,6 +35,8 @@ public class StoreDownloadQueue {
         public volatile int     percent;
         public volatile String  status;
         public volatile boolean active;
+        /** Opens the game's store page; Steam's is built from dlKey by DownloadsActivity. */
+        public volatile Intent  viewIntent;
 
         DownloadEntry(String dlKey, String store, String title) {
             this.dlKey   = dlKey;
@@ -264,6 +266,7 @@ public class StoreDownloadQueue {
 
     public static void startGog(Context ctx, GogGame game, String dlKey) {
         DownloadEntry entry = new DownloadEntry(dlKey, "GOG", game.title);
+        entry.viewIntent = GogGamesActivity.detailIntent(ctx, game);
         entries.put(dlKey, entry);
         onDownloadStarted(ctx, dlKey);
 
@@ -297,6 +300,7 @@ public class StoreDownloadQueue {
     public static void startEpic(Context ctx, EpicGame game, String dlKey) {
         AtomicBoolean cancelled = new AtomicBoolean(false);
         DownloadEntry entry = new DownloadEntry(dlKey, "EPIC", game.title);
+        entry.viewIntent = EpicGamesActivity.detailIntent(ctx, game);
         entries.put(dlKey, entry);
         onDownloadStarted(ctx, dlKey);
         cancelActions.put(dlKey, () -> {
@@ -370,6 +374,7 @@ public class StoreDownloadQueue {
     public static void startAmazon(Context ctx, AmazonGame game, String dlKey) {
         AtomicBoolean cancelled = new AtomicBoolean(false);
         DownloadEntry entry = new DownloadEntry(dlKey, "AMAZON", game.title);
+        entry.viewIntent = AmazonGamesActivity.detailIntent(ctx, game);
         entries.put(dlKey, entry);
         onDownloadStarted(ctx, dlKey);
         cancelActions.put(dlKey, () -> {

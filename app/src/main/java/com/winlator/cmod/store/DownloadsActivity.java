@@ -1,5 +1,6 @@
 package com.winlator.cmod.store;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
@@ -169,6 +170,28 @@ public class DownloadsActivity extends NavActivity {
         gameTitleTv.setPadding(dp(8), 0, 0, 0);
         topRow.addView(gameTitleTv, new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+        Intent viewIntent = e.viewIntent;
+        if (viewIntent == null && e.dlKey.startsWith("steam:")) {
+            try {
+                viewIntent = new Intent(this, SteamGameDetailActivity.class)
+                        .putExtra(SteamGameDetailActivity.EXTRA_APP_ID, Integer.parseInt(e.dlKey.substring(6)));
+            } catch (NumberFormatException ignored) {}
+        }
+        if (viewIntent != null) {
+            Intent open = viewIntent;
+            Button viewBtn = new Button(this);
+            viewBtn.setText("View in Store");
+            viewBtn.setTextColor(COLOR_TEXT);
+            viewBtn.setTextSize(12f);
+            viewBtn.setBackgroundColor(storeColor(e.store));
+            viewBtn.setPadding(dp(8), dp(2), dp(8), dp(2));
+            viewBtn.setOnClickListener(v -> startActivity(open));
+            LinearLayout.LayoutParams viewLp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            viewLp.rightMargin = dp(6);
+            topRow.addView(viewBtn, viewLp);
+        }
 
         if (e.active) {
             Button cancelBtn = new Button(this);

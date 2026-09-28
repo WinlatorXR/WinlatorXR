@@ -84,6 +84,7 @@ public class GogGameDetailActivity extends NavActivity {
         developer   = i.getStringExtra("developer");
         category    = i.getStringExtra("category");
         generation  = i.getIntExtra("generation", 0);
+        if (generation == 0 && gameId != null) generation = prefs.getInt("gog_gen_" + gameId, 0);
 
         if (gameId == null) { finish(); return; }
 
@@ -223,19 +224,16 @@ public class GogGameDetailActivity extends NavActivity {
     private View makeInfoCard() {
         LinearLayout card = makeCard();
 
-        if (generation > 0) {
+        {
             TextView genTV = new TextView(this);
-            genTV.setText("Gen " + generation);
             genTV.setTextSize(11f);
             genTV.setTextColor(0xFFFFFFFF);
             genTV.setPadding(dp(8), dp(3), dp(8), dp(3));
-            GradientDrawable bg = new GradientDrawable();
-            bg.setColor(generation == 2 ? 0xFF0277BD : 0xFFE65100);
-            bg.setCornerRadius(dp(4));
-            genTV.setBackground(bg);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
             lp.bottomMargin = dp(8);
             card.addView(genTV, lp);
+            if (generation > 0) setGenBadge(genTV);
+            else { genTV.setVisibility(View.GONE); fetchGeneration(genTV); }
         }
 
         if (developer != null && !developer.isEmpty()) {
@@ -670,6 +668,41 @@ public class GogGameDetailActivity extends NavActivity {
         card.addView(checkUpdatesBtn, btnLp());
 
         return card;
+    }
+
+    private void setGenBadge(TextView genTV) {
+        genTV.setText("Gen " + generation);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(generation == 2 ? 0xFF0277BD : 0xFFE65100);
+        bg.setCornerRadius(dp(4));
+        genTV.setBackground(bg);
+        genTV.setVisibility(View.VISIBLE);
+    }
+
+    /** Library sync no longer checks the build generation, so look it up on first open. */
+    private void fetchGeneration(TextView genTV) {
+        new Thread(() -> {
+            try {
+                String token = prefs.getString("access_token", null);
+                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(
+                        "https://api.gog.com/products/" + gameId + "/os/windows/builds?generation=2").openConnection();
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
+                if (token != null) conn.setRequestProperty("Authorization", "Bearer " + token);
+                if (conn.getResponseCode() != 200) { conn.disconnect(); return; }
+                StringBuilder sb = new StringBuilder();
+                try (java.io.BufferedReader br = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(conn.getInputStream()))) {
+                    String line;
+                    while ((line = br.readLine()) != null) sb.append(line);
+                }
+                conn.disconnect();
+                org.json.JSONArray items = new org.json.JSONObject(sb.toString()).optJSONArray("items");
+                int gen = items != null && items.length() > 0 ? 2 : 1;
+                prefs.edit().putInt("gog_gen_" + gameId, gen).apply();
+                uiHandler.post(() -> { generation = gen; setGenBadge(genTV); });
+            } catch (Exception ignored) {}
+        }, "gog-gen").start();
     }
 
     private void doCheckUpdate() {

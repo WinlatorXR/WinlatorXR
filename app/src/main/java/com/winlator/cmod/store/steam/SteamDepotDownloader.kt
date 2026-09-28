@@ -42,10 +42,14 @@ object SteamDepotDownloader {
     // Active download tracking — used by UI to detect stale DL_DOWNLOADING rows
     // -------------------------------------------------------------------------
 
-    private val activeDownloads = java.util.concurrent.ConcurrentHashMap<Int, Unit>()
+    // appId -> (os, branch), so a reopened detail page shows what is actually downloading
+    private val activeDownloads = java.util.concurrent.ConcurrentHashMap<Int, Pair<String, String>>()
 
     /** True if a download for this appId is currently running in this process. */
     @JvmStatic fun isDownloading(appId: Int): Boolean = activeDownloads.containsKey(appId)
+
+    /** (os, branch) of the running download for this appId, or null. */
+    @JvmStatic fun activeDownload(appId: Int): Pair<String, String>? = activeDownloads[appId]
 
     // -------------------------------------------------------------------------
     // Debug log — written to getExternalFilesDir/steam_debug.txt
@@ -171,7 +175,7 @@ object SteamDepotDownloader {
         branch: String = BRANCH_PUBLIC,
     ) {
         val isAndroid = os.equals(OS_ANDROID, ignoreCase = true)
-        activeDownloads[appId] = Unit
+        activeDownloads[appId] = Pair(os, branch)
         initDebugLog(ctx)
         dlog("=== Starting install: appId=$appId os=$os branch=$branch ===")
 

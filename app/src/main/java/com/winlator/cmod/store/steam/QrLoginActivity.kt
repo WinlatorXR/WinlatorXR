@@ -137,6 +137,7 @@ class QrLoginActivity : NavActivity(), SteamQrAuthManager.QrAuthListener {
         SteamRepository.getInstance().loginWithToken(username, refreshToken)
         setStatus("Signed in as $username", loading = false)
         startActivity(Intent(this, SteamGamesActivity::class.java))
+        setResult(RESULT_OK)
         finish()
     }
 

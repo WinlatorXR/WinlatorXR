@@ -61,6 +61,12 @@ class SteamLoginActivity : NavActivity(), SteamAuthManager.AuthListener {
         buildUi()
     }
 
+    // A QR sign-in opens the library itself, so this page must not stay underneath it
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_QR && resultCode == RESULT_OK) finish()
+    }
+
     override fun onDestroy() {
         mainHandler.removeCallbacks(connectTimeoutRunnable)
         connectWaitListener?.let { SteamRepository.getInstance().removeListener(it) }
@@ -125,7 +131,7 @@ class SteamLoginActivity : NavActivity(), SteamAuthManager.AuthListener {
             setTextColor(GRAY_TEXT)
             setBackgroundColor(Color.TRANSPARENT)
             setOnClickListener {
-                startActivity(Intent(this@SteamLoginActivity, QrLoginActivity::class.java))
+                startActivityForResult(Intent(this@SteamLoginActivity, QrLoginActivity::class.java), REQ_QR)
             }
         }
         ll.addView(btnQr, fullLp(dp(44)).also { it.bottomMargin = dp(16) })
@@ -308,7 +314,8 @@ class SteamLoginActivity : NavActivity(), SteamAuthManager.AuthListener {
         )
 
     companion object {
-        private val BG_DARK    = 0xFF1B1B1B.toInt()
+        private const val REQ_QR = 1
+        private val BG_DARK   = 0xFF1B1B1B.toInt()
         private val INPUT_BG   = 0xFF2A2A2A.toInt()
         private val STEAM_BLUE = 0xFF1A3A5C.toInt()
         private val GRAY_TEXT  = 0xFFAAAAAA.toInt()

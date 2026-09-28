@@ -175,6 +175,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
                 installBtn.isEnabled = true
                 installBtn.text = "Retry"
                 installBtn.setBackgroundColor(COLOR_INSTALL)
+                setDownloadChoicesLocked(false)
             }
 
             return
@@ -326,6 +327,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
                     progressText.visibility = View.GONE
 
                     loadGame()
+                    setDownloadChoicesLocked(false)
                 }
             }
 
@@ -360,6 +362,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
                     installBtn.isEnabled = true
                     installBtn.text = installLabel()
                     installBtn.setBackgroundColor(COLOR_INSTALL)
+                    setDownloadChoicesLocked(false)
                 }
             }
 
@@ -398,7 +401,12 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         game = SteamGame.fromGameRow(row)
         initVariantSelection()
         branches = SteamRepository.getInstance().database.getBranches(appId)
-        if (!userPickedBranch) selectedBranch = if (row.isInstalled)
+        val running = SteamDepotDownloader.activeDownload(appId)
+        if (running != null) {
+            // Reopened mid-download: show, and retry with, what is actually downloading
+            selectedOs = running.first; lastOs = running.first
+            selectedBranch = running.second; lastBranch = running.second
+        } else if (!userPickedBranch) selectedBranch = if (row.isInstalled)
             SteamDepotDownloader.installedBranch(this, appId) else SteamDepotDownloader.BRANCH_PUBLIC
         refreshUI()
         loadHeaderImage()
@@ -443,6 +451,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
         autoGoldbergCheck.visibility = if (androidSelected) View.GONE else View.VISIBLE
         branchBtn.visibility = if (!androidSelected && branches.size > 1) View.VISIBLE else View.GONE
         branchBtn.text = "Branch: $selectedBranch"
+        setDownloadChoicesLocked(SteamDepotDownloader.isDownloading(appId))
         val branchSize = branches.firstOrNull { it.name == selectedBranch }?.sizeBytes ?: 0L
         sizeText.text = when {
             androidSelected && g.androidDownloadable -> "~${fmtSize(g.androidSizeBytes)}  ·  APK"
@@ -498,6 +507,14 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
     /** Branch the next download uses: the picked one for PC, always public for Android. */
     private fun downloadBranch(): String =
         if (selectedOs == SteamDepotDownloader.OS_ANDROID) SteamDepotDownloader.BRANCH_PUBLIC else selectedBranch
+
+    /** Branch and PC/Android can't change mid-download, so both are greyed out while one runs. */
+    private fun setDownloadChoicesLocked(locked: Boolean) {
+        for (b in listOf(branchBtn, pcVariantBtn, androidVariantBtn)) {
+            b.isEnabled = !locked
+            b.alpha = if (locked) 0.5f else 1f
+        }
+    }
 
     private fun showBranchPicker() {
         val installed = if (game?.isInstalled == true) SteamDepotDownloader.installedBranch(this, appId) else ""
@@ -702,6 +719,7 @@ class SteamGameDetailActivity : NavActivity(), SteamRepository.SteamEventListene
 
         installBtn.isEnabled = false
         installBtn.text = "Starting…"
+        setDownloadChoicesLocked(true)
         statusText.text = "Preparing download..."
         statusText.setTextColor(Color.parseColor("#4CAF50"))
         progressBar.visibility = View.VISIBLE
