@@ -65,6 +65,7 @@ import com.winlator.cmod.saves.Save;
 import com.winlator.cmod.saves.SaveManager;
 import com.winlator.cmod.settings.SettingsFragment;
 import com.winlator.cmod.store.StoreFragment;
+import com.winlator.cmod.tour.GuidedTours;
 import com.winlator.cmod.xenvironment.ImageFsInstaller;
 
 import org.json.JSONException;
@@ -253,9 +254,16 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
             int padding = dpToPx(5, context);
             LinearLayout layout = new LinearLayout(context);
+            layout.setTag(item.getItemId()); // How the guided tours find it
             layout.setPadding(padding, padding, padding, padding);
             layout.setOrientation(LinearLayout.VERTICAL);
             layout.setOnClickListener(view -> {
+                // Opens over the current page rather than replacing it, so it is not remembered
+                // as the page to come back to.
+                if (item.getItemId() == R.id.main_menu_guided_tour) {
+                    GuidedTours.showPicker(this);
+                    return;
+                }
                 onNavigationItemSelected(item);
                 SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
                 SharedPreferences.Editor e = sharedPreferences.edit();
