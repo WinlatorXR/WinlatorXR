@@ -24,6 +24,7 @@
 #include <map>
 #include <vector>
 #include <mutex>
+#include <unistd.h>
 #include <android/bitmap.h>
 
 #include "openxr.h"
@@ -271,6 +272,37 @@ Java_com_winlator_xr_XrActivity_init(JNIEnv *env, jobject obj, jint width, jint 
     XrDirectStart();
     xr_initialized = true;
     ALOGV("Init called");
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_winlator_xr_XrActivity_nativeIsExitRequested(JNIEnv *env, jobject obj) {
+    return xr_initialized && xr_module_renderer.ExitRequested;
+}
+
+// Must run on the render thread: the swapchains belong to its GL context.
+JNIEXPORT void JNICALL
+Java_com_winlator_xr_XrActivity_nativeShutdown(JNIEnv *env, jobject obj) {
+    if (!xr_initialized) {
+        return;
+    }
+    xr_initialized = false;
+
+    // Ask the runtime to stop the session; its STOPPING event is answered with xrEndSession.
+    // A runtime that never sends it still gets a destroyed session, which ends it implicitly.
+    if (xr_module_renderer.SessionActive) {
+        OXR(xrRequestExitSession(xr_module_engine.Session));
+        for (int i = 0; i < 100 && xr_module_renderer.SessionActive; i++) {
+            XrRendererHandleXrEvents(&xr_module_engine, &xr_module_renderer);
+            if (xr_module_renderer.SessionActive) usleep(10000);
+        }
+    }
+
+    // Spaces made for XrAPI clients are children of the session and die with it
+    xr_spaces.clear();
+    XrRendererDestroy(&xr_module_engine, &xr_module_renderer);
+    XrEngineLeave(&xr_module_engine);
+    XrEngineDestroy(&xr_module_engine);
+    ALOGV("Shutdown called");
 }
 
 JNIEXPORT void JNICALL Java_com_winlator_xr_XrActivity_bindFramebuffer(JNIEnv *env, jobject obj) {
@@ -737,6 +769,7 @@ Java_com_winlator_xr_XrActivity_getDisplayRefreshRate(JNIEnv *env, jobject thiz)
 JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_increaseReferenceSpacesOffset(JNIEnv *env, jobject thiz, jfloat x,
                                                               jfloat y, jfloat z) {
+    if (!xr_initialized) return;
     double yaw = -ToRadians(xr_module_renderer.ConfigFloat[CONFIG_MENU_YAW]);
     auto c = (float)cos(yaw);
     auto s = (float)sin(yaw);
@@ -776,6 +809,7 @@ JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_updateActionSpace(JNIEnv *env, jobject thiz, jint space, jint type,
                                                   jint grip, jfloat x, jfloat y, jfloat z,
                                                   jfloat qx, jfloat qy, jfloat qz, jfloat qw) {
+    if (!xr_initialized) return;
     if (xr_spaces.find(space) == xr_spaces.end()) {
         ALOGV("Creating action space %d", space);
         XrSpace output = {};
@@ -803,6 +837,7 @@ JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_updateReferenceSpace(JNIEnv *env, jobject thiz, jint space,
                                                      jint type, jfloat x, jfloat y, jfloat z,
                                                      jfloat qx, jfloat qy, jfloat qz, jfloat qw) {
+    if (!xr_initialized) return;
     if (xr_spaces.find(space) == xr_spaces.end()) {
         ALOGV("Creating reference space %d", space);
         XrSpace output = {};

@@ -56,6 +56,7 @@ void XrRendererInit(struct XrEngine* engine, struct XrRenderer* renderer)
     memset(renderer, 0, sizeof(renderer));
     renderer->RecenterPending = true;
     // The memset above only covers a pointer, so state that must start clean is set here.
+    renderer->ExitRequested = false;
     renderer->EnvironmentCreated = false;
     renderer->EnvironmentReady = false;
     renderer->EdgeGlowRendered = false;
@@ -1013,6 +1014,7 @@ void XrRendererHandleXrEvents(struct XrEngine* engine, struct XrRenderer* render
                         (XrEventDataInstanceLossPending*)(base_event_handler);
                 ALOGV("xrPollEvent: received XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING: time %lf",
                       FromXrTime(instance_loss_pending_event->lossTime));
+                renderer->ExitRequested = true;
             }
                 break;
             case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED:
@@ -1040,6 +1042,10 @@ void XrRendererHandleXrEvents(struct XrEngine* engine, struct XrRenderer* render
                     case XR_SESSION_STATE_READY:
                     case XR_SESSION_STATE_STOPPING:
                         XrRendererHandleSessionStateChanges(engine, renderer, session_state_changed_event->state);
+                        break;
+                    case XR_SESSION_STATE_EXITING:
+                    case XR_SESSION_STATE_LOSS_PENDING:
+                        renderer->ExitRequested = true;
                         break;
                     default:
                         break;

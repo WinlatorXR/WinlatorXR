@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.drawable.Icon;
 import android.util.Log;
+import android.view.SubMenu;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -37,6 +38,7 @@ import com.winlator.cmod.core.WineInfo;
 import com.winlator.cmod.fexcore.FEXCoreManager;
 import com.winlator.cmod.inputcontrols.ControlsProfile;
 import com.winlator.cmod.inputcontrols.InputControlsManager;
+import com.winlator.cmod.store.StoreLaunchOptions;
 import com.winlator.cmod.audio.MidiManager;
 import com.winlator.cmod.widget.CPUListView;
 import com.winlator.cmod.widget.EnvVarsView;
@@ -56,6 +58,9 @@ public class ShortcutSettingsDialog extends ContentDialog {
     private InputControlsManager inputControlsManager;
     private TextView tvGraphicsDriverVersion;
     private String box64Version;
+
+    /** Menu group of the exec-argument entries read from the game's store. */
+    private static final int STORE_OPTION_GROUP = 1;
 
     private static final String[] MEDIACONV_ENV_VARS = {
             "MEDIACONV_AUDIO_DUMP_FILE=/data/data/com.winlator.cmod/files/imagefs/home/xuser/audio.dmp",
@@ -437,9 +442,21 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
         findViewById(R.id.BTExtraArgsMenu).setOnClickListener((v) -> {
             PopupMenu popupMenu = new PopupMenu(context, v);
+            // The game's own store options go first, so added before the presets
+            List<String[]> storeOptions = StoreLaunchOptions.forShortcut(context, shortcut);
+            if (!storeOptions.isEmpty()) {
+                SubMenu storeMenu = popupMenu.getMenu().addSubMenu("From store");
+                for (int i = 0; i < storeOptions.size(); i++) {
+                    String[] option = storeOptions.get(i);
+                    String label = option[0].isEmpty() ? option[1] : option[0] + " (" + option[1] + ")";
+                    storeMenu.add(STORE_OPTION_GROUP, i, i, label);
+                }
+            }
             popupMenu.inflate(R.menu.extra_args_popup_menu);
             popupMenu.setOnMenuItemClickListener((menuItem) -> {
-                String value = String.valueOf(menuItem.getTitle());
+                if (menuItem.hasSubMenu()) return false;
+                String value = menuItem.getGroupId() == STORE_OPTION_GROUP
+                        ? storeOptions.get(menuItem.getItemId())[1] : String.valueOf(menuItem.getTitle());
                 String execArgs = etExecArgs.getText().toString();
                 if (!execArgs.contains(value)) etExecArgs.setText(!execArgs.isEmpty() ? execArgs + " " + value : value);
                 return true;

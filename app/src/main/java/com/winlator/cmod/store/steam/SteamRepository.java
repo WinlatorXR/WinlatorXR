@@ -774,6 +774,21 @@ public final class SteamRepository {
                                 || "1".equals(kvStr(categories.get("category_31")))) vrSupport = SteamDatabase.VR_OPTIONAL;
                         db.setVrSupport(app.getId(), vrSupport);
 
+                        // Windows launch entries that pass arguments, for the shortcut's exec-arguments menu.
+                        // Entries tied to a beta branch or another OS are left out.
+                        List<String[]> launchOptions = new ArrayList<>();
+                        List<KeyValue> launchChildren = root.get("config").get("launch").getChildren();
+                        if (launchChildren != null) {
+                            for (KeyValue l : launchChildren) {
+                                String arguments = kvStr(l.get("arguments")).trim();
+                                String launchOs = kvStr(l.get("config").get("oslist")).toLowerCase();
+                                if (arguments.isEmpty() || !kvStr(l.get("config").get("betakey")).isEmpty()) continue;
+                                if (!launchOs.isEmpty() && !launchOs.contains("windows")) continue;
+                                launchOptions.add(new String[]{kvStr(l.get("description")).trim(), arguments});
+                            }
+                        }
+                        db.replaceLaunchOptions(app.getId(), launchOptions);
+
                         String oslist = String.join(",", platforms);
                         db.upsertGame(app.getId(), name, icon, windowsSize, depotSb.toString(), type,
                                 developer, metacriticScore, genreSb.toString(), oslist, androidSize);

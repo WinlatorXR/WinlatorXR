@@ -46,7 +46,9 @@ import java.util.zip.Inflater;
 public class EpicDownloadManager {
 
     private static final String TAG = "BH_EPIC";
-    private static final String UA  = "UELauncher/11.0.1-14907503+++Portal+Release-Live Windows/10.0.19041.1.256.64bit";
+    /** bh_epic_prefs key prefix, followed by the install folder's absolute path. */
+    public static final String LAUNCH_COMMAND_KEY = "epic_launch_command_";
+    private static final String UA  ="UELauncher/11.0.1-14907503+++Portal+Release-Live Windows/10.0.19041.1.256.64bit";
 
     // ── Public interface ──────────────────────────────────────────────────────
 
@@ -117,6 +119,8 @@ public class EpicDownloadManager {
         public String          chunkDir     = "ChunksV4";
         public List<ChunkInfo> uniqueChunks = new ArrayList<>();
         public List<FileInfo>  files        = new ArrayList<>();
+        /** Arguments the Epic launcher passes the game; "" when the manifest names none. */
+        public String          launchCommand = "";
 
         // Parsed manifest also holds CDN URLs for download
         public List<CdnUrl> cdnUrls = new ArrayList<>();
@@ -211,6 +215,9 @@ public class EpicDownloadManager {
                 return false;
             }
             manifest.cdnUrls = cdnUrls;
+            // Kept against the folder so a shortcut into it can offer the arguments
+            ctx.getSharedPreferences("bh_epic_prefs", 0).edit()
+                    .putString(LAUNCH_COMMAND_KEY + installDirPath, manifest.launchCommand).apply();
             dbg.append("chunkDir=").append(manifest.chunkDir)
                .append(" chunks=").append(manifest.uniqueChunks.size())
                .append(" files=").append(manifest.files.size()).append("\n");
@@ -551,9 +558,23 @@ public class EpicDownloadManager {
 
             ByteBuffer body = ByteBuffer.wrap(bodyBytes).order(ByteOrder.LITTLE_ENDIAN);
 
-            // Skip ManifestMeta section
+            // ManifestMeta section: only the launch command is kept
+            int metaStart = body.position();
             int metaSize = body.getInt();
-            body.position(body.position() - 4 + metaSize);
+            String launchCommand = "";
+            try {
+                body.get();                    // data version
+                body.getInt();                 // feature level
+                body.get();                    // is file data
+                body.getInt();                 // app id
+                readFString(body);             // app name
+                readFString(body);             // build version
+                readFString(body);             // launch exe
+                launchCommand = readFString(body).trim();
+            } catch (RuntimeException e) {
+                Log.w(TAG, "Manifest meta unreadable: " + e.getMessage());
+            }
+            body.position(metaStart + metaSize);
 
             // ChunkDataList section
             int cdlStart = body.position();
@@ -624,6 +645,7 @@ public class EpicDownloadManager {
             result.chunkDir     = chunkDir;
             result.uniqueChunks = new ArrayList<>(seenMap.values());
             result.files        = files;
+            result.launchCommand = launchCommand;
             return result;
 
         } catch (Exception e) {

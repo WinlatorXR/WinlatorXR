@@ -68,6 +68,8 @@ public class ContentDialog extends XrContentDialog {
 
         if (isDarkMode) {
             this.getContext().setTheme(R.style.ContentDialog_Dark);
+            // colorPrimary is too dark to read on the dark dialog background
+            ((TextView) contentView.findViewById(R.id.TVTitle)).setTextColor(Color.WHITE);
         }
 
 

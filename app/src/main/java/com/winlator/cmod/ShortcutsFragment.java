@@ -8,8 +8,11 @@ import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.Icon;
 import android.net.Uri;
@@ -21,6 +24,7 @@ import android.provider.DocumentsContract;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.LruCache;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -31,6 +35,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
@@ -45,6 +50,7 @@ import androidx.documentfile.provider.DocumentFile;
 import androidx.fragment.app.Fragment;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -91,6 +97,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class ShortcutsFragment extends Fragment {
@@ -114,6 +121,20 @@ public class ShortcutsFragment extends Fragment {
 
     private ArrayList<FileObserver> fileObservers = new ArrayList<>();
     private PreloaderDialog preloaderDialog;
+
+    /** Whether the Shortcuts tab shows cover cards instead of rows */
+    private static final String CARD_VIEW_PREF = "games_card_view";
+    /** Roughly how wide a card is; the screen is split into as many columns as fit */
+    private static final int CARD_WIDTH_DP = 150;
+    private static final ExecutorService COVER_LOADER = Executors.newSingleThreadExecutor();
+    private DividerItemDecoration listDivider;
+    private Button viewModeButton;
+    private final LruCache<String, Bitmap> coverCache = new LruCache<String, Bitmap>(24 * 1024 * 1024) {
+        @Override
+        protected int sizeOf(String key, Bitmap value) {
+            return value.getByteCount();
+        }
+    };
 
     public static int currentTab = 0;
 
@@ -776,8 +797,11 @@ public class ShortcutsFragment extends Fragment {
         Executors.newSingleThreadExecutor().execute(() -> {
             File iconFile = new File(new File(shortcut.container.getIconsDir(0).getParentFile(), "custom_icons"),
                     shortcut.name + "_" + System.currentTimeMillis() + ".png");
+            // The whole picture as well, for the card view
+            File coversDir = LudashiLaunchBridge.coversDir(shortcut.container);
+            File coverFile = new File(coversDir, FileUtils.getBasename(iconFile.getName()) + ".img");
             String art = "https://shared.steamstatic.com/store_item_assets/steam/apps/" + appId + "/";
-            boolean saved = LudashiLaunchBridge.saveIcon(iconFile, null, art + "library_600x900.jpg", art + "header.jpg");
+            boolean saved = LudashiLaunchBridge.saveIcon(iconFile, coverFile, null, art + "library_600x900.jpg", art + "header.jpg");
             if (getActivity() == null) return;
             getActivity().runOnUiThread(() -> {
                 preloaderDialog.close();
@@ -786,6 +810,12 @@ public class ShortcutsFragment extends Fragment {
                     return;
                 }
                 shortcut.setCustomIconPath(iconFile.getAbsolutePath());
+                // A cover from an earlier search goes; a store's own is left for the store to manage
+                File oldCover = new File(shortcut.getExtra("customCoverArtPath"));
+                if (coversDir.equals(oldCover.getParentFile()) && !oldCover.getName().startsWith(LudashiLaunchBridge.ICON_PREFIX)) {
+                    oldCover.delete();
+                }
+                shortcut.setCustomCoverArtPath(coverFile.isFile() ? coverFile.getAbsolutePath() : null);
                 loadShortcutsList();
             });
         });
@@ -806,6 +836,8 @@ public class ShortcutsFragment extends Fragment {
             if (FileUtils.copy(getContext(), icoFileUri, newIconFile)) {
                 // Update the shortcut to point to this new icon
                 currentShortcut.setCustomIconPath(newIconFile.getAbsolutePath());
+                // The card view shows a cover before the icon, so an icon picked by hand replaces it there too
+                currentShortcut.setCustomCoverArtPath(null);
 
                 // Reload the list to show the new icon
                 loadShortcutsList();
@@ -911,7 +943,14 @@ public class ShortcutsFragment extends Fragment {
         recyclerView = frameLayout.findViewById(R.id.RecyclerView);
         emptyTextView = frameLayout.findViewById(R.id.TVEmptyText);
         recyclerView.setLayoutManager(new LinearLayoutManager(recyclerView.getContext()));
-        recyclerView.addItemDecoration(new DividerItemDecoration(recyclerView.getContext(), DividerItemDecoration.VERTICAL));
+        listDivider = new DividerItemDecoration(recyclerView.getContext(), DividerItemDecoration.VERTICAL);
+        recyclerView.addItemDecoration(listDivider);
+        viewModeButton = frameLayout.findViewById(R.id.BTViewMode);
+        viewModeButton.setOnClickListener(v -> {
+            PreferenceManager.getDefaultSharedPreferences(requireContext()).edit()
+                    .putBoolean(CARD_VIEW_PREF, !isCardView()).apply();
+            loadShortcutsList();
+        });
 
         // Tab switcher
         tabLayout = frameLayout.findViewById(R.id.TabLayout);
@@ -934,6 +973,8 @@ public class ShortcutsFragment extends Fragment {
                         tabs[i].setVisibility(View.GONE);
                     }
                 }
+                // Only the Shortcuts tab has a view mode. INVISIBLE keeps the tabs from shifting.
+                viewModeButton.setVisibility(currentTab == 0 ? View.VISIBLE : View.INVISIBLE);
                 // The Z: tab reads the disk, so it is filled in when it is opened rather than kept
                 // up to date behind the user.
                 if (currentTab == 2) refreshZDriveTab();
@@ -1227,7 +1268,9 @@ public class ShortcutsFragment extends Fragment {
             if (source != null) sources.put(shortcut, source);
         }
 
-        recyclerView.setAdapter(new ShortcutsAdapter(shortcuts, sources));
+        boolean cardView = isCardView();
+        applyShortcutsLayout(cardView);
+        recyclerView.setAdapter(new ShortcutsAdapter(shortcuts, sources, cardView));
         emptyTextView.setVisibility(shortcuts.isEmpty() ? View.VISIBLE : View.GONE);
         setTabCount(0, R.string.shortcuts, shortcuts.size());
 
@@ -1249,11 +1292,72 @@ public class ShortcutsFragment extends Fragment {
     }
 
 
+    private boolean isCardView() {
+        return PreferenceManager.getDefaultSharedPreferences(requireContext()).getBoolean(CARD_VIEW_PREF, false);
+    }
+
+    /** Lays the Shortcuts tab out as rows, or as a grid of cover cards. */
+    private void applyShortcutsLayout(boolean cardView) {
+        viewModeButton.setText(cardView ? R.string.games_list_view : R.string.games_card_view);
+        // It sits on the purple tab bar, so it is white like the tab labels
+        viewModeButton.setCompoundDrawableTintList(ColorStateList.valueOf(Color.WHITE));
+        // A grid manager is also a linear one, so this tells the two apart
+        if (recyclerView.getLayoutManager() instanceof GridLayoutManager == cardView) return;
+        recyclerView.removeItemDecoration(listDivider);
+        if (cardView) {
+            DisplayMetrics metrics = getResources().getDisplayMetrics();
+            int columns = Math.max(2, (int) (metrics.widthPixels / metrics.density / CARD_WIDTH_DP));
+            recyclerView.setLayoutManager(new GridLayoutManager(getContext(), columns));
+        } else {
+            recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+            recyclerView.addItemDecoration(listDivider);
+        }
+    }
+
+    /**
+     * Shows a card's cover once it is read off the disk. Covers are full-size store art, so they
+     * are read scaled to the card, and away from the UI thread so scrolling does not wait on them.
+     */
+    private void loadCover(ImageView imageView, String path, int width) {
+        imageView.setTag(path);
+        Bitmap cached = coverCache.get(path);
+        if (cached != null) {
+            showCover(imageView, cached);
+            return;
+        }
+        imageView.setImageDrawable(null);
+        COVER_LOADER.execute(() -> {
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(path, options);
+            options.inSampleSize = 1;
+            while (options.outWidth / (options.inSampleSize * 2) >= width) options.inSampleSize *= 2;
+            options.inJustDecodeBounds = false;
+            Bitmap cover = BitmapFactory.decodeFile(path, options);
+            if (cover == null) return;
+            coverCache.put(path, cover);
+            imageView.post(() -> {
+                if (path.equals(imageView.getTag())) showCover(imageView, cover);
+            });
+        });
+    }
+
+    /** Portrait box art fills the card; a wide banner is shown whole rather than cut to a strip. */
+    private static void showCover(ImageView imageView, Bitmap cover) {
+        imageView.setPadding(0, 0, 0, 0);
+        imageView.setScaleType(cover.getHeight() > cover.getWidth()
+                ? ImageView.ScaleType.CENTER_CROP : ImageView.ScaleType.FIT_CENTER);
+        imageView.setImageBitmap(cover);
+    }
+
     private class ShortcutsAdapter extends RecyclerView.Adapter<ShortcutsAdapter.ViewHolder> {
         private final List<Shortcut> data;
 
         /** Where each shortcut's game is installed, for the ones that could be placed. */
         private final HashMap<Shortcut, String> sources;
+
+        /** Cover cards in a grid rather than rows */
+        private final boolean cardView;
 
         private class ViewHolder extends RecyclerView.ViewHolder {
             private final ImageButton menuButton;
@@ -1271,6 +1375,8 @@ public class ShortcutsFragment extends Fragment {
                 this.menuButton = view.findViewById(R.id.BTMenu);
                 this.innerArea = view.findViewById(R.id.LLInnerArea);
                 this.playButton = view.findViewById(R.id.BTPlay);
+                // A card is laid out for itself in its own file
+                if (cardView) return;
 
                 // Only the play button starts the game; the rest of the row was too easy to hit by mistake
                 innerArea.setClickable(false);
@@ -1291,15 +1397,23 @@ public class ShortcutsFragment extends Fragment {
             }
         }
 
-        public ShortcutsAdapter(List<Shortcut> data, HashMap<Shortcut, String> sources) {
+        public ShortcutsAdapter(List<Shortcut> data, HashMap<Shortcut, String> sources, boolean cardView) {
             this.data = data;
             this.sources = sources;
+            this.cardView = cardView;
         }
 
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new ViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.shortcut_list_item, parent, false));
+            if (!cardView) return new ViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.shortcut_list_item, parent, false));
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.shortcut_card_item, parent, false);
+            // Store cover art is 2:3, so the picture is made that shape to the column's width
+            int parentWidth = parent.getWidth() > 0 ? parent.getWidth() : parent.getResources().getDisplayMetrics().widthPixels;
+            int columns = ((GridLayoutManager) recyclerView.getLayoutManager()).getSpanCount();
+            int imageWidth = parentWidth / columns - view.getPaddingLeft() - view.getPaddingRight();
+            view.findViewById(R.id.ImageView).getLayoutParams().height = imageWidth * 3 / 2;
+            return new ViewHolder(view);
         }
 
         @Override
@@ -1312,13 +1426,28 @@ public class ShortcutsFragment extends Fragment {
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             final Shortcut item = data.get(position);
-            if (item.icon != null) {
+            String coverPath = cardView ? item.getCustomCoverArtPath() : null;
+            if (coverPath != null && new File(coverPath).isFile()) {
+                loadCover(holder.imageView, coverPath, holder.imageView.getLayoutParams().height * 2 / 3);
+            } else if (cardView) {
+                // No cover yet: the icon, not stretched edge to edge, and tapping it offers the search
+                holder.imageView.setTag(null);
+                int inset = holder.imageView.getLayoutParams().height / 6;
+                holder.imageView.setPadding(inset, inset, inset, inset);
+                holder.imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                if (item.icon != null) holder.imageView.setImageBitmap(item.icon);
+                else holder.imageView.setImageResource(R.mipmap.ic_launcher_foreground);
+            } else if (item.icon != null) {
                 holder.imageView.setImageBitmap(item.icon);
             } else {
                 // Set a default icon if none exists
                 holder.imageView.setImageResource(R.mipmap.ic_launcher_foreground); // Create a default icon drawable
             }
-            holder.imageView.setOnClickListener(v -> showIconPickerConfirmation(item));            holder.title.setText(item.name);
+            // Press and hold, so scrolling past a card's art does not open the picker
+            holder.imageView.setOnLongClickListener(v -> {
+                showIconPickerConfirmation(item);
+                return true;
+            });            holder.title.setText(item.name);
             // The container plays the game; the source says where the game itself is, which is not
             // the same thing and is the only difference between two rows for the same title.
             String source = sources.get(item);
@@ -1343,8 +1472,9 @@ public class ShortcutsFragment extends Fragment {
             }
             holder.subtitle.setText(subtitle);
             holder.menuButton.setOnClickListener((v) -> showListItemMenu(v, item));
-            // Set on every bind, so a renamed shortcut's button follows its new name
-            holder.playButton.setText(item.name);
+            // Set on every bind, so a renamed shortcut's button follows its new name. A card
+            // shows the name above its button already, so its button just says Play.
+            if (!cardView) holder.playButton.setText(item.name);
             holder.playButton.setOnClickListener((v) -> runFromShortcut(item));
 
             // Get the context from the item view
@@ -1361,6 +1491,12 @@ public class ShortcutsFragment extends Fragment {
                 // Set the text color to something dark for light backgrounds
                 holder.title.setTextColor(android.graphics.Color.BLACK);
             }
+            // The play button is only an outline, so its outline, text and icon follow the title
+            int playColour = isDarkMode ? android.graphics.Color.WHITE : android.graphics.Color.BLACK;
+            holder.playButton.setBackgroundResource(isDarkMode
+                    ? R.drawable.shortcut_play_button_bg_dark : R.drawable.shortcut_play_button_bg);
+            holder.playButton.setTextColor(playColour);
+            holder.playButton.setCompoundDrawableTintList(ColorStateList.valueOf(playColour));
         }
 
         @Override

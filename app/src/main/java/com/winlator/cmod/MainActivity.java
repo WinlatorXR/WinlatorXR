@@ -1,7 +1,6 @@
 package com.winlator.cmod;
 
 import android.Manifest;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -491,19 +490,24 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
     private void showAllFilesAccessDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle("USB Storage Access")
-                .setMessage("In order to grant access to additional storage devices such as USB storage device, the All Files Access permission must be granted. You can leave this disabled, or you can enable it for USB storage support.")
-                .setPositiveButton("Okay", (dialog, which) -> {
-                    Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-                    intent.setData(Uri.parse("package:" + getPackageName()));
-                    vrUpdateCheckOnResume = true;
-                    startActivity(intent);
-                    allAccessFilesDialogDismissed = true;
-                })
-                .setNegativeButton("Cancel", (dialog, which) -> checkVrContentUpdatesDelayed())
-                .setOnCancelListener(dialog -> checkVrContentUpdatesDelayed())
-                .show();
+        ContentDialog dialog = new ContentDialog(this);
+        dialog.setTitle("USB Storage Access");
+        dialog.setMessage("In order to grant access to additional storage devices such as USB storage device, the All Files Access permission must be granted. You can leave this disabled, or you can enable it for USB storage support.");
+        ((TextView) dialog.findViewById(R.id.BTConfirm)).setText("Okay");
+        boolean[] openedSettings = {false};
+        dialog.setOnConfirmCallback(() -> {
+            openedSettings[0] = true;
+            Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+            intent.setData(Uri.parse("package:" + getPackageName()));
+            vrUpdateCheckOnResume = true;
+            startActivity(intent);
+            allAccessFilesDialogDismissed = true;
+        });
+        // Cancel, back or tapping outside; Okay runs the check on return from the settings page instead
+        dialog.setOnDismissListener(d -> {
+            if (!openedSettings[0]) checkVrContentUpdatesDelayed();
+        });
+        dialog.show();
     }
 
     @Override
@@ -526,6 +530,20 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
      * to be in place).
      */
     private void onStorageAndAssetsReady() {
+        // A folder someone is meant to copy profiles into has to be there before the first export
+        // creates it, or there is nowhere to put the profile a friend just sent.
+        ShortcutProfile.ensureProfilesDir();
+        // Posted so the upgrade prompts open after onResume applies the light/dark theme; built
+        // from onCreate they take the manifest's dark text on a light dialog and read blank.
+        // The storage prompt waits for them rather than opening underneath.
+        getWindow().getDecorView().post(() -> {
+            autoCreateDefaultContainersIfNeeded();
+            if (!upgradePromptsShowing) showStoragePromptOrCheckUpdates();
+        });
+    }
+
+    private void showStoragePromptOrCheckUpdates() {
+        if (isFinishing() || isDestroyed()) return;
         if (!allAccessFilesDialogDismissed
                 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
                 && !Environment.isExternalStorageManager()) {
@@ -534,10 +552,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         } else {
             checkVrContentUpdatesDelayed();
         }
-        // A folder someone is meant to copy profiles into has to be there before the first export
-        // creates it, or there is nowhere to put the profile a friend just sent.
-        ShortcutProfile.ensureProfilesDir();
-        autoCreateDefaultContainersIfNeeded();
     }
 
     private void checkVrContentUpdatesDelayed() {
@@ -702,7 +716,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             return;
         }
         sharedPreferences.edit().putBoolean(PREF_XR_MENU_LONG_PRESS_NOTICE_SHOWN, true).apply();
-        ContentDialog dialog = new ContentDialog(this);
+        ContentDialog dialog = new ContentDialog(this, R.layout.xr_menu_hold_guide);
+        // The content frame wraps its child, so widen it for the picture to centre in
+        dialog.findViewById(R.id.FrameLayout).getLayoutParams().width = ViewGroup.LayoutParams.MATCH_PARENT;
         dialog.setTitle(R.string.xr_menu_long_press_notice_title);
         dialog.setMessage(R.string.xr_menu_long_press_notice_message);
         dialog.findViewById(R.id.BTCancel).setVisibility(View.GONE);
@@ -710,13 +726,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         dialog.show();
     }
 
-    /** The last upgrade prompt closed, so run the update check if it was held back. */
+    /** The last upgrade prompt closed, so the storage prompt and update check held back behind it run now. */
     private void finishUpgradePrompts() {
         upgradePromptsShowing = false;
-        if (vrContentUpdatesPending) {
-            vrContentUpdatesPending = false;
-            checkVrContentUpdatesDelayed();
-        }
+        vrContentUpdatesPending = false;
+        showStoragePromptOrCheckUpdates();
     }
 
     /** Bundled Wine versions plus bundled contents/ packages that installed, in creation order. */

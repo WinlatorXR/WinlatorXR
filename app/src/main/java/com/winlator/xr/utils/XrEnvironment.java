@@ -98,6 +98,20 @@ public class XrEnvironment {
         return isSupported(name) ? name : null;
     }
 
+    /**
+     * The file name to store an import under when the user renames it: their name, with
+     * the extension of the picked file so the image still decodes and lists.
+     */
+    public static String rename(String fileName, String name) {
+        int dot = fileName.lastIndexOf('.');
+        String extension = fileName.substring(dot);
+        name = name.trim().replaceAll("[\\/:*?\"<>|]", "_");
+        if (name.toLowerCase(Locale.ROOT).endsWith(extension.toLowerCase(Locale.ROOT))) {
+            name = name.substring(0, name.length() - extension.length()).trim();
+        }
+        return name.isEmpty() ? fileName : name + extension;
+    }
+
     /** Whether a panorama of that name is already installed. */
     public static boolean exists(Context context, String name) {
         return name != null && new File(getDirectory(context), name).isFile();
@@ -110,8 +124,7 @@ public class XrEnvironment {
      * installed, replace overwrites it in place; otherwise the import is stored alongside it
      * under a numbered name.
      */
-    public static String importFrom(Context context, Uri uri, boolean replace) {
-        String name = nameFor(context, uri);
+    public static String importFrom(Context context, Uri uri, String name, boolean replace) {
         if (name == null) return null;
 
         File directory = getDirectory(context);
@@ -218,6 +231,25 @@ public class XrEnvironment {
             activity.nativeSetEnvironment(bitmap);
             bitmap.recycle();
         }, "XrEnvironmentLoader").start();
+    }
+
+    /**
+     * A small, subsampled decode of the named panorama for the Settings preview, or null if
+     * it cannot be read. Cheap enough for a picker, but still meant for a worker thread.
+     */
+    public static Bitmap decodeThumbnail(Context context, String name, int maxWidth) {
+        File file = new File(getDirectory(context), name);
+        BitmapFactory.Options bounds = new BitmapFactory.Options();
+        bounds.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(file.getAbsolutePath(), bounds);
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null;
+
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inSampleSize = 1;
+        while (bounds.outWidth / (options.inSampleSize * 2) >= maxWidth) {
+            options.inSampleSize *= 2;
+        }
+        return BitmapFactory.decodeFile(file.getAbsolutePath(), options);
     }
 
     private static Bitmap decode(File file) {

@@ -15,6 +15,9 @@
     <string name="shortcuts">Shortcuts</string>
     <string name="add_local_game_files">Add Local Game Files</string>
     <string name="add_game">Add Game</string>
+    <string name="games_card_view">Show as cards</string>
+    <string name="games_list_view">Show as list</string>
+    <string name="play">Play</string>
     <string name="run_game_installer">Run a Game Installer</string>
     <string name="containers">Containers</string>
     <string name="container_list">Container list</string>
@@ -530,6 +533,7 @@
     <string name="xr_environment_import_message">Choose an equirectangular 360 panorama.\n\nSupported formats: JPG, PNG and WebP. The image must have a 2:1 width to height ratio, such as 8192x4096; anything larger is scaled down to that, and transparency is ignored.</string>
     <string name="xr_environment_imported">Panorama imported</string>
     <string name="xr_environment_import_failed">That file could not be imported. It must be a JPG, PNG or WebP image.</string>
+    <string name="xr_environment_import_name">Name this panorama (keep the file name or type your own)</string>
     <string name="xr_environment_import_duplicate">A panorama named \"%1$s\" is already installed.\n\nReplace it?</string>
     <string name="xr_environment_remove">Remove panorama</string>
     <string name="xr_environment_remove_message">Remove \"%1$s\"? The image file will be deleted.</string>
@@ -941,6 +945,11 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="mod_zip_only">A mod has to be a .zip file. Other archives (.rar, .7z) are not supported yet.</string>
 
     <!-- A mod archive that packed a settings profile beside its files. -->
+    <string name="mod_profile_choose_message">This mod brought %1$d sets of settings, each made on a headset. Pick the one to use. Only that one is kept in WxrProfiles.</string>
+    <string name="mod_profile_choose_none">Use none</string>
+    <string name="mod_profile_choice_this_headset">%1$s (%2$s, this headset)</string>
+    <string name="mod_profile_choice_device">%1$s (%2$s)</string>
+    <string name="mod_profile_choice_no_device">%1$s (headset not recorded)</string>
     <string name="mod_profile_included">\n\nIt also brought settings of its own (%1$s), which will be applied to that shortcut.</string>
     <string name="mod_profile_offer_game">\n\nIt also brought settings of its own (%1$s). With no program added there is no mod shortcut for them, but they can be applied to \"%2$s\" instead, replacing its current settings. Remove Custom Profile on its row puts them back.</string>
     <string name="mod_apply_profile">Apply Settings</string>

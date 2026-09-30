@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Games tab's card view: the same ids as shortcut_list_item, so one ViewHolder serves both -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="6dp">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <!-- Height is set from the width in code, to the 2:3 of store cover art -->
+        <ImageButton
+            android:id="@+id/ImageView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#33808080"
+            android:scaleType="centerCrop" />
+
+        <ImageButton
+            style="@style/ListMenuButton"
+            android:id="@+id/BTMenu"
+            android:layout_gravity="top|end"
+            android:background="#80000000"
+            android:tint="@android:color/white"
+            android:src="@drawable/icon_list_item_menu" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/TVTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textStyle="bold"
+        android:ellipsize="end"
+        android:maxLines="2" />
+
+    <TextView
+        android:id="@+id/TVSubtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="11sp" />
+
+    <!-- The grid stretches each card to its row's tallest, and this takes up the difference so
+         every Play button in a row sits at the same height -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <Button
+        android:id="@+id/BTPlay"
+        android:layout_width="match_parent"
+        android:layout_height="30dp"
+        android:layout_marginTop="4dp"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:background="@drawable/shortcut_play_button_bg"
+        android:drawableLeft="@drawable/ic_game_launch"
+        android:drawableTint="@android:color/black"
+        android:drawablePadding="4dp"
+        android:paddingLeft="8dp"
+        android:paddingRight="12dp"
+        android:text="@string/play"
+        android:textSize="13sp"
+        android:textAllCaps="false"
+        android:textColor="@android:color/black"
+        android:maxLines="1" />
+</LinearLayout>

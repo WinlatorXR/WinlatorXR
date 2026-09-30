@@ -485,7 +485,14 @@ public final class GogDownloadManager {
             ed0.putString("gog_dir_" + game.gameId, installDir);
             ed0.apply();
 
-            // Find exe — prefer temp_executable hint from manifest
+            // Find exe — prefer the game's primary play task, then the temp_executable hint from manifest
+            String primaryExe = primaryPlayTaskExe(installPath, game.gameId);
+            if (primaryExe != null) {
+                ctx.getSharedPreferences("bh_gog_prefs", 0).edit()
+                        .putString("gog_exe_" + game.gameId, primaryExe).apply();
+                cb.onComplete(primaryExe);
+                return null;
+            }
             if (tempExe != null) {
                 File hinted = new File(installPath, tempExe);
                 if (hinted.exists()) {
@@ -663,6 +670,14 @@ public final class GogDownloadManager {
             SharedPreferences.Editor ed0 = ctx.getSharedPreferences("bh_gog_prefs", 0).edit();
             ed0.putString("gog_dir_" + game.gameId, installDir);
             ed0.apply();
+
+            String primaryExe = primaryPlayTaskExe(installPath, game.gameId);
+            if (primaryExe != null) {
+                ctx.getSharedPreferences("bh_gog_prefs", 0).edit()
+                        .putString("gog_exe_" + game.gameId, primaryExe).apply();
+                cb.onComplete(primaryExe);
+                return null;
+            }
 
             List<String> candidates = collectExeCandidates(installPath);
             if (candidates.size() == 1) {
@@ -1080,6 +1095,40 @@ public final class GogDownloadManager {
         File[] children = dir.listFiles();
         if (children != null) for (File c : children) deleteDir(c);
         dir.delete();
+    }
+
+    /**
+     * The executable GOG's own launcher starts: the primary play task in the goggame-*.info files
+     * shipped at the top of the game's folder, the game's own file first. Returns null when none
+     * names an .exe that was installed.
+     */
+    static String primaryPlayTaskExe(File installDir, String gameId) {
+        File[] infoFiles = installDir.listFiles((dir, name) ->
+                name.toLowerCase().startsWith("goggame-") && name.toLowerCase().endsWith(".info"));
+        if (infoFiles == null) return null;
+        // DLC ship info files of their own, so the base game's is tried first
+        java.util.Arrays.sort(infoFiles, (a, b) ->
+                Boolean.compare(!a.getName().equalsIgnoreCase("goggame-" + gameId + ".info"),
+                        !b.getName().equalsIgnoreCase("goggame-" + gameId + ".info")));
+
+        for (File infoFile : infoFiles) {
+            try {
+                JSONArray tasks = new JSONObject(new String(java.nio.file.Files.readAllBytes(infoFile.toPath()), "UTF-8"))
+                        .optJSONArray("playTasks");
+                if (tasks == null) continue;
+                for (int i = 0; i < tasks.length(); i++) {
+                    JSONObject task = tasks.optJSONObject(i);
+                    if (task == null || !task.optBoolean("isPrimary")) continue;
+                    if (!"FileTask".equals(task.optString("type", "FileTask"))) continue;
+                    String path = task.optString("path").replace('\\', '/');
+                    File exe = new File(installDir, path);
+                    if (path.toLowerCase().endsWith(".exe") && exe.isFile()) return exe.getAbsolutePath();
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Unreadable " + infoFile.getName() + ": " + e.getMessage());
+            }
+        }
+        return null;
     }
 
     /**

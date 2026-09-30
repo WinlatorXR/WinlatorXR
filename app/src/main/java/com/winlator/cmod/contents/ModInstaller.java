@@ -3,6 +3,9 @@ package com.winlator.cmod.contents;
 import android.app.Activity;
 import android.content.Context;
 import android.util.Log;
+import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import com.winlator.cmod.R;
@@ -10,6 +13,8 @@ import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.container.ShortcutProfile;
 import com.winlator.cmod.contentdialog.ContentDialog;
+import com.winlator.cmod.core.AppUtils;
+import com.winlator.cmod.core.Callback;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.container.GameUninstaller;
 import com.winlator.cmod.core.GuestScriptRunner;
@@ -302,8 +307,8 @@ public abstract class ModInstaller {
             // folder now -- the game's own are in there too and are not what was just added.
             final List<String> exeEntries = failure == null
                     ? ZipExtractor.exeEntries(zip, stripPrefix) : new ArrayList<>();
-            final File bundled = failure == null ? bundledProfile(zip, stripPrefix, targetDir) : null;
-            final File keptCopy = bundled != null ? keepProfileCopy(zip, bundled) : null;
+            final List<File> bundled = failure == null
+                    ? bundledProfiles(zip, stripPrefix, targetDir) : new ArrayList<>();
             final String setupNote = failure == null
                     ? gameSetup(activity, shortcut, zip, stripPrefix, exeFile, targetDir) : "";
             final String error = failure;
@@ -317,14 +322,16 @@ public abstract class ModInstaller {
                     return;
                 }
 
-                offerShortcut(activity, shortcut, zip, exeFile, targetDir, exeEntries, bundled,
-                        keptCopy, setupNote, onShortcutCreated);
+                chooseProfile(activity, zip, bundled, profile -> offerShortcut(activity, shortcut,
+                        zip, exeFile, targetDir, exeEntries, profile,
+                        profile != null ? keepProfileCopy(zip, profile) : null,
+                        setupNote, onShortcutCreated));
             });
         });
     }
 
     /**
-     * The settings profile an archive brought with it, or null if it brought none.
+     * The settings profiles an archive brought with it, in archive order; empty if it brought none.
      *
      * A mod that needs the game run differently -- a loader that wants a particular DX wrapper, a
      * texture pack that wants a bigger screen size -- can pack a .wxrprofile.json beside its
@@ -333,16 +340,74 @@ public abstract class ModInstaller {
      * contract is that an archive's layout is kept exactly as packed, so deleting one of its
      * files afterwards would be the one place that stopped being true.
      *
-     * Only the shallowest is taken. An archive holding several is either mistaken or trying to be
-     * clever, and picking the top one is the answer that can be explained.
+     * A mod can pack one per headset, since the same settings do not land the same way on each;
+     * which one is used is asked in {@link #chooseProfile}.
      */
-    private static File bundledProfile(File zip, String stripPrefix, File targetDir) {
+    private static List<File> bundledProfiles(File zip, String stripPrefix, File targetDir) {
+        List<File> profiles = new ArrayList<>();
         for (String entry : ZipExtractor.fileEntries(zip, stripPrefix)) {
             if (!ShortcutProfile.isProfileFile(entry)) continue;
             File file = new File(targetDir, entry.replace('/', File.separatorChar));
-            if (file.isFile()) return file;
+            if (file.isFile()) profiles.add(file);
         }
-        return null;
+        return profiles;
+    }
+
+    /**
+     * Picks which of the archive's profiles to use, and hands it on -- null for none.
+     *
+     * One profile needs no question. Several are listed by the headset each was made on, with
+     * this headset's listed first and ticked, but any of them can be picked: a profile from
+     * another headset is still a starting point. Only the one picked goes on to be applied and
+     * kept in the profiles folder, so the other headsets' do not pile up there.
+     */
+    private static void chooseProfile(Activity activity, File zip, List<File> profiles,
+                                      Callback<File> onChosen) {
+        if (profiles.size() < 2) {
+            onChosen.call(profiles.isEmpty() ? null : profiles.get(0));
+            return;
+        }
+
+        List<File> ordered = new ArrayList<>();
+        List<String> labels = new ArrayList<>();
+        int matches = 0;
+        for (File file : profiles) {
+            String name = ShortcutProfile.nameOf(file.getName());
+            ShortcutProfile.Parsed parsed = ShortcutProfile.read(file).profile;
+            String device = parsed != null ? parsed.deviceName : "";
+            if (device.isEmpty()) {
+                ordered.add(file);
+                labels.add(activity.getString(R.string.mod_profile_choice_no_device, name));
+            }
+            else if (!parsed.isDifferentDevice()) {
+                ordered.add(matches, file);
+                labels.add(matches++, activity.getString(R.string.mod_profile_choice_this_headset, name, device));
+            }
+            else {
+                ordered.add(file);
+                labels.add(activity.getString(R.string.mod_profile_choice_device, name, device));
+            }
+        }
+
+        ContentDialog dialog = new ContentDialog(activity);
+        dialog.setTitle(zip.getName());
+        dialog.setMessage(activity.getString(R.string.mod_profile_choose_message, profiles.size()));
+        dialog.findViewById(R.id.BTConfirm).setVisibility(View.GONE);
+        ((TextView) dialog.findViewById(R.id.BTCancel)).setText(R.string.mod_profile_choose_none);
+        dialog.setCancelable(false);
+
+        ListView listView = dialog.findViewById(R.id.ListView);
+        listView.getLayoutParams().width = AppUtils.getPreferredDialogWidth(activity);
+        listView.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
+        listView.setAdapter(new ArrayAdapter<>(activity, android.R.layout.simple_list_item_single_choice, labels));
+        if (matches > 0) listView.setItemChecked(0, true);
+        listView.setVisibility(View.VISIBLE);
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            dialog.dismiss();
+            onChosen.call(ordered.get(position));
+        });
+        dialog.setOnCancelCallback(() -> onChosen.call(null));
+        dialog.show();
     }
 
     /**

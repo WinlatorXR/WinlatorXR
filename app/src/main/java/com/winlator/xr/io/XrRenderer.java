@@ -127,7 +127,7 @@ public class XrRenderer extends GLRenderer {
 
     @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
-        if (XrActivity.isEnabled(null)) {
+        if (XrActivity.isEnabled(null) && !XrActivity.isShutDown()) {
             XrActivity activity = XrActivity.getInstance();
             String res = activity.getScreenSize();
             String[] parts = res.split("x");
@@ -178,7 +178,8 @@ public class XrRenderer extends GLRenderer {
     protected void preFrame() {
         super.preFrame();
 
-        if (XrActivity.isEnabled(null)) {
+        // After shutdown the session and its buffers are gone; the last frames draw flat until the process ends
+        if (XrActivity.isEnabled(null) && !XrActivity.isShutDown()) {
             fullscreen = XrActivity.getVR();
             sbs = XrActivity.getSBS() && !taskManagerOnTop;
             sbsStretch = XrActivity.sbsStretch && !XrActivity.isVR;
@@ -186,6 +187,7 @@ public class XrRenderer extends GLRenderer {
             xrFrameReady = xrFrameStarted = XrActivity.getInstance().initFrame(
                     XrActivity.getImmersive() || XrActivity.getVR(),
                     sbs, sbsStretch, XrActivity.getAER(), XrActivity.getDistance());
+            XrActivity.getInstance().checkRuntimeExit();
             XrActivity.getInstance().updateFrame();
             // PC VR frames arriving directly replace the game window, so the screen swapchain
             // is only needed for what is drawn over them: the FPS panel and XR dialogs

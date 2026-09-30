@@ -139,8 +139,10 @@ public class NavigationDialog extends ContentDialog {
         if (page.hasFaceButtonAction(FaceButton.B)) return;
         page.setBackAction(context.getString(R.string.xr_back_to_menu), () -> {
             if (!page.isShowing()) return;
-            page.dismiss();
+            // Shown before the page closes: a frame with no dialog up lets immersive and VR
+            // modes turn the menu to face the user, so it would not come back where it was
             new NavigationDialog(context).show();
+            page.dismiss();
         });
     }
 

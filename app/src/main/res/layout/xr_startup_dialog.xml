@@ -93,5 +93,16 @@
                 android:textSize="11sp"
                 android:textColor="@color/colorAccent" />
         </LinearLayout>
+
+        <!-- Only shown with the menu hint; mirrored in code for the left stick. -->
+        <ImageView
+            android:id="@+id/IVHintPicture"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:layout_marginLeft="12dp"
+            android:layout_gravity="center_vertical"
+            android:importantForAccessibility="no"
+            android:src="@drawable/guide_xr_menu_hold"
+            android:visibility="gone" />
     </LinearLayout>
 </LinearLayout>

@@ -8,9 +8,33 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/colorPrimary"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+        <!-- Switches the games between rows and cover cards; says what it will switch to -->
+        <Button
+            android:id="@+id/BTViewMode"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_marginLeft="8dp"
+            android:minHeight="0dp"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:drawableLeft="@drawable/icon_view_mode"
+            android:drawablePadding="6dp"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:textSize="13sp" />
+
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/TabLayout"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:background="@color/colorPrimary"
             app:tabGravity="center"
@@ -36,19 +60,27 @@
                 android:layout_height="wrap_content"
                 android:text="@string/store" />
         </com.google.android.material.tabs.TabLayout>
+        </LinearLayout>
 
         <FrameLayout
             android:id="@+id/LLTabShortcuts"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <androidx.recyclerview.widget.RecyclerView
-                xmlns:app="http://schemas.android.com/apk/res-auto"
-                android:id="@+id/RecyclerView"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:scrollbars="vertical"
-                app:layoutManager="LinearLayoutManager" />
+                android:orientation="vertical">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    xmlns:app="http://schemas.android.com/apk/res-auto"
+                    android:id="@+id/RecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:scrollbars="vertical"
+                    app:layoutManager="LinearLayoutManager" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/TVEmptyText"

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A right-hand controller seen from above, with its thumbstick pressed in (the arrow) and
+     held (the ring). Mirrored with scaleX="-1" for left-handed mode, so it carries no text. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+
+    <!-- The paths below are laid out for the left hand; the group mirrors them into the
+         right-hand controller, with the stick on the right and the buttons on the left. -->
+    <group
+        android:scaleX="-1"
+        android:pivotX="100">
+
+    <!-- Grip, drawn first so the face covers its top edge. -->
+    <path
+        android:pathData="M78,112 L84,186 Q100,196 116,186 L122,112 Z"
+        android:fillColor="#FFE4E6EA"
+        android:strokeColor="#FF8A8F98"
+        android:strokeWidth="4"
+        android:strokeLineJoin="round" />
+
+    <!-- Face -->
+    <path
+        android:pathData="M45,78 A55,45 0 1,0 155,78 A55,45 0 1,0 45,78 Z"
+        android:fillColor="#FFD5D8DD"
+        android:strokeColor="#FF8A8F98"
+        android:strokeWidth="4" />
+
+    <!-- Face buttons -->
+    <path
+        android:pathData="M115,94 A7,7 0 1,0 129,94 A7,7 0 1,0 115,94 Z"
+        android:strokeColor="#FF8A8F98"
+        android:strokeWidth="3" />
+    <path
+        android:pathData="M125,66 A7,7 0 1,0 139,66 A7,7 0 1,0 125,66 Z"
+        android:strokeColor="#FF8A8F98"
+        android:strokeWidth="3" />
+
+    <!-- Thumbstick base and cap -->
+    <path
+        android:pathData="M64,74 A18,18 0 1,0 100,74 A18,18 0 1,0 64,74 Z"
+        android:strokeColor="@color/colorAccent"
+        android:strokeWidth="3" />
+    <path
+        android:pathData="M70,74 A12,12 0 1,0 94,74 A12,12 0 1,0 70,74 Z"
+        android:fillColor="@color/colorAccent" />
+
+    <!-- Hold ring: three quarters of a timer running round the stick. -->
+    <path
+        android:pathData="M82,46 A28,28 0 1,1 54,74"
+        android:strokeColor="@color/colorAccent"
+        android:strokeWidth="5"
+        android:strokeLineCap="round" />
+
+    <!-- Press arrow -->
+    <path
+        android:pathData="M82,4 L82,36"
+        android:strokeColor="@color/colorAccent"
+        android:strokeWidth="6"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M71,28 L82,40 L93,28"
+        android:strokeColor="@color/colorAccent"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    </group>
+</vector>

@@ -118,8 +118,8 @@ import java.nio.file.Files;
             this.iconFile = iconFile;
             this.wmClass  = wmClass;
 
+            // Decoded when asked for: store covers are full-size art, and shortcuts are built in bulk
             this.customCoverArtPath = getExtra("customCoverArtPath");
-            loadCoverArt();
 
             Container.checkObsoleteOrMissingProperties(extraData);
         }
@@ -143,6 +143,7 @@ import java.nio.file.Files;
 
         // Getters and setters for coverArt and customCoverArtPath
         public Bitmap getCoverArt() {
+            if (coverArt == null) loadCoverArt();
             return coverArt;
         }
 

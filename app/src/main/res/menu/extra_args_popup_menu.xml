@@ -1,18 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:title="/d3d9" />
-    <item android:title="-dx11" />
-    <item android:title="-dx12" />
-    <item android:title="-force-gfx-direct" />
-    <item android:title="-force-d3d11-singlethreaded" />
-    <item android:title="-force-d3d12-singlethreaded" />
-    <item android:title="-force-dx9" />
-    <item android:title="-force-d3d9" />
-    <item android:title="-force-d3d11" />
-    <item android:title="-force-d3d12" />
-    <item android:title="-force-vulkan" />
-    <item android:title="-vulkan" />
-    <item android:title="-vr" />
-    <item android:title="-vrmode openvr" />
-    <item android:title="-vrmode openxr" />
+    <item android:title="General">
+        <menu>
+            <item android:title="-windowed" />
+            <item android:title="-fullscreen" />
+            <item android:title="-nolauncher" />
+            <item android:title="-skipintro" />
+            <item android:title="-nosplash" />
+            <item android:title="/d3d9" />
+        </menu>
+    </item>
+    <item android:title="Unity">
+        <menu>
+            <item android:title="-popupwindow" />
+            <item android:title="-screen-fullscreen 0" />
+            <item android:title="-screen-width 1280 -screen-height 720" />
+            <item android:title="-force-gfx-direct" />
+            <item android:title="-force-d3d11-singlethreaded" />
+            <item android:title="-force-d3d12-singlethreaded" />
+            <item android:title="-force-dx9" />
+            <item android:title="-force-d3d9" />
+            <item android:title="-force-d3d11" />
+            <item android:title="-force-d3d12" />
+            <item android:title="-force-vulkan" />
+        </menu>
+    </item>
+    <item android:title="Unreal">
+        <menu>
+            <item android:title="-dx11" />
+            <item android:title="-dx12" />
+            <item android:title="-vulkan" />
+            <item android:title="-nohmd" />
+            <item android:title="-EpicPortal" />
+        </menu>
+    </item>
+    <item android:title="Source">
+        <menu>
+            <item android:title="-novid" />
+            <item android:title="-console" />
+            <item android:title="-w 1280 -h 720" />
+        </menu>
+    </item>
+    <item android:title="VR">
+        <menu>
+            <item android:title="-vr" />
+            <item android:title="-vrmode openvr" />
+            <item android:title="-vrmode openxr" />
+        </menu>
+    </item>
 </menu>

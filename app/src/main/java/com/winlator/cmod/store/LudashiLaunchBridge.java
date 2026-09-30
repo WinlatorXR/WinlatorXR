@@ -22,7 +22,9 @@ import com.winlator.xr.XrActivity;
 import com.winlator.xr.utils.PcvrRuntime;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -129,6 +131,8 @@ public final class LudashiLaunchBridge {
                 if (shortcut.iconFile != null && shortcut.iconFile.getName().startsWith(ICON_PREFIX)) {
                     safeDelete(shortcut.iconFile);
                 }
+                File cover = new File(shortcut.getExtra("customCoverArtPath"));
+                if (cover.getName().startsWith(ICON_PREFIX)) safeDelete(cover);
             }
         }
     }
@@ -232,16 +236,27 @@ public final class LudashiLaunchBridge {
      * Store art is portrait box art or a wide banner, and the Games list shows a small square, so
      * the middle square is kept; fitted whole it would be a sliver.
      */
-    private static String saveIcon(Container container, String safeName,
+    private static String saveIcon(Container container, String safeName, File coverFile,
                                    String userAgent, String... artUrls) {
         String iconName = ICON_PREFIX + safeName;
         File iconFile = new File(container.getIconsDir(64), iconName + ".png");
-        if (iconFile.isFile()) return iconName;
-        return saveIcon(iconFile, userAgent, artUrls) ? iconName : null;
+        // Shortcuts made before covers were kept fetch the art once more to get one
+        if (iconFile.isFile() && coverFile.isFile()) return iconName;
+        return saveIcon(iconFile, coverFile, userAgent, artUrls) || iconFile.isFile() ? iconName : null;
+    }
+
+    /** Where the Games tab's card view finds a shortcut's uncropped artwork. */
+    public static File coversDir(Container container) {
+        return new File(container.getIconsDir(0).getParentFile(), "covers");
     }
 
     /** Downloads the first artwork that works into iconFile, cropped square. Not for the UI thread. */
     public static boolean saveIcon(File iconFile, String userAgent, String... artUrls) {
+        return saveIcon(iconFile, null, userAgent, artUrls);
+    }
+
+    /** As above, also keeping the artwork uncropped in coverFile (may be null) for the card view. */
+    public static boolean saveIcon(File iconFile, @Nullable File coverFile, String userAgent, String... artUrls) {
         File iconDir = iconFile.getParentFile();
         if (artUrls == null) return false;
 
@@ -262,12 +277,30 @@ public final class LudashiLaunchBridge {
                 Log.w(TAG, "Could not create icon directory " + iconDir);
                 return false;
             }
-            if (FileUtils.saveBitmapToFile(icon, iconFile)) return true;
-            Log.w(TAG, "Could not save icon to " + iconFile);
-            return false;
+            if (!FileUtils.saveBitmapToFile(icon, iconFile)) {
+                Log.w(TAG, "Could not save icon to " + iconFile);
+                return false;
+            }
+            if (coverFile != null) saveCover(coverFile, data);
+            return true;
         }
         Log.w(TAG, "No artwork could be downloaded for " + iconFile.getName());
         return false;
+    }
+
+    /** The downloaded bytes as they came, so the card view can show the whole picture. */
+    private static void saveCover(File coverFile, byte[] data) {
+        File coverDir = coverFile.getParentFile();
+        if (!coverDir.isDirectory() && !coverDir.mkdirs()) {
+            Log.w(TAG, "Could not create cover directory " + coverDir);
+            return;
+        }
+        try (FileOutputStream out = new FileOutputStream(coverFile)) {
+            out.write(data);
+        } catch (IOException e) {
+            Log.w(TAG, "Could not save cover to " + coverFile, e);
+            safeDelete(coverFile);
+        }
     }
 
     private static void writeShortcut(Activity activity, Container container,
@@ -306,7 +339,8 @@ public final class LudashiLaunchBridge {
                 String winPath = GogInstallPath.toWinePath(activity, exePath);
                 String escapedWinPath = winPath.replace("\\", "\\\\\\\\");
 
-                String iconName = saveIcon(container, safeName, userAgent, artUrls);
+                File coverFile = new File(coversDir(container), ICON_PREFIX + safeName + ".img");
+                String iconName = saveIcon(container, safeName, coverFile, userAgent, artUrls);
 
                 // The file is rewritten below, so keep an earlier answer to the optional VR question
                 String pcvr = null;
@@ -325,7 +359,8 @@ public final class LudashiLaunchBridge {
                         + "StartupWMClass=explorer\n"
                         + "\n"
                         + "[Extra Data]\n"
-                        + (pcvr != null ? PcvrRuntime.EXTRA_KEY + "=" + pcvr + "\n" : "");
+                        + (pcvr != null ? PcvrRuntime.EXTRA_KEY + "=" + pcvr + "\n" : "")
+                        + (coverFile.isFile() ? "customCoverArtPath=" + coverFile.getPath() + "\n" : "");
                 if (extraData != null) {
                     for (Map.Entry<String, String> e : extraData.entrySet()) content += e.getKey() + "=" + e.getValue() + "\n";
                 }

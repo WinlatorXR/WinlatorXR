@@ -27,6 +27,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.Display;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.R;
@@ -47,6 +50,9 @@ import com.winlator.xr.utils.XrEnvironment;
 public class XrActivity extends XServerDisplayActivity {
     private static XrActivity instance;
     private static XrInput xrInput;
+    private static volatile boolean xrShutDown = false;
+    private boolean closing = false;
+    private boolean exitRequestHandled = false;
 
     // Configuration flags
     private static boolean isEnabled = false;
@@ -227,14 +233,30 @@ public class XrActivity extends XServerDisplayActivity {
     }
 
     @Override
+    public void onPause() {
+        // Pausing stops the render thread, and the OpenXR session has to be ended on it
+        if (isFinishing()) shutdownXr();
+        super.onPause();
+    }
+
+    @Override
     public synchronized void onDestroy() {
         super.onDestroy();
         closeSession();
     }
 
+    @Override
+    public void exitApp() {
+        shutdownXr();
+        super.exitApp();
+    }
+
     public synchronized void closeSession() {
+        if (closing) return;
+        closing = true;
         LaunchReport.onSessionEnd();
         xrInput.unload();
+        shutdownXr();
 
         Intent intent = getBaseContext().getPackageManager()
                 .getLaunchIntentForPackage(getBaseContext().getPackageName());
@@ -243,8 +265,38 @@ public class XrActivity extends XServerDisplayActivity {
             startActivity(intent);
         }
 
+        // The XServer and Wine environment in this process is not built to start a second time
         android.os.Process.killProcess(android.os.Process.myPid());
-        System.exit(0);
+    }
+
+    /**
+     * Ends the OpenXR session and instance on the render thread, whose GL context owns the
+     * swapchains, so the runtime sees the app leave instead of its process vanishing mid-frame.
+     * Waits a bounded time: a render thread that is already paused never runs the request.
+     */
+    private void shutdownXr() {
+        if (xrShutDown || getXServerView() == null) return;
+        CountDownLatch done = new CountDownLatch(1);
+        getXServerView().queueEvent(() -> {
+            nativeShutdown();
+            xrShutDown = true;
+            done.countDown();
+        });
+        try {
+            done.await(1500, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException ignored) {}
+    }
+
+    public static boolean isShutDown() {
+        return xrShutDown;
+    }
+
+    /** Called each frame: leaves the way the Exit menu item does when the runtime asks the app to quit. */
+    public void checkRuntimeExit() {
+        if (!exitRequestHandled && nativeIsExitRequested()) {
+            exitRequestHandled = true;
+            runOnUiThread(this::exitApp);
+        }
     }
 
     public static XrActivity getInstance() {
@@ -372,6 +424,8 @@ public class XrActivity extends XServerDisplayActivity {
 
     // Rendering
     public native void init(int width, int height, int refresh, int cpu, int gpu);
+    public native void nativeShutdown();
+    public native boolean nativeIsExitRequested();
     public native void bindFramebuffer();
     public native int getWidth();
     public native int getHeight();

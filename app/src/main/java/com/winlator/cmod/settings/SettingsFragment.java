@@ -798,16 +798,25 @@ public class SettingsFragment extends Fragment {
 
                     // Case for importing a 360 panorama
                     case REQUEST_CODE_IMPORT_PANORAMA: {
-                        String name = XrEnvironment.nameFor(getContext(), uri);
-                        // Importing the same file twice used to quietly stack up "panorama (2)"
-                        // copies of an image that is already installed; ask instead.
-                        if (name != null && XrEnvironment.exists(getContext(), name)) {
-                            ContentDialog.confirm(getContext(),
-                                    getString(R.string.xr_environment_import_duplicate, name),
-                                    () -> importPanorama(uri, true));
-                        } else {
-                            importPanorama(uri, false);
+                        String fileName = XrEnvironment.nameFor(getContext(), uri);
+                        if (fileName == null) {
+                            AppUtils.showToast(getContext(), R.string.xr_environment_import_failed);
+                            break;
                         }
+                        // Offer the file name, which the user can keep or type over.
+                        ContentDialog.prompt(getContext(), R.string.xr_environment_import_name,
+                                fileName.substring(0, fileName.lastIndexOf('.')), (typed) -> {
+                            String name = XrEnvironment.rename(fileName, typed);
+                            // Importing the same file twice used to quietly stack up "panorama (2)"
+                            // copies of an image that is already installed; ask instead.
+                            if (XrEnvironment.exists(getContext(), name)) {
+                                ContentDialog.confirm(getContext(),
+                                        getString(R.string.xr_environment_import_duplicate, name),
+                                        () -> importPanorama(uri, name, true));
+                            } else {
+                                importPanorama(uri, name, false);
+                            }
+                        });
                         break;
                     }
 
@@ -833,8 +842,8 @@ public class SettingsFragment extends Fragment {
     }
 
     /** Copies a picked panorama in and shows it in the picker. */
-    private void importPanorama(Uri uri, boolean replace) {
-        String imported = XrEnvironment.importFrom(getContext(), uri, replace);
+    private void importPanorama(Uri uri, String name, boolean replace) {
+        String imported = XrEnvironment.importFrom(getContext(), uri, name, replace);
         if (imported == null) {
             AppUtils.showToast(getContext(), R.string.xr_environment_import_failed);
             return;

@@ -106,7 +106,15 @@ public class XrStartupDialog extends ContentDialog {
         Window window = getWindow();
         if (window != null) {
             window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
-            window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
+            // In a headset this window must not take focus: shown before the XR session starts,
+            // it kept the session unfocused, so no controller input arrived - and the menu hold
+            // the hint teaches did nothing - until the hint went. XR dialogs take their input
+            // from XrController, not from window focus.
+            if (xr) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
+            } else {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
+            }
             window.setTitle("");
         }
     }
@@ -147,6 +155,9 @@ public class XrStartupDialog extends ContentDialog {
             }
 
             hintView.setText(hint);
+            View picture = findViewById(R.id.IVHintPicture);
+            picture.setVisibility(hint.equals(menuHint) ? View.VISIBLE : View.GONE);
+            picture.setScaleX(leftHanded ? -1 : 1);
             hintUntil = SystemClock.uptimeMillis()
                     + (firstTimeBoot ? FIRST_BOOT_HINT_MILLIS : HINT_MILLIS);
         }

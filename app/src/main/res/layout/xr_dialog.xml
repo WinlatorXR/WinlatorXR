@@ -277,6 +277,15 @@
                                     android:layout_marginRight="0dp"
                                     android:src="@drawable/icon_remove" />
                             </LinearLayout>
+
+                            <ImageView
+                                android:id="@+id/IVEnvironmentPreview"
+                                android:layout_width="match_parent"
+                                android:layout_height="100dp"
+                                android:layout_marginTop="6dp"
+                                android:scaleType="centerCrop"
+                                android:importantForAccessibility="no"
+                                android:visibility="gone" />
                         </LinearLayout>
 
                         <TextView

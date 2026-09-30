@@ -108,6 +108,16 @@ public final class SteamDatabase extends SQLiteOpenHelper {
             "  vr_support INTEGER NOT NULL DEFAULT 0" +
             ")";
 
+    // Also created in onOpen; the launch options the app info lists, in their listed order
+    private static final String SQL_LAUNCH_OPTIONS =
+            "CREATE TABLE IF NOT EXISTS steam_launch_options (" +
+            "  app_id      INTEGER NOT NULL," +
+            "  idx         INTEGER NOT NULL," +
+            "  description TEXT    NOT NULL DEFAULT ''," +
+            "  arguments   TEXT    NOT NULL," +
+            "  PRIMARY KEY (app_id, idx)" +
+            ")";
+
     public static final int VR_NONE     = 0;
     public static final int VR_OPTIONAL = 1;
     public static final int VR_ONLY     = 2;
@@ -159,6 +169,7 @@ public final class SteamDatabase extends SQLiteOpenHelper {
         if (!db.isReadOnly()) {
             db.execSQL(SQL_BRANCHES);
             db.execSQL(SQL_VR_SUPPORT);
+            db.execSQL(SQL_LAUNCH_OPTIONS);
         }
     }
 
@@ -540,6 +551,41 @@ public final class SteamDatabase extends SQLiteOpenHelper {
                 new String[]{String.valueOf(appId)})) {
             return c.moveToFirst() ? c.getInt(0) : VR_NONE;
         }
+    }
+
+    // =========================================================================
+    // steam_launch_options
+    // =========================================================================
+
+    /** Replace an app's stored launch options; each entry is {description, arguments}. */
+    public void replaceLaunchOptions(int appId, List<String[]> options) {
+        SQLiteDatabase db = getWritableDatabase();
+        db.beginTransaction();
+        try {
+            db.delete("steam_launch_options", "app_id = ?", new String[]{String.valueOf(appId)});
+            for (int i = 0; i < options.size(); i++) {
+                ContentValues cv = new ContentValues();
+                cv.put("app_id",      appId);
+                cv.put("idx",         i);
+                cv.put("description", options.get(i)[0]);
+                cv.put("arguments",   options.get(i)[1]);
+                db.insert("steam_launch_options", null, cv);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /** {description, arguments} pairs; empty until a library sync has stored them. */
+    public List<String[]> getLaunchOptions(int appId) {
+        List<String[]> rows = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery(
+                "SELECT description,arguments FROM steam_launch_options WHERE app_id = ? ORDER BY idx",
+                new String[]{String.valueOf(appId)})) {
+            while (c.moveToNext()) rows.add(new String[]{c.getString(0), c.getString(1)});
+        }
+        return rows;
     }
 
     // =========================================================================

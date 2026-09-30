@@ -77,6 +77,8 @@ struct XrRenderer {
     bool SessionFocused;
     bool Initialized;
     bool StageSupported;
+    // The runtime has told the app to quit (session EXITING or instance loss pending)
+    bool ExitRequested;
     float ConfigFloat[CONFIG_FLOAT_MAX];
     int ConfigInt[CONFIG_INT_MAX];
 

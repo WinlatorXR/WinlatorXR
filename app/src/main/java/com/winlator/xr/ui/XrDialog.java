@@ -20,11 +20,13 @@ package com.winlator.xr.ui;
 
 import android.app.Activity;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.os.Build;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.Spinner;
@@ -294,12 +296,14 @@ public class XrDialog extends ContentDialog {
         // Index 0 is "None", so a stored name maps to its position in the file list plus one.
         sEnvironment.setSelection(files.indexOf(name) + 1);
         updateRemoveEnabled(sEnvironment, btRemove);
+        updatePreview(activity, sEnvironment, name);
 
         sEnvironment.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 updateRemoveEnabled(sEnvironment, btRemove);
                 String selected = position <= 0 ? "" : files.get(position - 1);
+                updatePreview(activity, sEnvironment, selected);
                 if (selected.equals(XrEnvironment.getSelected(activity))) return;
                 applySelection(activity, selected);
             }
@@ -314,6 +318,30 @@ public class XrDialog extends ContentDialog {
         if (!name.equals(XrEnvironment.getSelected(activity))) {
             applySelection(activity, name);
         }
+    }
+
+    /**
+     * Shows a thumbnail of the picked panorama under the picker, or hides it for "None".
+     * Decoded off the UI thread; the tag drops a result that a newer pick has overtaken.
+     */
+    private static void updatePreview(Activity activity, Spinner sEnvironment, String name) {
+        ImageView preview = sEnvironment.getRootView().findViewById(R.id.IVEnvironmentPreview);
+        if (preview == null) return;
+        preview.setTag(name);
+        if (name.isEmpty()) {
+            preview.setImageDrawable(null);
+            preview.setVisibility(View.GONE);
+            return;
+        }
+
+        new Thread(() -> {
+            Bitmap bitmap = XrEnvironment.decodeThumbnail(activity, name, 512);
+            preview.post(() -> {
+                if (!name.equals(preview.getTag())) return;
+                preview.setImageBitmap(bitmap);
+                preview.setVisibility(bitmap != null ? View.VISIBLE : View.GONE);
+            });
+        }, "XrEnvironmentPreview").start();
     }
 
     /** There is nothing to remove while "None" is picked, or while the row is greyed out. */
@@ -376,6 +404,8 @@ public class XrDialog extends ContentDialog {
         setViewEnabled(sEnvironment, enabled);
         setViewEnabled(tvEnvironment, enabled);
         setViewEnabled(btImport, enabled);
+        View preview = sEnvironment.getRootView().findViewById(R.id.IVEnvironmentPreview);
+        if (preview != null) setViewEnabled(preview, enabled);
         // Remove also depends on something being selected, so let that decide once the row
         // itself is enabled again.
         updateRemoveEnabled(sEnvironment, btRemove);
