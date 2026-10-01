@@ -869,7 +869,7 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="open_with_android_browser">Open Android Browser in Wine</string>
     <string name="share_android_clipboard">Share Android Clipboard with Wine</string>
     <string name="force_kgsl_shim">Force KGSL Turnip compatibility shim on all devices</string>
-    <string name="browse_download_with_winlator">Browse Download with Winlator when adding local games</string>
+    <string name="browse_download_with_winlator">Browse Download with Winlator when adding local games or Downloader content</string>
     <string name="enable_launch_report">Record why games fail to start (may affect performance)</string>
     <string name="enable_launch_report_hint">After the next launch, open the game\'s menu on the Games screen and choose Last Launch Report.</string>
     <string name="ddraw_wrapper">DirectX 1–7 Emulation</string>

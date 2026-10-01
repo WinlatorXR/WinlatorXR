@@ -378,6 +378,8 @@ public abstract class FileUtils {
 
     /** Like getFilePathFromUriUsingSAF, but for a single-document Uri (e.g. from ACTION_OPEN_DOCUMENT) rather than a tree Uri. */
     public static String getFilePathFromDocumentUri(Context context, Uri uri) {
+        // Picked with Winlator's own Download browser rather than the system picker
+        if ("file".equals(uri.getScheme())) return uri.getPath();
         String documentId;
         try {
             documentId = DocumentsContract.getDocumentId(uri);

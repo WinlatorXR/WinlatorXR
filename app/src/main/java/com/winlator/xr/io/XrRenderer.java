@@ -203,6 +203,9 @@ public class XrRenderer extends GLRenderer {
             }
         } else {
             fullscreen = false;
+            // Left set from the last frame before shutdown, postFrame would keep ending frames on a
+            // destroyed session until the unreset layer count overflowed the stack and killed the app
+            xrFrameReady = xrFrameStarted = false;
         }
     }
 

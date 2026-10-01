@@ -2,6 +2,7 @@ package com.winlator.cmod;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
@@ -10,6 +11,7 @@ import android.graphics.drawable.InsetDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.text.SpannableStringBuilder;
 import android.text.style.ForegroundColorSpan;
@@ -61,6 +63,7 @@ import com.winlator.cmod.contents.ContentInstaller;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Executors;
@@ -209,12 +212,7 @@ public class ContentsFragment extends Fragment {
     /** What the install button does, which depends on the tab it is pressed on. */
     private void promptInstallContent() {
         if (currentContentType.contains(ContentProfile.ContentType.CONTENT_TYPE_ADRENO_GPU_DRIVERS)) {
-            ContentDialog.confirm(getContext(), getString(R.string.install_drivers_message) + " " + getString(R.string.install_drivers_warning), () -> {
-                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.setType("*/*");
-                getActivity().startActivityFromFragment(this, intent, MainActivity.OPEN_FILE_REQUEST_CODE);
-            });
+            ContentDialog.confirm(getContext(), getString(R.string.install_drivers_message) + " " + getString(R.string.install_drivers_warning), () -> openFilePicker(null));
             return;
         }
 
@@ -237,12 +235,7 @@ public class ContentsFragment extends Fragment {
                 ? getString(R.string.content_suffix_is_wcp_or_runtime_installer)
                 : getString(R.string.content_suffix_is_wcp_packed_xz_zst);
 
-        ContentDialog.confirm(getContext(), message, () -> {
-            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("*/*");
-            getActivity().startActivityFromFragment(this, intent, MainActivity.OPEN_FILE_REQUEST_CODE);
-        });
+        ContentDialog.confirm(getContext(), message, () -> openFilePicker(null));
     }
 
     /**
@@ -277,11 +270,65 @@ public class ContentsFragment extends Fragment {
      * drive a container gets by default -- so the picker opens there for both.
      */
     private void pickFileFromDownloads() {
+        openFilePicker(ContentInstaller.downloadsDocumentUri());
+    }
+
+    /** The system file picker, or Winlator's own Download browser when the setting asks for it. */
+    private void openFilePicker(@Nullable Uri initialUri) {
+        // Android's picker can hide files pushed to Download until the headset restarts
+        if (PreferenceManager.getDefaultSharedPreferences(requireContext())
+                .getBoolean("browse_download_with_winlator", false)) {
+            browseDownloadFolder(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS));
+            return;
+        }
+
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
-        intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, ContentInstaller.downloadsDocumentUri());
+        if (initialUri != null) intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, initialUri);
         getActivity().startActivityFromFragment(this, intent, MainActivity.OPEN_FILE_REQUEST_CODE);
+    }
+
+    /**
+     * Browses Download and its subfolders only, listing every file since each tab takes its own
+     * kind. A pick goes through onActivityResult as the system picker's would.
+     */
+    private void browseDownloadFolder(File dir) {
+        if (getContext() == null) return;
+
+        File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        File[] files = dir.listFiles();
+        if (files == null) files = new File[0];
+        Arrays.sort(files, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+
+        ArrayList<File> entries = new ArrayList<>();
+        for (File file : files) if (file.isDirectory()) entries.add(file);
+        for (File file : files) if (!file.isDirectory()) entries.add(file);
+
+        // The root gets no ".." entry, so nothing above Download can be reached from here.
+        boolean atRoot = dir.getAbsolutePath().equals(downloadDir.getAbsolutePath());
+        ArrayList<String> labels = new ArrayList<>();
+        if (!atRoot) labels.add("..");
+        for (File file : entries) labels.add(file.isDirectory() ? file.getName() + "/" : file.getName());
+
+        new AlertDialog.Builder(getContext())
+                .setTitle(atRoot ? Environment.DIRECTORY_DOWNLOADS : dir.getName())
+                .setItems(labels.toArray(new String[0]), (dialog, which) -> {
+                    if (!atRoot && which == 0) {
+                        browseDownloadFolder(dir.getParentFile());
+                        return;
+                    }
+                    File picked = entries.get(atRoot ? which : which - 1);
+                    if (picked.isDirectory()) browseDownloadFolder(picked);
+                    else onActivityResult(MainActivity.OPEN_FILE_REQUEST_CODE, Activity.RESULT_OK,
+                            new Intent().setData(Uri.fromFile(picked)));
+                })
+                // Backing out clears what was being added, as cancelling the system picker does
+                .setNegativeButton(android.R.string.cancel, (dialog, which) ->
+                        onActivityResult(MainActivity.OPEN_FILE_REQUEST_CODE, Activity.RESULT_CANCELED, null))
+                .setOnCancelListener(dialog ->
+                        onActivityResult(MainActivity.OPEN_FILE_REQUEST_CODE, Activity.RESULT_CANCELED, null))
+                .show();
     }
 
     @Override
