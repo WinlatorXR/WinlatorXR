@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.ContextThemeWrapper;
@@ -31,6 +32,7 @@ import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.navigation.NavigationView;
+import com.winlator.cmod.MainActivity;
 import com.winlator.cmod.R;
 
 public class NavActivity extends AppCompatActivity {
@@ -173,7 +175,32 @@ public class NavActivity extends AppCompatActivity {
             lp.gravity = Gravity.CENTER_HORIZONTAL;
             icon.setLayoutParams(lp);
             icon.setBackground(item.getIcon());
-            layout.addView(icon);
+            int updateCount = MainActivity.getContentUpdateCount();
+            if (item.getItemId() == R.id.main_menu_contents && updateCount > 0) {
+                // Same update count badge as the main bottom bar
+                FrameLayout iconFrame = new FrameLayout(context);
+                LinearLayout.LayoutParams frameLp = new LinearLayout.LayoutParams(size + dpToPx(16, context), size);
+                frameLp.gravity = Gravity.CENTER_HORIZONTAL;
+                iconFrame.setLayoutParams(frameLp);
+                icon.setLayoutParams(new FrameLayout.LayoutParams(size, size, Gravity.CENTER));
+                iconFrame.addView(icon);
+
+                int badgeSize = dpToPx(18, context);
+                GradientDrawable badgeBackground = new GradientDrawable();
+                badgeBackground.setShape(GradientDrawable.OVAL);
+                badgeBackground.setColor(MainActivity.UPDATE_BADGE_COLOR);
+                TextView badge = new TextView(context);
+                badge.setLayoutParams(new FrameLayout.LayoutParams(badgeSize, badgeSize, Gravity.TOP | Gravity.END));
+                badge.setBackground(badgeBackground);
+                badge.setText(String.valueOf(updateCount));
+                badge.setTextColor(Color.WHITE);
+                badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+                badge.setTypeface(Typeface.DEFAULT_BOLD);
+                badge.setGravity(Gravity.CENTER);
+                iconFrame.addView(badge);
+                layout.addView(iconFrame);
+            }
+            else layout.addView(icon);
 
             int width = dpToPx(80, context);
             TextView text = new TextView(context);

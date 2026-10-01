@@ -7,7 +7,9 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -17,11 +19,13 @@ import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -94,6 +98,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private static final String PREF_AUTO_DEFAULT_CONTAINER_CREATED = "auto_default_container_created";
     private static final String PREF_UPGRADE_CONTAINERS_OFFERED = "upgrade_containers_offered";
     private static final String PREF_XR_MENU_LONG_PRESS_NOTICE_SHOWN = "xr_menu_long_press_notice_shown";
+    /** Red, so an update reads as needing attention on both the dark bar and the tabs. */
+    public static final int UPDATE_BADGE_COLOR = 0xFFE53935;
     private DrawerLayout drawerLayout;
     private GridLayout gridLayout;
     public final PreloaderDialog preloaderDialog = new PreloaderDialog(this);
@@ -120,6 +126,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private boolean upgradePromptsShowing = false;
     private boolean vrContentUpdatesPending = false;
     private boolean vrUpdateCheckOnResume = false;
+    // Kept across activity recreation, since the update check only runs once per app start
+    private static int contentUpdateCount = 0;
+    private TextView downloaderBadge;
 
 
     @Override
@@ -286,7 +295,31 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             lp.gravity = Gravity.CENTER_HORIZONTAL;
             icon.setLayoutParams(lp);
             icon.setBackground(item.getIcon());
-            layout.addView(icon);
+            if (item.getItemId() == R.id.main_menu_contents) {
+                // The Downloader's icon carries a count of the updates it lists
+                FrameLayout iconFrame = new FrameLayout(context);
+                LinearLayout.LayoutParams frameLp = new LinearLayout.LayoutParams(size + dpToPx(16, context), size);
+                frameLp.gravity = Gravity.CENTER_HORIZONTAL;
+                iconFrame.setLayoutParams(frameLp);
+                icon.setLayoutParams(new FrameLayout.LayoutParams(size, size, Gravity.CENTER));
+                iconFrame.addView(icon);
+
+                int badgeSize = dpToPx(18, context);
+                GradientDrawable badgeBackground = new GradientDrawable();
+                badgeBackground.setShape(GradientDrawable.OVAL);
+                badgeBackground.setColor(UPDATE_BADGE_COLOR);
+                downloaderBadge = new TextView(context);
+                downloaderBadge.setLayoutParams(new FrameLayout.LayoutParams(badgeSize, badgeSize, Gravity.TOP | Gravity.END));
+                downloaderBadge.setBackground(badgeBackground);
+                downloaderBadge.setTextColor(Color.WHITE);
+                downloaderBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+                downloaderBadge.setTypeface(Typeface.DEFAULT_BOLD);
+                downloaderBadge.setGravity(Gravity.CENTER);
+                iconFrame.addView(downloaderBadge);
+                layout.addView(iconFrame);
+                updateDownloaderBadge();
+            }
+            else layout.addView(icon);
 
             int width = dpToPx(80, context);
             TextView text = new TextView(context);
@@ -299,6 +332,23 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
             gridLayout.addView(layout);
         }
+    }
+
+    /** Shows how many updates the Downloader lists on its bottom bar button, or hides the badge at none. */
+    public void setContentUpdateCount(int count) {
+        contentUpdateCount = count;
+        updateDownloaderBadge();
+    }
+
+    /** The store pages draw their own bottom bar, so they read the count from here. */
+    public static int getContentUpdateCount() {
+        return contentUpdateCount;
+    }
+
+    private void updateDownloaderBadge() {
+        if (downloaderBadge == null) return;
+        downloaderBadge.setText(String.valueOf(contentUpdateCount));
+        downloaderBadge.setVisibility(contentUpdateCount > 0 ? View.VISIBLE : View.GONE);
     }
 
     public int dpToPx(float dp, Context context){
@@ -588,6 +638,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             ContentsManager contentsManager = new ContentsManager(this);
             contentsManager.setRemoteProfiles(json);
             List<ContentProfile> updates = VrContentUpdates.find(this, contentsManager);
+            runOnUiThread(() -> setContentUpdateCount(updates.size()));
             if (apkUpdate == null && updates.isEmpty()) return;
             final ApkUpdate apk = apkUpdate;
             runOnUiThread(() -> {

@@ -4,6 +4,9 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.InsetDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -75,6 +78,9 @@ public class ContentsFragment extends Fragment {
     private PreloaderDialog preloaderDialog;
     private ArrayList<ContentProfile.ContentType> currentContentType = new ArrayList<>();
     private List<ContentProfile> vrUpdates = new ArrayList<>();
+    // Updates can only be told apart once contents.json has arrived; before that every count is zero
+    private boolean remoteProfilesLoaded = false;
+    private TabLayout tabLayout;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -124,9 +130,11 @@ public class ContentsFragment extends Fragment {
         recyclerView.setLayoutManager(new LinearLayoutManager(recyclerView.getContext()));
         recyclerView.addItemDecoration(new DividerItemDecoration(recyclerView.getContext(), DividerItemDecoration.VERTICAL));
 
-        TabLayout tabLayout = layout.findViewById(R.id.TabLayout);
+        tabLayout = layout.findViewById(R.id.TabLayout);
         tabLayout.setTabTextColors(Color.LTGRAY, Color.WHITE);
         tabLayout.setSelectedTabIndicatorColor(Color.WHITE);
+        // Keeps the update dot red instead of the tab's text colour
+        tabLayout.setTabIconTint(null);
 
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
@@ -685,6 +693,7 @@ public class ContentsFragment extends Fragment {
 
         List<ContentProfile> profiles = manager.getProfiles(currentContentType);
         vrUpdates = VrContentUpdates.find(getContext(), manager);
+        if (remoteProfilesLoaded) showUpdateIndicators();
         if (profiles.isEmpty()) {
             emptyText.setVisibility(View.VISIBLE);
             recyclerView.setVisibility(View.GONE);
@@ -716,9 +725,43 @@ public class ContentsFragment extends Fragment {
                 return;
             activity.runOnUiThread(() -> {
                 manager.setRemoteProfiles(json);
+                remoteProfilesLoaded = true;
                 loadContentList();
             });
         }).start();
+    }
+
+    /**
+     * Puts a red dot before the name of each tab holding an update, and the count on the bottom
+     * bar button, so both clear once the update is installed.
+     */
+    private void showUpdateIndicators() {
+        boolean[] tabHasUpdate = new boolean[tabLayout.getTabCount()];
+        for (ContentProfile profile : vrUpdates) {
+            // The tabs the update checker's families are listed on
+            int tab = profile.type == ContentProfile.ContentType.CONTENT_TYPE_PROTON ? 0 : 1;
+            if (tab < tabHasUpdate.length) tabHasUpdate[tab] = true;
+        }
+        // The dot is the tab's icon rather than part of its text: the tab capitalises its text, which
+        // drops any styling, and with an inline icon the label keeps its own single line
+        for (int i = 0; i < tabHasUpdate.length; i++) {
+            TabLayout.Tab tab = tabLayout.getTabAt(i);
+            if (tab != null) tab.setIcon(tabHasUpdate[i] ? createUpdateDot() : null);
+        }
+
+        if (getActivity() instanceof MainActivity)
+            ((MainActivity) getActivity()).setContentUpdateCount(vrUpdates.size());
+    }
+
+    /** A small red dot, inset so the tab's 24dp icon slot doesn't stretch it. */
+    private Drawable createUpdateDot() {
+        float density = getResources().getDisplayMetrics().density;
+        int dotSize = Math.round(8 * density);
+        GradientDrawable dot = new GradientDrawable();
+        dot.setShape(GradientDrawable.OVAL);
+        dot.setColor(MainActivity.UPDATE_BADGE_COLOR);
+        dot.setSize(dotSize, dotSize);
+        return new InsetDrawable(dot, Math.round(12 * density), dotSize, Math.round(4 * density), dotSize);
     }
 
     private class ContentItemAdapter extends RecyclerView.Adapter<ContentItemAdapter.ViewHolder> {
