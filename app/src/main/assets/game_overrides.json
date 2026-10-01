@@ -1,0 +1,318 @@
+{
+  "fixes": [
+    {
+      "label": "Stop OpenSSL crashing on newer CPU features",
+      "env": {
+        "OPENSSL_ia32cap": "~0x20000000"
+      },
+      "games": {
+        "285190": "Warhammer 40,000: Dawn of War III",
+        "366870": "Narcosis",
+        "386360": "SMITE",
+        "392110": "ENDLESS Space 2",
+        "399810": "Call of Cthulhu",
+        "406970": "The Uncertain: Last Quiet Day",
+        "415200": "Motorsport Manager",
+        "420290": "Blackwake",
+        "425670": "Seraph",
+        "433100": "The Town of Light",
+        "433530": "Heliborne - Enhanced Edition",
+        "437630": "State of Mind",
+        "442780": "STRAFE: Gold Edition",
+        "447020": "Farming Simulator 17",
+        "451520": "theBlu: Season 1",
+        "463150": "BARRIER X",
+        "469610": "Rick and Morty: Virtual Rick-ality",
+        "485030": "PLANET ALPHA",
+        "487720": "Agony",
+        "492230": "Space Hulk: Tactics",
+        "521890": "Hello Neighbor",
+        "535850": "Micro Machines World Series",
+        "544920": "Darwin Project",
+        "551770": "ECHO",
+        "556180": "Mysterium: A Psychic Clue Game",
+        "558260": "Gravel",
+        "561600": "MXGP3 - The Official Motocross Videogame",
+        "649950": "Ashen",
+        "661920": "Claybook",
+        "682990": "Drug Dealer Simulator",
+        "711750": "Monster Energy Supercross - The Official Videogame",
+        "748360": "MY HERO ONE'S JUSTICE",
+        "759740": "RIDE 3",
+        "775900": "MotoGP18",
+        "783170": "INSOMNIA: The Ark",
+        "798290": "MXGP PRO",
+        "824280": "Monster Jam Steel Titans",
+        "834280": "Fishing Sim World: Pro Tour",
+        "879420": "Agony UNRATED",
+        "882020": "Monster Energy Supercross - The Official Videogame 2",
+        "890880": "FROSTBITE: Deadly Climate",
+        "967390": "Chronos: Before the Ashes",
+        "968870": "Close to the Sun",
+        "996580": "Spyro Reignited Trilogy",
+        "1029890": "Layers of Fear 2 (2019)",
+        "1051200": "Trover Saves the Universe",
+        "1052070": "Burning Daylight",
+        "1055610": "Deep Space Battle Simulator",
+        "1058450": "MY HERO ONE'S JUSTICE 2",
+        "1092660": "Blair Witch",
+        "1096570": "SONG OF HORROR COMPLETE EDITION",
+        "1133320": "Westworld Awakening",
+        "1150080": "Azur Lane: Crosswave",
+        "1195460": "Last Year",
+        "1237970": "Titanfall® 2",
+        "1342260": "SAMURAI SHODOWN"
+      },
+      "source": "Proton 5b89db94"
+    },
+    {
+      "label": "Stop OpenSSL crashing under FEX (WXR wider mask, try if the one above fails)",
+      "env": {
+        "OPENSSL_ia32cap": "~0x1000020000000000:~0x20000020"
+      },
+      "games": {
+        "285190": "Warhammer 40,000: Dawn of War III",
+        "366870": "Narcosis",
+        "386360": "SMITE",
+        "392110": "ENDLESS Space 2",
+        "399810": "Call of Cthulhu",
+        "406970": "The Uncertain: Last Quiet Day",
+        "415200": "Motorsport Manager",
+        "420290": "Blackwake",
+        "425670": "Seraph",
+        "433100": "The Town of Light",
+        "433530": "Heliborne - Enhanced Edition",
+        "437630": "State of Mind",
+        "442780": "STRAFE: Gold Edition",
+        "447020": "Farming Simulator 17",
+        "451520": "theBlu: Season 1",
+        "463150": "BARRIER X",
+        "469610": "Rick and Morty: Virtual Rick-ality",
+        "485030": "PLANET ALPHA",
+        "487720": "Agony",
+        "492230": "Space Hulk: Tactics",
+        "521890": "Hello Neighbor",
+        "522020": "Blue Effect VR",
+        "535850": "Micro Machines World Series",
+        "544920": "Darwin Project",
+        "551770": "ECHO",
+        "556180": "Mysterium: A Psychic Clue Game",
+        "558260": "Gravel",
+        "561600": "MXGP3 - The Official Motocross Videogame",
+        "649950": "Ashen",
+        "661920": "Claybook",
+        "682990": "Drug Dealer Simulator",
+        "711750": "Monster Energy Supercross - The Official Videogame",
+        "748360": "MY HERO ONE'S JUSTICE",
+        "759740": "RIDE 3",
+        "775900": "MotoGP18",
+        "783170": "INSOMNIA: The Ark",
+        "798290": "MXGP PRO",
+        "824280": "Monster Jam Steel Titans",
+        "834280": "Fishing Sim World: Pro Tour",
+        "879420": "Agony UNRATED",
+        "882020": "Monster Energy Supercross - The Official Videogame 2",
+        "890880": "FROSTBITE: Deadly Climate",
+        "967390": "Chronos: Before the Ashes",
+        "968870": "Close to the Sun",
+        "996580": "Spyro Reignited Trilogy",
+        "1029890": "Layers of Fear 2 (2019)",
+        "1051200": "Trover Saves the Universe",
+        "1052070": "Burning Daylight",
+        "1055610": "Deep Space Battle Simulator",
+        "1058450": "MY HERO ONE'S JUSTICE 2",
+        "1092660": "Blair Witch",
+        "1096570": "SONG OF HORROR COMPLETE EDITION",
+        "1133320": "Westworld Awakening",
+        "1150080": "Azur Lane: Crosswave",
+        "1195460": "Last Year",
+        "1237970": "Titanfall® 2",
+        "1342260": "SAMURAI SHODOWN"
+      },
+      "source": "WinlatorXR"
+    },
+    {
+      "label": "Use the game's own ddraw.dll",
+      "dlls": {
+        "ddraw": "n,b"
+      },
+      "games": {
+        "500810": "Arcanum",
+        "4249100": "Resident Evil (1996)",
+        "4249110": "Resident Evil 2 (1998)",
+        "4249130": "Dino Crisis",
+        "4249150": "Breath of Fire IV"
+      },
+      "source": "Proton 5b89db94"
+    },
+    {
+      "label": "Use the game's own dinput.dll",
+      "dlls": {
+        "dinput": "n,b"
+      },
+      "games": {
+        "3780660": ""
+      },
+      "source": "Proton 5b89db94"
+    },
+    {
+      "label": "Use the game's own winmm.dll",
+      "dlls": {
+        "winmm": "n,b"
+      },
+      "games": {
+        "2471120": ""
+      },
+      "source": "Proton 5b89db94"
+    },
+    {
+      "label": "Disable GameInput",
+      "dlls": {
+        "gameinput": "d"
+      },
+      "games": {
+        "1928420": ""
+      },
+      "source": "Proton 5b89db94"
+    },
+    {
+      "label": "Only offer 16-bit display modes",
+      "env": {
+        "PROTON_LIMIT_RESOLUTIONS": "16"
+      },
+      "games": {
+        "39540": "SpellForce: Platinum Edition"
+      },
+      "source": "Proton 5b89db94"
+    },
+    {
+      "label": "Only offer 32-bit display modes",
+      "env": {
+        "PROTON_LIMIT_RESOLUTIONS": "32"
+      },
+      "games": {
+        "229480": "Dungeons & Dragons: Chronicles of Mystara",
+        "357190": "Ultimate Marvel vs Capcom 3",
+        "374320": "DARK SOULS III",
+        "524220": "NieR: Automata",
+        "730830": "Escape from Monkey Island",
+        "814380": "Sekiro: Shadows Die Twice"
+      },
+      "source": "Proton 5b89db94"
+    },
+    {
+      "label": "Hide Mono types",
+      "env": {
+        "WINE_MONO_HIDETYPES": "1"
+      },
+      "games": {
+        "1183470": "Imperiums: Greek Wars"
+      },
+      "source": "Proton 5b89db94"
+    },
+    {
+      "label": "Stop mimalloc redirecting allocations",
+      "env": {
+        "MIMALLOC_DISABLE_REDIRECT": "1"
+      },
+      "games": {
+        "1167630": "Teardown"
+      },
+      "source": "Proton 5b89db94"
+    },
+    {
+      "label": "Limit address space",
+      "env": {
+        "PROTON_LIMIT_ADDRESS_SPACE": "1"
+      },
+      "games": {
+        "1282270": "",
+        "2963870": ""
+      },
+      "source": "Proton 5b89db94"
+    },
+    {
+      "label": "Limit the game to 1 CPU",
+      "env": {
+        "WINE_CPU_TOPOLOGY": "1"
+      },
+      "games": {
+        "2229830": "Command & Conquer and The Covert Operations"
+      },
+      "source": "Proton 5b89db94"
+    },
+    {
+      "label": "Limit the game to 4 CPUs",
+      "env": {
+        "WINE_CPU_TOPOLOGY": "4"
+      },
+      "games": {
+        "11440": "DiRT",
+        "618970": "Outcast - Second Contact"
+      },
+      "source": "Proton 5b89db94"
+    },
+    {
+      "label": "Limit the game to 8 CPUs",
+      "env": {
+        "WINE_CPU_TOPOLOGY": "8"
+      },
+      "games": {
+        "10150": "Prototype",
+        "15620": "Warhammer 40,000: Dawn of War II",
+        "20570": "Warhammer 40,000: Dawn of War II - Chaos Rising",
+        "56400": "Warhammer 40,000: Dawn of War II - Retribution",
+        "115320": "Prototype 2",
+        "259170": "Alone in the Dark (2008)"
+      },
+      "source": "Proton 5b89db94"
+    },
+    {
+      "label": "Limit the game to 16 CPUs",
+      "env": {
+        "WINE_CPU_TOPOLOGY": "16"
+      },
+      "games": {
+        "19900": "Far Cry 2",
+        "20920": "The Witcher 2: Assassins of Kings Enchanced Edition",
+        "35130": "Lara Croft and the Guardian of Light",
+        "55150": "Warhammer 40,000: Space Marine",
+        "65540": "Gothic 1 Classic",
+        "204450": "Call of Juarez: Gunslinger",
+        "298110": "Far Cry 4",
+        "316260": "Disney Universe"
+      },
+      "source": "Proton 5b89db94"
+    },
+    {
+      "label": "Limit the game to 28 CPUs",
+      "env": {
+        "WINE_CPU_TOPOLOGY": "28"
+      },
+      "games": {
+        "70000": "Dino D-Day"
+      },
+      "source": "Proton 5b89db94"
+    },
+    {
+      "label": "Limit the game to 30 CPUs",
+      "env": {
+        "WINE_CPU_TOPOLOGY": "30"
+      },
+      "games": {
+        "286810": "Hard Truck Apocalypse: Rise of Clans / Ex Machina: Meridian 113"
+      },
+      "source": "Proton 5b89db94"
+    },
+    {
+      "label": "Limit the game to performance cores",
+      "env": {
+        "WINE_CPU_TOPOLOGY": "P"
+      },
+      "games": {
+        "1038250": "DIRT 5"
+      },
+      "source": "Proton 5b89db94"
+    }
+  ]
+}

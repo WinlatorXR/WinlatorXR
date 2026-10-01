@@ -5,11 +5,13 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.drawable.Icon;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.SubMenu;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -38,6 +40,7 @@ import com.winlator.cmod.core.WineInfo;
 import com.winlator.cmod.fexcore.FEXCoreManager;
 import com.winlator.cmod.inputcontrols.ControlsProfile;
 import com.winlator.cmod.inputcontrols.InputControlsManager;
+import com.winlator.cmod.store.GameOverrides;
 import com.winlator.cmod.store.StoreLaunchOptions;
 import com.winlator.cmod.audio.MidiManager;
 import com.winlator.cmod.widget.CPUListView;
@@ -51,6 +54,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class ShortcutSettingsDialog extends ContentDialog {
     private final ShortcutsFragment fragment;
@@ -864,7 +868,80 @@ public class ShortcutSettingsDialog extends ContentDialog {
                 new AddEnvVarDialog(context, envVarsView).show()
         );
 
+        new Thread(() -> {
+            GameOverrides.Result result = GameOverrides.forShortcut(context, shortcut);
+            if (result != null) view.post(() -> showRecognisedOverrides(view, envVarsView, result, isDarkMode));
+        }).start();
+
         return envVarsView;
+    }
+
+    /** Overrides Proton would set for this game; each is only added when the user asks. */
+    private void showRecognisedOverrides(View view, EnvVarsView envVarsView, GameOverrides.Result result, boolean isDarkMode) {
+        final Context context = view.getContext();
+        int textColor = isDarkMode ? Color.WHITE : Color.BLACK;
+
+        TextView tvTitle = view.findViewById(R.id.TVRecognisedOverridesTitle);
+        String game = result.gameName.isEmpty() ? "" : result.gameName + ", ";
+        tvTitle.setText("Recognised for this game (" + game + "Steam " + result.appId + ")");
+        tvTitle.setTextColor(textColor);
+
+        LinearLayout list = view.findViewById(R.id.LLRecognisedOverridesList);
+        // Fixes can set the same variable, so adding one can undo another
+        Map<Button, GameOverrides.Fix> buttons = new java.util.LinkedHashMap<>();
+        Runnable refreshButtons = () -> {
+            for (Map.Entry<Button, GameOverrides.Fix> entry : buttons.entrySet()) {
+                boolean added = isOverrideAdded(envVarsView, entry.getValue());
+                entry.getKey().setText(added ? "Added" : context.getString(R.string.add));
+                entry.getKey().setEnabled(!added);
+            }
+        };
+        for (GameOverrides.Fix fix : result.fixes) {
+            List<String> parts = new ArrayList<>();
+            for (Map.Entry<String, String> env : fix.envVars.entrySet()) parts.add(env.getKey() + "=" + env.getValue());
+            for (Map.Entry<String, String> dll : fix.dllOverrides.entrySet()) parts.add("WINEDLLOVERRIDES " + dll.getKey() + "=" + dll.getValue());
+
+            LinearLayout row = new LinearLayout(context);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+
+            TextView tvFix = new TextView(context);
+            tvFix.setText(fix.label + "\n" + String.join(" ", parts) + (fix.source.isEmpty() ? "" : "\nFrom " + fix.source));
+            tvFix.setTextColor(textColor);
+            row.addView(tvFix, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+
+            Button btAdd = new Button(context, null, 0, R.style.ButtonNeutral);
+            buttons.put(btAdd, fix);
+            btAdd.setOnClickListener((v) -> {
+                for (Map.Entry<String, String> env : fix.envVars.entrySet()) envVarsView.put(env.getKey(), env.getValue());
+                if (!fix.dllOverrides.isEmpty()) {
+                    String dllOverrides = new EnvVars(envVarsView.getEnvVars()).get("WINEDLLOVERRIDES");
+                    for (Map.Entry<String, String> dll : fix.dllOverrides.entrySet()) {
+                        String entry = dll.getKey() + "=" + dll.getValue();
+                        if (!Arrays.asList(dllOverrides.split(";")).contains(entry))
+                            dllOverrides = dllOverrides.isEmpty() ? entry : dllOverrides + ";" + entry;
+                    }
+                    envVarsView.put("WINEDLLOVERRIDES", dllOverrides);
+                }
+                refreshButtons.run();
+            });
+            row.addView(btAdd, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+            row.setPadding(0, 8, 0, 8);
+            list.addView(row);
+        }
+        refreshButtons.run();
+        view.findViewById(R.id.LLRecognisedOverrides).setVisibility(View.VISIBLE);
+    }
+
+    private static boolean isOverrideAdded(EnvVarsView envVarsView, GameOverrides.Fix fix) {
+        EnvVars current = new EnvVars(envVarsView.getEnvVars());
+        for (Map.Entry<String, String> env : fix.envVars.entrySet())
+            if (!env.getValue().equals(current.get(env.getKey()))) return false;
+        List<String> dllOverrides = Arrays.asList(current.get("WINEDLLOVERRIDES").split(";"));
+        for (Map.Entry<String, String> dll : fix.dllOverrides.entrySet())
+            if (!dllOverrides.contains(dll.getKey() + "=" + dll.getValue())) return false;
+        return true;
     }
 
     private void loadControlsProfileSpinner(Spinner spinner, String selectedValue) {

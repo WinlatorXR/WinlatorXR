@@ -41,7 +41,9 @@ public class EnvVarsView extends FrameLayout {
         {"MANGOHUD", "CHECKBOX", "0", "1"},
         {"DXVK_DISABLE_TIMELINE_SEMAPHORES", "CHECKBOX", "0", "1"},
         {"WINE_FAST_YIELD", "CHECKBOX", "0", "1"},
-        {"FEX_DISKCACHE", "CHECKBOX", "0", "1"}
+        {"FEX_DISKCACHE", "CHECKBOX", "0", "1"},
+        // WXR's wider mask for OpenSSL crashes under FEX (Blue Effect VR), then Valve's from Proton
+        {"OPENSSL_ia32cap", "SELECT", "~0x1000020000000000:~0x20000020", "~0x20000000"}
     };
     private final LinearLayout container;
     private final TextView emptyTextView;
@@ -170,6 +172,15 @@ public class EnvVarsView extends FrameLayout {
             if (name.equals(text)) return true;
         }
         return false;
+    }
+
+    // Method to add an environment variable, replacing any row already using the name
+    public void put(String name, String value) {
+        for (int i = container.getChildCount() - 1; i >= 0; i--) {
+            View child = container.getChildAt(i);
+            if (name.equals(((TextView) child.findViewById(R.id.TextView)).getText().toString())) container.removeView(child);
+        }
+        add(name, value);
     }
 
     // Method to add an environment variable

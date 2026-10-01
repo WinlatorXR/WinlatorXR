@@ -888,6 +888,31 @@
                     android:paddingLeft="16dp"
                     android:paddingRight="16dp"/>
 
+                <LinearLayout
+                    android:id="@+id/LLRecognisedOverrides"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingLeft="16dp"
+                    android:paddingRight="16dp"
+                    android:visibility="gone">
+
+                    <View style="@style/HorizontalLine" />
+
+                    <TextView
+                        android:id="@+id/TVRecognisedOverridesTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:id="@+id/LLRecognisedOverridesList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
+
                 <View style="@style/HorizontalLine" />
 
                 <Button
