@@ -40,6 +40,28 @@ public abstract class ImageFsInstaller {
         }
     }
 
+    // The shipped imagefs has some libfoo.so dev links as empty files instead of symlinks. Anything
+    // linked against the bare name (winegstreamer.so -> libgstreamer-1.0.so) then fails to load,
+    // which silently kills GStreamer decoding such as Skyrim's xWMA voices. Point each empty one at
+    // its versioned libfoo.so.N.
+    public static void repairEmptyLibLinks(File libDir) {
+        String[] names = libDir.list();
+        if (names == null) return;
+        java.util.Arrays.sort(names);
+        for (String name : names) {
+            if (!name.endsWith(".so")) continue;
+            File file = new File(libDir, name);
+            if (file.length() != 0 || FileUtils.isSymlink(file)) continue;
+            for (String candidate : names) {
+                if (candidate.startsWith(name + ".") && new File(libDir, candidate).length() > 0) {
+                    FileUtils.symlink(candidate, file.getPath());
+                    Log.i("ImageFsInstaller", "Repaired empty " + name + " -> " + candidate);
+                    break;
+                }
+            }
+        }
+    }
+
     private static String getAssetFile(Context context, String baseName) {
         try {
             String[] assets = context.getAssets().list("");

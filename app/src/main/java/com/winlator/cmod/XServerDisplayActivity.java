@@ -121,6 +121,7 @@ import com.winlator.cmod.winhandler.TaskManagerDialog;
 import com.winlator.cmod.winhandler.WinHandler;
 import com.winlator.cmod.xconnector.UnixSocketConfig;
 import com.winlator.cmod.xenvironment.ImageFs;
+import com.winlator.cmod.xenvironment.ImageFsInstaller;
 import com.winlator.cmod.xenvironment.XEnvironment;
 import com.winlator.cmod.xenvironment.components.ALSAServerComponent;
 import com.winlator.cmod.xenvironment.components.BionicProgramLauncherComponent;
@@ -529,6 +530,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         wineInfo = WineInfo.fromIdentifier(this, contentsManager, wineVersion);
 
         imageFs.setWinePath(wineInfo.path);
+        ImageFsInstaller.repairEmptyLibLinks(imageFs.getLibDir());
 
         ProcessHelper.removeAllDebugCallbacks();
         if (shortcut != null && LaunchReport.isEnabled(this)) ProcessHelper.addDebugCallback(LaunchReport.start(this, shortcut));
