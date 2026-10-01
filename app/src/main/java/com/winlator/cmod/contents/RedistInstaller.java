@@ -10,6 +10,7 @@ import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.GuestScriptRunner;
+import com.winlator.cmod.store.StoreGameInstall;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -98,6 +99,19 @@ public abstract class RedistInstaller {
         for (File child : listDirs(gameDir)) {
             if (isSearchDir(child.getName())) {
                 collectFrom(context, shortcut.container, child, 1, found, seen, true, hasOpenAL);
+            }
+        }
+
+        // An exe further down the game than its root (Unreal's Project\Binaries\Win64) has the
+        // game's _CommonRedist above it, so the folders up to the root are searched too
+        File gameRoot = findGameRoot(context, exeFile, gameDir);
+        for (File dir = gameDir; gameRoot != null && !dir.equals(gameRoot); ) {
+            dir = dir.getParentFile();
+            if (dir == null) break;
+            for (File child : listDirs(dir)) {
+                if (isSearchDir(child.getName())) {
+                    collectFrom(context, shortcut.container, child, 1, found, seen, true, hasOpenAL);
+                }
             }
         }
 
@@ -287,6 +301,24 @@ public abstract class RedistInstaller {
                 redist.label += " - " + FileUtils.getName(FileUtils.getDirname(redist.winPath));
             }
         }
+    }
+
+    /**
+     * The top of the game the exe belongs to, when that is above the exe's own folder: the store
+     * install it sits in, or the folder above an Unreal project's Binaries\Win64. Null otherwise,
+     * so nothing outside the game is searched.
+     */
+    private static File findGameRoot(Context context, File exeFile, File gameDir) {
+        StoreGameInstall install = StoreGameInstall.find(context, exeFile);
+        if (install != null) return install.installDir.equals(gameDir) ? null : install.installDir;
+
+        File binaries = gameDir.getParentFile();
+        String dirName = gameDir.getName().toLowerCase(Locale.ENGLISH);
+        if (binaries == null || !binaries.getName().equalsIgnoreCase("binaries")
+            || !(dirName.equals("win64") || dirName.equals("win32"))) return null;
+
+        File project = binaries.getParentFile();
+        return project != null ? project.getParentFile() : null;
     }
 
     private static boolean isSearchDir(String name) {
