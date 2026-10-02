@@ -8,59 +8,63 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <LinearLayout
+        <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/colorPrimary"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-        <!-- Switches the games between rows and cover cards; says what it will switch to -->
-        <Button
-            android:id="@+id/BTViewMode"
-            style="?android:attr/borderlessButtonStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:layout_marginLeft="8dp"
-            android:minHeight="0dp"
-            android:paddingLeft="8dp"
-            android:paddingRight="8dp"
-            android:drawableLeft="@drawable/icon_view_mode"
-            android:drawablePadding="6dp"
-            android:textAllCaps="false"
-            android:textColor="@android:color/white"
-            android:textSize="13sp" />
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/TabLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:background="@color/colorPrimary"
+                app:tabGravity="center"
+                app:tabInlineLabel="true"
+                app:tabMinWidth="0dp"
+                app:tabMode="scrollable"
+                app:tabPaddingStart="8dp"
+                app:tabPaddingEnd="8dp"
+                xmlns:app="http://schemas.android.com/apk/res-auto">
 
-        <com.google.android.material.tabs.TabLayout
-            android:id="@+id/TabLayout"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:background="@color/colorPrimary"
-            app:tabGravity="center"
-            app:tabInlineLabel="true"
-            app:tabMinWidth="0dp"
-            app:tabMode="scrollable"
-            app:tabPaddingStart="8dp"
-            app:tabPaddingEnd="8dp"
-            xmlns:app="http://schemas.android.com/apk/res-auto">
+                <com.google.android.material.tabs.TabItem
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/shortcuts" />
 
-            <com.google.android.material.tabs.TabItem
+                <com.google.android.material.tabs.TabItem
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/saves" />
+
+                <com.google.android.material.tabs.TabItem
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/store" />
+            </com.google.android.material.tabs.TabLayout>
+
+            <!-- Switches the games between rows and cover cards; says what it will switch to -->
+            <Button
+                android:id="@+id/BTViewMode"
+                style="?android:attr/borderlessButtonStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/shortcuts" />
+                android:layout_marginRight="8dp"
+                android:layout_alignParentRight="true"
+                android:layout_alignBottom="@id/TabLayout"
+                android:minHeight="0dp"
+                android:paddingLeft="8dp"
+                android:paddingRight="8dp"
+                android:paddingBottom="12dp"
+                android:drawableRight="@drawable/icon_view_mode"
+                android:drawablePadding="6dp"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white"
+                android:textSize="13sp" />
 
-            <com.google.android.material.tabs.TabItem
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/saves" />
-
-            <com.google.android.material.tabs.TabItem
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/store" />
-        </com.google.android.material.tabs.TabLayout>
-        </LinearLayout>
+        </RelativeLayout>
 
         <FrameLayout
             android:id="@+id/LLTabShortcuts"
