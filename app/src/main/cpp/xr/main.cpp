@@ -519,6 +519,8 @@ Java_com_winlator_xr_XrActivity_getButtons(JNIEnv *env, jobject obj) {
     data[count++] = r & (int) Up; //R_THUMBSTICK_UP
     data[count++] = r & (int) Down; //R_THUMBSTICK_DOWN
     data[count++] = r & (int) Trigger; //R_TRIGGER
+    data[count++] = l & (int) Rest; //L_THUMBREST
+    data[count++] = r & (int) Rest; //R_THUMBREST
 
     jboolean values[count];
     memcpy(values, data, count * sizeof(jboolean));

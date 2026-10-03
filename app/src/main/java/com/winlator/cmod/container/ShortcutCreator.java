@@ -9,6 +9,7 @@ import com.winlator.cmod.R;
 import com.winlator.cmod.contentdialog.ContentDialog;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.GuestScriptRunner;
+import com.winlator.cmod.store.LudashiLaunchBridge;
 import com.winlator.cmod.store.SteamDatabase;
 import com.winlator.xr.utils.PcvrRuntime;
 import com.winlator.xr.utils.VrGameScanner;
@@ -51,7 +52,11 @@ public abstract class ShortcutCreator {
 
     /** @param vrSupport a SteamDatabase.VR_* value, or VrGameScanner.UNKNOWN to scan the game; VR only turns on PC VR, optional VR asks */
     public static void createForExecutable(Activity activity, File exeFile, File iconFile, int vrSupport, Runnable onCreated) {
-        String gameName = FileUtils.getBasename(exeFile.getName());
+        createForExecutable(activity, exeFile, FileUtils.getBasename(exeFile.getName()), iconFile, vrSupport, onCreated);
+    }
+
+    /** @param gameName what the game is called where the exe's own name is not it, offered as the shortcut's name */
+    public static void createForExecutable(Activity activity, File exeFile, String gameName, File iconFile, int vrSupport, Runnable onCreated) {
 
         List<Container> containers = new ContainerManager(activity).getContainers();
         if (containers == null || containers.isEmpty()) {
@@ -64,11 +69,11 @@ public abstract class ShortcutCreator {
             // A container that already has this game says so instead, which asks the same
             // question and more besides, so the two are never both shown.
             if (!existingShortcutsFor(activity, only, exeFile).isEmpty()) {
-                create(activity, only, exeFile, iconFile, vrSupport, onCreated);
+                create(activity, only, exeFile, gameName, iconFile, vrSupport, onCreated);
                 return;
             }
             ContentDialog.confirm(activity, activity.getString(R.string.shortcut_will_be_created,
-                    gameName, only.getName()), () -> create(activity, only, exeFile, iconFile, vrSupport, onCreated));
+                    gameName, only.getName()), () -> create(activity, only, exeFile, gameName, iconFile, vrSupport, onCreated));
             return;
         }
 
@@ -77,7 +82,7 @@ public abstract class ShortcutCreator {
 
         ContentDialog.showSingleChoiceList(activity,
                 activity.getString(R.string.shortcut_choose_container, gameName), names,
-                which -> create(activity, containers.get(which), exeFile, iconFile, vrSupport, onCreated));
+                which -> create(activity, containers.get(which), exeFile, gameName, iconFile, vrSupport, onCreated));
     }
 
     /**
@@ -88,23 +93,23 @@ public abstract class ShortcutCreator {
      * them -- one set up differently for a different way of playing -- so the answer is the
      * user's rather than something to refuse or to do silently.
      */
-    public static void create(Activity activity, Container container, File exeFile, File iconFile, int vrSupport, Runnable onCreated) {
+    public static void create(Activity activity, Container container, File exeFile, String gameName, File iconFile, int vrSupport, Runnable onCreated) {
         List<Shortcut> existing = existingShortcutsFor(activity, container, exeFile);
         if (!existing.isEmpty()) {
             StringBuilder names = new StringBuilder();
             for (Shortcut shortcut : existing) names.append("\n• ").append(shortcut.name);
 
             ContentDialog dialog = new ContentDialog(activity);
-            dialog.setTitle(FileUtils.getBasename(exeFile.getName()));
+            dialog.setTitle(gameName);
             dialog.setMessage(activity.getString(R.string.shortcut_already_exists,
                     container.getName(), names.toString()));
             ((TextView)dialog.findViewById(R.id.BTConfirm)).setText(R.string.shortcut_create_another);
-            dialog.setOnConfirmCallback(() -> writeAndReport(activity, container, exeFile, iconFile, vrSupport, onCreated));
+            dialog.setOnConfirmCallback(() -> writeAndReport(activity, container, exeFile, gameName, iconFile, vrSupport, onCreated));
             dialog.show();
             return;
         }
 
-        writeAndReport(activity, container, exeFile, iconFile, vrSupport, onCreated);
+        writeAndReport(activity, container, exeFile, gameName, iconFile, vrSupport, onCreated);
     }
 
     /**
@@ -135,12 +140,12 @@ public abstract class ShortcutCreator {
     }
 
     /** Puts the shortcut on disk, having settled that it is wanted. */
-    private static void writeAndReport(Activity activity, Container container, File exeFile, File iconFile, int vrSupport, Runnable onCreated) {
+    private static void writeAndReport(Activity activity, Container container, File exeFile, String gameName, File iconFile, int vrSupport, Runnable onCreated) {
         // A game folder can hold thousands of files, so the scan stays off the UI thread
         if (vrSupport == VrGameScanner.UNKNOWN) {
             Executors.newSingleThreadExecutor().execute(() -> {
                 int found = VrGameScanner.detect(activity, exeFile);
-                activity.runOnUiThread(() -> writeAndReport(activity, container, exeFile, iconFile, found, onCreated));
+                activity.runOnUiThread(() -> writeAndReport(activity, container, exeFile, gameName, iconFile, found, onCreated));
             });
             return;
         }
@@ -148,12 +153,12 @@ public abstract class ShortcutCreator {
         // Optional VR is asked here, and the answer carries on as VR only or none
         if (vrSupport == SteamDatabase.VR_OPTIONAL) {
             ContentDialog dialog = new ContentDialog(activity);
-            dialog.setTitle(FileUtils.getBasename(exeFile.getName()));
-            dialog.setMessage(activity.getString(R.string.shortcut_vr_optional, FileUtils.getBasename(exeFile.getName())));
+            dialog.setTitle(gameName);
+            dialog.setMessage(activity.getString(R.string.shortcut_vr_optional, gameName));
             ((TextView)dialog.findViewById(R.id.BTConfirm)).setText(R.string.shortcut_vr_enable);
             ((TextView)dialog.findViewById(R.id.BTCancel)).setText(R.string.shortcut_vr_skip);
-            dialog.setOnConfirmCallback(() -> writeAndReport(activity, container, exeFile, iconFile, SteamDatabase.VR_ONLY, onCreated));
-            dialog.setOnCancelCallback(() -> writeAndReport(activity, container, exeFile, iconFile, SteamDatabase.VR_NONE, onCreated));
+            dialog.setOnConfirmCallback(() -> writeAndReport(activity, container, exeFile, gameName, iconFile, SteamDatabase.VR_ONLY, onCreated));
+            dialog.setOnCancelCallback(() -> writeAndReport(activity, container, exeFile, gameName, iconFile, SteamDatabase.VR_NONE, onCreated));
             dialog.show();
             return;
         }
@@ -167,15 +172,24 @@ public abstract class ShortcutCreator {
             return;
         }
 
-        File desktopFile = write(activity, container, exeFile, winePath, iconFile, vrSupport == SteamDatabase.VR_ONLY);
-        if (desktopFile == null) {
-            ContentDialog.alert(activity, R.string.shortcut_create_failed, null);
-            return;
-        }
+        // The exe's own name is often not the game's (Game-Win64-Shipping, launcher), so the name
+        // is offered as the default and the user gets the last word before anything is written.
+        ContentDialog.prompt(activity, R.string.shortcut_name_prompt, gameName, name -> {
+            File desktopFile = write(activity, container, exeFile, winePath, iconFile, name, vrSupport == SteamDatabase.VR_ONLY);
+            if (desktopFile == null) {
+                ContentDialog.alert(activity, R.string.shortcut_create_failed, null);
+                return;
+            }
 
-        if (onCreated != null) onCreated.run();
-        ContentDialog.alert(activity, activity.getString(R.string.shortcut_created,
-                FileUtils.getBasename(exeFile.getName()), container.getName()), null);
+            if (onCreated != null) onCreated.run();
+            ContentDialog.alert(activity, activity.getString(R.string.shortcut_created,
+                    name, container.getName()), null);
+        });
+    }
+
+    /** Where the uncropped artwork for an icon is kept: beside it, same name, .img. */
+    public static File coverFor(File iconFile) {
+        return new File(iconFile.getParentFile(), FileUtils.getBasename(iconFile.getName()) + ".img");
     }
 
     /**
@@ -184,14 +198,13 @@ public abstract class ShortcutCreator {
      * A name already taken is numbered rather than overwritten: the same game can reasonably be
      * added to more than one container, and a second copy of one is not a mistake to correct.
      */
-    private static File write(Context context, Container container, File exeFile, String winePath, File iconFile, boolean pcvr) {
+    private static File write(Context context, Container container, File exeFile, String winePath, File iconFile, String gameName, boolean pcvr) {
         File desktopDir = container.getDesktopDir();
         if (!desktopDir.exists() && !desktopDir.mkdirs()) {
             Log.e(TAG, "Could not create the desktop directory at " + desktopDir.getAbsolutePath());
             return null;
         }
 
-        String gameName = FileUtils.getBasename(exeFile.getName());
         String safeName = gameName.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
         if (safeName.isEmpty()) safeName = "game";
 
@@ -211,6 +224,15 @@ public abstract class ShortcutCreator {
         if (iconFile != null && (iconDir.isDirectory() || iconDir.mkdirs())
                 && FileUtils.copy(iconFile, new File(iconDir, iconFile.getName())))
             iconName = FileUtils.getBasename(iconFile.getName());
+        // The card view shows the whole artwork when the icon came with it
+        String coverPath = null;
+        File cover = iconFile != null ? coverFor(iconFile) : null;
+        if (cover != null && cover.isFile()) {
+            File coverDir = LudashiLaunchBridge.coversDir(container);
+            File target = new File(coverDir, cover.getName());
+            if ((coverDir.isDirectory() || coverDir.mkdirs()) && FileUtils.copy(cover, target))
+                coverPath = target.getPath();
+        }
         String content = "[Desktop Entry]\n" +
                 "Name=" + gameName + "\n" +
                 "Exec=wine " + escapedWinePath + "\n" +
@@ -220,7 +242,8 @@ public abstract class ShortcutCreator {
                 "StartupWMClass=" + exeFile.getName() + "\n\n" +
                 "[Extra Data]\n" +
                 "container_id:" + container.id + "\n" +
-                (pcvr ? PcvrRuntime.EXTRA_KEY + "=1\n" : "");
+                (pcvr ? PcvrRuntime.EXTRA_KEY + "=1\n" : "") +
+                (coverPath != null ? "customCoverArtPath=" + coverPath + "\n" : "");
 
         if (FileUtils.writeString(desktopFile, content)) return desktopFile;
 

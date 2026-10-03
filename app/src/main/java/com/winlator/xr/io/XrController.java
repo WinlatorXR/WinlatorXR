@@ -49,7 +49,8 @@ public class XrController {
      */
     public enum Mapping {
         BUTTON_A, BUTTON_B, BUTTON_X, BUTTON_Y, BUTTON_GRIP, BUTTON_TRIGGER,
-        THUMBSTICK_UP, THUMBSTICK_DOWN, THUMBSTICK_LEFT, THUMBSTICK_RIGHT, THUMBSTICK_PRESS
+        THUMBSTICK_UP, THUMBSTICK_DOWN, THUMBSTICK_LEFT, THUMBSTICK_RIGHT, THUMBSTICK_PRESS,
+        THUMBREST_LEFT, THUMBREST_RIGHT
     }
 
     /** How long the primary thumbstick has to be held to open the menu. */
@@ -61,6 +62,15 @@ public class XrController {
     /** Short "shot" pulse on trigger press in lightgun mode, same feel as XrKeyboard's click. */
     private static final int LIGHTGUN_HAPTICS_DURATION = 50;
     private static final float LIGHTGUN_HAPTICS_INTENSITY = 5;
+
+    /** How long both thumbrests have to be held to switch the left stick to a d-pad or back. */
+    private static final long DPAD_LOCK_HOLD_MILLIS = 1000;
+
+    /** How long the right thumbrest has to be touched before the left stick acts as a d-pad. */
+    private static final long DPAD_HOLD_DELAY_MILLIS = 200;
+
+    /** How long the mouse hand's thumbrest has to be held to put the cursor back in the centre. */
+    private static final long MOUSE_CENTRE_HOLD_MILLIS = 3000;
 
     /** How long relative motion may go unanswered before the guest is woken again. */
     private static final long WAKE_INTERVAL_MILLIS = 1000;
@@ -79,6 +89,10 @@ public class XrController {
     private byte tapKeycode = 0;
     private long startPulseEndTime = 0;
     private long dpadComboStartTime = 0;
+    private long dpadLockComboStartTime = 0;
+    private long dpadHoldStartTime = 0;
+    private boolean dpadLocked = false;
+    private long mouseCentreHoldStartTime = 0;
     private long lastMouseUpdate = 0;
     private short lastMouseX = 0;
     private short lastMouseY = 0;
@@ -177,11 +191,33 @@ public class XrController {
         }
         boolean menuLongPress = menuButtonPressTime > 0 && (System.currentTimeMillis() - menuButtonPressTime) > 600;
 
+        // Holding both grips is the d-pad for controllers whose thumbrests report nothing.
         boolean bothGripsPressed = buttons[XrInterface.ControllerButton.L_GRIP.ordinal()] && buttons[XrInterface.ControllerButton.R_GRIP.ordinal()];
         if (bothGripsPressed) {
             if (dpadComboStartTime == 0) dpadComboStartTime = System.currentTimeMillis();
         } else dpadComboStartTime = 0;
         boolean dpadActive = dpadComboStartTime > 0 && (System.currentTimeMillis() - dpadComboStartTime) > 600;
+
+        // Holding both thumbrests switches the left stick to a d-pad until they are held again.
+        boolean bothThumbrests = buttons[XrInterface.ControllerButton.L_THUMBREST.ordinal()] && buttons[XrInterface.ControllerButton.R_THUMBREST.ordinal()];
+        if (bothThumbrests) {
+            if (dpadLockComboStartTime == 0) dpadLockComboStartTime = System.currentTimeMillis();
+            else if (dpadLockComboStartTime > 0 && (System.currentTimeMillis() - dpadLockComboStartTime) > DPAD_LOCK_HOLD_MILLIS) {
+                dpadLocked = !dpadLocked;
+                // One switch per hold: nothing more happens until the thumbs have come off.
+                dpadLockComboStartTime = -1;
+                instance.vibrateController(LIGHTGUN_HAPTICS_DURATION, 0, LIGHTGUN_HAPTICS_INTENSITY);
+                instance.vibrateController(LIGHTGUN_HAPTICS_DURATION, 1, LIGHTGUN_HAPTICS_INTENSITY);
+            }
+        } else dpadLockComboStartTime = 0;
+        // The right thumbrest alone is the same thing for as long as it is touched, for a quick
+        // d-pad press without leaving the stick switched over. It has to stay touched for a
+        // moment first, so a thumb brushing past does not cut the left stick out. It is opt-in:
+        // a thumbrest that reports a touch nobody made would take the left stick away for good.
+        if (XrActivity.thumbrestDpad && buttons[XrInterface.ControllerButton.R_THUMBREST.ordinal()]) {
+            if (dpadHoldStartTime == 0) dpadHoldStartTime = System.currentTimeMillis();
+        } else dpadHoldStartTime = 0;
+        boolean dpadMode = dpadActive || dpadLocked || (dpadHoldStartTime > 0 && (System.currentTimeMillis() - dpadHoldStartTime) > DPAD_HOLD_DELAY_MILLIS);
 
         state.setPressed(ExternalController.IDX_BUTTON_X, buttons[XrInterface.ControllerButton.L_X.ordinal()]);
         state.setPressed(ExternalController.IDX_BUTTON_Y, buttons[XrInterface.ControllerButton.L_Y.ordinal()]);
@@ -198,13 +234,13 @@ public class XrController {
         state.setPressed(ExternalController.IDX_BUTTON_SELECT, menuLongPress);
         state.setPressed(ExternalController.IDX_BUTTON_START, System.currentTimeMillis() < startPulseEndTime);
 
-        state.dpad[0] = dpadActive && buttons[XrInterface.ControllerButton.L_THUMBSTICK_UP.ordinal()];
-        state.dpad[1] = dpadActive && buttons[XrInterface.ControllerButton.L_THUMBSTICK_RIGHT.ordinal()];
-        state.dpad[2] = dpadActive && buttons[XrInterface.ControllerButton.L_THUMBSTICK_DOWN.ordinal()];
-        state.dpad[3] = dpadActive && buttons[XrInterface.ControllerButton.L_THUMBSTICK_LEFT.ordinal()];
+        state.dpad[0] = dpadMode && buttons[XrInterface.ControllerButton.L_THUMBSTICK_UP.ordinal()];
+        state.dpad[1] = dpadMode && buttons[XrInterface.ControllerButton.L_THUMBSTICK_RIGHT.ordinal()];
+        state.dpad[2] = dpadMode && buttons[XrInterface.ControllerButton.L_THUMBSTICK_DOWN.ordinal()];
+        state.dpad[3] = dpadMode && buttons[XrInterface.ControllerButton.L_THUMBSTICK_LEFT.ordinal()];
 
-        state.thumbLX = dpadActive ? 0 : axes[XrInterface.ControllerAxis.L_THUMBSTICK_X.ordinal()];
-        state.thumbLY = dpadActive ? 0 : -axes[XrInterface.ControllerAxis.L_THUMBSTICK_Y.ordinal()];
+        state.thumbLX = dpadMode ? 0 : axes[XrInterface.ControllerAxis.L_THUMBSTICK_X.ordinal()];
+        state.thumbLY = dpadMode ? 0 : -axes[XrInterface.ControllerAxis.L_THUMBSTICK_Y.ordinal()];
         state.thumbRX = axes[XrInterface.ControllerAxis.R_THUMBSTICK_X.ordinal()];
         state.thumbRY = -axes[XrInterface.ControllerAxis.R_THUMBSTICK_Y.ordinal()];
 
@@ -287,6 +323,8 @@ public class XrController {
         mapTapKey(XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBSTICK_PRESS
                 : XrInterface.ControllerButton.R_THUMBSTICK_PRESS,
                 getMapping(context, Mapping.THUMBSTICK_PRESS));
+        mapKey(XrInterface.ControllerButton.L_THUMBREST, getMapping(context, Mapping.THUMBREST_LEFT));
+        mapKey(XrInterface.ControllerButton.R_THUMBREST, getMapping(context, Mapping.THUMBREST_RIGHT));
     }
 
     /**
@@ -398,6 +436,31 @@ public class XrController {
         if (getButtonClicked(buttons, primaryRight)) {
             relativeMouseAccumulator[0] += step;
             smoothedMouse[0] += step;
+        }
+    }
+
+    /**
+     * Holding the mouse hand's thumbrest puts the cursor back in the middle of the screen, for
+     * a cursor that has been lost off an edge. Absolute mouse mode only.
+     */
+    public void updateMouseCentre(boolean[] buttons) {
+        XrInterface.ControllerButton primaryRest = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBREST : XrInterface.ControllerButton.R_THUMBREST;
+        // A lightgun cursor is wherever the controller points, and in immersive mode the mouse
+        // is the camera, so there is nothing to centre in either. In gamepad mode the thumbrests
+        // belong to the d-pad, and with a relative mouse the guest owns the cursor.
+        if (XrActivity.gamepadEmulation || XrActivity.mouseRelative || XrActivity.mouseLightgun || XrActivity.isImmersive || !buttons[primaryRest.ordinal()]) {
+            mouseCentreHoldStartTime = 0;
+            return;
+        }
+        if (mouseCentreHoldStartTime == 0) mouseCentreHoldStartTime = System.currentTimeMillis();
+        else if (mouseCentreHoldStartTime > 0 && (System.currentTimeMillis() - mouseCentreHoldStartTime) > MOUSE_CENTRE_HOLD_MILLIS) {
+            // One reset per hold: nothing more happens until the thumb has come off.
+            mouseCentreHoldStartTime = -1;
+            float cx = instance.getXServer().screenInfo.width / 2.0f;
+            float cy = instance.getXServer().screenInfo.height / 2.0f;
+            smoothedMouse[0] = cx;
+            smoothedMouse[1] = cy;
+            instance.vibrateController(LIGHTGUN_HAPTICS_DURATION, XrActivity.mouseLeftHanded ? 0 : 1, LIGHTGUN_HAPTICS_INTENSITY);
         }
     }
 
@@ -554,6 +617,10 @@ public class XrController {
         // The stick click starts unbound. It is the menu gesture first and a key second, so a
         // game only gets it once someone has asked for that here.
         output += (char)XKeycode.KEY_NONE.id;
+        // The thumbrests are touch only, and a thumb sits on one most of the time, so they
+        // start unbound as well.
+        output += (char)XKeycode.KEY_NONE.id;
+        output += (char)XKeycode.KEY_NONE.id;
         return output;
     }
 
@@ -629,6 +696,7 @@ public class XrController {
     }
 
     private void mapKey(XrInterface.ControllerButton xrButton, byte xKeycode) {
+        if (xKeycode == XKeycode.KEY_NONE.id) return;
         Keyboard keyboard = instance.getXServer().keyboard;
         if (currentButtons[xrButton.ordinal()] != lastButtons[xrButton.ordinal()]) {
             if (currentButtons[xrButton.ordinal()]) {

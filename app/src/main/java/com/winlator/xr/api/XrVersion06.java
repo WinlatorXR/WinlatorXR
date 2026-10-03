@@ -91,8 +91,8 @@ public class XrVersion06 extends XrVersion05 {
     @Override
     public String encode(@NonNull float[] axes, @NonNull boolean[] buttons, int clientIndex) {
         StringBuilder binary = new StringBuilder();
-        for (boolean button : buttons) {
-            binary.append(button ? "T" : "F");
+        for (int i = 0; i < GUEST_BUTTON_COUNT; i++) {
+            binary.append(buttons[i] ? "T" : "F");
         }
 
         XrActivity instance = XrActivity.getInstance();

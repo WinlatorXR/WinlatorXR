@@ -65,6 +65,8 @@ public class XrControllerDialog extends ContentDialog {
         bindMapping(findViewById(R.id.SThumbstickUp), XrController.Mapping.THUMBSTICK_UP);
         bindMapping(findViewById(R.id.SThumbstickDown), XrController.Mapping.THUMBSTICK_DOWN);
         bindMapping(findViewById(R.id.SThumbstickPress), XrController.Mapping.THUMBSTICK_PRESS);
+        bindMapping(findViewById(R.id.SThumbrestLeft), XrController.Mapping.THUMBREST_LEFT);
+        bindMapping(findViewById(R.id.SThumbrestRight), XrController.Mapping.THUMBREST_RIGHT);
 
         setOnConfirmCallback(() -> {
             saveMapping(etName.getText().toString());
@@ -147,7 +149,7 @@ public class XrControllerDialog extends ContentDialog {
         int[] ids = {
                 R.id.SButtonA, R.id.SButtonB, R.id.SButtonX, R.id.SButtonY, R.id.SButtonGrip, R.id.SButtonTrigger,
                 R.id.SThumbstickUp, R.id.SThumbstickDown, R.id.SThumbstickLeft, R.id.SThumbstickRight,
-                R.id.SThumbstickPress
+                R.id.SThumbstickPress, R.id.SThumbrestLeft, R.id.SThumbrestRight
         };
         byte[] output = new byte[ids.length];
         for (int i = 0; i < ids.length; i++) {

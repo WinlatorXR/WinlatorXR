@@ -88,6 +88,31 @@
     <string name="tour_xr_controllers">Input options here set the launch options for every game. It is recommended to leave them as default and control them per game from the in-game XR menu.</string>
     <string name="tour_xr_left_handed">Left-handed swaps the hands over. The XR Menu then opens with a long press of the left joystick (L3).</string>
     <string name="tour_xr_profile">A controller profile changes which button does what. These are the keyboard key presses that are passed to games and containers. Use + to make one of your own.</string>
+    <string name="tour_gamepad">XR controllers as a gamepad</string>
+    <string name="tour_gamepad_tab">The XR tab holds the headset options, including how the controllers act in a game.</string>
+    <string name="tour_gamepad_enable">Gamepad mode makes the two XR controllers act as one gamepad. Ticked here, every game starts with it on, it is recommended to leave this off.\n\nIn a game, open the XR menu and hold X to switch it on or off for that game alone.</string>
+    <string name="tour_gamepad_buttons">What each control becomes:\n\n• Thumbsticks: left and right stick\n• Thumbstick click: L3 and R3\n• A, B, X, Y: the same buttons\n• Triggers: LT and RT\n• Grips: LB and RB</string>
+    <string name="tour_gamepad_menu">The menu button on the left controller is two buttons:\n\n• A short press is Start\n• Holding it is Select (Back)\n\nHolding the right thumbstick click for a second opens the XR menu. With left-handed on, it is the left thumbstick.</string>
+    <string name="tour_gamepad_dpad">The left thumbstick doubles as the d-pad:\n\n• Rest both thumbs on the thumbrests for a second to switch it to a d-pad. The controllers buzz. Do it again to switch back.\n• Or hold both grips for a moment. It is a d-pad until you let go, and the grips do not press LB and RB meanwhile.</string>
+    <string name="tour_gamepad_thumbrest">With this ticked, touching the right thumbrest alone makes the left thumbstick a d-pad for as long as the thumb stays there. Handy for a quick weapon change.\n\nLeave it off if a controller\'s thumbrest reports touches by itself, as the left thumbstick would stop moving you.</string>
+    <string name="tour_mouse">XR controller as a mouse</string>
+    <string name="tour_mouse_enable">Mouse mode makes one XR controller act as a mouse. It uses the right controller. It is recommended to leave this enabled here.\n\nMove your hand to move the cursor.</string>
+    <string name="tour_mouse_buttons">What each control does:\n\n• Trigger: left click\n• Grip: right click\n• Thumbstick up and down: scroll wheel\n• Thumbstick left and right: jump the cursor sideways\n\nHolding the thumbstick click for a second opens the XR menu.</string>
+    <string name="tour_mouse_centre">Lost the cursor? Rest your thumb on the mouse hand\'s thumbrest for three seconds. The controller buzzes and the cursor goes back to the centre of the screen.\n\nThis is off in gamepad mode, in light gun mode and with relative mouse movement.</string>
+    <string name="tour_mouse_lightgun">Light gun mode puts the cursor where the controller points, like a laser pointer, instead of following your hand.\n\nTicking it shows an option to buzz the controller on each trigger press. It also turns relative mouse movement off.\n\nIt is recommended to leave this disabled and control this from the XR menu per game.</string>
+    <string name="tour_mouse_relative">Relative mouse movement sends the game how far the mouse moved, instead of where the cursor is. Some games require this for their mouse input.\n\nContainers on Proton 10 and 11 will automatically enable this to correct game mouse inputs.</string>
+    <string name="tour_vr">PC VR games</string>
+    <string name="tour_vr_games">PC VR can be enabled per game and is detected automatically for games from Steam. Tap Games.</string>
+    <string name="tour_vr_enable">Settings in a game\'s ⋮ menu has the tick box \"PC VR game\". It sets up OpenComposite and OXRWXR, which SteamVR and OpenXR games need to reach the headset.\n\nGames known to be VR only have it ticked for you. Where VR is optional, you are asked when the shortcut is made.</string>
+    <string name="tour_vr_direct">Under it, \"Direct PC VR frames\" sends each eye\'s image straight to the headset, skipping the game window. It needs a Proton 11 WXR-VR container and is greyed out in any other.\n\nA game\'s row shows a PC VR or Direct PC VR badge once it is set.</string>
+    <string name="tour_vr_direct_off">Not every game works with direct frames. If a game shows nothing in the headset, untick \"Direct PC VR frames\" and try again.\n\nOpenGL games cannot use direct frames, so leave it unticked for those.</string>
+    <string name="tour_vr_options">Three more options follow in the same Settings:\n\n• PC VR controller type: the controllers the game is told you are holding. Automatic suits most games.\n• PC VR render scale: lower it for more performance, with direct PC VR.\n• VR field of view: narrows or widens what the game draws.</string>
+    <string name="tour_vr_xrapi">In the Proton 9 x86 container the tick box is \"VR game (XrAPI title)\" instead. It is for games using an XRAPI mod, found in the Downloader\'s Mods tab.</string>
+    <string name="tour_vr_containers">PC VR games run best in the Proton 11 WXR-VR container. Tap Containers.</string>
+    <string name="tour_vr_container_menu">⋮ on a Proton 11 WXR-VR container has \"Enable VR for container\". It holds the same PC VR options for anything started in that container without a shortcut, such as an installer or a game run from the desktop.\n\nIt is advised to leave this disabled and control PC VR per game.</string>
+    <string name="tour_vr_downloader">Updates for PC VR are kept in the Downloader. Tap Downloader.</string>
+    <string name="tour_vr_wine">Newer versions of Proton WXR are listed under Wine.</string>
+    <string name="tour_vr_runtimes">Newer versions of OXRWXR and OpenComposite, the PC VR runtime, are listed under Runtimes. A red dot on a tab means it has an update.</string>
     <string name="tour_add_game_plus">Tap + to add a game.\n\n\"Add Local Game Files\" is for a game exe that is already on your device in the Android \'Download\' folder.\n\"Run a Game Installer\" runs a setup .exe to install it first.</string>
     <string name="containers">Containers</string>
     <string name="container_list">Container list</string>
@@ -641,7 +666,7 @@
     <string name="wheel_emulation">Use controllers as a wheel</string>
     <string name="controllers_as_gamepad">Use XR controllers as gamepad</string>
     <string name="xr_rumble_passthrough">Rumble on XR controllers without gamepad mode</string>
-    <string name="gamepad_radial_to_square">Gamepad radial to square mapping</string>
+    <string name="xr_thumbrest_gamepad">Present right thumbrest area to gamepad mode</string>    <string name="gamepad_radial_to_square">Gamepad radial to square mapping</string>
     <string name="gamepad_thumbstick_type">Joystick Deadzone Mode</string>
     <string name="controllers_as_keys">Use XR controllers as keys</string>
     <string name="controller_as_mouse">Use XR controller as mouse</string>
@@ -659,6 +684,8 @@
     <string name="thumbstick_up">Thumbstick up</string>
     <string name="thumbstick_down">Thumbstick down</string>
     <string name="thumbstick_press">Thumbstick click (primary hand, hold opens the menu)</string>
+    <string name="thumbrest_left">Thumbrest touch (left)</string>
+    <string name="thumbrest_right">Thumbrest touch (right)</string>
     <string name="hint_camera_adjust">Use primary thumstick to adjust camera height.\nUse secondary thumstick to adjust camera position</string>
     <string name="autoclose">Automatically close the container when all windows are closed</string>
     <string name="trackir_plugin">TrackIR emulation plugin</string>
@@ -1058,6 +1085,7 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="shortcut_choose_container">Add a shortcut for \"%1$s\" — which container should it run in?</string>
     <string name="shortcut_will_be_created">A shortcut for \"%1$s\" will be added to the Games tab, set to run in %2$s.</string>
     <string name="shortcut_created">\"%1$s\" added to %2$s. It is on the Games tab.</string>
+    <string name="shortcut_name_prompt">Shortcut name — keep it or rename it</string>
     <string name="shortcut_subtitle_with_source">%1$s • %2$s</string>
     <string name="shortcut_already_exists">%1$s already has a shortcut for this game:%2$s\n\nCreate another one?</string>
     <string name="shortcut_create_another">Create Another</string>

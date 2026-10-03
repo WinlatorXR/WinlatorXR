@@ -319,7 +319,8 @@ public class XrInput {
         if (!XrActivity.gamepadEmulation && !XrActivity.getVR() && xrController.getButtonClicked(buttons, secondaryPress)) {
             if (buttons[primaryGrip.ordinal()]) {
                 XrActivity.isSBS = !XrActivity.isSBS;
-            } else {
+            } else if (!XrActivity.isUDP) {
+                // The menu greys the tick box out while TrackIR or another XR app is connected
                 XrActivity.isImmersive = !XrActivity.isImmersive;
             }
         }
@@ -396,6 +397,7 @@ public class XrInput {
                         }
                         if (XrActivity.mouseLightgun && !XrActivity.isImmersive)
                             xrController.updateMouseLightgun(axes, XrActivity.lastDistance);
+                        xrController.updateMouseCentre(buttons);
                         xrController.updateMouseState(buttons);
                     } else if (headMapping) {
                         xrController.updateMouseAxes(axes, true);

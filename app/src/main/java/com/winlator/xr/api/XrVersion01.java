@@ -62,8 +62,8 @@ public class XrVersion01 implements XrInterface {
     @Override
     public String encode(@NonNull float[] axes, @NonNull boolean[] buttons, int clientIndex) {
         StringBuilder binary = new StringBuilder();
-        for (boolean button : buttons) {
-            binary.append(button ? "T" : "F");
+        for (int i = 0; i < GUEST_BUTTON_COUNT; i++) {
+            binary.append(buttons[i] ? "T" : "F");
         }
         return (MSG_CLIENT + clientIndex +
                 " " + String.format(Locale.US, "%.3f", axes[XrAPI.ControllerAxis.L_QX.ordinal()]) +

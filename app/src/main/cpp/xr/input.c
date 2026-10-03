@@ -44,6 +44,8 @@ void XrInputInit(struct XrEngine* engine, struct XrInput* input)
     input->JoystickRight = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_VECTOR2F_INPUT, "move_on_right_joy","Move on right Joy", 0, NULL);
     input->ThumbLeft = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "thumbstick_left","Thumbstick left", 0, NULL);
     input->ThumbRight = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "thumbstick_right","Thumbstick right", 0, NULL);
+    input->ThumbrestLeft = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "thumbrest_left","Thumbrest left", 0, NULL);
+    input->ThumbrestRight = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "thumbrest_right","Thumbrest right", 0, NULL);
     input->VibrateLeftFeedback = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_VIBRATION_OUTPUT, "vibrate_left_feedback","Vibrate Left Controller", 0, NULL);
     input->VibrateRightFeedback = XrInputCreateAction(input->ActionSet, XR_ACTION_TYPE_VIBRATION_OUTPUT, "vibrate_right_feedback","Vibrate Right Controller", 0, NULL);
 
@@ -100,13 +102,24 @@ void XrInputInit(struct XrEngine* engine, struct XrInput* input)
     bindings[curr++] = XrInputGetBinding(instance, input->HandGripLeft, "/user/hand/left/input/grip/pose");
     bindings[curr++] = XrInputGetBinding(instance, input->HandGripRight, "/user/hand/right/input/grip/pose");
 
+    // The thumbrest goes last so it can be dropped: a runtime that does not have the path on
+    // this profile rejects the whole set, and that would take every other input with it.
+    int withoutThumbrest = curr;
+    bindings[curr++] = XrInputGetBinding(instance, input->ThumbrestLeft, "/user/hand/left/input/thumbrest/touch");
+    bindings[curr++] = XrInputGetBinding(instance, input->ThumbrestRight, "/user/hand/right/input/thumbrest/touch");
+
     XrInteractionProfileSuggestedBinding suggested_bindings = {};
     suggested_bindings.type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING;
     suggested_bindings.next = NULL;
     suggested_bindings.interactionProfile = interactionProfilePath;
     suggested_bindings.suggestedBindings = bindings;
     suggested_bindings.countSuggestedBindings = curr;
-    OXR(xrSuggestInteractionProfileBindings(engine->Instance, &suggested_bindings));
+    if (XR_FAILED(xrSuggestInteractionProfileBindings(engine->Instance, &suggested_bindings)))
+    {
+        ALOGV("thumbrest not available on this profile, binding without it");
+        suggested_bindings.countSuggestedBindings = withoutThumbrest;
+        OXR(xrSuggestInteractionProfileBindings(engine->Instance, &suggested_bindings));
+    }
 
     // Attach actions
     XrSessionActionSetsAttachInfo attach_info = {};
@@ -256,6 +269,8 @@ void XrInputUpdate(struct XrEngine* engine, struct XrInput* input)
         input->ButtonsLeft |= (int)Grip;
     if (XrInputGetActionStateBoolean(session, input->ThumbLeft).currentState)
         input->ButtonsLeft |= (int)LThumb;
+    if (XrInputGetActionStateBoolean(session, input->ThumbrestLeft).currentState)
+        input->ButtonsLeft |= (int)Rest;
     input->ButtonsRight = 0;
     input->TriggerRight = XrInputGetActionStateFloat(session, input->IndexRight).currentState;
     if (XrInputGetActionStateBoolean(session, input->ButtonA).currentState)
@@ -269,6 +284,8 @@ void XrInputUpdate(struct XrEngine* engine, struct XrInput* input)
         input->ButtonsRight |= (int)Grip;
     if (XrInputGetActionStateBoolean(session, input->ThumbRight).currentState)
         input->ButtonsRight |= (int)RThumb;
+    if (XrInputGetActionStateBoolean(session, input->ThumbrestRight).currentState)
+        input->ButtonsRight |= (int)Rest;
 
     // thumbstick
     float deadzone = 0.6f;

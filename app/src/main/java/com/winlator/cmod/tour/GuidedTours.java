@@ -32,6 +32,9 @@ public final class GuidedTours {
                 activity.getString(R.string.tour_saves),
                 activity.getString(R.string.tour_controllers),
                 activity.getString(R.string.tour_xr_settings),
+                activity.getString(R.string.tour_gamepad),
+                activity.getString(R.string.tour_mouse),
+                activity.getString(R.string.tour_vr),
                 activity.getString(R.string.tour_containers),
                 activity.getString(R.string.tour_downloader),
                 activity.getString(R.string.tour_mods),
@@ -48,10 +51,13 @@ public final class GuidedTours {
                         case 4 -> saves(activity);
                         case 5 -> externalControllers(activity);
                         case 6 -> xrSettings(activity);
-                        case 7 -> containers(activity);
-                        case 8 -> downloader(activity);
-                        case 9 -> mods(activity);
-                        case 10 -> backup(activity);
+                        case 7 -> gamepad(activity);
+                        case 8 -> mouse(activity);
+                        case 9 -> vr(activity);
+                        case 10 -> containers(activity);
+                        case 11 -> downloader(activity);
+                        case 12 -> mods(activity);
+                        case 13 -> backup(activity);
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
@@ -152,6 +158,69 @@ public final class GuidedTours {
                         .alsoSpotlight(() -> activity.findViewById(R.id.CBPlayerXRMouse)),
                 xrSetting(activity, R.string.tour_xr_left_handed, R.id.CBPlayerXRMouseLeftHanded, openSettings),
                 xrSetting(activity, R.string.tour_xr_profile, R.id.LLSpinnerLayout, openSettings)));
+    }
+
+    /**
+     * The XR controllers as a gamepad: which button is which, and the ways to a d-pad. There is
+     * no screen of the bindings to point at, so the steps that list them stay on the gamepad
+     * tick box.
+     */
+    public static void gamepad(MainActivity activity) {
+        Runnable openSettings = () -> open(activity, R.id.main_menu_settings, SettingsFragment.class);
+
+        GuidedTour.start(activity, Arrays.asList(
+                new GuidedTour.Step(R.string.tour_xr_nav, () -> navButton(activity, R.id.main_menu_settings), null),
+                new GuidedTour.Step(R.string.tour_gamepad_tab, () -> tab(activity, SettingsFragment.class, 3), openSettings),
+                xrSetting(activity, R.string.tour_gamepad_enable, R.id.CBPlayerXRGamepad, openSettings),
+                xrSetting(activity, R.string.tour_gamepad_buttons, R.id.CBPlayerXRGamepad, openSettings),
+                xrSetting(activity, R.string.tour_gamepad_menu, R.id.CBPlayerXRGamepad, openSettings),
+                xrSetting(activity, R.string.tour_gamepad_dpad, R.id.CBPlayerXRGamepad, openSettings),
+                xrSetting(activity, R.string.tour_gamepad_thumbrest, R.id.CBPlayerXRThumbrestDpad, openSettings)));
+    }
+
+    /**
+     * An XR controller as a mouse: what its controls do, centring a lost cursor, and the light
+     * gun and relative modes. The steps with nothing of their own to point at stay on the mouse
+     * tick box.
+     */
+    public static void mouse(MainActivity activity) {
+        Runnable openSettings = () -> open(activity, R.id.main_menu_settings, SettingsFragment.class);
+
+        GuidedTour.start(activity, Arrays.asList(
+                new GuidedTour.Step(R.string.tour_xr_nav, () -> navButton(activity, R.id.main_menu_settings), null),
+                new GuidedTour.Step(R.string.tour_gamepad_tab, () -> tab(activity, SettingsFragment.class, 3), openSettings),
+                xrSetting(activity, R.string.tour_mouse_enable, R.id.CBPlayerXRMouse, openSettings),
+                xrSetting(activity, R.string.tour_mouse_buttons, R.id.CBPlayerXRMouse, openSettings),
+                xrSetting(activity, R.string.tour_mouse_centre, R.id.CBPlayerXRMouse, openSettings),
+                xrSetting(activity, R.string.tour_xr_left_handed, R.id.CBPlayerXRMouseLeftHanded, openSettings),
+                xrSetting(activity, R.string.tour_mouse_lightgun, R.id.CBPlayerXRMouseLightgun, openSettings),
+                xrSetting(activity, R.string.tour_mouse_relative, R.id.CBRelativeMouse, openSettings)));
+    }
+
+    /**
+     * PC VR: the tick boxes in a game's settings, the same options kept on a container, and
+     * where the runtime's updates are. The settings open as windows of their own, so those steps
+     * point at the ⋮ that leads to them.
+     */
+    public static void vr(MainActivity activity) {
+        Runnable openGames = () -> open(activity, R.id.main_menu_shortcuts, ShortcutsFragment.class);
+        Runnable openContainers = () -> open(activity, R.id.main_menu_containers, ContainersFragment.class);
+        Runnable openDownloader = () -> open(activity, R.id.main_menu_contents, ContentsFragment.class);
+        Supplier<View> menu = () -> firstRowView(activity, ShortcutsFragment.class, 0, R.id.LLTabShortcuts, R.id.BTMenu);
+
+        GuidedTour.start(activity, Arrays.asList(
+                new GuidedTour.Step(R.string.tour_vr_games, () -> navButton(activity, R.id.main_menu_shortcuts), null),
+                new GuidedTour.Step(R.string.tour_vr_enable, menu, openGames).noPress(),
+                new GuidedTour.Step(R.string.tour_vr_direct, menu, openGames).noPress(),
+                new GuidedTour.Step(R.string.tour_vr_direct_off, menu, openGames).noPress(),
+                new GuidedTour.Step(R.string.tour_vr_options, menu, openGames).noPress(),
+                new GuidedTour.Step(R.string.tour_vr_xrapi, menu, openGames).noPress(),
+                new GuidedTour.Step(R.string.tour_vr_containers, () -> navButton(activity, R.id.main_menu_containers), null),
+                new GuidedTour.Step(R.string.tour_vr_container_menu,
+                        () -> firstRowView(activity, ContainersFragment.class, 0, R.id.BTMenu), openContainers).noPress(),
+                new GuidedTour.Step(R.string.tour_vr_downloader, () -> navButton(activity, R.id.main_menu_contents), null),
+                new GuidedTour.Step(R.string.tour_vr_wine, () -> tab(activity, ContentsFragment.class, 0), openDownloader),
+                new GuidedTour.Step(R.string.tour_vr_runtimes, () -> tab(activity, ContentsFragment.class, 1), openDownloader)));
     }
 
     /** The Downloader's + for importing, then its main tabs: Wine, Runtimes, FEXCore and Mods. */

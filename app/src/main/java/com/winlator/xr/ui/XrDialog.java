@@ -146,6 +146,7 @@ public class XrDialog extends ContentDialog {
         CheckBox cbGamepad = findViewById(R.id.CBPlayerXRGamepad);
         CheckBox cbKeys = findViewById(R.id.CBPlayerXRKeys);
         controllerUI(cbMouseLeftHanded, cbMouseLightgun, cbLightgunHaptic, cbRelativeMouse, cbMouse, cbGamepad, cbKeys);
+        thumbrestDpadUI(findViewById(R.id.CBPlayerXRThumbrestDpad));
 
         // Which controller profile is in use belongs to the game; the profiles themselves
         // are a shared library and stay in the app-wide preferences.
@@ -179,6 +180,22 @@ public class XrDialog extends ContentDialog {
             saveConfig(cbShowFPS, XrActivity.PREF_SHOW_FPS, checked);
             XrActivity.showFPS = checked;
         });
+    }
+
+    /**
+     * The right thumbrest turning the left stick into a d-pad under gamepad emulation. Off
+     * until asked for: a thumbrest that reports a touch nobody made would take the left stick's
+     * movement away. From Settings it can be set once for every game.
+     */
+    public static void thumbrestDpadUI(CheckBox cbThumbrestDpad) {
+        loadConfig(cbThumbrestDpad, "use_xr_thumbrest_dpad", XrActivity.DEFAULT_THUMBREST_DPAD, XrActivity.thumbrestDpad);
+        cbThumbrestDpad.setOnCheckedChangeListener((compoundButton, checked) -> {
+            saveConfig(cbThumbrestDpad, "use_xr_thumbrest_dpad", checked);
+            XrActivity.thumbrestDpad = checked;
+        });
+        // In a session it only means anything with gamepad mode on. Settings leaves it free,
+        // so it can be set up front whatever the gamepad default is.
+        if (XrActivity.isActive()) cbThumbrestDpad.setEnabled(XrActivity.gamepadEmulation);
     }
 
     public static void controllerUI(CheckBox cbMouseLeftHanded, CheckBox cbMouseLightgun, CheckBox cbLightgunHaptic, CheckBox cbRelativeMouse, CheckBox cbMouse, CheckBox cbGamepad, CheckBox cbKeys) {
@@ -233,6 +250,10 @@ public class XrDialog extends ContentDialog {
             saveConfig(cbGamepad, "use_xr_gamepad", checked);
             XrActivity.gamepadEmulation = checked;
             updateImmersiveLabel(cbGamepad, checked);
+            if (XrActivity.isActive()) {
+                View cbThumbrestDpad = cbGamepad.getRootView().findViewById(R.id.CBPlayerXRThumbrestDpad);
+                if (cbThumbrestDpad != null) cbThumbrestDpad.setEnabled(checked);
+            }
             if (checked && XrActivity.isActive()) {
                 XrInput.ensureVirtualControllerAttached();
             }

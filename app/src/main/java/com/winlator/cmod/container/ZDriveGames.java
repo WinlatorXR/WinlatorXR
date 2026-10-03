@@ -191,8 +191,11 @@ public abstract class ZDriveGames {
 
         File iconFile = new File(new File(context.getCacheDir(), "z_drive_icons"), LudashiLaunchBridge.ICON_PREFIX
                 + game.dir.getParentFile().getName() + "_" + game.getName() + ".png");
-        if (iconFile.isFile()) return iconFile;
-        return LudashiLaunchBridge.saveIcon(iconFile, install.artUserAgent(), install.artUrls(context)) ? iconFile : null;
+        // The uncropped art goes beside it for a shortcut's card; icons cached before that fetch once more
+        File coverFile = ShortcutCreator.coverFor(iconFile);
+        if (iconFile.isFile() && coverFile.isFile()) return iconFile;
+        return LudashiLaunchBridge.saveIcon(iconFile, coverFile, install.artUserAgent(), install.artUrls(context))
+                || iconFile.isFile() ? iconFile : null;
     }
 
     /* ------------------------------------------------------------------ *
@@ -229,7 +232,7 @@ public abstract class ZDriveGames {
                 }
 
                 if (executables.size() == 1) {
-                    ShortcutCreator.createForExecutable(activity, executables.get(0), iconFile, vrSupport, onCreated);
+                    ShortcutCreator.createForExecutable(activity, executables.get(0), game.getName(), iconFile, vrSupport, onCreated);
                     return;
                 }
 
@@ -239,7 +242,7 @@ public abstract class ZDriveGames {
 
                 ContentDialog.showSingleChoiceList(activity,
                         activity.getString(R.string.zip_choose_game_title, game.getName()), names,
-                        which -> ShortcutCreator.createForExecutable(activity, executables.get(which), iconFile, vrSupport, onCreated));
+                        which -> ShortcutCreator.createForExecutable(activity, executables.get(which), game.getName(), iconFile, vrSupport, onCreated));
             });
         });
     }

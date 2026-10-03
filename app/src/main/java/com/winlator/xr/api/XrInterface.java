@@ -42,7 +42,14 @@ public interface XrInterface {
     enum ControllerButton {
         L_GRIP,  L_MENU, L_THUMBSTICK_PRESS, L_THUMBSTICK_LEFT, L_THUMBSTICK_RIGHT, L_THUMBSTICK_UP, L_THUMBSTICK_DOWN, L_TRIGGER, L_X, L_Y,
         R_A, R_B, R_GRIP, R_THUMBSTICK_PRESS, R_THUMBSTICK_LEFT, R_THUMBSTICK_RIGHT, R_THUMBSTICK_UP, R_THUMBSTICK_DOWN, R_TRIGGER,
+        L_THUMBREST, R_THUMBREST,
     }
+
+    /**
+     * How many buttons a Windows app is sent. The guest side reads a fixed run of them, so
+     * anything added to ControllerButton after R_TRIGGER stays on this side of the wire.
+     */
+    int GUEST_BUTTON_COUNT = ControllerButton.R_TRIGGER.ordinal() + 1;
 
     enum PortIntent {
         HMD_STATE,

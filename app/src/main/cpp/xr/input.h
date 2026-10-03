@@ -41,6 +41,7 @@ enum XrButton
     Back = 0x00200000,  //< Back button on the Go Controller (only set when
     // a short press comes up)
     Grip = 0x04000000,    //< grip trigger engaged
+    Rest = 0x08000000,    //< thumb on the thumbrest
     Trigger = 0x20000000  //< Index Trigger engaged
 };
 
@@ -69,6 +70,8 @@ struct XrInput {
     XrAction JoystickRight;
     XrAction ThumbLeft;
     XrAction ThumbRight;
+    XrAction ThumbrestLeft;
+    XrAction ThumbrestRight;
     XrAction VibrateLeftFeedback;
     XrAction VibrateRightFeedback;
     XrSpace LeftControllerAimSpace;
