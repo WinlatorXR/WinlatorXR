@@ -36,7 +36,6 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -1360,12 +1359,12 @@ public class ShortcutsFragment extends Fragment {
         private final boolean cardView;
 
         private class ViewHolder extends RecyclerView.ViewHolder {
-            private final ImageButton menuButton;
+            private final ImageView menuButton;
             private final ImageButton imageView;
             private final TextView title;
             private final TextView subtitle;
             private final View innerArea;
-            private final Button playButton;
+            private final View playButton;
 
             private ViewHolder(View view) {
                 super(view);
@@ -1375,25 +1374,6 @@ public class ShortcutsFragment extends Fragment {
                 this.menuButton = view.findViewById(R.id.BTMenu);
                 this.innerArea = view.findViewById(R.id.LLInnerArea);
                 this.playButton = view.findViewById(R.id.BTPlay);
-                // A card is laid out for itself in its own file
-                if (cardView) return;
-
-                // Only the play button starts the game; the rest of the row was too easy to hit by mistake
-                innerArea.setClickable(false);
-                innerArea.setFocusable(false);
-                view.findViewById(R.id.FLPlay).setVisibility(View.VISIBLE);
-                // The name and its container/source/profile line get all the room the button
-                // doesn't need, and wrap rather than being cut off
-                LinearLayout.LayoutParams playParams = (LinearLayout.LayoutParams) view.findViewById(R.id.FLPlay).getLayoutParams();
-                playParams.width = ViewGroup.LayoutParams.WRAP_CONTENT;
-                playParams.weight = 0;
-                DisplayMetrics metrics = view.getResources().getDisplayMetrics();
-                playButton.setMaxWidth((int) (metrics.widthPixels * 0.4f));
-                for (TextView text : new TextView[]{title, subtitle}) {
-                    text.setSingleLine(false);
-                    text.setMaxLines(Integer.MAX_VALUE);
-                    text.setEllipsize(null);
-                }
             }
         }
 
@@ -1419,7 +1399,11 @@ public class ShortcutsFragment extends Fragment {
         @Override
         public void onViewRecycled(@NonNull ViewHolder holder) {
             holder.menuButton.setOnClickListener(null);
-            holder.playButton.setOnClickListener(null);
+            if (holder.playButton != null) {
+                holder.playButton.setOnClickListener(null);
+            } else {
+                holder.innerArea.setOnClickListener(null);
+            }
             super.onViewRecycled(holder);
         }
 
@@ -1472,10 +1456,11 @@ public class ShortcutsFragment extends Fragment {
             }
             holder.subtitle.setText(subtitle);
             holder.menuButton.setOnClickListener((v) -> showListItemMenu(v, item));
-            // Set on every bind, so a renamed shortcut's button follows its new name. A card
-            // shows the name above its button already, so its button just says Play.
-            if (!cardView) holder.playButton.setText(item.name);
-            holder.playButton.setOnClickListener((v) -> runFromShortcut(item));
+            if (holder.playButton != null) {
+                holder.playButton.setOnClickListener((v) -> runFromShortcut(item));
+            } else {
+                holder.innerArea.setOnClickListener((v) -> runFromShortcut(item));
+            }
 
             // Get the context from the item view
             Context context = holder.itemView.getContext();
@@ -1491,12 +1476,6 @@ public class ShortcutsFragment extends Fragment {
                 // Set the text color to something dark for light backgrounds
                 holder.title.setTextColor(android.graphics.Color.BLACK);
             }
-            // The play button is only an outline, so its outline, text and icon follow the title
-            int playColour = isDarkMode ? android.graphics.Color.WHITE : android.graphics.Color.BLACK;
-            holder.playButton.setBackgroundResource(isDarkMode
-                    ? R.drawable.shortcut_play_button_bg_dark : R.drawable.shortcut_play_button_bg);
-            holder.playButton.setTextColor(playColour);
-            holder.playButton.setCompoundDrawableTintList(ColorStateList.valueOf(playColour));
         }
 
         @Override

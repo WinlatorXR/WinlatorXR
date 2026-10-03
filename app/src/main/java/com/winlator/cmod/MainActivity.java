@@ -158,6 +158,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         setContentView(R.layout.main_activity);
 
         drawerLayout = findViewById(R.id.DrawerLayout);
+        drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
         NavigationView navigationView = findViewById(R.id.NavigationView);
         navigationView.setNavigationItemSelectedListener(this);
 
@@ -756,14 +757,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 showXrMenuLongPressNoticeIfNeeded();
                 return;
             }
-            ContentDialog finalDialog = new ContentDialog(this);
-            finalDialog.setTitle(R.string.upgrade_containers_title);
-            finalDialog.setMessage(R.string.upgrade_containers_final_message);
-            ((TextView) finalDialog.findViewById(R.id.BTConfirm)).setText(R.string.upgrade_containers_create);
-            ((TextView) finalDialog.findViewById(R.id.BTCancel)).setText(R.string.upgrade_containers_im_sure);
-            finalDialog.setOnConfirmCallback(this::createDefaultContainers);
-            finalDialog.setOnDismissListener(fd -> showXrMenuLongPressNoticeIfNeeded());
-            finalDialog.show();
         });
         dialog.show();
     }
