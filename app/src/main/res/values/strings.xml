@@ -686,7 +686,7 @@
     <string name="thumbstick_press">Thumbstick click (primary hand, hold opens the menu)</string>
     <string name="thumbrest_left">Thumbrest touch (left)</string>
     <string name="thumbrest_right">Thumbrest touch (right)</string>
-    <string name="hint_camera_adjust">Use primary thumstick to adjust camera height.\nUse secondary thumstick to adjust camera position</string>
+    <string name="hint_camera_adjust">Use primary thumbstick to adjust camera height.\nUse secondary thumbstick to adjust camera position</string>
     <string name="autoclose">Automatically close the container when all windows are closed</string>
     <string name="trackir_plugin">TrackIR emulation plugin</string>
     <string name="pcvr_runtime">PC VR game (set up OpenComposite and OXRWXR for SteamVR and OpenXR titles)</string>
