@@ -48,6 +48,7 @@ Winlator is an Android application that lets you to run Windows (x86_64) applica
 # Credits and Third-party apps
 - Ubuntu RootFs ([Focal Fossa](https://releases.ubuntu.com/focal))
 - Wine ([winehq.org](https://www.winehq.org/))
+- Proton Wine 11.0-2 arm64ec (LGPL 2.1), built by The412Banner ([github.com/The412Banner/proton-wine](https://github.com/The412Banner/proton-wine/tree/proton_11.0-2)); licence texts are inside the package
 - Box86/Box64 by [ptitseb](https://github.com/ptitSeb)
 - PRoot ([proot-me.github.io](https://proot-me.github.io))
 - Mesa (Turnip/Zink/VirGL) ([mesa3d.org](https://www.mesa3d.org))

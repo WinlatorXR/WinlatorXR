@@ -92,6 +92,8 @@ public class ContainerManager {
                 }
             }
         }
+        // listFiles() has no guaranteed order, so list them in the order they were created
+        Collections.sort(containers, (a, b) -> Integer.compare(a.id, b.id));
     }
 
 

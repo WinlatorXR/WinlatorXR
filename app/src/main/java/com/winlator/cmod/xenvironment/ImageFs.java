@@ -17,6 +17,8 @@ public class ImageFs {
     public static final String CACHE_PATH = HOME_PATH+"/.cache";
     public static final String CONFIG_PATH = HOME_PATH+"/.config";
     public static final String WINEPREFIX = HOME_PATH+"/.wine";
+    // Bump when graphics_driver/extra_libs.tzst changes, so it is extracted again.
+    public static final int EXTRA_LIBS_VERSION = 1;
     private final File rootDir;
     public String winePath;
     public String home_path;
@@ -84,6 +86,39 @@ public class ImageFs {
 
     public File getImgVersionFile() {
         return new File(getConfigDir(), ".img_version");
+    }
+
+    public File getMainWrapperFile() {
+        return new File(getConfigDir(), ".main_wrapper");
+    }
+
+    public String getInstalledMainWrapper() {
+        File file = getMainWrapperFile();
+        return file.exists() ? FileUtils.readString(file).trim() : "";
+    }
+
+    public void setInstalledMainWrapper(String mainWrapper) {
+        getConfigDir().mkdirs();
+        FileUtils.writeString(getMainWrapperFile(), mainWrapper);
+    }
+
+    public File getExtraLibsVersionFile() {
+        return new File(getConfigDir(), ".extra_libs_version");
+    }
+
+    public int getExtraLibsVersion() {
+        File file = getExtraLibsVersionFile();
+        try {
+            return file.exists() ? Integer.parseInt(FileUtils.readString(file).trim()) : 0;
+        }
+        catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    public void setExtraLibsVersion(int version) {
+        getConfigDir().mkdirs();
+        FileUtils.writeString(getExtraLibsVersionFile(), String.valueOf(version));
     }
 
     public File getInstalledWineDir() {

@@ -1364,7 +1364,7 @@ public class ShortcutsFragment extends Fragment {
             private final TextView title;
             private final TextView subtitle;
             private final View innerArea;
-            private final View playButton;
+            private final Button playButton;
 
             private ViewHolder(View view) {
                 super(view);
@@ -1475,6 +1475,14 @@ public class ShortcutsFragment extends Fragment {
             } else {
                 // Set the text color to something dark for light backgrounds
                 holder.title.setTextColor(android.graphics.Color.BLACK);
+            }
+            // A card's play button is only an outline, so its outline, text and icon follow the title
+            if (holder.playButton != null) {
+                int playColour = isDarkMode ? android.graphics.Color.WHITE : android.graphics.Color.BLACK;
+                holder.playButton.setBackgroundResource(isDarkMode
+                        ? R.drawable.shortcut_play_button_bg_dark : R.drawable.shortcut_play_button_bg);
+                holder.playButton.setTextColor(playColour);
+                holder.playButton.setCompoundDrawableTintList(ColorStateList.valueOf(playColour));
             }
         }
 

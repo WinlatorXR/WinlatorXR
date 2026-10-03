@@ -346,7 +346,7 @@
         <item>proton-9.0-arm64ec</item>
     </string-array>
     <string-array name="default_container_content_entries">
-        <item>Proton-11.0-2-arm64ec-4</item>
+        <item>Proton-11.0-2-arm64ec-6</item>
     </string-array>
     <string-array name="default_container_content_names">
         <item>Proton-11.0-2-arm64ec-WXR-VR</item>

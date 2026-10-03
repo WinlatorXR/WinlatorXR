@@ -745,18 +745,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         dialog.setMessage(R.string.upgrade_containers_message);
         ((TextView) dialog.findViewById(R.id.BTConfirm)).setText(R.string.upgrade_containers_create);
         ((TextView) dialog.findViewById(R.id.BTCancel)).setText(R.string.vr_content_updates_later);
-        boolean[] created = {false};
-        dialog.setOnConfirmCallback(() -> {
-            created[0] = true;
-            createDefaultContainers();
-        });
-        // "Not now", back or tapping outside all get one last chance
+        dialog.setOnConfirmCallback(this::createDefaultContainers);
+        // "Not now", back or tapping outside carry on to the next prompt just as creating does
         dialog.setOnDismissListener(d -> {
             if (isFinishing() || isDestroyed()) return;
-            if (created[0]) {
-                showXrMenuLongPressNoticeIfNeeded();
-                return;
-            }
+            showXrMenuLongPressNoticeIfNeeded();
         });
         dialog.show();
     }

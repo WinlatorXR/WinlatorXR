@@ -2382,8 +2382,9 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         // 1. Get the main WRAPPER selection (e.g., "Wrapper-v2") from the class field.
         String mainWrapperSelection = this.graphicsDriver;
 
-        // 2. Get the WRAPPER that was last saved to the container's settings.
-        String lastInstalledMainWrapper = container.getExtra("lastInstalledMainWrapper");
+        // 2. Get the WRAPPER that was last extracted. The file lives in the imagefs, which all
+        //    containers share, so the marker is stored there and not on the container.
+        String lastInstalledMainWrapper = imageFs.getInstalledMainWrapper();
 
         // 3. Check if we need to extract a new wrapper file.
         if (firstTimeBoot || !mainWrapperSelection.equals(lastInstalledMainWrapper)) {
@@ -2394,15 +2395,17 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 boolean success = TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, assetPath, rootDir);
                 if (success) {
                     // After success, save the new version so we don't re-extract next time.
-                    container.putExtra("lastInstalledMainWrapper", mainWrapperSelection);
-                    container.saveData();
+                    imageFs.setInstalledMainWrapper(mainWrapperSelection);
                 }
             }
+        }
 
-            // 4. Extract common libraries, but only when the container is first created.
-            if (firstTimeBoot) {
-                Log.d("XServerDisplayActivity", "First time container boot, extracting extra_libs.tzst");
-                TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "graphics_driver/extra_libs.tzst", rootDir);
+        // 4. Extract common libraries when the container is first created, or when the bundled
+        //    archive is newer than the one last extracted into the imagefs.
+        if (firstTimeBoot || imageFs.getExtraLibsVersion() != ImageFs.EXTRA_LIBS_VERSION) {
+            Log.d("XServerDisplayActivity", "First time container boot or extra_libs updated, extracting extra_libs.tzst");
+            if (TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "graphics_driver/extra_libs.tzst", rootDir)) {
+                imageFs.setExtraLibsVersion(ImageFs.EXTRA_LIBS_VERSION);
             }
         }
 

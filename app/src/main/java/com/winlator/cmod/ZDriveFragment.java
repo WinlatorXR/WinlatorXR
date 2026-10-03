@@ -15,6 +15,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 
@@ -293,7 +294,7 @@ public class ZDriveFragment extends Fragment {
         private final Map<File, Bitmap> storeIcons = new HashMap<>();
 
         private class ViewHolder extends RecyclerView.ViewHolder {
-            private final ImageButton menuButton;
+            private final ImageView menuButton;
             private final ImageButton imageView;
             private final TextView title;
             private final TextView subtitle;
