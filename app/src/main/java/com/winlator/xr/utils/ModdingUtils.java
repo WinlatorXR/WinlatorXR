@@ -22,7 +22,6 @@ import android.content.Context;
 import android.util.Log;
 
 import com.winlator.cmod.container.Container;
-import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.MSLink;
 import com.winlator.cmod.core.TarCompressorUtils;
 import com.winlator.cmod.xenvironment.ImageFs;
@@ -34,10 +33,6 @@ public class ModdingUtils {
     private static final String PATH_CHARS = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM01234567890.";
     private static final String PATH_ZDRIVE = "/data/data/com.winlator.cmod/files/imagefs/";
     private static final TarCompressorUtils.Type PKG_TYPE = TarCompressorUtils.Type.ZSTD;
-    private static final String[] RESHADE_DIRECTX_CLONES = {"d3d10.dll", "d3d11.dll", "d3d12.dll"};
-    private static final String RESHADE_DIRECTX_DLL = "dxgi.dll";
-    private static final String RESHADE_DIRECTX_PKG = "reshade-directx.tzst";
-    private static final String RESHADE_PLUGINS_PKG = "reshade-plugins.tzst";
     private static final String TRACKIR_DESTIONATION = "/sdcard/Download/Winlator";
     private static final String TRACKIR_PATH = "D:\\Winlator\\opentrack_wxr\\opentrack.exe";
     private static final String TRACKIR_TRAY_PATH = "D:\\Winlator\\opentrack_wxr\\opentrack_tray.exe";
@@ -96,56 +91,8 @@ public class ModdingUtils {
         }
 
         if (hasExe) {
-            updateReshadePlugins(context, useReshade, dst);
-            updateReshadeDirectX(context, useReshade, forceDXGI, dst);
-        }
-    }
-
-    private static void updateReshadeDirectX(Context context, boolean useReshade, boolean forceDXGI, File dst) {
-        // Add or remove Reshade files
-        TarCompressorUtils.Status extracted;
-        extracted = TarCompressorUtils.isExtracted(PKG_TYPE, context, RESHADE_DIRECTX_PKG, dst);
-        if (extracted != TarCompressorUtils.Status.PARTIAL) {
-            if (useReshade) {
-                Log.i(TAG, "Extracting reshade to " + dst.getAbsolutePath());
-                TarCompressorUtils.extract(PKG_TYPE, context, RESHADE_DIRECTX_PKG, dst);
-                if (forceDXGI || isUsingDXGI(dst)) {
-                    deleteClones(dst, RESHADE_DIRECTX_CLONES);
-                } else {
-                    cloneFile(new File(dst, RESHADE_DIRECTX_DLL), RESHADE_DIRECTX_CLONES);
-                }
-            } else {
-                Log.i(TAG, "Removing reshade from " + dst.getAbsolutePath());
-                TarCompressorUtils.remove(PKG_TYPE, context, RESHADE_DIRECTX_PKG, dst);
-                deleteClones(dst, RESHADE_DIRECTX_CLONES);
-            }
-        }
-
-        // Log current status
-        extracted = TarCompressorUtils.isExtracted(PKG_TYPE, context, RESHADE_DIRECTX_PKG, dst);
-        Log.i(TAG, "Reshade isExtracted=" + extracted);
-    }
-
-    private static void updateReshadePlugins(Context context, boolean useReshade, File dst) {
-        if (useReshade) {
-            Log.i(TAG, "Extracting reshade to " + dst.getAbsolutePath());
-            TarCompressorUtils.extract(PKG_TYPE, context, RESHADE_PLUGINS_PKG, dst);
-        } else {
-            Log.i(TAG, "Removing reshade from " + dst.getAbsolutePath());
-            TarCompressorUtils.remove(PKG_TYPE, context, RESHADE_PLUGINS_PKG, dst);
-        }
-    }
-
-    private static void cloneFile(File file, String[] names) {
-        File dir = file.getParentFile();
-        for (String name : names) {
-            FileUtils.copy(file, new File(dir, name));
-        }
-    }
-
-    private static void deleteClones(File dir, String[] names) {
-        for (String name : names) {
-            new File(dir, name).delete();
+            boolean dxgi = useReshade && (forceDXGI || isUsingDXGI(dst));
+            ReshadeInstaller.update(context, dst, useReshade, dxgi);
         }
     }
 

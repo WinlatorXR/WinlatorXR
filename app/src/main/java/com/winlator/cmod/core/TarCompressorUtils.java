@@ -24,6 +24,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.LinkedHashMap;
 
 public abstract class TarCompressorUtils {
     public enum Type {XZ, ZSTD}
@@ -235,6 +236,24 @@ public abstract class TarCompressorUtils {
             e.printStackTrace();
             return Status.UNKNOWN;
         }
+    }
+
+    public static LinkedHashMap<String, Long> list(Type type, Context context, String assetFile) {
+        LinkedHashMap<String, Long> entries = new LinkedHashMap<>();
+        try (InputStream inStream = getCompressorInputStream(type, context.getAssets().open(assetFile));
+             ArchiveInputStream tar = new TarArchiveInputStream(inStream)) {
+            TarArchiveEntry entry;
+            while ((entry = (TarArchiveEntry)tar.getNextEntry()) != null) {
+                if (!tar.canReadEntryData(entry)) continue;
+                String name = entry.getName();
+                if (entry.isDirectory() && !name.endsWith("/")) name += "/";
+                entries.put(name, entry.isDirectory() ? 0L : entry.getSize());
+            }
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+        return entries;
     }
 
     public static boolean remove(Type type, Context context, String assetFile, File destination) {
