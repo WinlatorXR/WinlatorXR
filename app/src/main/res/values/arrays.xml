@@ -361,6 +361,7 @@
         <item>Reshade SuperDepth3D</item>
         <item>Reshade SuperDepth3D DCGI fallback</item>
         <item>Custom setup</item>
+        <item>Reshade SuperDepth3D OpenGL</item>
     </string-array>
     <string-array name="trackir_entries">
         <item>None</item>

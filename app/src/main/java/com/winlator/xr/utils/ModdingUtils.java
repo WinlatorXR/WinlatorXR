@@ -74,7 +74,7 @@ public class ModdingUtils {
         }
     }
 
-    public static void updateReshade(Context context, File dst, boolean useReshade, boolean forceDXGI) {
+    public static void updateReshade(Context context, File dst, boolean useReshade, boolean forceDXGI, boolean opengl) {
         // A folder that cannot be listed is one there is nothing to do in: a shortcut generated
         // to run a job points at cmd.exe, whose folder resolves to nothing here, and the recursion
         // below walks into whatever the game's own folder holds.
@@ -87,12 +87,12 @@ public class ModdingUtils {
                 hasExe = true;
             if (!file.isDirectory())
                 continue;
-            updateReshade(context, file, useReshade, forceDXGI);
+            updateReshade(context, file, useReshade, forceDXGI, opengl);
         }
 
         if (hasExe) {
-            boolean dxgi = useReshade && (forceDXGI || isUsingDXGI(dst));
-            ReshadeInstaller.update(context, dst, useReshade, dxgi);
+            boolean dxgi = useReshade && !opengl && (forceDXGI || isUsingDXGI(dst));
+            ReshadeInstaller.update(context, dst, useReshade, dxgi, useReshade && opengl);
         }
     }
 

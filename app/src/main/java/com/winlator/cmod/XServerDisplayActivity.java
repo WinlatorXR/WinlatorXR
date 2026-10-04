@@ -1691,8 +1691,8 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 File exeFile = ModdingUtils.getLocalExeFile(imageFs, shortcut.getFullExecutable(), shortcut.container);
                 File dst = exeFile != null ? exeFile.getParentFile() : null;
                 int reshade = Integer.parseInt(shortcut.getExtra("useReshade", "0"));
-                if (reshade < 3) {
-                    ModdingUtils.updateReshade(this, dst, reshade > 0, reshade > 1);
+                if (reshade != 3) {
+                    ModdingUtils.updateReshade(this, dst, reshade > 0, reshade == 2, reshade == 4);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -1736,6 +1736,12 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
             // Merge in shortcut environment variables if present
             if (shortcut != null) envVars.putAll(shortcut.getExtra("envVars"));
+
+            // ReShade for OpenGL sits beside the game as opengl32.dll and has to be loaded ahead of Wine's own
+            if (shortcut != null && shortcut.getExtra("useReshade", "0").equals("4")) {
+                String dllOverrides = envVars.get("WINEDLLOVERRIDES");
+                envVars.put("WINEDLLOVERRIDES", dllOverrides.isEmpty() ? "opengl32=n,b" : dllOverrides + ";opengl32=n,b");
+            }
 
             // If WINEESYNC is not defined, default to "1"
             if (!envVars.has("WINEESYNC")) {
