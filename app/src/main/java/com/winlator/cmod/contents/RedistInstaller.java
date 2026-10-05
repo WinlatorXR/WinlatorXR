@@ -96,11 +96,7 @@ public abstract class RedistInstaller {
         boolean hasOpenAL = bundlesOpenAL(shortcut.container);
 
         collectFrom(context, shortcut.container, gameDir, 0, found, seen, false, hasOpenAL);
-        for (File child : listDirs(gameDir)) {
-            if (isSearchDir(child.getName())) {
-                collectFrom(context, shortcut.container, child, 1, found, seen, true, hasOpenAL);
-            }
-        }
+        collectSearchDirs(context, shortcut.container, gameDir, found, seen, hasOpenAL);
 
         // An exe further down the game than its root (Unreal's Project\Binaries\Win64) has the
         // game's _CommonRedist above it, so the folders up to the root are searched too
@@ -108,11 +104,7 @@ public abstract class RedistInstaller {
         for (File dir = gameDir; gameRoot != null && !dir.equals(gameRoot); ) {
             dir = dir.getParentFile();
             if (dir == null) break;
-            for (File child : listDirs(dir)) {
-                if (isSearchDir(child.getName())) {
-                    collectFrom(context, shortcut.container, child, 1, found, seen, true, hasOpenAL);
-                }
-            }
+            collectSearchDirs(context, shortcut.container, dir, found, seen, hasOpenAL);
         }
 
         disambiguateLabels(found);
@@ -176,6 +168,25 @@ public abstract class RedistInstaller {
         GuestScriptRunner.run(activity, shortcut.container, "Installing redistributables", "redist", body);
     }
 
+    /** Walks the search-dir children of a folder, and those of its Engine folder. */
+    private static void collectSearchDirs(Context context, Container container, File dir,
+                                          List<Redist> found, HashSet<String> seen,
+                                          boolean containerHasOpenAL) {
+        for (File child : listDirs(dir)) {
+            if (isSearchDir(child.getName())) {
+                collectFrom(context, container, child, 1, found, seen, true, containerHasOpenAL);
+            }
+            else if (child.getName().equalsIgnoreCase("engine")) {
+                // Unreal keeps its prerequisites installer in Engine\Extras\Redist\en-us
+                for (File sub : listDirs(child)) {
+                    if (isSearchDir(sub.getName())) {
+                        collectFrom(context, container, sub, 2, found, seen, true, containerHasOpenAL);
+                    }
+                }
+            }
+        }
+    }
+
     private static void collectFrom(Context context, Container container, File dir, int depth,
                                     List<Redist> found, HashSet<String> seen, boolean recurse,
                                     boolean containerHasOpenAL) {
@@ -222,6 +233,12 @@ public abstract class RedistInstaller {
             String arch = name.contains("x64") ? "x64" : "x86";
             String label = "Visual C++ " + (year.isEmpty() ? "Redistributable" : year) + " (" + arch + ")";
             return new Redist(label, file, winPath, exe() + " " + vcFlags(year, name), true);
+        }
+
+        if ((name.startsWith("ue4prereqsetup") || name.startsWith("ueprereqsetup")) && name.endsWith(".exe")) {
+            String arch = name.contains("x86") ? "x86" : "x64";
+            return new Redist("Unreal Engine prerequisites (" + arch + ")", file, winPath,
+                exe() + " /quiet /norestart", true);
         }
 
         if (name.equals("dxsetup.exe")) {

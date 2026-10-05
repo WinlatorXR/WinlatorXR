@@ -288,6 +288,21 @@ object SteamDepotDownloader {
         dlog("DepotDownloader constructed OK")
         downloaderRef.set(downloader)
 
+        // Runs once, from onDownloadCompleted or from the completion future, whichever comes first
+        val completeHandled = AtomicBoolean(false)
+        // A failed download never completes the future, so the wait below needs its own way out
+        val failed = AtomicBoolean(false)
+        fun markComplete() {
+            if (!completeHandled.compareAndSet(false, true)) return
+            val finalBytes = bytesDownloaded.get()
+            val finalTotal = totalRunning.get()
+            // Emit 100% before switching to installed state
+            repo.emit("DownloadProgress:$appId:$finalTotal:$finalTotal")
+            ctx.getSharedPreferences(BRANCH_PREFS, Context.MODE_PRIVATE).edit().putString("branch_$appId", branch).apply()
+            db.markInstalled(appId, installDir.absolutePath, finalBytes, os)
+            repo.emit("DownloadComplete:$appId")
+        }
+
         downloader.addListener(object : IDownloadListener {
             override fun onDownloadStarted(item: DownloadItem) {
                 dlog("onDownloadStarted: appId=${item.appId}")
@@ -336,13 +351,7 @@ object SteamDepotDownloader {
 
             override fun onDownloadCompleted(item: DownloadItem) {
                 dlog("=== Download complete: appId=${item.appId} ===")
-                val finalBytes = bytesDownloaded.get()
-                val finalTotal = totalRunning.get()
-                // Emit 100% before switching to installed state
-                repo.emit("DownloadProgress:$appId:$finalTotal:$finalTotal")
-                ctx.getSharedPreferences(BRANCH_PREFS, Context.MODE_PRIVATE).edit().putString("branch_$appId", branch).apply()
-                db.markInstalled(appId, installDir.absolutePath, finalBytes, os)
-                repo.emit("DownloadComplete:$appId")
+                markComplete()
             }
 
             override fun onDownloadFailed(item: DownloadItem, error: Throwable) {
@@ -352,6 +361,9 @@ object SteamDepotDownloader {
                 } else {
                     dlog("=== Download FAILED: appId=${item.appId} ===")
                     dlogError("onDownloadFailed", error)
+                    // Stop being the active download before listeners hear of the failure
+                    activeDownloads.remove(appId)
+                    failed.set(true)
                     emitFailed(appId, error.message ?: "Unknown error")
                 }
             }
@@ -393,7 +405,7 @@ object SteamDepotDownloader {
         try {
             // close() never completes this future, so poll it or a cancel/pause would wait forever
             val completion = downloader.getCompletion()
-            while (!completedNormally && !cancelled.get() && !paused.get()) {
+            while (!completedNormally && !cancelled.get() && !paused.get() && !failed.get()) {
                 try { completion.get(500, TimeUnit.MILLISECONDS); completedNormally = true }
                 catch (_: TimeoutException) {}
             }
@@ -408,7 +420,11 @@ object SteamDepotDownloader {
             dlog("getCompletion() unexpected exception: ${e.message}")
             dlogError("getCompletion unexpected", e)
         } finally {
-            activeDownloads.remove(appId)
+            // onDownloadCompleted is delivered on a coroutine that close() cancels, so it can be lost
+            // when several downloads are busy. The future only completes on success, so finish here.
+            if (completedNormally) markComplete()
+            // Already removed on failure; a retry may have registered this appId again since
+            if (!failed.get()) activeDownloads.remove(appId)
             dlog("Closing DepotDownloader")
             try { downloader.close() } catch (_: Exception) {}
             downloaderRef.set(null)
