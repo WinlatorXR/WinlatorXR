@@ -2604,6 +2604,13 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             restoreOriginalDllFiles(dlls);
         }
         else {
+            if (ddrawrapper.startsWith("d7vk")) {
+                // D7VK hands the DirectDraw calls it doesn't implement (2D/GDI) to Wine's own
+                // ddraw, which it looks for as ddraw_.dll next to itself.
+                restoreOriginalDllFiles(dlls);
+                File syswow64Dir = new File(windowsDir, "syswow64");
+                FileUtils.copy(new File(syswow64Dir, "ddraw.dll"), new File(syswow64Dir, "ddraw_.dll"));
+            }
             Log.d("XServerDisplayActivity", "Extracting ddrawrapper " + ddrawrapper);
             TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "ddrawrapper/" + ddrawrapper + ".tzst", windowsDir, onExtractFileListener);
         }
