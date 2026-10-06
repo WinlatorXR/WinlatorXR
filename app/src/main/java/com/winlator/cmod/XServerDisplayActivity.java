@@ -1734,6 +1734,8 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             // Merge in container’s environment variables
             envVars.putAll(container.getEnvVars());
 
+            if (PcvrRuntime.isEnabled(shortcut) && PcvrRuntime.isStickTouchpad(shortcut)) envVars.put(PcvrRuntime.STICK_TOUCHPAD_ENV, "1");
+
             // Merge in shortcut environment variables if present
             if (shortcut != null) envVars.putAll(shortcut.getExtra("envVars"));
 

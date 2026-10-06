@@ -430,6 +430,12 @@
                 android:entries="@array/pcvr_controller_entries" />
         </LinearLayout>
 
+        <CheckBox
+            android:id="@+id/CBPcvrStickTouchpad"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/pcvr_stick_touchpad" />
+
         <LinearLayout
             android:id="@+id/LLPcvrRenderScale"
             android:layout_width="match_parent"

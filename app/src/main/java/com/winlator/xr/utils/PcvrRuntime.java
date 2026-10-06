@@ -54,6 +54,10 @@ public final class PcvrRuntime {
     public static final String DIRECT_KEY = "pcvrDirectTransport";
     /** OpenXR profile the runtime reports; OpenComposite presents the matching headset. Empty keeps the runtime's ranking. */
     public static final String CONTROLLER_KEY = "pcvrController";
+    /** Pushing a thumbstick counts as pressing the touchpad, for games written for the Vive wand. */
+    public static final String STICK_TOUCHPAD_KEY = "pcvrStickTouchpad";
+    /** OpenComposite reads this at start; builds older than the option ignore it. */
+    public static final String STICK_TOUCHPAD_ENV = "OPENCOMPOSITE_STICK_PRESSES_TOUCHPAD";
     /** In the order of the pcvr_controller_entries array. */
     public static final String[] CONTROLLER_PROFILES = {"", "/valve/index_controller", "/oculus/touch_controller", "/htc/vive_controller", "/microsoft/motion_controller"};
 
@@ -83,6 +87,10 @@ public final class PcvrRuntime {
 
     public static boolean isDirectTransport(Shortcut shortcut) {
         return shortcut == null || !shortcut.getExtra(DIRECT_KEY, "1").equals("0");
+    }
+
+    public static boolean isStickTouchpad(Shortcut shortcut) {
+        return shortcut != null && shortcut.getExtra(STICK_TOUCHPAD_KEY, "0").equals("1");
     }
 
     public static int getRenderScale(Shortcut shortcut) {

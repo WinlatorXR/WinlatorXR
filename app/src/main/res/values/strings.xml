@@ -692,6 +692,7 @@
     <string name="pcvr_runtime">PC VR game (set up OpenComposite and OXRWXR for SteamVR and OpenXR titles)</string>
     <string name="pcvr_direct_transport">Direct PC VR frames (eye images go straight to the headset, skipping the game window)</string>
     <string name="pcvr_controller">PC VR controller type (the headset type shown to the game follows it)</string>
+    <string name="pcvr_stick_touchpad">Pushing a thumbstick presses the touchpad (for games where you must click the stick in to move)</string>
     <string name="pcvr_render_scale">PC VR render scale (of the headset\'s own resolution, with direct PC VR)</string>
     <string name="pcvr_fov_scale">VR field of view (horizontal)</string>
     <string name="pcvr_fov_scale_y">VR field of view (vertical)</string>
