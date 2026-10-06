@@ -49,6 +49,8 @@ public class XrAPI implements XrInterface {
 
     private XrInterface impl = null;
     private final DatagramSocket socket = new DatagramSocket();
+    // Looked up once: resolving it again for every packet cost a lookup per VR frame
+    private InetAddress localAddress = null;
 
     // Reused for sendAsync() instead of spawning a new OS thread every VR frame.
     private final ExecutorService sendExecutor = Executors.newSingleThreadExecutor(r -> {
@@ -96,6 +98,8 @@ public class XrAPI implements XrInterface {
         info += XrActivity.getInstance().getScreenSize() + "\n";
         // Per-eye size for direct PC VR frames; older runtimes stop reading at the line above
         info += XrActivity.getInstance().getDirectEyeSize() + "\n";
+        // Tells a runtime that knows XrAPI 0.7 it may ask for it; one that doesn't never reads this far
+        info += "BINARY_UDP\n";
         FileOutputStream fos = new FileOutputStream(new File(dir, SYSTEM_FILE));
         fos.write(info.getBytes(StandardCharsets.US_ASCII));
         fos.close();
@@ -115,6 +119,10 @@ public class XrAPI implements XrInterface {
 
     public String encode(@NonNull float[] axes, @NonNull boolean[] buttons, int clientIndex) {
         return impl != null ? impl.encode(axes, buttons, clientIndex) : "";
+    }
+
+    public byte[] encodeBinary(@NonNull float[] axes, @NonNull boolean[] buttons, int clientIndex) {
+        return impl != null ? impl.encodeBinary(axes, buttons, clientIndex) : null;
     }
 
     public String getFlags() {
@@ -145,7 +153,8 @@ public class XrAPI implements XrInterface {
 
     public void send(@NonNull byte[] bytes) throws Exception {
         //Send data to localhost
-        InetAddress address = InetAddress.getLocalHost();
+        if (localAddress == null) localAddress = InetAddress.getLocalHost();
+        InetAddress address = localAddress;
         for (int port : getPortsOut()) {
             socket.send(new DatagramPacket(bytes, bytes.length, address, port));
         }
@@ -206,6 +215,7 @@ public class XrAPI implements XrInterface {
                 if (version.startsWith("0.4")) impl = new XrVersion04();
                 if (version.startsWith("0.5")) impl = new XrVersion05();
                 if (version.startsWith("0.6")) impl = new XrVersion06();
+                if (version.startsWith("0.7")) impl = new XrVersion07();
             } catch (Exception e) {
                 System.err.println("Error reading version file: " + e.getMessage());
             }
@@ -237,7 +247,6 @@ public class XrAPI implements XrInterface {
                                 } catch (Exception e) {
                                     System.err.println("Error parsing UDP packet: " + e.getMessage());
                                 }
-                                Thread.sleep(10);
                             }
                         } catch (Exception e) {
                             System.err.println("Error listening for UDP packets: " + e.getMessage());

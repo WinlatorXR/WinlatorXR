@@ -69,6 +69,8 @@ public interface XrInterface {
     void consumeInputs(XServer xServer);
     void dataReceived(PortIntent intent, @NonNull String message);
     String encode(@NonNull float[] axes, @NonNull boolean[] buttons, int clientIndex);
+    /** The whole tracking packet as bytes, or null from a version that sends encode() as text. */
+    default byte[] encodeBinary(@NonNull float[] axes, @NonNull boolean[] buttons, int clientIndex) { return null; }
     String getFlags();
     int getPortIn(PortIntent intent);
     int[] getPortsOut();

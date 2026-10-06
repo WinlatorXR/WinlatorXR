@@ -328,8 +328,12 @@ public class XrInput {
 
     private void updateXrApp(float[] axes, boolean[] buttons) {
         if (XrActivity.isUDP) {
-            String data = xrAPI.encode(axes, buttons, 0) + xrAPI.getFlags();
-            xrAPI.sendAsync(data.getBytes(StandardCharsets.US_ASCII));
+            byte[] packet = xrAPI.encodeBinary(axes, buttons, 0);
+            if (packet == null) {
+                String data = xrAPI.encode(axes, buttons, 0) + xrAPI.getFlags();
+                packet = data.getBytes(StandardCharsets.US_ASCII);
+            }
+            xrAPI.sendAsync(packet);
         }
     }
 

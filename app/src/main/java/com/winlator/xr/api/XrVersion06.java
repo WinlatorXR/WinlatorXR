@@ -29,7 +29,9 @@ import java.util.Locale;
 
 public class XrVersion06 extends XrVersion05 {
 
-    private final ArrayList<Pair<Integer, Integer>> spaces = new ArrayList<>();
+    protected final ArrayList<Pair<Integer, Integer>> spaces = new ArrayList<>();
+
+    private static final long[] POW10 = {1, 10, 100, 1000, 10000, 100000};
 
     @Override
     public void dataReceived(PortIntent intent, @NonNull String message) {
@@ -90,50 +92,75 @@ public class XrVersion06 extends XrVersion05 {
 
     @Override
     public String encode(@NonNull float[] axes, @NonNull boolean[] buttons, int clientIndex) {
-        StringBuilder binary = new StringBuilder();
+        // One builder and no String.format: this runs every VR frame, and format made a Formatter
+        // and several strings for each of the forty-odd numbers in the packet
+        XrActivity instance = XrActivity.getInstance();
+        StringBuilder out = new StringBuilder(512);
+        out.append(MSG_CLIENT).append(clientIndex);
+        appendFixed(out.append(' '), axes[ControllerAxis.L_THUMBSTICK_X.ordinal()], 2, false);
+        appendFixed(out.append(' '), axes[ControllerAxis.L_THUMBSTICK_Y.ordinal()], 2, false);
+        appendFixed(out.append(' '), axes[ControllerAxis.R_THUMBSTICK_X.ordinal()], 2, false);
+        appendFixed(out.append(' '), axes[ControllerAxis.R_THUMBSTICK_Y.ordinal()], 2, false);
+        appendFixed(out.append(' '), axes[ControllerAxis.L_TRIGGER.ordinal()], 2, false);
+        appendFixed(out.append(' '), axes[ControllerAxis.L_SQUEEZE.ordinal()], 2, false);
+        appendFixed(out.append(' '), axes[ControllerAxis.R_TRIGGER.ordinal()], 2, false);
+        appendFixed(out.append(' '), axes[ControllerAxis.R_SQUEEZE.ordinal()], 2, false);
+        appendFixed(out.append(' '), axes[ControllerAxis.HMD_IPD.ordinal()], 4, false);
+        appendFixed(out.append(' '), axes[ControllerAxis.HMD_FOVX.ordinal()], 2, false);
+        appendFixed(out.append(' '), axes[ControllerAxis.HMD_FOVY.ordinal()], 2, false);
+        appendFixed(out.append(' '), instance.getDisplayRefreshRate(), 2, false);
+        out.append(' ').append((int)axes[ControllerAxis.HMD_SYNC.ordinal()]);
+        out.append(' ').append((int)axes[ControllerAxis.HMD_RECENTER.ordinal()]);
+
+        out.append(' ');
         for (int i = 0; i < GUEST_BUTTON_COUNT; i++) {
-            binary.append(buttons[i] ? "T" : "F");
+            out.append(buttons[i] ? 'T' : 'F');
         }
 
-        XrActivity instance = XrActivity.getInstance();
-        StringBuilder poses = new StringBuilder();
+        out.append(' ');
         synchronized (spaces) {
-            poses.append(spaces.size()).append(" ");
+            out.append(spaces.size()).append(' ');
             for (Pair<Integer, Integer> space : spaces) {
-                poses.append(space.first).append(" ");
-                poses.append(space.second).append(" ");
+                out.append(space.first).append(' ');
+                out.append(space.second).append(' ');
                 float[] pose = instance.getPose(space.first, space.second);
                 if (pose.length != 7) pose = new float[7];
                 for (float f : pose) {
-                    String str = String.format(Locale.US, "%.3f", f);
-                    str = str.replaceAll("\\.000", "");
-                    poses.append(str).append(" ");
+                    // Five decimals: at three, a quaternion was rounded to about a twentieth of a degree
+                    appendFixed(out, f, 5, true);
+                    out.append(' ');
                 }
                 float[] velocity = instance.getPoseVelocity(space.first, space.second);
                 if (velocity.length != 7) velocity = new float[7];
                 for (float f : velocity) {
-                    String str = String.format(Locale.US, "%.3f", f);
-                    str = str.replaceAll("\\.000", "");
-                    poses.append(str).append(" ");
+                    appendFixed(out, f, 3, true);
+                    out.append(' ');
                 }
             }
         }
-        return (MSG_CLIENT + clientIndex +
-                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.L_THUMBSTICK_X.ordinal()]) +
-                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.L_THUMBSTICK_Y.ordinal()]) +
-                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.R_THUMBSTICK_X.ordinal()]) +
-                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.R_THUMBSTICK_Y.ordinal()]) +
-                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.L_TRIGGER.ordinal()]) +
-                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.L_SQUEEZE.ordinal()]) +
-                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.R_TRIGGER.ordinal()]) +
-                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.R_SQUEEZE.ordinal()]) +
-                " " + String.format(Locale.US, "%.4f", axes[ControllerAxis.HMD_IPD.ordinal()]) +
-                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.HMD_FOVX.ordinal()]) +
-                " " + String.format(Locale.US, "%.2f", axes[ControllerAxis.HMD_FOVY.ordinal()]) +
-                " " + String.format(Locale.US, "%.2f", instance.getDisplayRefreshRate()) +
-                " " + String.format(Locale.US, "%d", (int)axes[ControllerAxis.HMD_SYNC.ordinal()]) +
-                " " + String.format(Locale.US, "%d", (int)axes[ControllerAxis.HMD_RECENTER.ordinal()]) +
-                " " + binary + " " + poses);
+        return out.toString();
+    }
+
+    /**
+     * Appends value with a fixed number of decimals, as "%.Nf" would. With trimWhole a value that
+     * rounds to a whole number is written without its decimals, which keeps the pose list short:
+     * a pair that could not be located goes out as plain zeros.
+     */
+    static void appendFixed(StringBuilder out, float value, int decimals, boolean trimWhole) {
+        if (Float.isNaN(value) || Float.isInfinite(value) || Math.abs(value) >= 1e9f) {
+            out.append(String.format(Locale.US, "%." + decimals + "f", value));
+            return;
+        }
+        long scale = POW10[decimals];
+        long scaled = Math.round(Math.abs((double)value) * scale);
+        if (value < 0) out.append('-');
+        out.append(scaled / scale);
+        long fraction = scaled % scale;
+        if (trimWhole && fraction == 0) return;
+        out.append('.');
+        for (long digit = scale / 10; digit > 0; digit /= 10) {
+            out.append((char)('0' + (fraction / digit) % 10));
+        }
     }
 
     private Pose parsePose(String[] parts, int idx) {
