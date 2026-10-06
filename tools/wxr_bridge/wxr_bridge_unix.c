@@ -575,24 +575,10 @@ static NTSTATUS bridge_copy_readback(void* data)
 
 /* ------------------------------------------------------------ submit */
 
-/*
- * Per frame, after the caller's CPU wait: queue one layer's copy into the
- * slot's AHardwareBuffer and return without waiting. The slot's fence only
- * blocks when the same swapchain image comes round again before its last copy
- * finished.
- */
-static VkResult queue_copy(struct slot* s, uint32_t layer, VkSemaphore signal)
+/* Records one layer's copy into the slot's AHardwareBuffer. */
+static void record_copy(VkCommandBuffer cmd, struct slot* s, uint32_t layer)
 {
-    VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
     VkImageBlit region = { 0 };
-    VkCommandBuffer cmd = s->cmd[layer];
-
-    pvkWaitForFences(g.device, 1, &s->fence[layer], VK_TRUE, 100000000ull);
-    pvkResetFences(g.device, 1, &s->fence[layer]);
-    pvkResetCommandBuffer(cmd, 0);
-    begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    pvkBeginCommandBuffer(cmd, &begin);
 
     barrier(cmd, s->src, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             VK_QUEUE_FAMILY_EXTERNAL, g.family);
@@ -615,14 +601,29 @@ static VkResult queue_copy(struct slot* s, uint32_t layer, VkSemaphore signal)
             g.family, VK_QUEUE_FAMILY_EXTERNAL);
     barrier(cmd, s->dst[layer], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
             g.family, VK_QUEUE_FAMILY_FOREIGN_EXT);
+}
+
+/*
+ * Per frame, after the caller's CPU wait: queue one layer's copy and return
+ * without waiting. The slot's fence only blocks when the same swapchain image
+ * comes round again before its last copy finished.
+ */
+static VkResult queue_copy(struct slot* s, uint32_t layer)
+{
+    VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+    VkCommandBuffer cmd = s->cmd[layer];
+
+    pvkWaitForFences(g.device, 1, &s->fence[layer], VK_TRUE, 100000000ull);
+    pvkResetFences(g.device, 1, &s->fence[layer]);
+    pvkResetCommandBuffer(cmd, 0);
+    begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    pvkBeginCommandBuffer(cmd, &begin);
+    record_copy(cmd, s, layer);
     pvkEndCommandBuffer(cmd);
 
     submit.commandBufferCount = 1;
     submit.pCommandBuffers = &cmd;
-    if (signal) {
-        submit.signalSemaphoreCount = 1;
-        submit.pSignalSemaphores = &signal;
-    }
     return pvkQueueSubmit(g.queue, 1, &submit, s->fence[layer]);
 }
 
@@ -632,7 +633,7 @@ static NTSTATUS bridge_submit(void* data)
 
     args->result = VK_ERROR_UNKNOWN;
     if (args->id >= g_slot_count || args->layer >= g_slots[args->id].layers) return STATUS_SUCCESS;
-    args->result = queue_copy(&g_slots[args->id], args->layer, VK_NULL_HANDLE);
+    args->result = queue_copy(&g_slots[args->id], args->layer);
     return STATUS_SUCCESS;
 }
 
@@ -713,48 +714,106 @@ static void app_connect(void)
 
 /* ------------------------------------------------------------ present */
 
-/* Queues one image's copy and exports its completion as a sync fd, or returns -1. */
-static int copy_to_app(struct wxr_bridge_present_args* args, uint32_t id, uint32_t layer)
+/* PRESENT's command buffers, one per frame for all of its copies. A ring, so a
+ * fence only blocks when the copies from PRESENT_RING frames ago are still running. */
+#define PRESENT_RING 4
+static struct {
+    VkCommandBuffer cmd;
+    VkFence fence;
+} g_present[PRESENT_RING];
+static uint32_t g_present_next;
+
+/*
+ * Queues the copies of count images in one submit, each signalling its
+ * semaphore, and exports those as sync fds. All or nothing: on failure no fd
+ * is left open.
+ */
+static VkResult copy_to_app(const uint32_t (*images)[2], uint32_t count, int* fds)
 {
+    VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
     VkSemaphoreGetFdInfoKHR get_fd = { VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR };
-    struct slot* s;
+    VkSemaphore signals[WXR_DIRECT_MAX_FDS];
+    uint32_t first[WXR_DIRECT_MAX_FDS];  /* the earlier entry naming the same image, or itself */
+    uint32_t i, j, signal_count = 0;
+    VkCommandBuffer cmd;
+    VkFence fence;
     VkResult result;
-    int fd = -1;
 
-    if (id >= g_slot_count || layer >= g_slots[id].layers) {
-        args->result = VK_ERROR_UNKNOWN;
-        return -1;
+    if (!g_present[0].cmd) {
+        VkCommandBufferAllocateInfo alloc = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+        VkFenceCreateInfo fence_info = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+        alloc.commandPool = g.pool;
+        alloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        alloc.commandBufferCount = 1;
+        fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+        for (i = 0; i < PRESENT_RING; i++) {
+            if ((result = pvkAllocateCommandBuffers(g.device, &alloc, &g_present[i].cmd)) ||
+                (result = pvkCreateFence(g.device, &fence_info, NULL, &g_present[i].fence))) {
+                g_present[0].cmd = VK_NULL_HANDLE;
+                return result;
+            }
+        }
     }
-    s = &g_slots[id];
+    cmd = g_present[g_present_next % PRESENT_RING].cmd;
+    fence = g_present[g_present_next++ % PRESENT_RING].fence;
 
-    /* Only signal when the frame will go out: exporting the sync fd is what
-     * unsignals the semaphore for the next frame. */
-    result = queue_copy(s, layer, g.sock >= 0 ? s->done[layer] : VK_NULL_HANDLE);
-    if (result) {
-        if (!args->result) args->result = result;
-        return -1;
+    pvkWaitForFences(g.device, 1, &fence, VK_TRUE, 100000000ull);
+    pvkResetFences(g.device, 1, &fence);
+    pvkResetCommandBuffer(cmd, 0);
+    begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    pvkBeginCommandBuffer(cmd, &begin);
+    for (i = 0; i < count; i++) {
+        struct slot* s = &g_slots[images[i][0]];
+        for (j = 0; j < i; j++)
+            if (images[j][0] == images[i][0] && images[j][1] == images[i][1]) break;
+        first[i] = j;
+        if (j < i) continue;  /* a semaphore can only be signalled once per submit */
+        record_copy(cmd, s, images[i][1]);
+        signals[signal_count++] = s->done[images[i][1]];
     }
-    if (g.sock < 0) return -1;
+    pvkEndCommandBuffer(cmd);
 
-    get_fd.semaphore = s->done[layer];
+    submit.commandBufferCount = 1;
+    submit.pCommandBuffers = &cmd;
+    submit.signalSemaphoreCount = signal_count;
+    submit.pSignalSemaphores = signals;
+    if ((result = pvkQueueSubmit(g.queue, 1, &submit, fence))) return result;
+
+    /* Every semaphore is exported even after a failure: that is what unsignals it for the next frame. */
     get_fd.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT;
-    if ((result = pvkGetSemaphoreFdKHR(g.device, &get_fd, &fd))) {
-        if (!args->result) args->result = result;
-        return -1;
+    for (i = 0; i < count; i++) {
+        VkResult exported = VK_SUCCESS;
+        fds[i] = -1;
+        if (first[i] < i) {
+            if (fds[first[i]] >= 0) fds[i] = dup(fds[first[i]]);
+        } else {
+            get_fd.semaphore = g_slots[images[i][0]].done[images[i][1]];
+            exported = pvkGetSemaphoreFdKHR(g.device, &get_fd, &fds[i]);
+        }
+        if (exported || fds[i] < 0) {
+            fds[i] = -1;
+            if (!result) result = exported ? exported : VK_ERROR_UNKNOWN;
+        }
     }
-    return fd;
+    if (result)
+        for (i = 0; i < count; i++)
+            if (fds[i] >= 0) close(fds[i]);
+    return result;
 }
 
 /*
- * Per frame, after the caller's CPU wait: queue each view's and each quad's
- * copy, each signalling a semaphore exported as a sync fd, and send the frame
- * to the app without waiting for any of it. The app waits on the sync fds itself.
+ * Per frame, after the caller's CPU wait: queue every view's and quad's copy
+ * in one submit, each signalling a semaphore exported as a sync fd, and send
+ * the frame to the app without waiting for any of it. The app waits on the
+ * sync fds itself.
  */
 static NTSTATUS bridge_present(void* data)
 {
     struct wxr_bridge_present_args* args = data;
     struct wxr_direct_frame msg = { { WXR_DIRECT_FRAME, sizeof(msg) } };
     int fds[WXR_DIRECT_MAX_FDS];
+    uint32_t images[WXR_DIRECT_MAX_FDS][2];  /* slot, layer */
     static uint32_t since_attempt;
     uint32_t v, q, fd_count = 0;
 
@@ -763,12 +822,16 @@ static NTSTATUS bridge_present(void* data)
     if (args->view_count > WXR_BRIDGE_MAX_VIEWS) args->view_count = WXR_BRIDGE_MAX_VIEWS;
     if (args->quad_count > WXR_BRIDGE_MAX_QUADS) args->quad_count = WXR_BRIDGE_MAX_QUADS;
     if (g.sock < 0 && (since_attempt++ % 300) == 0) app_connect();
+    if (g.sock < 0) return STATUS_SUCCESS;  /* nobody to copy for */
 
     for (v = 0; v < args->view_count; v++) {
         const struct wxr_bridge_present_view* view = &args->views[v];
-        int fd = copy_to_app(args, view->id, view->layer);
-        if (fd < 0) continue;
-        fds[fd_count++] = fd;
+        if (view->id >= g_slot_count || view->layer >= g_slots[view->id].layers) {
+            args->result = VK_ERROR_UNKNOWN;
+            continue;
+        }
+        images[fd_count][0] = view->id;
+        images[fd_count++][1] = view->layer;
         msg.views[msg.view_count].slot = view->id;
         msg.views[msg.view_count].layer = view->layer;
         memcpy(msg.views[msg.view_count].rect, view->rect, sizeof(view->rect));
@@ -777,17 +840,18 @@ static NTSTATUS bridge_present(void* data)
         memcpy(msg.views[msg.view_count].fov, view->fov, sizeof(view->fov));
         msg.view_count++;
     }
-    if (msg.view_count != args->view_count) {  /* all eyes or none */
-        for (v = 0; v < msg.view_count; v++) close(fds[v]);
+    if (msg.view_count != args->view_count)  /* all eyes or none */
         fd_count = msg.view_count = 0;
-    }
 
     for (q = 0; q < args->quad_count; q++) {
         const struct wxr_bridge_present_quad* quad = &args->quads[q];
         struct wxr_direct_quad* out = &msg.quads[msg.quad_count];
-        int fd = copy_to_app(args, quad->id, quad->layer);
-        if (fd < 0) continue;
-        fds[fd_count++] = fd;
+        if (quad->id >= g_slot_count || quad->layer >= g_slots[quad->id].layers) {
+            args->result = VK_ERROR_UNKNOWN;
+            continue;
+        }
+        images[fd_count][0] = quad->id;
+        images[fd_count++][1] = quad->layer;
         out->space = quad->space;
         out->slot = quad->id;
         out->layer = quad->layer;
@@ -800,7 +864,12 @@ static NTSTATUS bridge_present(void* data)
         msg.quad_count++;
     }
 
-    if (g.sock >= 0 && fd_count) {
+    if (fd_count) {
+        VkResult result = copy_to_app(images, fd_count, fds);
+        if (result) {
+            args->result = result;
+            return STATUS_SUCCESS;
+        }
         msg.frame = args->frame;
         msg.display_time = args->display_time;
         msg.space = args->space;

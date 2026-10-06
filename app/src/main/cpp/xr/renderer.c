@@ -567,6 +567,8 @@ void XrRendererFinishFrame(struct XrEngine* engine, struct XrRenderer* renderer)
     {
         // Blended so the outer-FOV passthrough shows around the eyes, whose alpha the copy forces to 1
         if (XrDirectOpaqueEyes) direct_layer.layerFlags |= XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+        // Sharpened like the screen: the eyes are often rendered below the headset's resolution
+        direct_layer.next = layer_settings_chain;
         // PC VR frames from the direct transport replace the preview window's, the game's quads on top
         if (direct_layer.viewCount) renderer->Layers[renderer->LayerCount++].projection = direct_layer;
         for (int i = 0; i < direct_quad_count; i++) renderer->Layers[renderer->LayerCount++].quad = direct_quads[i];
