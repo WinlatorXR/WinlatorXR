@@ -454,9 +454,6 @@
     <string name="select_installer">Select an installer (.exe or .msi) from your Download folder. Nothing is copied: it is run where it sits, so any data files it comes with, such as the .bin parts of a GOG offline installer, only have to stay in the same folder as it.\n\nA .zip holding an installer can be selected too. That one is extracted first, into Z:\\extracted, and the installer inside it is listed from there.</string>
     <string name="not_downloaded_yet">Not downloaded yet</string>
     <string name="update_available">Update available</string>
-    <string name="vr_content_updates_title">VR updates available</string>
-    <string name="vr_content_updates_message">The Downloader has newer versions of:</string>
-    <string name="vr_content_updates_open">Open Downloader</string>
     <string name="vr_content_updates_later">Not now</string>
     <string name="apk_update_title">WinlatorXR update available</string>
     <string name="upgrade_containers_title">New containers for this version</string>

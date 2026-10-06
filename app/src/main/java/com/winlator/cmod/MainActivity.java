@@ -640,7 +640,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             contentsManager.setRemoteProfiles(json);
             List<ContentProfile> updates = VrContentUpdates.find(this, contentsManager);
             runOnUiThread(() -> setContentUpdateCount(updates.size()));
-            if (apkUpdate == null && updates.isEmpty()) return;
             final ApkUpdate apk = apkUpdate;
             runOnUiThread(() -> {
                 if (isFinishing() || isDestroyed()) return;
@@ -652,27 +651,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     ((TextView) apkDialog.findViewById(R.id.BTConfirm)).setText(R.string.apk_update_open);
                     ((TextView) apkDialog.findViewById(R.id.BTCancel)).setText(R.string.vr_content_updates_later);
                     apkDialog.setOnConfirmCallback(() -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(apk.url))));
-                    apkDialog.setOnDismissListener(d -> showVrContentUpdates(updates));
                     apkDialog.show();
-                } else {
-                    showVrContentUpdates(updates);
                 }
             });
         }).start();
-    }
-
-    private void showVrContentUpdates(List<ContentProfile> updates) {
-        if (updates.isEmpty() || isFinishing() || isDestroyed()) return;
-        StringBuilder names = new StringBuilder();
-        for (ContentProfile profile : updates)
-            names.append("\n• ").append(profile.type).append(": ").append(profile.verName).append(" (").append(profile.verCode).append(")");
-        ContentDialog dialog = new ContentDialog(this);
-        dialog.setTitle(R.string.vr_content_updates_title);
-        dialog.setMessage(getString(R.string.vr_content_updates_message) + "\n" + names);
-        ((TextView) dialog.findViewById(R.id.BTConfirm)).setText(R.string.vr_content_updates_open);
-        ((TextView) dialog.findViewById(R.id.BTCancel)).setText(R.string.vr_content_updates_later);
-        dialog.setOnConfirmCallback(() -> showDownloader(updates.get(0).type != ContentProfile.ContentType.CONTENT_TYPE_PROTON));
-        dialog.show();
     }
 
     /**
@@ -1041,23 +1023,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             case R.id.main_menu_about -> show(new WebFragment(), reverse);
             default -> true;
         };
-    }
-
-
-    /** Opens the Downloader on the Wine/Proton tab, or the one listing the PC VR runtimes. */
-    private void showDownloader(boolean runtimesTab) {
-        NavigationView navigation = findViewById(R.id.NavigationView);
-        MenuItem item = navigation.getMenu().findItem(R.id.main_menu_contents);
-        PreferenceManager.getDefaultSharedPreferences(this).edit()
-                .putString("tab_last", item.getTitle().toString())
-                .commit();
-        navigation.setCheckedItem(R.id.main_menu_contents);
-
-        ContentsFragment fragment = new ContentsFragment();
-        Bundle args = new Bundle();
-        args.putInt(ContentsFragment.ARG_TAB, runtimesTab ? 1 : 0);
-        fragment.setArguments(args);
-        getSupportFragmentManager().beginTransaction().replace(R.id.FLFragmentContainer, fragment).commit();
     }
 
     /** Opens the Downloader on its Installers tab and goes straight to adding an installer. */
