@@ -441,14 +441,15 @@ public class XrController {
 
     /**
      * Holding the mouse hand's thumbrest puts the cursor back in the middle of the screen, for
-     * a cursor that has been lost off an edge. Absolute mouse mode only.
+     * a cursor that has been lost off an edge. It is opt-in: a thumb sits on the thumbrest most
+     * of the time, so the hold would go off by itself.
      */
     public void updateMouseCentre(boolean[] buttons) {
         XrInterface.ControllerButton primaryRest = XrActivity.mouseLeftHanded ? XrInterface.ControllerButton.L_THUMBREST : XrInterface.ControllerButton.R_THUMBREST;
         // A lightgun cursor is wherever the controller points, and in immersive mode the mouse
         // is the camera, so there is nothing to centre in either. In gamepad mode the thumbrests
         // belong to the d-pad, and with a relative mouse the guest owns the cursor.
-        if (XrActivity.gamepadEmulation || XrActivity.mouseRelative || XrActivity.mouseLightgun || XrActivity.isImmersive || !buttons[primaryRest.ordinal()]) {
+        if (!XrActivity.thumbrestMouseCentre || XrActivity.gamepadEmulation || XrActivity.mouseRelative || XrActivity.mouseLightgun || XrActivity.isImmersive || !buttons[primaryRest.ordinal()]) {
             mouseCentreHoldStartTime = 0;
             return;
         }

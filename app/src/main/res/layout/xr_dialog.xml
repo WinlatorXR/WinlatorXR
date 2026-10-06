@@ -374,6 +374,14 @@
                                 android:background="@drawable/xr_selector"
                                 android:text="@string/relative_mouse_movement" />
 
+                            <CheckBox
+                                android:id="@+id/CBPlayerXRThumbrestMouseCentre"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="8dp"
+                                android:background="@drawable/xr_selector"
+                                android:text="@string/xr_thumbrest_mouse_centre" />
+
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"

@@ -191,7 +191,7 @@ public final class GuidedTours {
                 new GuidedTour.Step(R.string.tour_gamepad_tab, () -> tab(activity, SettingsFragment.class, 3), openSettings),
                 xrSetting(activity, R.string.tour_mouse_enable, R.id.CBPlayerXRMouse, openSettings),
                 xrSetting(activity, R.string.tour_mouse_buttons, R.id.CBPlayerXRMouse, openSettings),
-                xrSetting(activity, R.string.tour_mouse_centre, R.id.CBPlayerXRMouse, openSettings),
+                xrSetting(activity, R.string.tour_mouse_centre, R.id.CBPlayerXRThumbrestMouseCentre,openSettings),
                 xrSetting(activity, R.string.tour_xr_left_handed, R.id.CBPlayerXRMouseLeftHanded, openSettings),
                 xrSetting(activity, R.string.tour_mouse_lightgun, R.id.CBPlayerXRMouseLightgun, openSettings),
                 xrSetting(activity, R.string.tour_mouse_relative, R.id.CBRelativeMouse, openSettings)));

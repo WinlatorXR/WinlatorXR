@@ -68,6 +68,7 @@ public class XrActivity extends XServerDisplayActivity {
     public static boolean gamepadRadialToSquare;
     public static boolean rumblePassthrough;
     public static boolean thumbrestDpad;
+    public static boolean thumbrestMouseCentre;
     public static boolean keysEmulation;
     public static boolean mouseEmulation;
     public static boolean mouseLeftHanded;
@@ -129,6 +130,7 @@ public class XrActivity extends XServerDisplayActivity {
     public static final boolean DEFAULT_RADIAL_TO_SQUARE = false;
     public static final boolean DEFAULT_RUMBLE_PASSTHROUGH = false;
     public static final boolean DEFAULT_THUMBREST_DPAD = false;
+    public static final boolean DEFAULT_THUMBREST_MOUSE_CENTRE = false;
     public static final boolean DEFAULT_KEYS = true;
     public static final boolean DEFAULT_MOUSE = true;
     public static final boolean DEFAULT_MOUSE_LEFT_HANDED = false;
@@ -153,7 +155,7 @@ public class XrActivity extends XServerDisplayActivity {
      */
     public static final String[] SESSION_KEYS = {
             "use_cs", "use_pt", "use_xr_gamepad", "xr_gamepad_radial_to_square",
-            "use_xr_rumble_passthrough", "use_xr_thumbrest_dpad", "use_xr_keys", "use_xr_mouse", "use_xr_leftHanded",
+            "use_xr_rumble_passthrough", "use_xr_thumbrest_dpad", "use_xr_thumbrest_mouse_centre", "use_xr_keys", "use_xr_mouse", "use_xr_leftHanded",
             "use_xr_lightgun", "use_xr_lightgun_haptic", "use_xr_relative_mouse", "use_xr_smoothing", "use_xr_wheel",
             PREF_SHOW_FPS, PREF_SBS_STRETCH, PREF_SBS_TRIM, PREF_FOV_PASSTHROUGH, PREF_COLOUR_KEY, PREF_COLOUR_KEY_TOLERANCE, PREF_SCREEN_DISTANCE, PREF_HEAD_TURN_SENSITIVITY,XrEnvironment.PREF_KEY, XrEnvironment.ENABLED_KEY,
             XrControllerDialog.XR_CONTROLLER_PROFILE_INDEX};
@@ -190,6 +192,7 @@ public class XrActivity extends XServerDisplayActivity {
         gamepadRadialToSquare = SessionSettings.getBoolean(this, "xr_gamepad_radial_to_square", DEFAULT_RADIAL_TO_SQUARE);
         rumblePassthrough = SessionSettings.getBoolean(this, "use_xr_rumble_passthrough", DEFAULT_RUMBLE_PASSTHROUGH);
         thumbrestDpad = SessionSettings.getBoolean(this, "use_xr_thumbrest_dpad", DEFAULT_THUMBREST_DPAD);
+        thumbrestMouseCentre = SessionSettings.getBoolean(this, "use_xr_thumbrest_mouse_centre", DEFAULT_THUMBREST_MOUSE_CENTRE);
         keysEmulation = SessionSettings.getBoolean(this, "use_xr_keys", DEFAULT_KEYS);
         mouseEmulation = SessionSettings.getBoolean(this, "use_xr_mouse", DEFAULT_MOUSE);
         mouseLeftHanded = SessionSettings.getBoolean(this, "use_xr_leftHanded", DEFAULT_MOUSE_LEFT_HANDED);

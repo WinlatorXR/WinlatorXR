@@ -98,7 +98,7 @@
     <string name="tour_mouse">XR controller as a mouse</string>
     <string name="tour_mouse_enable">Mouse mode makes one XR controller act as a mouse. It uses the right controller. It is recommended to leave this enabled here.\n\nMove your hand to move the cursor.</string>
     <string name="tour_mouse_buttons">What each control does:\n\n• Trigger: left click\n• Grip: right click\n• Thumbstick up and down: scroll wheel\n• Thumbstick left and right: jump the cursor sideways\n\nHolding the thumbstick click for a second opens the XR menu.</string>
-    <string name="tour_mouse_centre">Lost the cursor? Rest your thumb on the mouse hand\'s thumbrest for three seconds. The controller buzzes and the cursor goes back to the centre of the screen.\n\nThis is off in gamepad mode, in light gun mode and with relative mouse movement.</string>
+    <string name="tour_mouse_centre">Lost the cursor? With this ticked, rest your thumb on the mouse hand\'s thumbrest for three seconds. The controller buzzes and the cursor goes back to the centre of the screen.\n\nThis is off in gamepad mode, in light gun mode and with relative mouse movement.</string>
     <string name="tour_mouse_lightgun">Light gun mode puts the cursor where the controller points, like a laser pointer, instead of following your hand.\n\nTicking it shows an option to buzz the controller on each trigger press. It also turns relative mouse movement off.\n\nIt is recommended to leave this disabled and control this from the XR menu per game.</string>
     <string name="tour_mouse_relative">Relative mouse movement sends the game how far the mouse moved, instead of where the cursor is. Some games require this for their mouse input.\n\nContainers on Proton 10 and 11 will automatically enable this to correct game mouse inputs.</string>
     <string name="tour_vr">PC VR games</string>
@@ -202,6 +202,7 @@
     <string name="cursor_speed">Cursor Speed</string>
     <string name="smooth_pointer">Smooth controller pointer</string>
     <string name="relative_mouse_movement">Relative mouse movement</string>
+    <string name="xr_thumbrest_mouse_centre">Hold thumbrest 3 seconds to centre the mouse</string>
     <string name="toggle_switch">Toggle Switch</string>
     <string name="profile_exported_to">Profile exported to</string>
     <string name="unable_to_import_profile">Unable to import profile</string>

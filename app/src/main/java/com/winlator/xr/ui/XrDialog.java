@@ -147,6 +147,7 @@ public class XrDialog extends ContentDialog {
         CheckBox cbKeys = findViewById(R.id.CBPlayerXRKeys);
         controllerUI(cbMouseLeftHanded, cbMouseLightgun, cbLightgunHaptic, cbRelativeMouse, cbMouse, cbGamepad, cbKeys);
         thumbrestDpadUI(findViewById(R.id.CBPlayerXRThumbrestDpad));
+        thumbrestMouseCentreUI(findViewById(R.id.CBPlayerXRThumbrestMouseCentre));
 
         // Which controller profile is in use belongs to the game; the profiles themselves
         // are a shared library and stay in the app-wide preferences.
@@ -198,6 +199,37 @@ public class XrDialog extends ContentDialog {
         if (XrActivity.isActive()) cbThumbrestDpad.setEnabled(XrActivity.gamepadEmulation);
     }
 
+    /**
+     * Holding the mouse hand's thumbrest for three seconds to put the cursor back in the centre
+     * of the screen. Off until asked for: a thumb sits on the thumbrest most of the time, so
+     * the hold would go off by itself. Call after controllerUI, which it reads the mouse and
+     * gamepad tick boxes from.
+     */
+    public static void thumbrestMouseCentreUI(CheckBox cbThumbrestMouseCentre) {
+        loadConfig(cbThumbrestMouseCentre, "use_xr_thumbrest_mouse_centre", XrActivity.DEFAULT_THUMBREST_MOUSE_CENTRE, XrActivity.thumbrestMouseCentre);
+        cbThumbrestMouseCentre.setOnCheckedChangeListener((compoundButton, checked) -> {
+            saveConfig(cbThumbrestMouseCentre, "use_xr_thumbrest_mouse_centre", checked);
+            XrActivity.thumbrestMouseCentre = checked;
+        });
+        updateThumbrestMouseCentreEnabled(cbThumbrestMouseCentre);
+    }
+
+    /**
+     * It needs mouse mode on, and gamepad mode off: the thumbrests are the d-pad's there. It
+     * is off with a relative mouse as well, where the guest owns the cursor, and with a light
+     * gun, where the cursor is wherever the controller points.
+     */
+    private static void updateThumbrestMouseCentreEnabled(View view) {
+        View root = view.getRootView();
+        CheckBox cbThumbrestMouseCentre = root.findViewById(R.id.CBPlayerXRThumbrestMouseCentre);
+        CheckBox cbMouse = root.findViewById(R.id.CBPlayerXRMouse);
+        CheckBox cbGamepad = root.findViewById(R.id.CBPlayerXRGamepad);
+        CheckBox cbRelativeMouse = root.findViewById(R.id.CBRelativeMouse);
+        CheckBox cbMouseLightgun = root.findViewById(R.id.CBPlayerXRMouseLightgun);
+        if (cbThumbrestMouseCentre == null || cbMouse == null || cbGamepad == null || cbRelativeMouse == null || cbMouseLightgun == null) return;
+        cbThumbrestMouseCentre.setEnabled(cbMouse.isChecked() && !cbGamepad.isChecked() && !cbRelativeMouse.isChecked() && !cbMouseLightgun.isChecked());
+    }
+
     public static void controllerUI(CheckBox cbMouseLeftHanded, CheckBox cbMouseLightgun, CheckBox cbLightgunHaptic, CheckBox cbRelativeMouse, CheckBox cbMouse, CheckBox cbGamepad, CheckBox cbKeys) {
         loadConfig(cbMouseLeftHanded, "use_xr_leftHanded", XrActivity.DEFAULT_MOUSE_LEFT_HANDED, XrActivity.mouseLeftHanded);
         cbMouseLeftHanded.setOnCheckedChangeListener((compoundButton, checked) -> {
@@ -212,6 +244,7 @@ public class XrDialog extends ContentDialog {
             if (checked) cbRelativeMouse.setChecked(false);
             cbRelativeMouse.setEnabled(!checked && cbMouse.isChecked());
             cbLightgunHaptic.setVisibility(checked ? View.VISIBLE : View.GONE);
+            updateThumbrestMouseCentreEnabled(cbMouseLightgun);
         });
 
         loadConfig(cbLightgunHaptic, "use_xr_lightgun_haptic", XrActivity.DEFAULT_LIGHTGUN_HAPTIC, XrActivity.lightgunHaptic);
@@ -225,6 +258,7 @@ public class XrDialog extends ContentDialog {
         cbRelativeMouse.setOnCheckedChangeListener((compoundButton, checked) -> {
             saveConfig(cbRelativeMouse, "use_xr_relative_mouse", checked);
             XrActivity.mouseRelative = checked;
+            updateThumbrestMouseCentreEnabled(cbRelativeMouse);
             if (XrActivity.isActive()) {
                 XrActivity.getInstance().setRelativeMouseMovement(checked);
             }
@@ -238,6 +272,7 @@ public class XrDialog extends ContentDialog {
             cbMouseLightgun.setEnabled(checked);
             cbLightgunHaptic.setEnabled(checked);
             cbRelativeMouse.setEnabled(checked && !cbMouseLightgun.isChecked());
+            updateThumbrestMouseCentreEnabled(cbMouse);
         });
         cbMouseLeftHanded.setEnabled(cbMouse.isChecked());
         cbMouseLightgun.setEnabled(cbMouse.isChecked());
@@ -250,6 +285,7 @@ public class XrDialog extends ContentDialog {
             saveConfig(cbGamepad, "use_xr_gamepad", checked);
             XrActivity.gamepadEmulation = checked;
             updateImmersiveLabel(cbGamepad, checked);
+            updateThumbrestMouseCentreEnabled(cbGamepad);
             if (XrActivity.isActive()) {
                 View cbThumbrestDpad = cbGamepad.getRootView().findViewById(R.id.CBPlayerXRThumbrestDpad);
                 if (cbThumbrestDpad != null) cbThumbrestDpad.setEnabled(checked);
