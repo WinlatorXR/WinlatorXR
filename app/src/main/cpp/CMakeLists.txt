@@ -97,6 +97,13 @@ set_target_properties(kgsl_turnip_shim PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY
         "${CMAKE_CURRENT_SOURCE_DIR}/jniLibs/${ANDROID_ABI}")
 
+# ---- MAP_MERGE_SHIM (keeps small 64 KB-aligned Wine allocations mergeable, for vm.max_map_count) ----
+add_library(map_merge_shim SHARED winlator/map_merge_shim.c)
+
+set_target_properties(map_merge_shim PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY
+        "${CMAKE_CURRENT_SOURCE_DIR}/jniLibs/${ANDROID_ABI}")
+
 # ---- TURNIP_COMPAT_SHIM (libc/platform symbol gaps on older Android, needed by some Turnip builds) ----
 add_library(turnip_compat_shim SHARED winlator/turnip_compat_shim.c)
 

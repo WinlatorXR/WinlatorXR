@@ -259,6 +259,15 @@ public class GoldbergEmu {
     }
 
     public static void showApplyGoldbergDialog(Activity activity, final Shortcut shortcut) {
+        showApplyGoldbergDialog(activity, shortcut, null, null, null);
+    }
+
+    /**
+     * The same dialog for a fix recommended for the game: only the installed packages of that kind
+     * (ColdClientLoader or not; null offers every kind), with the AppID filled in when known.
+     * onApplied runs on the UI thread once the fix is on the game.
+     */
+    public static void showApplyGoldbergDialog(Activity activity, final Shortcut shortcut, Boolean coldClientLoader, String appId, Runnable onApplied) {
         final Context context = activity;
 
         // A second fix on top of the first backs up the first one's files as the originals, so
@@ -275,12 +284,16 @@ public class GoldbergEmu {
         final List<ContentProfile> installed = new ArrayList<>();
         if (allProfiles != null) {
             for (ContentProfile profile : allProfiles) {
-                if (getInstallDir(context, profile).isDirectory()) installed.add(profile);
+                if (!getInstallDir(context, profile).isDirectory()) continue;
+                if (coldClientLoader != null && isColdClientLoader(profile) != coldClientLoader) continue;
+                installed.add(profile);
             }
         }
 
         if (installed.isEmpty()) {
-            Toast.makeText(context, "No Goldberg Steam Emulator files installed. Install one from Downloader → Goldberg first.", Toast.LENGTH_LONG).show();
+            Toast.makeText(context, coldClientLoader == null ? "No Goldberg Steam Emulator files installed. Install one from Downloader → Goldberg first."
+                    : coldClientLoader ? "No Goldberg ColdClientLoader package installed. Install one from Downloader → Goldberg first."
+                    : "No Goldberg steam_api package installed. Install one from Downloader → Goldberg first.", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -291,13 +304,13 @@ public class GoldbergEmu {
         }
 
         if (installed.size() == 1) {
-            promptGoldbergAppId(activity, shortcut, installed.get(0), targetDirs);
+            promptGoldbergAppId(activity, shortcut, installed.get(0), targetDirs, appId, onApplied);
         } else {
             String[] names = new String[installed.size()];
             for (int i = 0; i < installed.size(); i++) names[i] = installed.get(i).verName;
             new AlertDialog.Builder(context)
                     .setTitle("Select Goldberg version")
-                    .setItems(names, (d, which) -> promptGoldbergAppId(activity, shortcut, installed.get(which), targetDirs))
+                    .setItems(names, (d, which) -> promptGoldbergAppId(activity, shortcut, installed.get(which), targetDirs, appId, onApplied))
                     .setNegativeButton("Cancel", null)
                     .show();
         }
@@ -477,12 +490,12 @@ public class GoldbergEmu {
         return results;
     }
 
-    private static void promptGoldbergAppId(Activity activity, final Shortcut shortcut, final ContentProfile profile, final List<File> targetDirs) {
+    private static void promptGoldbergAppId(Activity activity, final Shortcut shortcut, final ContentProfile profile, final List<File> targetDirs, String knownAppId, final Runnable onApplied) {
         final Context context = activity;
         final File targetDir = targetDirs.get(0); // representative folder — AppID/name detection is per-game, not per-binary
 
-        String detectedAppId = "";
-        try {
+        String detectedAppId = knownAppId != null ? knownAppId : "";
+        if (detectedAppId.isEmpty()) try {
             SteamDatabase db = SteamDatabase.getInstance(context.getApplicationContext());
             String targetPath = targetDir.getAbsolutePath();
             for (SteamDatabase.GameRow row : db.getInstalledGames()) {
@@ -539,16 +552,16 @@ public class GoldbergEmu {
                         Toast.makeText(context, "AppID is required.", Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    applyGoldberg(activity, shortcut, profile, targetDirs, appId);
+                    applyGoldberg(activity, shortcut, profile, targetDirs, appId, onApplied);
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    private static void applyGoldberg(Activity activity, final Shortcut shortcut, final ContentProfile profile, final List<File> targetDirs, final String appId) {
+    private static void applyGoldberg(Activity activity, final Shortcut shortcut, final ContentProfile profile, final List<File> targetDirs, final String appId, final Runnable onApplied) {
         final Context context = activity;
         if (isColdClientLoader(profile)) {
-            Executors.newSingleThreadExecutor().execute(() -> applyColdClientLoader(activity, shortcut, profile, appId));
+            Executors.newSingleThreadExecutor().execute(() -> applyColdClientLoader(activity, shortcut, profile, appId, onApplied));
             return;
         }
         Executors.newSingleThreadExecutor().execute(() -> {
@@ -574,11 +587,14 @@ public class GoldbergEmu {
             final int finalSucceeded = succeeded;
             final int total = targetDirs.size();
             if (activity != null) {
-                activity.runOnUiThread(() -> Toast.makeText(context,
+                activity.runOnUiThread(() -> {
+                    Toast.makeText(context,
                         finalSucceeded == 0 ? "Failed to apply Goldberg fix."
                                 : total == 1 ? "Goldberg Steam fix applied."
                                   : "Goldberg Steam fix applied to " + finalSucceeded + " of " + total + " locations.",
-                        Toast.LENGTH_LONG).show());
+                        Toast.LENGTH_LONG).show();
+                    if (finalSucceeded > 0 && onApplied != null) onApplied.run();
+                });
             }
         });
     }
@@ -629,7 +645,7 @@ public class GoldbergEmu {
      * The shortcut keeps pointing at the game's exe, so everything that reads its path still finds
      * the game; goldbergLoader only swaps the program started at launch for the loader beside it.
      */
-    private static void applyColdClientLoader(Activity activity, Shortcut shortcut, ContentProfile profile, String appId) {
+    private static void applyColdClientLoader(Activity activity, Shortcut shortcut, ContentProfile profile, String appId, Runnable onApplied) {
         File exeFile = GameUninstaller.resolveExecutable(activity, shortcut.container, shortcut);
         File exeDir = exeFile == null ? null : exeFile.getParentFile();
         String exePath = exeFile == null ? null : GuestScriptRunner.toWinPath(activity, shortcut.container, exeFile);
@@ -662,9 +678,12 @@ public class GoldbergEmu {
         }
 
         final String error = failure;
-        activity.runOnUiThread(() -> Toast.makeText(activity, error != null ? error
+        activity.runOnUiThread(() -> {
+            Toast.makeText(activity, error != null ? error
                 : "ColdClientLoader set up. The game's shortcut now starts it through the loader.",
-                Toast.LENGTH_LONG).show());
+                Toast.LENGTH_LONG).show();
+            if (error == null && onApplied != null) onApplied.run();
+        });
     }
 
     /** An Unreal root exe is a bootstrap that starts <project>/Binaries/Win64/*-Shipping.exe; any other exe is returned as is. */

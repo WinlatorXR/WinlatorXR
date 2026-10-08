@@ -471,6 +471,7 @@ public class XrActivity extends XServerDisplayActivity {
     public native boolean nativeIsDirectActive();
     public native float nativeGetDirectFps();
     public native int[] nativeGetRecommendedEyeSize();
+    public native String nativeGetVisibilityMask();
     public native void nativeSetFramesync(int r, int g, int b, int a);
     public native void sendManufacturer(String manufacturer);
 

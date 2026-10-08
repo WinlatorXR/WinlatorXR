@@ -467,6 +467,10 @@ public class ContainerDetailFragment extends Fragment {
                     showGStreamerWorkaroundWarning.run();
             });
 
+        // Shown only for arm64ec Wine, see loadWineVersionSpinner
+        final CheckBox cbMapMergeShim = view.findViewById(R.id.CBMapMergeShim);
+        cbMapMergeShim.setChecked(isEditMode() && container.isMapMergeShim());
+
         final EditText etLC_ALL = view.findViewById(R.id.ETlcall);
         Locale systemLocal = Locale.getDefault();
         etLC_ALL.setText(isEditMode() ? container.getLC_ALL() : systemLocal.getLanguage() + '_' + systemLocal.getCountry() + ".UTF-8");
@@ -599,6 +603,7 @@ public class ContainerDetailFragment extends Fragment {
 
                 // Handle GStreamer Workaround environment variables based on the toggle state
                 boolean gstreamerWorkaround = cbGStreamerWorkaroundToggle.isChecked();
+                boolean mapMergeShim = cbMapMergeShim.getVisibility() == View.VISIBLE && cbMapMergeShim.isChecked();
 
 
 
@@ -635,6 +640,7 @@ public class ContainerDetailFragment extends Fragment {
                     container.setGpuLevel(StringUtils.parseInt(sGPULevel.getSelectedItem()));
                     container.setRefreshRate(StringUtils.parseInt(sRefreshRate.getSelectedItem()));
                     container.setGstreamerWorkaround(gstreamerWorkaround);
+                    container.setMapMergeShim(mapMergeShim);
                     container.saveData();
                     saveWineRegistryKeys(view);
                     FEXCoreManager.saveFEXCoreSpinners(container, sFEXCoreTSOPreset, sFEXCoreMultiBlock, sFEXCoreX87ReducedPrecision);
@@ -674,6 +680,7 @@ public class ContainerDetailFragment extends Fragment {
                     data.put("gpuLevel", StringUtils.parseInt(sGPULevel.getSelectedItem()));
                     data.put("refreshRate", StringUtils.parseInt(sRefreshRate.getSelectedItem()));
                     data.put("gstreamerWorkaround", gstreamerWorkaround);
+                    data.put("mapMergeShim", mapMergeShim);
 
                     preloaderDialog.show(R.string.creating_container);
 
@@ -1141,6 +1148,7 @@ public class ContainerDetailFragment extends Fragment {
                     sEmulator.setSelection(1);
                     sEmulator64.setSelection(1);
                 }
+                view.findViewById(R.id.CBMapMergeShim).setVisibility(wineInfo.isArm64EC() ? View.VISIBLE : View.GONE);
                 loadBox64VersionSpinner(context, container, contentsManager, sBox64Version, wineInfo.isArm64EC());
                 cbWoW64Mode.setEnabled(true); // Always allow user to toggle WoW64 mode
                 updateArchitecture(wineInfo);
@@ -1183,6 +1191,7 @@ public class ContainerDetailFragment extends Fragment {
                     sEmulator.setSelection(1);
                     sEmulator64.setSelection(1);
                 }
+                view.findViewById(R.id.CBMapMergeShim).setVisibility(wineInfo.isArm64EC() ? View.VISIBLE : View.GONE);
                 loadBox64VersionSpinner(context, container, contentsManager, sBox64Version, wineInfo.isArm64EC());
                 updateArchitecture(wineInfo);
                 updateGraphicsDriverSpinner(context, sGraphicsDriver);

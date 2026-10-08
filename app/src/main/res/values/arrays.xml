@@ -386,7 +386,7 @@
         <item>Hold Y on the menu to drop this game back to the app-wide XR, motion control and screen effect settings.</item>
         <item>XR, motion control and screen effect settings are remembered per game, so tuning one game leaves the others alone.</item>
         <item>Import an equirectangular 360 panorama (JPG, PNG or WebP, 2:1) and play inside it with passthrough off.</item>
-        <item>In gamepad mode, rest both thumbs on the thumbrests for a second to turn the left thumbstick into a d-pad, and again to turn it back. Holding both grips for a moment also works. The XR settings have an option to use the right thumbrest alone for it.</item>
+        <item>In Gamepad mode, rest on both thumbrests for a second to toggle between analogue and d-pad mode.</item>
         <item>Left-handed? Turn on left-handed mouse mapping and every primary control moves to your other hand.</item>
         <item>Camera adjust: the primary thumbstick moves the view up and down, the secondary one moves it around you.</item>
     </string-array>

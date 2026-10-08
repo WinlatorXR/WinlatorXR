@@ -684,6 +684,50 @@ Java_com_winlator_xr_XrActivity_nativeGetRecommendedEyeSize(JNIEnv *env, jobject
     return result;
 }
 
+// The part of each eye the lenses hide, from the headset's own runtime, in the text form the PC VR runtime
+// reads: "eye type vertexCount indexCount", then the vertices, then the indices. Empty if the headset has none.
+JNIEXPORT jstring JNICALL
+Java_com_winlator_xr_XrActivity_nativeGetVisibilityMask(JNIEnv *env, jobject obj) {
+    std::string out;
+    PFN_xrGetVisibilityMaskKHR getMask = NULL;
+    if (xr_initialized && xr_module_engine.PlatformFlag[PLATFORM_EXTENSION_VISIBILITY_MASK] &&
+            xr_module_engine.Session != XR_NULL_HANDLE) {
+        xrGetInstanceProcAddr(xr_module_engine.Instance, "xrGetVisibilityMaskKHR", (PFN_xrVoidFunction*)&getMask);
+    }
+    for (uint32_t eye = 0; getMask && eye < 2; eye++) {
+        for (int type = XR_VISIBILITY_MASK_TYPE_HIDDEN_TRIANGLE_MESH_KHR; type <= XR_VISIBILITY_MASK_TYPE_LINE_LOOP_KHR; type++) {
+            XrVisibilityMaskKHR mask = {XR_TYPE_VISIBILITY_MASK_KHR};
+            if (XR_FAILED(getMask(xr_module_engine.Session, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, eye,
+                    (XrVisibilityMaskTypeKHR)type, &mask))) continue;
+            ALOGV("Visibility mask eye %u type %d: %u vertices, %u indices", eye, type, mask.vertexCountOutput, mask.indexCountOutput);
+            if (mask.vertexCountOutput == 0 || mask.indexCountOutput == 0) continue;
+            std::vector<XrVector2f> vertices(mask.vertexCountOutput);
+            std::vector<uint32_t> indices(mask.indexCountOutput);
+            mask.vertexCapacityInput = (uint32_t)vertices.size();
+            mask.vertices = vertices.data();
+            mask.indexCapacityInput = (uint32_t)indices.size();
+            mask.indices = indices.data();
+            if (XR_FAILED(getMask(xr_module_engine.Session, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, eye,
+                    (XrVisibilityMaskTypeKHR)type, &mask))) continue;
+
+            char text[64];
+            snprintf(text, sizeof(text), "%u %d %u %u\n", eye, type, mask.vertexCountOutput, mask.indexCountOutput);
+            out += text;
+            for (uint32_t i = 0; i < mask.vertexCountOutput; i++) {
+                snprintf(text, sizeof(text), "%.6f %.6f ", vertices[i].x, vertices[i].y);
+                out += text;
+            }
+            out += "\n";
+            for (uint32_t i = 0; i < mask.indexCountOutput; i++) {
+                snprintf(text, sizeof(text), "%u ", indices[i]);
+                out += text;
+            }
+            out += "\n";
+        }
+    }
+    return env->NewStringUTF(out.c_str());
+}
+
 JNIEXPORT void JNICALL
 Java_com_winlator_xr_XrActivity_nativeSetFramesync(JNIEnv *env, jobject obj, jint r, jint g, jint b,
                                                    jint a) {

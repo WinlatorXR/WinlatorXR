@@ -39,6 +39,7 @@
             <item android:title="-novid" />
             <item android:title="-console" />
             <item android:title="-w 1280 -h 720" />
+            <item android:title="-vr -novid +vr_fidelity_level_auto 0 +vr_fidelity_level 0 +vr_msaa 0 +volume_fog_disable 1" />
         </menu>
     </item>
     <item android:title="VR">

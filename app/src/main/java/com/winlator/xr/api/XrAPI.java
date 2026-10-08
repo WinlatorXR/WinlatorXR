@@ -45,6 +45,7 @@ public class XrAPI implements XrInterface {
     @SuppressLint("SdCardPath")
     private static final String PATH_DEBUG = "/sdcard/Download/udp_debug";
     private static final String SYSTEM_FILE = "system";
+    private static final String MASK_FILE = "mask";
     private static final String VERSION_FILE = "version";
 
     private XrInterface impl = null;
@@ -103,6 +104,14 @@ public class XrAPI implements XrInterface {
         FileOutputStream fos = new FileOutputStream(new File(dir, SYSTEM_FILE));
         fos.write(info.getBytes(StandardCharsets.US_ASCII));
         fos.close();
+
+        // The lens-hidden area of each eye, for the runtime's xrGetVisibilityMaskKHR; no file if the headset has none
+        String mask = XrActivity.getInstance().nativeGetVisibilityMask();
+        if (!mask.isEmpty()) {
+            fos = new FileOutputStream(new File(dir, MASK_FILE));
+            fos.write(mask.getBytes(StandardCharsets.US_ASCII));
+            fos.close();
+        }
     }
 
     public void consumeInputs(XServer xServer) {

@@ -522,6 +522,25 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/LLPcvrRefreshRate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/refresh_rate" />
+
+            <Spinner
+                style="@style/ComboBox"
+                android:layout_width="match_parent"
+                android:id="@+id/SPcvrRefreshRate"
+                android:entries="@array/xr_refresh_entries"
+                android:spinnerMode="dialog" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/LLTabAdvanced"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -655,6 +674,12 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/enable_gstreamer_workaround" />
+
+                    <CheckBox
+                        android:id="@+id/CBMapMergeShim"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/map_merge_shim" />
 
                 </LinearLayout>
 

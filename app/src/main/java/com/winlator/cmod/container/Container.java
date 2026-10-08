@@ -28,7 +28,7 @@ public class Container {
     public static final String DEFAULT_DXWRAPPERCONFIG = defaultDXWrapperConfig(false);
     public static final String DEFAULT_GRAPHICSDRIVERCONFIG = defaultGraphicsDriverConfig(DefaultVersion.WRAPPER);
     public static final String DEFAULT_DDRAWRAPPER = "dd7to9-v1.7";
-    public static final String DEFAULT_WINCOMPONENTS = "direct3d=1,directsound=0,directmusic=0,directshow=0,directplay=0,xaudio=0,vcrun2005=1,vcrun2010=1,wmdecoder=1";
+    public static final String DEFAULT_WINCOMPONENTS = "direct3d=1,directsound=0,directmusic=0,directshow=0,directplay=0,xaudio=0,vcrun2005=1,vcrun2010=1,vcrun2012=1,wmdecoder=1";
     public static final String FALLBACK_WINCOMPONENTS = "direct3d=1,directsound=1,directmusic=1,directshow=1,directplay=1,xaudio=1,vcrun2005=1,vcrun2010=1,wmdecoder=1";
 
     public static final String[] MEDIACONV_ENV_VARS = {
@@ -80,6 +80,7 @@ public class Container {
     private boolean isRelativeMouseMovement;
 
     private boolean gstreamerWorkaround = false;
+    private boolean mapMergeShim = false;
 
     private ContainerManager containerManager;
 
@@ -332,6 +333,14 @@ public class Container {
         this.gstreamerWorkaround = gstreamerWorkaround;
     }
 
+    public boolean isMapMergeShim() {
+        return this.mapMergeShim;
+    }
+
+    public void setMapMergeShim(boolean mapMergeShim) {
+        this.mapMergeShim = mapMergeShim;
+    }
+
     public void setExtraData(JSONObject extraData) {
         this.extraData = extraData;
     }
@@ -480,6 +489,7 @@ public class Container {
             data.put("gpuLevel", gpuLevel);
             data.put("refreshRate", refreshRate);
             data.put("gstreamerWorkaround", gstreamerWorkaround);
+            data.put("mapMergeShim", mapMergeShim);
             if (!WineInfo.isMainWineVersion(wineVersion)) data.put("wineVersion", wineVersion);
             FileUtils.writeString(getConfigFile(), data.toString());
         }
@@ -553,7 +563,11 @@ public class Container {
                     break;
                 case "extraData" : {
                     JSONObject extraData = data.getJSONObject(key);
+                    String installedWinComponents = extraData.optString("wincomponents", null);
                     checkObsoleteOrMissingProperties(extraData);
+                    // This is the record of what was last installed, so it must not pick up
+                    // defaults for components added since, or they would never be installed
+                    if (installedWinComponents != null) extraData.put("wincomponents", installedWinComponents);
                     setExtraData(extraData);
                     break;
                 }
@@ -595,6 +609,9 @@ public class Container {
                     break;
                 case "gstreamerWorkaround" : // Add this case
                     setGstreamerWorkaround(data.getBoolean(key));
+                    break;
+                case "mapMergeShim" :
+                    setMapMergeShim(data.getBoolean(key));
                     break;
             }
         }

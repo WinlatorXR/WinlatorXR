@@ -308,10 +308,15 @@ public class ShortcutSettingsDialog extends ContentDialog {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {}
         });
+        // The headset refresh rate for this game; the container's rate until changed here
+        final View llPcvrRefreshRate = findViewById(R.id.LLPcvrRefreshRate);
+        final Spinner sPcvrRefreshRate = findViewById(R.id.SPcvrRefreshRate);
+        AppUtils.setSpinnerSelectionFromNumber(sPcvrRefreshRate, shortcut.getExtra("refreshRate", "" + shortcut.container.getRefreshRate()));
         cbPcvrDirectTransport.setVisibility(cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE);
         llPcvrController.setVisibility(cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE);
         cbPcvrStickTouchpad.setVisibility(cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE);
         llPcvrFovScale.setVisibility(cbPcvrRuntime.isChecked() || cbXrapiVr.isChecked() ? View.VISIBLE : View.GONE);
+        llPcvrRefreshRate.setVisibility(cbPcvrRuntime.isChecked() || cbXrapiVr.isChecked() ? View.VISIBLE : View.GONE);
         // The render scale only has a say over direct frames
         llPcvrRenderScale.setVisibility(cbPcvrRuntime.isChecked() && cbPcvrDirectTransport.isChecked()
                 ? View.VISIBLE : View.GONE);
@@ -320,10 +325,13 @@ public class ShortcutSettingsDialog extends ContentDialog {
             llPcvrController.setVisibility(isChecked ? View.VISIBLE : View.GONE);
             cbPcvrStickTouchpad.setVisibility(isChecked ? View.VISIBLE : View.GONE);
             llPcvrFovScale.setVisibility(isChecked || cbXrapiVr.isChecked() ? View.VISIBLE : View.GONE);
+            llPcvrRefreshRate.setVisibility(isChecked || cbXrapiVr.isChecked() ? View.VISIBLE : View.GONE);
             llPcvrRenderScale.setVisibility(isChecked && cbPcvrDirectTransport.isChecked() ? View.VISIBLE : View.GONE);
         });
-        cbXrapiVr.setOnCheckedChangeListener((buttonView, isChecked) ->
-                llPcvrFovScale.setVisibility(isChecked || cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE));
+        cbXrapiVr.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            llPcvrFovScale.setVisibility(isChecked || cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE);
+            llPcvrRefreshRate.setVisibility(isChecked || cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE);
+        });
         cbPcvrDirectTransport.setOnCheckedChangeListener((buttonView, isChecked) ->
                 llPcvrRenderScale.setVisibility(isChecked && cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE));
 
@@ -437,6 +445,11 @@ public class ShortcutSettingsDialog extends ContentDialog {
             if (isChecked && cbGStreamerWorkaroundToggle.isChecked())
                 showGStreamerWorkaroundWarning.run();
         });
+
+        // The mapping merge preload only loads for arm64ec Wine, so other containers don't get the box
+        final CheckBox cbMapMergeShim = findViewById(R.id.CBMapMergeShim);
+        cbMapMergeShim.setChecked(wineInfo.isArm64EC() && shortcut.getExtra("mapMergeShim", shortcut.container.isMapMergeShim() ? "1" : "0").equals("1"));
+        cbMapMergeShim.setVisibility(wineInfo.isArm64EC() ? View.VISIBLE : View.GONE);
 
 
 //        final CheckBox cbRelativeMouseMovement = findViewById(R.id.CBRelativeMouseMovement);
@@ -577,6 +590,8 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
                 boolean gstreamerWorkaround = cbGStreamerWorkaroundToggle.isChecked();
                 shortcut.putExtra("gstreamerWorkaround", gstreamerWorkaround ? "1" : "0");
+                boolean mapMergeShim = cbMapMergeShim.isChecked();
+                shortcut.putExtra("mapMergeShim", mapMergeShim != shortcut.container.isMapMergeShim() ? (mapMergeShim ? "1" : "0") : null);
 
                 boolean touchscreenMode = cbSimTouchScreen.isChecked();
                 shortcut.putExtra("simTouchScreen", touchscreenMode ? "1" : "0");
@@ -619,6 +634,9 @@ public class ShortcutSettingsDialog extends ContentDialog {
                 shortcut.putExtra("xrapiVr", cbXrapiVr.isChecked() ? "1" : null);
                 shortcut.putExtra(PcvrRuntime.FOV_SCALE_KEY, (cbPcvrRuntime.isChecked() || cbXrapiVr.isChecked()) && pcvrFov != PcvrRuntime.DEFAULT_FOV_SCALE
                         ? String.valueOf(pcvrFov) : null);
+                int pcvrRefreshRate = StringUtils.parseInt(sPcvrRefreshRate.getSelectedItem());
+                shortcut.putExtra("refreshRate", (cbPcvrRuntime.isChecked() || cbXrapiVr.isChecked()) && pcvrRefreshRate != shortcut.container.getRefreshRate()
+                        ? String.valueOf(pcvrRefreshRate) : null);
                 int pcvrFovY = 30 + 5 * sbPcvrFovScaleY.getProgress();
                 shortcut.putExtra(PcvrRuntime.FOV_SCALE_Y_KEY, (cbPcvrRuntime.isChecked() || cbXrapiVr.isChecked()) && pcvrFovY != pcvrFov
                         ? String.valueOf(pcvrFovY) : null);
@@ -892,12 +910,20 @@ public class ShortcutSettingsDialog extends ContentDialog {
         tvTitle.setText("Recognised for this game (" + game + "Steam " + result.appId + ")");
         tvTitle.setTextColor(textColor);
 
+        final EditText etExecArgs = view.findViewById(R.id.ETExecArgs);
+        // Hidden outside arm64ec containers, where the preload never loads
+        final CheckBox cbMapMergeShim = view.findViewById(R.id.CBMapMergeShim);
+        final boolean canMergeMappings = cbMapMergeShim.getVisibility() == View.VISIBLE;
+
         LinearLayout list = view.findViewById(R.id.LLRecognisedOverridesList);
         // Fixes can set the same variable, so adding one can undo another
         Map<Button, GameOverrides.Fix> buttons = new java.util.LinkedHashMap<>();
         Runnable refreshButtons = () -> {
             for (Map.Entry<Button, GameOverrides.Fix> entry : buttons.entrySet()) {
-                boolean added = isOverrideAdded(envVarsView, entry.getValue());
+                GameOverrides.Fix fix = entry.getValue();
+                boolean added = isOverrideAdded(envVarsView, fix) && hasExecArgs(etExecArgs, fix)
+                        && (!fix.mapMergeShim || !canMergeMappings || cbMapMergeShim.isChecked())
+                        && (fix.goldberg.isEmpty() || GoldbergEmu.isApplied(shortcut));
                 entry.getKey().setText(added ? "Added" : context.getString(R.string.add));
                 entry.getKey().setEnabled(!added);
             }
@@ -906,6 +932,9 @@ public class ShortcutSettingsDialog extends ContentDialog {
             List<String> parts = new ArrayList<>();
             for (Map.Entry<String, String> env : fix.envVars.entrySet()) parts.add(env.getKey() + "=" + env.getValue());
             for (Map.Entry<String, String> dll : fix.dllOverrides.entrySet()) parts.add("WINEDLLOVERRIDES " + dll.getKey() + "=" + dll.getValue());
+            if (!fix.execArgs.isEmpty()) parts.add(fix.execArgs);
+            final boolean coldClientLoader = fix.goldberg.equals(GameOverrides.GOLDBERG_LOADER);
+            if (!fix.goldberg.isEmpty()) parts.add(coldClientLoader ? "Goldberg ColdClientLoader" : "Goldberg steam_api replacement");
 
             LinearLayout row = new LinearLayout(context);
             row.setOrientation(LinearLayout.HORIZONTAL);
@@ -929,6 +958,17 @@ public class ShortcutSettingsDialog extends ContentDialog {
                     }
                     envVarsView.put("WINEDLLOVERRIDES", dllOverrides);
                 }
+                // Only the options the exec args don't already have, so nothing is doubled
+                String execArgs = etExecArgs.getText().toString().trim();
+                for (String option : fix.execArgOptions()) {
+                    if (!(" " + execArgs + " ").contains(" " + option + " "))
+                        execArgs = execArgs.isEmpty() ? option : execArgs + " " + option;
+                }
+                if (!fix.execArgs.isEmpty()) etExecArgs.setText(execArgs);
+                if (fix.mapMergeShim && canMergeMappings) cbMapMergeShim.setChecked(true);
+                // Goldberg changes the game's files, so it goes through its own dialog, which keeps the originals for a revert
+                if (!fix.goldberg.isEmpty() && !GoldbergEmu.isApplied(shortcut))
+                    GoldbergEmu.showApplyGoldbergDialog(fragment.getActivity(), shortcut, coldClientLoader, result.appId, refreshButtons);
                 refreshButtons.run();
             });
             row.addView(btAdd, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -938,6 +978,13 @@ public class ShortcutSettingsDialog extends ContentDialog {
         }
         refreshButtons.run();
         view.findViewById(R.id.LLRecognisedOverrides).setVisibility(View.VISIBLE);
+    }
+
+    private static boolean hasExecArgs(EditText etExecArgs, GameOverrides.Fix fix) {
+        String execArgs = " " + etExecArgs.getText().toString().trim() + " ";
+        for (String option : fix.execArgOptions())
+            if (!execArgs.contains(" " + option + " ")) return false;
+        return true;
     }
 
     private static boolean isOverrideAdded(EnvVarsView envVarsView, GameOverrides.Fix fix) {

@@ -2361,9 +2361,9 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         File rootDir = imageFs.getRootDir();
 
         if (dxwrapper.equals("dxvk")) {
-            DXVKConfigDialog.setEnvVars(this, dxwrapperConfig, envVars, container.getRefreshRate());
+            DXVKConfigDialog.setEnvVars(this, dxwrapperConfig, envVars, getRefreshRate());
         } else if (dxwrapper.equals("vkd3d")) {
-            VKD3DConfigDialog.setEnvVars(this, dxwrapperConfig, envVars, container.getRefreshRate());
+            VKD3DConfigDialog.setEnvVars(this, dxwrapperConfig, envVars, getRefreshRate());
         }
 
 
@@ -2651,10 +2651,11 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             ArrayList<String> dlls = new ArrayList<>();
             String wincomponents = shortcut != null ? shortcut.getExtra("wincomponents", container.getWinComponents()) : container.getWinComponents();
 
-            Iterator<String[]> oldWinComponentsIter = new KeyValueSet(container.getExtra("wincomponents", Container.FALLBACK_WINCOMPONENTS)).iterator();
+            // Looked up by name, so a component added to the list later counts as not installed yet
+            KeyValueSet oldWinComponents = new KeyValueSet(container.getExtra("wincomponents", Container.FALLBACK_WINCOMPONENTS));
 
             for (String[] wincomponent : new KeyValueSet(wincomponents)) {
-                if (wincomponent[1].equals(oldWinComponentsIter.next()[1]) && !firstTimeBoot) continue;
+                if (wincomponent[1].equals(oldWinComponents.get(wincomponent[0])) && !firstTimeBoot) continue;
                 String identifier = wincomponent[0];
                 boolean useNative = wincomponent[1].equals("1");
 
@@ -2803,6 +2804,15 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             return shortcut.getExtra("screenSize", container.getScreenSize());
         }
         return getContainer().getScreenSize();
+    }
+
+    public int getRefreshRate() {
+        if (shortcut != null) {
+            try {
+                return Integer.parseInt(shortcut.getExtra("refreshRate", "" + container.getRefreshRate()));
+            } catch (NumberFormatException e) {}
+        }
+        return container.getRefreshRate();
     }
 
     public int getPcvrRenderScale() {

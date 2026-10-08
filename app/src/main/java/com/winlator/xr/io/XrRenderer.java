@@ -140,7 +140,7 @@ public class XrRenderer extends GLRenderer {
 
             int cpuLevel = activity.getContainer().getCpuLevel();
             int gpuLevel = activity.getContainer().getGpuLevel();
-            int refresh = activity.getContainer().getRefreshRate();
+            int refresh = activity.getRefreshRate();
             activity.init(width, height, refresh, cpuLevel, gpuLevel);
             // The headset's eye size is only known now; the runtime reads it at the game's xrCreateInstance
             activity.updateRecommendedEyeSize();

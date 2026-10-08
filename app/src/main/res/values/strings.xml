@@ -249,6 +249,7 @@
     <string name="xaudio">XAudio</string>
     <string name="vcrun2005">Visual C++ 2005</string>
     <string name="vcrun2010">Visual C++ 2010</string>
+    <string name="vcrun2012">Visual C++ 2012</string>
     <string name="wmdecoder">Windows Media Decoder</string>
     <string name="settings">Settings</string>
     <string name="exec_arguments">Exec Arguments</string>
@@ -893,6 +894,7 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="open_with_android_browser">Open Android Browser in Wine</string>
     <string name="share_android_clipboard">Share Android Clipboard with Wine</string>
     <string name="force_kgsl_shim">Force KGSL Turnip compatibility shim on all devices</string>
+    <string name="map_merge_shim">Merge small memory mappings (fixes hangs loading very large games)</string>
     <string name="browse_download_with_winlator">Browse Download with Winlator when adding local games or Downloader content</string>
     <string name="enable_launch_report">Record why games fail to start (may affect performance)</string>
     <string name="enable_launch_report_hint">After the next launch, open the game\'s menu on the Games screen and choose Last Launch Report.</string>

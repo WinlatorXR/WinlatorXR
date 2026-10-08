@@ -362,6 +362,17 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         if ((isQuest3 || forceKgslShimAllDevices) && new File(kgslShimPath).exists())
             ld_preload += ":" + kgslShimPath;
 
+        // Lets the kernel merge Wine's small 64 KB-aligned allocations, so games that make
+        // tens of thousands of them stay under the per-process mapping limit (Half-Life: Alyx).
+        // arm64ec only: under Box64 the emulator tracks free addresses itself and could reuse the extended tails.
+        // Off unless the "mapMergeShim" tick box is on in the container settings; a shortcut can override it either way.
+        String mapMergeShimPath = context.getApplicationInfo().nativeLibraryDir + "/libmap_merge_shim.so";
+        boolean mapMergeShim = container.isMapMergeShim();
+        if (shortcut != null)
+            mapMergeShim = shortcut.getExtra("mapMergeShim", mapMergeShim ? "1" : "0").equals("1");
+        if (mapMergeShim && wineInfo.isArm64EC() && new File(mapMergeShimPath).exists())
+            ld_preload += ":" + mapMergeShimPath;
+
         envVars.put("LD_PRELOAD", ld_preload);
 
         envVars.put("EVSHIM_SHM_NAME", "controller-shm0");

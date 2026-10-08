@@ -99,12 +99,18 @@ void XrEngineInit(struct XrEngine* engine, void* system, const char* name, int v
                     engine->PlatformFlag[PLATFORM_EXTENSION_EQUIRECT] = true;
                     extensions[count++] = XR_KHR_COMPOSITION_LAYER_EQUIRECT2_EXTENSION_NAME;
                 }
+                // The lens-hidden area, passed on to PC VR games so they can skip drawing it
+                if (XrEngineHasExtension(available, available_count, XR_KHR_VISIBILITY_MASK_EXTENSION_NAME)) {
+                    engine->PlatformFlag[PLATFORM_EXTENSION_VISIBILITY_MASK] = true;
+                    extensions[count++] = XR_KHR_VISIBILITY_MASK_EXTENSION_NAME;
+                }
             }
             free(available);
         }
     }
     ALOGV("XR_FB_composition_layer_settings %s", engine->PlatformFlag[PLATFORM_EXTENSION_LAYER_SETTINGS] ? "enabled" : "not supported");
     ALOGV("XR_KHR_composition_layer_equirect2 %s", engine->PlatformFlag[PLATFORM_EXTENSION_EQUIRECT] ? "enabled" : "not supported");
+    ALOGV("XR_KHR_visibility_mask %s", engine->PlatformFlag[PLATFORM_EXTENSION_VISIBILITY_MASK] ? "enabled" : "not supported");
 
     // Create the OpenXR instance.
     XrApplicationInfo app_info;

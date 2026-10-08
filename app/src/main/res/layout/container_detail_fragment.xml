@@ -741,6 +741,12 @@
                             android:layout_height="wrap_content"
                             android:text="@string/enable_gstreamer_workaround" />
 
+                        <CheckBox
+                            android:id="@+id/CBMapMergeShim"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/map_merge_shim" />
+
 <!--                        <CheckBox-->
 <!--                            android:id="@+id/CBRelativeMouseMovement"-->
 <!--                            android:layout_width="wrap_content"-->
