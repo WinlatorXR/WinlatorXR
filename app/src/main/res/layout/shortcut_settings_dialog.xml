@@ -45,6 +45,43 @@
                 android:text="@string/remove_profile" />
         </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/LLRecognisedOverrides"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/TVRecognisedOverridesTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textStyle="bold" />
+
+                <Button
+                    style="@style/ButtonNeutral"
+                    android:id="@+id/BTSetSteamAppId"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Set Steam AppID" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/LLRecognisedOverridesList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <View style="@style/HorizontalLine" />
+        </LinearLayout>
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -329,6 +366,13 @@
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:hint="@string/enter_secondary_exec_path" />
+
+                <Button
+                    style="@style/ButtonNeutral"
+                    android:id="@+id/BTBrowseSecondaryExec"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/browse" />
             </LinearLayout>
 
             <LinearLayout
@@ -409,6 +453,7 @@
         <CheckBox
             android:id="@+id/CBPcvrDirectTransport"
             android:layout_width="wrap_content"
+            android:maxWidth="450dp"
             android:layout_height="wrap_content"
             android:text="@string/pcvr_direct_transport" />
 
@@ -416,6 +461,7 @@
             android:id="@+id/LLPcvrController"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:orientation="vertical">
 
             <TextView
@@ -433,6 +479,7 @@
         <CheckBox
             android:id="@+id/CBPcvrStickTouchpad"
             android:layout_width="wrap_content"
+            android:maxWidth="450dp"
             android:layout_height="wrap_content"
             android:text="@string/pcvr_stick_touchpad" />
 
@@ -537,6 +584,37 @@
                 android:layout_width="match_parent"
                 android:id="@+id/SPcvrRefreshRate"
                 android:entries="@array/xr_refresh_entries"
+                android:spinnerMode="dialog" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/LLXrapiLevels"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/cpu_level" />
+
+            <Spinner
+                style="@style/ComboBox"
+                android:layout_width="match_parent"
+                android:id="@+id/SXrapiCpuLevel"
+                android:entries="@array/xr_level_entries"
+                android:spinnerMode="dialog" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/gpu_level" />
+
+            <Spinner
+                style="@style/ComboBox"
+                android:layout_width="match_parent"
+                android:id="@+id/SXrapiGpuLevel"
+                android:entries="@array/xr_level_entries"
                 android:spinnerMode="dialog" />
         </LinearLayout>
 
@@ -918,31 +996,6 @@
                     android:layout_height="wrap_content"
                     android:paddingLeft="16dp"
                     android:paddingRight="16dp"/>
-
-                <LinearLayout
-                    android:id="@+id/LLRecognisedOverrides"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingLeft="16dp"
-                    android:paddingRight="16dp"
-                    android:visibility="gone">
-
-                    <View style="@style/HorizontalLine" />
-
-                    <TextView
-                        android:id="@+id/TVRecognisedOverridesTitle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:textStyle="bold" />
-
-                    <LinearLayout
-                        android:id="@+id/LLRecognisedOverridesList"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical" />
-                </LinearLayout>
 
                 <View style="@style/HorizontalLine" />
 

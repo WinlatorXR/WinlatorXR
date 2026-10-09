@@ -1,5 +1,18 @@
 {
-  "version": 1,
+  "version": 3,
+  "exes": {
+    "Fallout4VR.exe": "611660",
+    "f4sevr_loader.exe": "611660",
+    "hlvr.exe": "546560",
+    "DarkSoulsIII.exe": "374320",
+    "sekiro.exe": "814380",
+    "NieRAutomata.exe": "524220",
+    "Titanfall2.exe": "1237970",
+    "teardown.exe": "1167630",
+    "FarCry4.exe": "298110",
+    "witcher2.exe": "20920",
+    "prototype2.exe": "115320"
+  },
   "fixes": [
     {
       "label": "Stop OpenSSL crashing on newer CPU features",
@@ -329,7 +342,120 @@
       "goldberg": "coldclient",
       "games": {
         "611660": "Fallout 4 VR",
-        "1363430": "Propagation VR"
+        "1363430": "Propagation VR",
+        "543390": "Aeon",
+        "513320": "Alice VR",
+        "244210": "Asseto Corsa",
+        "502820": "Batman Arkham VR",
+        "629730": "Blade and Sorcery",
+        "449640": "Bloody Zombies VR",
+        "823500": "Boneworks",
+        "396900": "GRIP: Combat Racing",
+        "747350": "Hellblade: Senua's Sacrifice VR Edition",
+        "611160": "Karnage Chronicles",
+        "1683340": "Kayak VR: Mirage",
+        "522200": "Loading Human",
+        "1107340": "LONN",
+        "762490": "Naked Sun",
+        "598070": "Nevrosa: Prelude",
+        "378860": "Project Cars 2",
+        "958400": "Project Cars 3",
+        "429180": "Project Cars - Pagani Edition",
+        "365960": "RFactor 2",
+        "611670": "The Elder Scrolls V: Skyrim VR",
+        "1222730": "Star Wars Squadrons (steam)",
+        "936720": "Wrench",
+        "1056970": "Wolfenstein Cyberpilot",
+        "1133320": "Westworld Awakening"
+      },
+      "source": "WinlatorXR"
+    },
+    {
+      "label": "Replace the game's steam_api DLL with Goldberg's (the game will not run without Steam)",
+      "goldberg": "steam_api",
+      "games": {
+        "859640": "Along together",
+        "620980": "Beat Saber",
+        "490490": "Blasters of the universe",
+        "991260": "Borderlands 2 VR",
+        "750010": "Combat Tested",
+        "2609610": "ConVRgence",
+        "744750": "Devil and the fairy",
+        "233610": "Distance",
+        "328590": "Don't knock twice",
+        "664090": "Eternity Warriors VR",
+        "1429640": "Hinge VR",
+        "754530": "IL-2 Sturmovik Cliffs of Dover Blitz",
+        "382360": "John wick Chronicles",
+        "2318280": "Memories From Beyond a Coral Sea",
+        "864970": "NIGHTSTAR: Alliance",
+        "906120": "POLYBIUS",
+        "788690": "Psychonauts in the Rhombus of Ruin",
+        "517710": "Redout: Enhanced Edition",
+        "517160": "Richie's Plank Experience",
+        "859340": "Seeking Dawn",
+        "564310": "Serious Sam FUSION",
+        "264710": "Subnautica",
+        "3025280": "Swingmania"
+      },
+      "source": "WinlatorXR"
+    },
+    {
+      "label": "Start in VR",
+      "args": "-vr",
+      "games": {
+        "396750": "Everspace",
+        "396900": "GRIP: Combat Racing",
+        "602480": "Kartong Death by cardboard",
+        "517710": "Redout: Enhanced Edition",
+        "936720": "Wrench"
+      },
+      "source": "WinlatorXR"
+    },
+    {
+      "label": "Start in VR",
+      "args": "-SSVR",
+      "games": {
+        "475190": "Scanner Sombre"
+      },
+      "source": "WinlatorXR"
+    },
+    {
+      "label": "Set up as a PC VR game (it is not detected as one)",
+      "pcvr": true,
+      "games": {
+        "770990": "Blade Runner 9732"
+      },
+      "source": "WinlatorXR"
+    },
+    {
+      "label": "Pushing a thumbstick presses the touchpad (the game needs the stick clicked in to move)",
+      "pcvrStickTouchpad": true,
+      "games": {
+        "543390": "Aeon",
+        "406860": "Blind",
+        "602480": "Kartong Death by cardboard",
+        "522200": "Loading Human",
+        "859340": "Seeking Dawn",
+        "1133320": "Westworld Awakening"
+      },
+      "source": "WinlatorXR"
+    },
+    {
+      "label": "Use the game window instead of direct PC VR frames (OpenGL game)",
+      "pcvrDirect": false,
+      "games": {
+        "348250": "Google Earth VR",
+        "906120": "POLYBIUS",
+        "3025280": "Swingmania"
+      },
+      "source": "WinlatorXR"
+    },
+    {
+      "label": "Use the Oculus Touch controller type",
+      "pcvrController": "/oculus/touch_controller",
+      "games": {
+        "1036260": "Journey for Elysium"
       },
       "source": "WinlatorXR"
     }

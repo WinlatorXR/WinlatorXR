@@ -47,6 +47,7 @@ import com.winlator.xr.utils.XrEnvironment;
 
 import javax.microedition.khronos.opengles.GL10;
 
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -69,6 +70,8 @@ public class XrRenderer extends GLRenderer {
     private boolean xrFrameReady = false;
     private boolean xrFrameStarted = false;
     private boolean directActive = false;
+    private boolean directFeed = false;
+    private final HashSet<Drawable> hiddenContents = new HashSet<>();
     private boolean screenBound = true;
     private boolean sbs = false;
     private boolean sbsStretch = false;
@@ -138,8 +141,8 @@ public class XrRenderer extends GLRenderer {
                 width = 1280;
             }
 
-            int cpuLevel = activity.getContainer().getCpuLevel();
-            int gpuLevel = activity.getContainer().getGpuLevel();
+            int cpuLevel = activity.getCpuLevel();
+            int gpuLevel = activity.getGpuLevel();
             int refresh = activity.getRefreshRate();
             activity.init(width, height, refresh, cpuLevel, gpuLevel);
             // The headset's eye size is only known now; the runtime reads it at the game's xrCreateInstance
@@ -162,6 +165,7 @@ public class XrRenderer extends GLRenderer {
     protected boolean preDrawable(ShaderMaterial material, Drawable drawable) {
         // A window resized or closed this frame can still be listed after its buffer was freed; reading it would crash
         if (drawable.getTexture() instanceof GPUImage && ((GPUImage)drawable.getTexture()).getVirtualData() == null) return false;
+        if (hiddenContents.contains(drawable)) return false;
         // Only X windows carry the framesync pixel; dialogs, the FPS panel and the cursor are id 0
         if (XrActivity.isEnabled(null) && XrActivity.isVR && vrWindowOnTop && xrFrameReady && drawable.id != 0) {
             xrFramesync.process(drawable, (r, g, b, a) -> XrActivity.getInstance().nativeSetFramesync(r, g, b, a));
@@ -192,7 +196,8 @@ public class XrRenderer extends GLRenderer {
             // PC VR frames arriving directly replace the game window, so the screen swapchain
             // is only needed for what is drawn over them: the FPS panel and XR dialogs
             // Native only shows them in VR mode, so another window on top (the task manager) is drawn instead
-            directActive = xrFrameStarted && fullscreen && XrActivity.getInstance().nativeIsDirectActive();
+            directFeed = xrFrameStarted && XrActivity.getInstance().nativeIsDirectActive();
+            directActive = directFeed && fullscreen;
             screenBound = !directActive || XrActivity.showFPS || !XrContentDialog.getInstances().isEmpty();
             if (!screenBound) {
                 GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
@@ -433,15 +438,55 @@ public class XrRenderer extends GLRenderer {
         }
     }
 
+    /**
+     * In a direct PC VR session the game's own window flashes black when drawn, so with another
+     * window in front of it (the task manager) it is left out and the others sit on black.
+     */
+    private boolean hidesGameWindow() {
+        return directFeed && XrActivity.isVR && !vrWindowOnTop;
+    }
+
+    /**
+     * Only a window the game presents to has a GPU image. The windows it sits inside go with it:
+     * the game's outer window is a blank white frame once its picture is gone, and the desktop
+     * behind that would stop the backdrop being black.
+     */
+    private boolean collectHiddenContents(Window window) {
+        Drawable content = window.getContent();
+        boolean hidden = content != null && content.getTexture() instanceof GPUImage;
+        for (Window child : window.getChildren()) hidden |= collectHiddenContents(child);
+        if (hidden && content != null) hiddenContents.add(content);
+        return hidden;
+    }
+
+    @Override
+    public void drawFrame() {
+        if (!hidesGameWindow()) {
+            super.drawFrame();
+            return;
+        }
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        super.drawFrame();
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    }
+
     @Override
     protected void renderWindows(ShaderMaterial material, boolean forceFullscreen) {
-        if (directActive) {
+        // An XR menu takes the session out of VR mode, but the game window still is not what the
+        // game is presenting to: drawn behind the menu it flashes, and is split as if it were SBS
+        if (directActive || (directFeed && XrActivity.isVR && vrWindowOnTop)) {
             // Nothing drawn, but the window stack is still tracked: vrWindowOnTop keeps VR mode on
             try (XLock lock = xServer.lock(XServer.Lockable.DRAWABLE_MANAGER)) {
                 preWindows();
                 postWindows();
             }
             return;
+        }
+        hiddenContents.clear();
+        if (hidesGameWindow()) {
+            try (XLock lock = xServer.lock(XServer.Lockable.WINDOW_MANAGER)) {
+                collectHiddenContents(xServer.windowManager.rootWindow);
+            }
         }
         boolean fullscreen = (XrActivity.isVR && XrRenderer.vrWindowOnTop) || XrActivity.isImmersive;
         if (material instanceof WindowMaterial) {

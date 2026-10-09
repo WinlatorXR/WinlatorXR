@@ -32,8 +32,12 @@ import java.util.Map;
  * themselves; the list in assets/game_overrides.json is copied from it, plus fixes found here.
  * A newer copy of the list is downloaded from REMOTE_URL when there is one.
  *
- * A fix can also carry launch arguments, the memory mapping merge tick box and which kind of
- * Goldberg package to apply.
+ * The list's "exes" names the game by its exe's file name, for a copy with no Steam files beside
+ * it to read the AppID from.
+ *
+ * A fix can also carry launch arguments, the memory mapping merge tick box, the "PC VR game" tick
+ * box, the state of the PC VR direct frames and thumbstick touchpad tick boxes, the PC VR controller
+ * type, and which kind of Goldberg package to apply.
  *
  * Nothing is applied automatically: the user picks which ones go into the shortcut's settings.
  * Reads files and steam.db, so call it off the UI thread.
@@ -63,13 +67,25 @@ public final class GameOverrides {
         public final boolean mapMergeShim;
         /** the Goldberg package kind to apply: GOLDBERG_LOADER, GOLDBERG_STEAM_API, or empty for none */
         public final String goldberg;
+        /** ticks the shortcut's "PC VR game" box, for a game not detected as one */
+        public final boolean pcvr;
+        /** what the "Direct PC VR frames" box should be, null to leave it alone; setting it also ticks "PC VR game" */
+        public final Boolean pcvrDirect;
+        /** what the "Pushing a thumbstick presses the touchpad" box should be, null to leave it alone; also ticks "PC VR game" */
+        public final Boolean pcvrStickTouchpad;
+        /** one of PcvrRuntime.CONTROLLER_PROFILES for the "Controller type" list, empty to leave it alone; also ticks "PC VR game" */
+        public final String pcvrController;
 
-        Fix(String label, String source, String execArgs, boolean mapMergeShim, String goldberg) {
+        Fix(String label, String source, String execArgs, boolean mapMergeShim, String goldberg, boolean pcvr, Boolean pcvrDirect, Boolean pcvrStickTouchpad, String pcvrController) {
             this.label = label;
             this.source = source;
             this.execArgs = execArgs;
             this.mapMergeShim = mapMergeShim;
             this.goldberg = goldberg;
+            this.pcvr = pcvr;
+            this.pcvrDirect = pcvrDirect;
+            this.pcvrStickTouchpad = pcvrStickTouchpad;
+            this.pcvrController = pcvrController;
         }
 
         /** The launch arguments one option at a time, a value staying with its option ("+vr_msaa 0"). */
@@ -92,15 +108,17 @@ public final class GameOverrides {
 
     private GameOverrides() {}
 
-    /** The fixes listed for this shortcut's game, or null when its AppID is unknown or nothing is listed. */
+    /** The fixes listed for this shortcut's game. The AppID is null when unknown, and the fixes empty when nothing is listed. */
     public static Result forShortcut(Context context, Shortcut shortcut) {
+        List<Fix> fixes = new ArrayList<>();
+        String appId = null;
+        String gameName = "";
         try {
-            String appId = findSteamAppId(context, shortcut);
-            if (appId == null) return null;
+            JSONObject list = loadList(context);
+            appId = findSteamAppId(context, shortcut, list.optJSONObject("exes"));
+            if (appId == null) return new Result(null, gameName, fixes);
 
-            JSONArray entries = loadList(context).getJSONArray("fixes");
-            List<Fix> fixes = new ArrayList<>();
-            String gameName = "";
+            JSONArray entries = list.getJSONArray("fixes");
             for (int i = 0; i < entries.length(); i++) {
                 JSONObject entry = entries.getJSONObject(i);
                 JSONObject games = entry.getJSONObject("games");
@@ -108,16 +126,18 @@ public final class GameOverrides {
                 if (gameName.isEmpty()) gameName = games.optString(appId);
 
                 Fix fix = new Fix(entry.getString("label"), entry.optString("source"),
-                        entry.optString("args").trim(), entry.optBoolean("mapMergeShim"), entry.optString("goldberg").trim());
+                        entry.optString("args").trim(), entry.optBoolean("mapMergeShim"), entry.optString("goldberg").trim(), entry.optBoolean("pcvr"),
+                        entry.has("pcvrDirect") ? entry.getBoolean("pcvrDirect") : null,
+                        entry.has("pcvrStickTouchpad") ? entry.getBoolean("pcvrStickTouchpad") : null,
+                        entry.optString("pcvrController").trim());
                 putAll(entry.optJSONObject("env"), fix.envVars);
                 putAll(entry.optJSONObject("dlls"), fix.dllOverrides);
                 fixes.add(fix);
             }
-            return fixes.isEmpty() ? null : new Result(appId, gameName, fixes);
         } catch (Exception e) {
             Log.w(TAG, "Finding overrides for " + shortcut.name + " failed", e);
-            return null;
         }
+        return new Result(appId, gameName, fixes);
     }
 
     /**
@@ -185,11 +205,15 @@ public final class GameOverrides {
     }
 
     /**
-     * Goldberg's AppID if one was set, else the Steam library entry the game sits in, else the
-     * appmanifest beside a copied steamapps folder, else a steam_appid.txt next to the executable.
+     * The AppID set by hand in the shortcut's settings, else Goldberg's if one was set, else the
+     * Steam library entry the game sits in, else the appmanifest beside a copied steamapps folder,
+     * else a steam_appid.txt next to the executable, else the list's own entry for the exe's name.
      */
-    private static String findSteamAppId(Context context, Shortcut shortcut) {
-        String appId = shortcut.getExtra("goldbergAppId", "").trim();
+    private static String findSteamAppId(Context context, Shortcut shortcut, JSONObject exes) {
+        String appId = shortcut.getExtra("steamAppId", "").trim();
+        if (appId.matches("\\d+")) return appId;
+
+        appId = shortcut.getExtra("goldbergAppId", "").trim();
         if (appId.matches("\\d+")) return appId;
 
         File exeFile = GameUninstaller.resolveExecutable(context, shortcut.container, shortcut);
@@ -213,6 +237,14 @@ public final class GameOverrides {
             if (!file.isFile()) continue;
             appId = FileUtils.readString(file).trim();
             if (appId.matches("\\d+")) return appId;
+        }
+
+        // Only exes with a name no other game uses are listed
+        if (exes != null) {
+            for (Iterator<String> names = exes.keys(); names.hasNext(); ) {
+                String name = names.next();
+                if (name.equalsIgnoreCase(exeFile.getName())) return exes.optString(name);
+            }
         }
         return null;
     }

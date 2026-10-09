@@ -2815,6 +2815,24 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         return container.getRefreshRate();
     }
 
+    public int getCpuLevel() {
+        if (shortcut != null) {
+            try {
+                return Integer.parseInt(shortcut.getExtra("cpuLevel", "" + container.getCpuLevel()));
+            } catch (NumberFormatException e) {}
+        }
+        return container.getCpuLevel();
+    }
+
+    public int getGpuLevel() {
+        if (shortcut != null) {
+            try {
+                return Integer.parseInt(shortcut.getExtra("gpuLevel", "" + container.getGpuLevel()));
+            } catch (NumberFormatException e) {}
+        }
+        return container.getGpuLevel();
+    }
+
     public int getPcvrRenderScale() {
         return shortcut != null ? PcvrRuntime.getRenderScale(shortcut) : PcvrRuntime.getRenderScale(container);
     }

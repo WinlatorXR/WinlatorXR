@@ -25,6 +25,11 @@ import com.google.android.material.navigation.NavigationView;
 import com.winlator.cmod.R;
 import com.winlator.cmod.XServerDisplayActivity;
 import com.winlator.cmod.core.SessionSettings;
+import com.winlator.cmod.xserver.Atom;
+import com.winlator.cmod.xserver.Property;
+import com.winlator.cmod.xserver.Window;
+import com.winlator.cmod.xserver.XLock;
+import com.winlator.cmod.xserver.XServer;
 import com.winlator.xr.XrActivity;
 import com.winlator.xr.io.XrInput;
 import com.winlator.xr.ui.XrContentDialog;
@@ -33,6 +38,12 @@ import com.winlator.xr.utils.XrEnvironment;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class NavigationDialog extends ContentDialog {
     private static final int STATUS_REFRESH_INTERVAL_MS = 1000;
@@ -48,6 +59,15 @@ public class NavigationDialog extends ContentDialog {
     // 20, 40, 60, 80, 100 - five stops, which is as many as is worth tapping through.
     private static final int EDGE_GLOW_STEP = 20;
     private static final int EDGE_GLOW_MAX = 100;
+
+    // The title must not grow with what is running, so the rest are counted rather than named.
+    private static final int MAX_WINDOW_NAMES = 3;
+    private static final int MAX_WINDOW_NAME_LENGTH = 30;
+
+    private final ExecutorService windowsExecutor = Executors.newSingleThreadExecutor();
+    private final AtomicBoolean windowsQuery = new AtomicBoolean();
+    private volatile String windowsText = "";
+    private boolean dismissed;
 
     public NavigationDialog(@NonNull XServerDisplayActivity context) {
         super(context, R.layout.navigation_dialog);
@@ -114,12 +134,31 @@ public class NavigationDialog extends ContentDialog {
         final Runnable updateStatus = new Runnable() {
             @Override
             public void run() {
-                setTitle(getStatusText(context));
+                // removeCallbacks misses a tick posted while the view was attached once the
+                // window is gone, so the tick has to stop itself
+                if (dismissed) return;
+                setTitle(getStatusText(context) + "\n" + windowsText);
+                // Read off this thread: it waits on a lock the X server and the renderer are
+                // both busy with, and nothing on screen may wait with it. One at a time, so
+                // a slow read is skipped over rather than queued up behind.
+                if (windowsQuery.compareAndSet(false, true)) {
+                    windowsExecutor.execute(() -> {
+                        try {
+                            windowsText = getWindowsText(context);
+                        } finally {
+                            windowsQuery.set(false);
+                        }
+                    });
+                }
                 grid.postDelayed(this, STATUS_REFRESH_INTERVAL_MS);
             }
         };
         updateStatus.run();
-        setOnDismissListener((dialog) -> grid.removeCallbacks(updateStatus));
+        setOnDismissListener((dialog) -> {
+            dismissed = true;
+            grid.removeCallbacks(updateStatus);
+            windowsExecutor.shutdown();
+        });
 
         actionLinesUI(context);
     }
@@ -350,6 +389,68 @@ public class NavigationDialog extends ContentDialog {
         }
 
         return status.toString();
+    }
+
+    /**
+     * The programs that have a window open, front one first, by the window title the task
+     * manager lists them under. A game that has crashed can leave the session running with nothing
+     * to show for it, and this is how to tell without opening the task manager.
+     */
+    private static String getWindowsText(XServerDisplayActivity context) {
+        XServer xServer = context.getXServer();
+        // Exe to title, in front to back order
+        LinkedHashMap<String, String> titles = new LinkedHashMap<>();
+        if (xServer != null) {
+            try (XLock lock = xServer.lock(XServer.Lockable.WINDOW_MANAGER)) {
+                collectWindowTitles(xServer.windowManager.rootWindow, titles);
+            }
+        }
+        ArrayList<String> names = new ArrayList<>();
+        for (Map.Entry<String, String> entry : titles.entrySet()) {
+            // A program none of whose windows has a title is named by its exe
+            String name = entry.getValue().isEmpty() ? entry.getKey() : entry.getValue();
+            if (name.length() > MAX_WINDOW_NAME_LENGTH) name = name.substring(0, MAX_WINDOW_NAME_LENGTH) + "…";
+            if (!names.contains(name)) names.add(name);
+        }
+        if (names.isEmpty()) return context.getString(R.string.open_windows_none);
+        int more = names.size() - MAX_WINDOW_NAMES;
+        String list = String.join(", ", more > 0 ? names.subList(0, MAX_WINDOW_NAMES) : names);
+        return context.getString(R.string.open_windows, more > 0 ? list + " +" + more : list);
+    }
+
+    /**
+     * Every program's windows sit inside the desktop, which is a window of explorer.exe, so
+     * the whole tree is walked and the desktop itself is left out. A program can have an
+     * untitled window in front of its titled one, so the title is taken from whichever of its
+     * windows has one.
+     */
+    private static void collectWindowTitles(Window parent, LinkedHashMap<String, String> titles) {
+        List<Window> windows = parent.getChildren();
+        for (int i = windows.size() - 1; i >= 0; i--) {
+            Window window = windows.get(i);
+            if (!window.attributes.isMapped()) continue;
+            String exe = window.getClassName();
+            if (window.getWidth() > 1 && window.getHeight() > 1 && !exe.isEmpty() && !exe.equalsIgnoreCase("explorer.exe")) {
+                String title = titles.get(exe);
+                if (title == null || title.isEmpty()) titles.put(exe, getWindowTitle(window));
+            }
+            collectWindowTitles(window, titles);
+        }
+    }
+
+    /** The title the task manager lists a window under, which Wine sets as _NET_WM_NAME and as WM_NAME. */
+    private static String getWindowTitle(Window window) {
+        for (String atom : new String[]{"_NET_WM_NAME", "WM_NAME"}) {
+            int id = Atom.getId(atom);
+            Property property = id > 0 ? window.getProperty(id) : null;
+            if (property == null) continue;
+            String type = Atom.getName(property.type);
+            // Any other type would be read back as a list of numbers
+            if (!"UTF8_STRING".equals(type) && !"STRING".equals(type)) continue;
+            String title = property.toString().trim();
+            if (!title.isEmpty()) return title;
+        }
+        return "";
     }
 
     private static boolean isGamepad(InputDevice device) {

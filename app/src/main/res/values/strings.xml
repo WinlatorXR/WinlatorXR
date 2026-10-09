@@ -639,6 +639,8 @@
     <string name="xr_face_button_unassigned">%1$s —</string>
     <string name="xr_reset_to_default">Reset to default</string>
     <string name="xr_back_to_menu">Back to XR menu</string>
+    <string name="open_windows">Open windows: %s</string>
+    <string name="open_windows_none">No open windows</string>
     <string name="xr_adjust_window_distance">Adjust window distance - Grip trigger+Thumbstick</string>
     <string name="xr_gamepad_mode_enabled">Gamepad mode enabled</string>
     <string name="xr_gamepad_mode_disabled">Gamepad mode disabled</string>
@@ -689,10 +691,10 @@
     <string name="autoclose">Automatically close the container when all windows are closed</string>
     <string name="trackir_plugin">TrackIR emulation plugin</string>
     <string name="pcvr_runtime">PC VR game (set up OpenComposite and OXRWXR for SteamVR and OpenXR titles)</string>
-    <string name="pcvr_direct_transport">Direct PC VR frames (eye images go straight to the headset, skipping the game window)</string>
+    <string name="pcvr_direct_transport">Direct PC VR frames (eye images go straight to the headset)</string>
     <string name="pcvr_controller">PC VR controller type (the headset type shown to the game follows it)</string>
-    <string name="pcvr_stick_touchpad">Pushing a thumbstick presses the touchpad (for games where you must click the stick in to move)</string>
-    <string name="pcvr_render_scale">PC VR render scale (of the headset\'s own resolution, with direct PC VR)</string>
+    <string name="pcvr_stick_touchpad">Pushing a thumbstick presses the touchpad\n(for games where you must click the stick in to move)</string>
+    <string name="pcvr_render_scale">PC VR render scale (of the headset\'s own resolution, with direct PC VR only)</string>
     <string name="pcvr_fov_scale">VR field of view (horizontal)</string>
     <string name="pcvr_fov_scale_y">VR field of view (vertical)</string>
     <string name="xrapi_vr_game">VR game (XrAPI title)</string>
@@ -704,7 +706,7 @@
     <string name="input">Input</string>
 
     <string name="secondary_executable">Path:</string>
-    <string name="enter_secondary_exec_path"> ex: "D:/Games/My Game/My Game.exe"</string>
+    <string name="enter_secondary_exec_path"> ex: \"D:\\Games\\My Game\\My Game.exe\"</string>
     <string name="exec_delay">Delayed Execution (seconds):</string>
     <string name="enter_delay_seconds">Enter the delay in seconds:</string>
     <string name="use_secondary_executable">Use secondary executable?</string>

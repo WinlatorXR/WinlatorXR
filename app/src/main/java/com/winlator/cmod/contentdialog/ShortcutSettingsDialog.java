@@ -1,9 +1,11 @@
 package com.winlator.cmod.contentdialog;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.drawable.Icon;
+import android.os.Environment;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.SubMenu;
@@ -34,6 +36,7 @@ import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.core.AppUtils;
 import com.winlator.cmod.core.DefaultVersion;
 import com.winlator.cmod.core.EnvVars;
+import com.winlator.cmod.core.GuestScriptRunner;
 import com.winlator.cmod.container.ShortcutProfile;
 import com.winlator.cmod.core.StringUtils;
 import com.winlator.cmod.core.WineInfo;
@@ -84,6 +87,52 @@ public class ShortcutSettingsDialog extends ContentDialog {
         setIcon(R.drawable.icon_settings);
 
         createContentView();
+    }
+
+    /**
+     * Browses Download and its subfolders for an exe, and writes the path the container sees it
+     * at into the field.
+     */
+    private void browseSecondaryExec(File dir, EditText etSecondaryExec) {
+        final Context context = fragment.getContext();
+        if (context == null) return;
+
+        File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        File[] files = dir.listFiles();
+        if (files == null) files = new File[0];
+        Arrays.sort(files, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+
+        ArrayList<File> entries = new ArrayList<>();
+        for (File file : files) if (file.isDirectory()) entries.add(file);
+        for (File file : files) if (!file.isDirectory() && file.getName().toLowerCase().endsWith(".exe")) entries.add(file);
+
+        // The root gets no ".." entry, so nothing above Download can be reached from here.
+        boolean atRoot = dir.getAbsolutePath().equals(downloadDir.getAbsolutePath());
+        ArrayList<String> labels = new ArrayList<>();
+        if (!atRoot) labels.add("..");
+        for (File file : entries) labels.add(file.isDirectory() ? file.getName() + "/" : file.getName());
+
+        new AlertDialog.Builder(context)
+                .setTitle(atRoot ? Environment.DIRECTORY_DOWNLOADS : dir.getName())
+                .setItems(labels.toArray(new String[0]), (dialog, which) -> {
+                    if (!atRoot && which == 0) {
+                        browseSecondaryExec(dir.getParentFile(), etSecondaryExec);
+                        return;
+                    }
+                    File picked = entries.get(atRoot ? which : which - 1);
+                    if (picked.isDirectory()) {
+                        browseSecondaryExec(picked, etSecondaryExec);
+                        return;
+                    }
+                    String winPath = GuestScriptRunner.toWinPath(context, shortcut.container, picked);
+                    if (winPath == null) {
+                        ContentDialog.alert(context, "The Download folder is not set as a drive in this container.", null);
+                        return;
+                    }
+                    etSecondaryExec.setText(winPath.contains(" ") ? "\"" + winPath + "\"" : winPath);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private void createContentView() {
@@ -224,6 +273,8 @@ public class ShortcutSettingsDialog extends ContentDialog {
         cbUseSecondaryExec.setOnCheckedChangeListener((buttonView, isChecked) -> {
             llSecondaryExecOptions.setVisibility(isChecked ? View.VISIBLE : View.GONE);
         });
+        findViewById(R.id.BTBrowseSecondaryExec).setOnClickListener(view -> browseSecondaryExec(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), etSecondaryExec));
 
         // Autoclose option
         boolean autoclose = shortcut.getExtra("autoclose", "1").equals("1");
@@ -312,6 +363,13 @@ public class ShortcutSettingsDialog extends ContentDialog {
         final View llPcvrRefreshRate = findViewById(R.id.LLPcvrRefreshRate);
         final Spinner sPcvrRefreshRate = findViewById(R.id.SPcvrRefreshRate);
         AppUtils.setSpinnerSelectionFromNumber(sPcvrRefreshRate, shortcut.getExtra("refreshRate", "" + shortcut.container.getRefreshRate()));
+        // The CPU and GPU clock levels for an XrAPI title; the container's levels until changed here
+        final View llXrapiLevels = findViewById(R.id.LLXrapiLevels);
+        final Spinner sXrapiCpuLevel = findViewById(R.id.SXrapiCpuLevel);
+        AppUtils.setSpinnerSelectionFromNumber(sXrapiCpuLevel, shortcut.getExtra("cpuLevel", "" + shortcut.container.getCpuLevel()));
+        final Spinner sXrapiGpuLevel = findViewById(R.id.SXrapiGpuLevel);
+        AppUtils.setSpinnerSelectionFromNumber(sXrapiGpuLevel, shortcut.getExtra("gpuLevel", "" + shortcut.container.getGpuLevel()));
+        llXrapiLevels.setVisibility(cbXrapiVr.isChecked() ? View.VISIBLE : View.GONE);
         cbPcvrDirectTransport.setVisibility(cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE);
         llPcvrController.setVisibility(cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE);
         cbPcvrStickTouchpad.setVisibility(cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE);
@@ -328,10 +386,27 @@ public class ShortcutSettingsDialog extends ContentDialog {
             llPcvrRefreshRate.setVisibility(isChecked || cbXrapiVr.isChecked() ? View.VISIBLE : View.GONE);
             llPcvrRenderScale.setVisibility(isChecked && cbPcvrDirectTransport.isChecked() ? View.VISIBLE : View.GONE);
         });
+        final boolean pcvrShown = cbPcvrRuntime.getVisibility() == View.VISIBLE;
+        final boolean[] pcvrWasChecked = {cbPcvrRuntime.isChecked()};
         cbXrapiVr.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            // An XrAPI title does not use the PC VR runtime, so its tick box and settings go
+            // while this is ticked and come back as they were when it is unticked
+            if (isChecked) {
+                pcvrWasChecked[0] = cbPcvrRuntime.isChecked();
+                cbPcvrRuntime.setChecked(false);
+                cbPcvrRuntime.setVisibility(View.GONE);
+            } else if (pcvrShown) {
+                cbPcvrRuntime.setVisibility(View.VISIBLE);
+                cbPcvrRuntime.setChecked(pcvrWasChecked[0]);
+            }
             llPcvrFovScale.setVisibility(isChecked || cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE);
             llPcvrRefreshRate.setVisibility(isChecked || cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE);
+            llXrapiLevels.setVisibility(isChecked ? View.VISIBLE : View.GONE);
         });
+        if (cbXrapiVr.isChecked()) {
+            cbPcvrRuntime.setChecked(false);
+            cbPcvrRuntime.setVisibility(View.GONE);
+        }
         cbPcvrDirectTransport.setOnCheckedChangeListener((buttonView, isChecked) ->
                 llPcvrRenderScale.setVisibility(isChecked && cbPcvrRuntime.isChecked() ? View.VISIBLE : View.GONE));
 
@@ -637,6 +712,12 @@ public class ShortcutSettingsDialog extends ContentDialog {
                 int pcvrRefreshRate = StringUtils.parseInt(sPcvrRefreshRate.getSelectedItem());
                 shortcut.putExtra("refreshRate", (cbPcvrRuntime.isChecked() || cbXrapiVr.isChecked()) && pcvrRefreshRate != shortcut.container.getRefreshRate()
                         ? String.valueOf(pcvrRefreshRate) : null);
+                int xrapiCpuLevel = StringUtils.parseInt(sXrapiCpuLevel.getSelectedItem());
+                shortcut.putExtra("cpuLevel", cbXrapiVr.isChecked() && xrapiCpuLevel != shortcut.container.getCpuLevel()
+                        ? String.valueOf(xrapiCpuLevel) : null);
+                int xrapiGpuLevel = StringUtils.parseInt(sXrapiGpuLevel.getSelectedItem());
+                shortcut.putExtra("gpuLevel", cbXrapiVr.isChecked() && xrapiGpuLevel != shortcut.container.getGpuLevel()
+                        ? String.valueOf(xrapiGpuLevel) : null);
                 int pcvrFovY = 30 + 5 * sbPcvrFovScaleY.getProgress();
                 shortcut.putExtra(PcvrRuntime.FOV_SCALE_Y_KEY, (cbPcvrRuntime.isChecked() || cbXrapiVr.isChecked()) && pcvrFovY != pcvrFov
                         ? String.valueOf(pcvrFovY) : null);
@@ -892,12 +973,17 @@ public class ShortcutSettingsDialog extends ContentDialog {
                 new AddEnvVarDialog(context, envVarsView).show()
         );
 
-        new Thread(() -> {
-            GameOverrides.Result result = GameOverrides.forShortcut(context, shortcut);
-            if (result != null) view.post(() -> showRecognisedOverrides(view, envVarsView, result, isDarkMode));
-        }).start();
+        loadRecognisedOverrides(view, envVarsView, isDarkMode);
 
         return envVarsView;
+    }
+
+    private void loadRecognisedOverrides(View view, EnvVarsView envVarsView, boolean isDarkMode) {
+        final Context context = view.getContext();
+        new Thread(() -> {
+            GameOverrides.Result result = GameOverrides.forShortcut(context, shortcut);
+            view.post(() -> showRecognisedOverrides(view, envVarsView, result, isDarkMode));
+        }).start();
     }
 
     /** Overrides Proton would set for this game; each is only added when the user asks. */
@@ -907,15 +993,34 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
         TextView tvTitle = view.findViewById(R.id.TVRecognisedOverridesTitle);
         String game = result.gameName.isEmpty() ? "" : result.gameName + ", ";
-        tvTitle.setText("Recognised for this game (" + game + "Steam " + result.appId + ")");
+        if (result.appId == null) tvTitle.setText("Game not recognised. Set its Steam AppID to see the fixes listed for it.");
+        else if (result.fixes.isEmpty()) tvTitle.setText("No fixes listed for this game (" + game + "Steam " + result.appId + ")");
+        else tvTitle.setText("Recognised for this game (" + game + "Steam " + result.appId + ")");
         tvTitle.setTextColor(textColor);
+
+        // For a game none of the lookups find, or one they get wrong
+        view.findViewById(R.id.BTSetSteamAppId).setOnClickListener((v) ->
+                GoldbergEmu.showSteamAppIdDialog(fragment.getActivity(), shortcut.name, result.appId != null ? result.appId : "", (appId) -> {
+                    shortcut.putExtra("steamAppId", appId.isEmpty() ? null : appId);
+                    shortcut.saveData();
+                    loadRecognisedOverrides(view, envVarsView, isDarkMode);
+                }));
 
         final EditText etExecArgs = view.findViewById(R.id.ETExecArgs);
         // Hidden outside arm64ec containers, where the preload never loads
         final CheckBox cbMapMergeShim = view.findViewById(R.id.CBMapMergeShim);
         final boolean canMergeMappings = cbMapMergeShim.getVisibility() == View.VISIBLE;
+        // Hidden in the XrAPI container, which has no PC VR setup
+        final CheckBox cbPcvrRuntime = view.findViewById(R.id.CBPcvrRuntime);
+        final boolean canPcvr = cbPcvrRuntime.getVisibility() == View.VISIBLE;
+        // Greyed out and off where the container has no direct frames
+        final CheckBox cbPcvrDirectTransport = view.findViewById(R.id.CBPcvrDirectTransport);
+        final CheckBox cbPcvrStickTouchpad = view.findViewById(R.id.CBPcvrStickTouchpad);
+        final Spinner sPcvrController = view.findViewById(R.id.SPcvrController);
+        final List<String> controllerProfiles = Arrays.asList(PcvrRuntime.CONTROLLER_PROFILES);
 
         LinearLayout list = view.findViewById(R.id.LLRecognisedOverridesList);
+        list.removeAllViews();
         // Fixes can set the same variable, so adding one can undo another
         Map<Button, GameOverrides.Fix> buttons = new java.util.LinkedHashMap<>();
         Runnable refreshButtons = () -> {
@@ -923,6 +1028,13 @@ public class ShortcutSettingsDialog extends ContentDialog {
                 GameOverrides.Fix fix = entry.getValue();
                 boolean added = isOverrideAdded(envVarsView, fix) && hasExecArgs(etExecArgs, fix)
                         && (!fix.mapMergeShim || !canMergeMappings || cbMapMergeShim.isChecked())
+                        && (!fix.pcvr || !canPcvr || cbPcvrRuntime.isChecked())
+                        && (fix.pcvrDirect == null || !canPcvr || !cbPcvrDirectTransport.isEnabled()
+                                || (cbPcvrRuntime.isChecked() && cbPcvrDirectTransport.isChecked() == fix.pcvrDirect))
+                        && (fix.pcvrStickTouchpad == null || !canPcvr
+                                || (cbPcvrRuntime.isChecked() && cbPcvrStickTouchpad.isChecked() == fix.pcvrStickTouchpad))
+                        && (controllerProfiles.indexOf(fix.pcvrController) <= 0 || !canPcvr
+                                || (cbPcvrRuntime.isChecked() && sPcvrController.getSelectedItemPosition() == controllerProfiles.indexOf(fix.pcvrController)))
                         && (fix.goldberg.isEmpty() || GoldbergEmu.isApplied(shortcut));
                 entry.getKey().setText(added ? "Added" : context.getString(R.string.add));
                 entry.getKey().setEnabled(!added);
@@ -933,6 +1045,12 @@ public class ShortcutSettingsDialog extends ContentDialog {
             for (Map.Entry<String, String> env : fix.envVars.entrySet()) parts.add(env.getKey() + "=" + env.getValue());
             for (Map.Entry<String, String> dll : fix.dllOverrides.entrySet()) parts.add("WINEDLLOVERRIDES " + dll.getKey() + "=" + dll.getValue());
             if (!fix.execArgs.isEmpty()) parts.add(fix.execArgs);
+            if (fix.pcvr) parts.add("PC VR game on");
+            if (fix.pcvrDirect != null) parts.add("Direct PC VR frames " + (fix.pcvrDirect ? "on" : "off"));
+            if (fix.pcvrStickTouchpad != null) parts.add("Thumbstick push presses touchpad " + (fix.pcvrStickTouchpad ? "on" : "off"));
+            // A type this build does not have is left alone
+            final int controllerIndex = controllerProfiles.indexOf(fix.pcvrController);
+            if (controllerIndex > 0) parts.add("Controller type " + sPcvrController.getItemAtPosition(controllerIndex));
             final boolean coldClientLoader = fix.goldberg.equals(GameOverrides.GOLDBERG_LOADER);
             if (!fix.goldberg.isEmpty()) parts.add(coldClientLoader ? "Goldberg ColdClientLoader" : "Goldberg steam_api replacement");
 
@@ -966,6 +1084,12 @@ public class ShortcutSettingsDialog extends ContentDialog {
                 }
                 if (!fix.execArgs.isEmpty()) etExecArgs.setText(execArgs);
                 if (fix.mapMergeShim && canMergeMappings) cbMapMergeShim.setChecked(true);
+                if (canPcvr && (fix.pcvr || fix.pcvrDirect != null || fix.pcvrStickTouchpad != null || controllerIndex > 0)) {
+                    cbPcvrRuntime.setChecked(true);
+                    if (fix.pcvrDirect != null && cbPcvrDirectTransport.isEnabled()) cbPcvrDirectTransport.setChecked(fix.pcvrDirect);
+                    if (fix.pcvrStickTouchpad != null) cbPcvrStickTouchpad.setChecked(fix.pcvrStickTouchpad);
+                    if (controllerIndex > 0) sPcvrController.setSelection(controllerIndex);
+                }
                 // Goldberg changes the game's files, so it goes through its own dialog, which keeps the originals for a revert
                 if (!fix.goldberg.isEmpty() && !GoldbergEmu.isApplied(shortcut))
                     GoldbergEmu.showApplyGoldbergDialog(fragment.getActivity(), shortcut, coldClientLoader, result.appId, refreshButtons);

@@ -36,6 +36,7 @@ import com.winlator.cmod.contents.ColdClientLoaderIni;
 import com.winlator.cmod.contents.ContentProfile;
 import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.contents.Downloader;
+import com.winlator.cmod.core.Callback;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.GuestScriptRunner;
 import com.winlator.cmod.core.WineRegistryEditor;
@@ -488,6 +489,35 @@ public class GoldbergEmu {
             } catch (Exception ignored) {}
         }
         return results;
+    }
+
+    /** Asks which Steam game a shortcut is, with the same name search the Goldberg dialog has. An empty answer clears it. */
+    public static void showSteamAppIdDialog(Activity activity, String gameName, String appId, final Callback<String> onSet) {
+        final Context context = activity;
+
+        final EditText input = new EditText(context);
+        input.setHint("Steam AppID");
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
+        input.setText(appId);
+
+        final Button searchBtn = new Button(context);
+        searchBtn.setText("Search Steam");
+        searchBtn.setOnClickListener(v -> promptSteamSearchQuery(activity, gameName, input, searchBtn));
+
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * context.getResources().getDisplayMetrics().density);
+        layout.setPadding(pad, pad, pad, pad);
+        layout.addView(input);
+        layout.addView(searchBtn);
+
+        new AlertDialog.Builder(context)
+                .setTitle("Set Steam AppID")
+                .setMessage("The fixes for a game are listed by its Steam AppID. Enter this game's, or leave it empty to clear the one set here.")
+                .setView(layout)
+                .setPositiveButton("OK", (d, which) -> onSet.call(input.getText().toString().trim()))
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private static void promptGoldbergAppId(Activity activity, final Shortcut shortcut, final ContentProfile profile, final List<File> targetDirs, String knownAppId, final Runnable onApplied) {
